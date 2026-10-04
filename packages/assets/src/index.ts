@@ -1,2 +1,11 @@
 // Default pack, pack manifest schema and validator (spec §9.2, §9.3).
-export {};
+export { buildDefaultPack, writeDefaultPack, writeEngineTextures } from './generate.ts';
+export {
+  type Manifest,
+  ManifestSchema,
+  OPTIONAL_ANIMATIONS,
+  REQUIRED_ANIMATIONS,
+  SPEC,
+  TASK_POINT_STATES,
+} from './manifest.ts';
+export { LIMITS, type PackValidation, validatePack } from './validate.ts';

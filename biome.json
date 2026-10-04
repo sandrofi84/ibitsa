@@ -6,7 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!**/.tsbuild", "!prototypes"]
+    "includes": ["**", "!**/.tsbuild", "!prototypes", "!packages/assets/default-pack"]
   },
   "formatter": {
     "indentStyle": "space",

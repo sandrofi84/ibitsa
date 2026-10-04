@@ -4,8 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "textures": "node scripts/make-default-textures.mjs"
+    "build": "vite build"
   },
   "dependencies": {
     "@ibitsa/agent-fake": "workspace:*",
