@@ -1,0 +1,9 @@
+{
+  "name": "@ibitsa/protocol",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {}
+}
