@@ -573,7 +573,7 @@ Verified 2026-10-04 against `@anthropic-ai/claude-agent-sdk@0.3.289` ([research]
 
 ## 13. Development workflow
 - **Builds:** esbuild for `extension` (Node, `vscode` external); Vite for `game`.
-- **Agent SDK packaging:** the Claude Agent SDK runs Claude Code as a subprocess; keep it as an external runtime dependency, not bundled. If platform-specific binaries are involved, publish platform-specific VSIX packages (`vsce --target`).
+- **Agent SDK packaging:** the Claude Agent SDK runs a native `claude` binary that it ships as per-platform optional npm dependencies. Keep the SDK external to esbuild (it locates the binary next to its own module) and load it with `import()` (ESM only). Publish **platform-specific VSIX packages** (`vsce package --target`): darwin-x64/arm64, linux-x64/arm64, alpine-x64/arm64, win32-x64/arm64, to both registries, built on one CI runner with `npm ci --os/--cpu/--libc`. Optional setting `ibitsa.claudeCodePath` → `pathToClaudeCodeExecutable`. See [research](https://github.com/sandrofi84/ibitsa/blob/research/sdk-vsix-packaging/docs/research/sdk-vsix-packaging.md).
 - **Fast loops:**
   - Game: run `game` standalone in a browser with Vite HMR, driven by a fake core replaying recorded event logs.
   - Core: Vitest with the `agent-fake` adapter. No tokens spent in tests.
