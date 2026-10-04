@@ -4,6 +4,7 @@ Quest for Ibitsa: a VS Code extension that presents work with AI coding agents a
 
 - **Spec:** `docs/SPEC.md` is the source of truth for product and architecture. Update it when a decision changes it.
 - **Vocabulary:** use the terms in `GLOSSARY.md`. In particular, a **task** is the unit of work in a plan; a **ticket** is only an item in an outside ticket system.
+- **Commits:** [Conventional Commits](https://www.conventionalcommits.org), enforced by commitlint on the `commit-msg` hook. Optional scope: a package (`core`, `game`, …) or `spec`, `adr`, `glossary`, `ci`, `deps`, `repo` (`commitlint.config.js`). Spec edits are `docs(spec): …`.
 - **Open decisions:** being worked through on the GitHub issue labelled `wayfinder:map`.
 
 ## Agent skills
