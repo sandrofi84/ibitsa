@@ -1,0 +1,23 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+}
+
+#game {
+  width: 100vw;
+  height: 100vh;
+}
+
+.notice {
+  color: #ddd;
+  font:
+    14px / 1.5 system-ui,
+    sans-serif;
+  max-width: 32em;
+  margin: 20vh auto 0;
+  padding: 0 16px;
+}
