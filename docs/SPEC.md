@@ -335,7 +335,9 @@ Shown in the same hover menu, visually distinct:
 3. **Plan review:** plan, decisions, criteria; Approve / Change.
 4. **Party assembly:** per worktree: hero class, reviewing councillors (recommended pre-checked), estimated cost.
 5. **World map (overworld):** see §7.2.
-6. **Party panel:** compact lineup usable as a bottom panel next to the terminal.
+6. **Party panel:** compact lineup usable as a bottom panel next to the terminal (a `WebviewView`, from M4).
+
+**Placement (M0–M3):** the game is a single editor tab (`WebviewPanel`), restored after a window reload with `registerWebviewPanelSerializer` (it reconnects via `hello` → snapshot). When the tab is hidden, the "Needs you" VS Code notification (§6.4) covers it.
 7. **Guild Hall (settings):** councillor roster, class armory (models), rule book, spell book (actions), asset/sound packs.
 8. **Campaign end:** the party sails to **Ibitsa**, the party island, for a short celebration scene (skippable; respects reduced motion). Then: record summary, keep/compact/empty with council HP. A campaign ended with work abandoned or unshipped skips the celebration.
 
@@ -708,6 +710,9 @@ Settled in [#9](https://github.com/sandrofi84/ibitsa/issues/9); see [ADR 0001](a
 ---
 
 ## 13. Development workflow
+- **Toolchain:** Node 24 LTS for development and CI (`.nvmrc`, `engines.node`); pnpm pinned via `packageManager`. `engines.vscode` is the lowest version with the APIs we use, checked at M0 against the VS Code base of current Cursor and Windsurf builds (Open VSX users).
+- **Workspace:** library packages (`protocol`, `core`, `runtime`, adapters) have no build step: their `exports` point at TypeScript source. Only `extension` and `game` produce bundles. Type checking is `tsc -b` over project references, which also enforce allowed dependencies (e.g. `game` cannot import `runtime`). `pnpm -r` scripts; no Turborepo/Nx. Tests sit next to code (`*.test.ts`) under one root Vitest config with a project per package.
+- **Lint and format:** Biome. `noNodejsModules` and `noRestrictedImports` keep Node built-ins and `vscode` out of `core`, `protocol` and `game` (ADR 0001).
 - **Builds:** esbuild for `extension` (Node, `vscode` external); Vite for `game`.
 - **Agent SDK packaging:** the Claude Agent SDK runs a native `claude` binary that it ships as per-platform optional npm dependencies. Keep the SDK external to esbuild (it locates the binary next to its own module) and load it with `import()` (ESM only). Publish **platform-specific VSIX packages** (`vsce package --target`): darwin-x64/arm64, linux-x64/arm64, alpine-x64/arm64, win32-x64/arm64, to both registries, built on one CI runner with `npm ci --os/--cpu/--libc`. Optional setting `ibitsa.claudeCodePath` → `pathToClaudeCodeExecutable`. See [research](https://github.com/sandrofi84/ibitsa/blob/research/sdk-vsix-packaging/docs/research/sdk-vsix-packaging.md).
 - **Fast loops:**
@@ -719,6 +724,7 @@ Settled in [#9](https://github.com/sandrofi84/ibitsa/issues/9); see [ADR 0001](a
 - **Webview:** load assets via `asWebviewUri` and `localResourceRoots` (including user pack folders); strict CSP (no `unsafe-eval`, `img-src ${webview.cspSource}` only); bundle everything (no CDNs); don't rely on `retainContextWhenHidden`. Phaser's built-in textures (`__DEFAULT`, `__MISSING`, `__WHITE`) come from bundled PNGs via its `images` config rather than `data:` URIs.
 - **Engine check (first M0 work):** F5 opens the game panel; Phaser renders a 480×270 scene integer-scaled and letterboxed to the panel, re-scales on resize, with no CSP errors in the console. If this fails, reopen the engine choice before anything else builds on Phaser (fallback for a `data:` need: allow `img-src data:`).
 - **Publishing:** `vsce` to the VS Code Marketplace and `ovsx` to Open VSX (Cursor, VSCodium, Windsurf, …). GitHub Actions: build, test, package, publish on tag.
+- **CI from M0:** GitHub Actions on every PR and push to `main`, Ubuntu only: install → Biome → `tsc -b` → Vitest (incl. fixture golden files) → build `extension` and `game` → Playwright against the standalone game → extension integration tests (`@vscode/test-electron` under `xvfb`). macOS and Windows test runners join at M1 (sandbox and platform behaviour, §11.6). Platform-specific packaging and publishing start at M10, on tags.
 
 ---
 
