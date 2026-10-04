@@ -1,6 +1,6 @@
 # Ibitsa
 
-Ibitsa (Quest for Ibitsa) presents work with AI coding agents as a pixel-art RPG: a council plans with the user, parties of warriors carry out the plan, and councillors review the result. Every character stands for a real agent session.
+Ibitsa (Quest for Ibitsa) presents work with AI coding agents as a pixel-art RPG: a council plans with the user, parties of heros carry out the plan, and councillors review the result. Every character stands for a real agent session.
 
 ## Campaign
 
@@ -9,7 +9,7 @@ One goal from the user, from the first question to the final pull requests.
 _Avoid_: Project, run, session
 
 **Quick quest**:
-A campaign small and clear enough to skip the council and go straight to a single warrior.
+A campaign small and clear enough to skip the council and go straight to a single hero.
 
 **Campaign record**:
 The council's closing account of a campaign: decisions, what shipped, what was deferred, lessons.
@@ -51,7 +51,7 @@ The collection of a campaign's decision records.
 ## Work
 
 **Task**:
-The unit of work in a plan: one thing a warrior does and the councillors review.
+The unit of work in a plan: one thing a hero does and the councillors review.
 _Avoid_: Ticket, job, story
 
 **Ticket**:
@@ -75,19 +75,19 @@ How a plan's islands relate: **separate** (each branches from main) or **stacked
 ## Parties
 
 **Party**:
-One lead warrior assigned to one island, plus the councillors who will review its work.
+One lead hero assigned to one island, plus the councillors who will review its work.
 _Avoid_: Team, squad
 
-**Warrior**:
+**Hero**:
 A coding agent session that carries out tasks.
-_Avoid_: Worker, agent (in game-facing language)
+_Avoid_: Warrior, worker, agent (in game-facing language)
 
-**Warrior class**:
-A named pairing of agent runtime and model that a warrior is created from (Paladin, Barbarian, Ranger, Rogue).
+**Hero class**:
+A named pairing of agent runtime and model that a hero is created from (Paladin, Barbarian, Ranger, Rogue).
 _Avoid_: Tier, role
 
 **Execution state**:
-Exactly one of a warrior's current conditions (traveling, working, waiting on you, blocked, resting, submitted, stalled, error), always derived from real agent events.
+Exactly one of a hero's current conditions (traveling, working, waiting on you, blocked, resting, submitted, stalled, error), always derived from real agent events.
 
 **Review**:
 A councillor's check of a submitted task against its acceptance criteria, ending in a verdict.

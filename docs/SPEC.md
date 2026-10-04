@@ -15,7 +15,7 @@
 
 ## 1. Overview
 
-Quest for Ibitsa is a VS Code extension that turns working with AI coding agents (Claude Code first) into a 2D pixel-art RPG. The user leads a **campaign**: a **council** of advisors researches and plans the work with the user, then **parties** of **warriors** (coding agents) carry out the plan on a Super Mario World–style overworld map. Councillors return to review the warriors' work before a pull request is opened.
+Quest for Ibitsa is a VS Code extension that turns working with AI coding agents (Claude Code first) into a 2D pixel-art RPG. The user leads a **campaign**: a **council** of advisors researches and plans the work with the user, then **parties** of **heros** (coding agents) carry out the plan on a Super Mario World–style overworld map. Councillors return to review the heros' work before a pull request is opened.
 
 Every character is backed by a real agent session. The game layer makes multi-agent work visible (who is working, waiting, stuck, or low on context), keeps the human in charge of every key decision, and makes cost visible.
 
@@ -63,8 +63,8 @@ Every character is backed by a real agent session. The game layer makes multi-ag
 | **Research brief** | Short document written by the elder's research pass; input to planning. |
 | **Plan** | Saved document: tasks, branches, acceptance criteria, decision records. |
 | **Decision record** | A recorded user choice with its alternatives, trade-offs and reasons. |
-| **Warrior** | A coding agent session that executes tasks. Its **class** maps to an adapter + model. |
-| **Party** | One lead warrior assigned to one worktree/branch, plus the councillors who will review its work. |
+| **Hero** | A coding agent session that executes tasks. Its **class** maps to an adapter + model. |
+| **Party** | One lead hero assigned to one worktree/branch, plus the councillors who will review its work. |
 | **Island** | A worktree/branch on the map. **Task points** on it are tasks. |
 | **Game master** | Deterministic TypeScript code that runs the rules. It is **not** an LLM. |
 | **Adapter** | Plug-in that connects the core to an agent runtime, model vendor, git host or ticket system. |
@@ -77,14 +77,14 @@ Every character is backed by a real agent session. The game layer makes multi-ag
 
 1. **Start.** The user opens the panel and describes a task to the **elder** (free text, optionally from a ticket).
 2. **Research.** The elder (cheap/fast model) researches the codebase and writes the **research brief**: relevant files, current patterns, open questions, recommended councillors with a one-line reason each, recommended council effort, and whether this is a **quick quest**.
-3. **Quick quest path.** If the task is small and clear, the elder offers to skip the council and dispatch a single warrior directly.
+3. **Quick quest path.** If the task is small and clear, the elder offers to skip the council and dispatch a single hero directly.
 4. **Convene the council.** The user picks councillors (checkboxes, recommended ones pre-checked with reasons) and **one effort level for the whole council** (= the council session's model).
 5. **Planning.** A fresh council session starts from the brief on the chosen model. Councillors contribute their domain concerns, ask the user steering questions (in their own voice), and can be questioned about trade-offs ("Why?").
-6. **Plan proposal.** The elder presents the plan: tasks, dependencies, branching strategy (separate or stacked), suggested warrior classes, acceptance criteria per reviewing councillor, decision records.
+6. **Plan proposal.** The elder presents the plan: tasks, dependencies, branching strategy (separate or stacked), suggested hero classes, acceptance criteria per reviewing councillor, decision records.
 7. **Approval.** The user approves, or requests changes with context. The plan is saved to the repo.
-8. **Assemble parties.** One party per worktree. The user picks the warrior class per party and which councillors join each party (= will review its work). All pre-filled with recommendations from the plan.
-9. **Adventure.** Warriors work on the map. The user can talk to any party or to the council at any time.
-10. **Review loop.** When a warrior submits a task, its party's councillors review it concurrently against the agreed criteria. Blocking findings send the warrior back. Loop ends when all are satisfied or the loop limit escalates to the user.
+8. **Assemble parties.** One party per worktree. The user picks the hero class per party and which councillors join each party (= will review its work). All pre-filled with recommendations from the plan.
+9. **Adventure.** Heros work on the map. The user can talk to any party or to the council at any time.
+10. **Review loop.** When a hero submits a task, its party's councillors review it concurrently against the agreed criteria. Blocking findings send the hero back. Loop ends when all are satisfied or the loop limit escalates to the user.
 11. **PR.** A passed task can open a PR from its task point. PR status is shown as a badge.
 12. **Campaign end.** The council writes the **campaign record**. The user chooses to keep (default), compact or empty the council's context.
 
@@ -135,7 +135,7 @@ ask_user({
 - Saved at `.ibitsa/campaigns/<campaignId>/plan.md` (human-readable markdown with a machine-readable JSON block or sidecar `plan.json`; the game reads the JSON).
 - Plan contents:
   - Goal and scope
-  - Tasks (id, title, description, files likely touched, dependencies, suggested warrior class, estimated effort, optional source ticket). A **ticket** is an item in an outside ticket system; it is not part of the game world. See `GLOSSARY.md`.
+  - Tasks (id, title, description, files likely touched, dependencies, suggested hero class, estimated effort, optional source ticket). A **ticket** is an item in an outside ticket system; it is not part of the game world. See `GLOSSARY.md`.
   - Branching strategy: `separate` or `stacked`, with branch names and bases
   - **Acceptance criteria per reviewing councillor per task**
   - Recommended party composition per worktree
@@ -172,8 +172,8 @@ ask_user({
 - Councillor skills must not be auto-invoked by the model in normal Claude Code use (`disable-model-invocation: true`; consider `user-invocable: false`). **[OPEN]** confirm best location so they don't clutter the user's normal `/` menu.
 
 ### 4.8 Talking to the council mid-campaign
-- `@council` messages go to the council session (resumed). It does **not** stop warriors.
-- The game master gives the council a **compact status report** (tasks done, current findings, blockers, PR states), never warriors' transcripts.
+- `@council` messages go to the council session (resumed). It does **not** stop heros.
+- The game master gives the council a **compact status report** (tasks done, current findings, blockers, PR states), never heros' transcripts.
 - Plan changes become a **plan amendment** naming affected parties and potential rework. The user confirms. Affected parties receive it as a **queued** message (delivered after their current step).
 
 ### 4.9 Campaign end
@@ -183,18 +183,18 @@ ask_user({
   - **Compact**: summarize and continue.
   - **Empty**: next campaign starts fresh (the record file preserves knowledge).
 - On the next campaign, the elder compares the new task with any kept context and may suggest a different choice ("Unrelated to the accounts work. Start fresh?").
-- Warrior sessions are task-scoped and end when their task's PR opens or the task is abandoned.
+- Hero sessions are task-scoped and end when their task's PR opens or the task is abandoned.
 
 ---
 
-## 5. Parties and warriors
+## 5. Parties and heros
 
 ### 5.1 Composition
 - One party per worktree/branch.
-- **One lead warrior writes to a worktree.** Parallel help inside a task uses the lead's own subagents, or the plan splits it into another worktree/party.
+- **One lead hero writes to a worktree.** Parallel help inside a task uses the lead's own subagents, or the plan splits it into another worktree/party.
 - Councillors who "join the party" are the ones who will review that party's work. The same councillor class may join several parties (each review is its own instance).
 
-### 5.2 Warrior classes
+### 5.2 Hero classes
 - A class maps to **adapter + model** (configurable). Defaults:
 
 | Class | Model |
@@ -213,7 +213,7 @@ ask_user({
 - Worktrees are created by the game master (`git worktree add`), default location: a sibling folder `../<repo>.ibitsa/<branch>` (configurable).
 
 ### 5.4 Execution states
-Each warrior is always in exactly one state, mapped from agent events:
+Each hero is always in exactly one state, mapped from agent events:
 
 | State | Source | Map display |
 |---|---|---|
@@ -228,9 +228,9 @@ Each warrior is always in exactly one state, mapped from agent events:
 | stalled | stall detection (§10) | warning bubble, auto-paused |
 | error | adapter error | hurt animation + log |
 
-### 5.5 Review loop (run by the game master, never by the warrior)
-1. Warrior declares the task done.
-2. Game master runs **free deterministic checks** in the worktree (tests, lint, typecheck, and configured tools such as axe, npm audit, semgrep). Failures go straight back to the warrior.
+### 5.5 Review loop (run by the game master, never by the hero)
+1. Hero declares the task done.
+2. Game master runs **free deterministic checks** in the worktree (tests, lint, typecheck, and configured tools such as axe, npm audit, semgrep). Failures go straight back to the hero.
 3. Game master launches each of the party's reviewing councillors **concurrently**: read-only, review-mode prompt, councillor's own model (per-councillor effort applies here), given the diff, check outputs, the task's acceptance criteria and relevant decision records.
 4. Each returns a structured verdict:
 
@@ -240,7 +240,7 @@ Each warrior is always in exactly one state, mapped from agent events:
               file?: string, line?: number, message: string }[] }
 ```
 
-5. Blocking findings are sent into the warrior's session; it fixes and resubmits.
+5. Blocking findings are sent into the hero's session; it fixes and resubmits.
 6. Re-review: only councillors who raised blocking findings, only on the delta since their last review.
 7. **Loop limit** (default 3 rounds) → escalate to the user with disputed findings.
 8. **Conflicting findings** between councillors → escalate to the user (or the elder, if configured).
@@ -313,7 +313,7 @@ Shown in the same hover menu, visually distinct:
 1. **Elder's recommendation:** task input, research progress, brief summary, councillor checkboxes with reasons, council effort, quick-quest offer.
 2. **Council hut (interior):** side-on room (Alex Kidd shop style), councillors behind a long table, active speaker highlighted, "!" for who wants to speak, RPG dialogue box with portrait, options, "Why?", free text. Step tracker: Goal › Research › Questions › Plan › Dispatch. Book of Decisions on the table.
 3. **Plan review:** plan, decisions, criteria; Approve / Change.
-4. **Party assembly:** per worktree: warrior class, reviewing councillors (recommended pre-checked), estimated cost.
+4. **Party assembly:** per worktree: hero class, reviewing councillors (recommended pre-checked), estimated cost.
 5. **World map (overworld):** see §7.2.
 6. **Party panel:** compact lineup usable as a bottom panel next to the terminal.
 7. **Guild Hall (settings):** councillor roster, class armory (models), rule book, spell book (actions), asset/sound packs.
@@ -323,7 +323,7 @@ Shown in the same hover menu, visually distinct:
 - **Home Village** island with the **council hut**; it represents `main` and the campaign start.
 - Each worktree/branch is an **island**; tasks are **task points** connected by dotted paths, colored by state (locked, active, done, under review).
 - Separate strategy: islands scattered, each reached from the village. Stacked: islands in a line with **bridges**; locked drawbridges.
-- Warriors are **round tokens** with HP bars; councillors are **square tokens** with a parchment border and name plate, no HP bar.
+- Heros are **round tokens** with HP bars; councillors are **square tokens** with a parchment border and name plate, no HP bar.
 - Councillors walk from the hut to a task point when a review starts and return when done.
 - PR badges float above task points (or islands, for stacked).
 - **Ibitsa** sits on the map's horizon as the campaign's destination: visible but out of reach until the campaign's work is shipped.
@@ -331,7 +331,7 @@ Shown in the same hover menu, visually distinct:
 
 ### 7.3 HP and gold
 - **HP** = remaining context window (from adapter context usage; estimated if unavailable). Resting (compaction) restores HP.
-- **Gold** = spend. Shown per warrior, per party and per campaign. Budget caps act as a warrior's "gold pouch".
+- **Gold** = spend. Shown per hero, per party and per campaign. Budget caps act as a hero's "gold pouch".
 - Optional end-of-campaign efficiency score.
 
 ### 7.4 Accessibility
@@ -404,7 +404,7 @@ Character animations:
 - The built-in pack loads through the same loader and validator as user packs.
 - **Upload validator:** checks dimensions, grid, required animations; shows specific errors; live animation preview and "try in scene".
 - **Recolor:** tint/palette-swap of default sprites without drawing.
-- New characters = appearance attached to a warrior class or councillor.
+- New characters = appearance attached to a hero class or councillor.
 
 ### 9.4 Sound slots
 
@@ -432,7 +432,7 @@ Character animations:
 ## 10. Token efficiency rules
 
 1. **Game master is code, not an LLM.** State transitions are free and deterministic.
-2. **Research once.** The elder's brief is shared; warriors get the plan's "files likely touched" list instead of exploring.
+2. **Research once.** The elder's brief is shared; heros get the plan's "files likely touched" list instead of exploring.
 3. **Single council session**, one model; questions batched.
 4. **Fresh contexts over bloated ones.** Research transcript is dropped after the brief; new tasks start new sessions; low-HP "rest" may restart from a handoff summary.
 5. **Model tiering.** Cheap models for research, summaries, simple tasks and first-pass reviews; strong models for planning and hard tasks.
@@ -440,7 +440,7 @@ Character animations:
 7. **Cache-friendly prompts.** Identical system prompt per role; variable content at the end; never put changing values (timestamps, HP) in system prompts.
 8. **Free checks before LLM reviews**; reviewers get the diff + check output, not the repo; only relevant reviewers; re-reviews only by flaggers on the delta.
 9. **Structured, short outputs** (JSON verdicts, plans); the game renders flavor text itself.
-10. **Budgets:** per-warrior caps and a per-campaign cap.
+10. **Budgets:** per-hero caps and a per-campaign cap.
 11. **Stall detection:** same file edited repeatedly, same test failing in a loop, or no progress for N turns → auto-pause and raise "?".
 12. **Estimate vs actual logging** per task type and model, used to improve effort estimates.
 
@@ -471,6 +471,66 @@ packages/
 - Core communicates with the shell and the game **only through `protocol` messages** (commands in, events and state snapshots out), so it can later move to a background daemon (campaigns survive window reloads; other front ends possible) without rewrite.
 - The webview never talks to agents. It renders state and sends user intents. On reopen, it rebuilds from the core's state snapshot.
 
+#### 11.2.1 Protocol (M0–M1)
+Settled in [#8](https://github.com/sandrofi84/ibitsa/issues/8). The webview and the extension shell (status bar, notifications while the panel is closed) consume the same messages.
+
+- **Snapshots + cues.** State reaches a front end only as a full `Snapshot`, sent after changes and throttled (~10/s). **Cues** are fire-and-forget effects (animation, sound, toast) that carry no state; dropping any cue must be harmless.
+- **Domain view only.** `AgentEvent` never leaves core. Snapshots describe the world in glossary terms with no layout or coordinates; `game` decides positions (§9.1).
+- **Unknown is explicit.** Every measured value is a `Reading<T>`; front ends must render all three cases (`?` for unknown, `~` for estimated). Totals (party, campaign) are computed in core, never summed by a front end.
+- **Money** is integer micro-dollars, converted once from the SDK's float in the adapter. Display as gold is a `game` concern.
+- **Commands are fire-and-forget** with a `commandId`. Success shows in a later snapshot; failure arrives as a `commandRejected` cue. Front ends never update state optimistically.
+- **Ordering and versioning.** Every core → front end message has a monotonic `seq`; front ends drop stale snapshots and cues older than the shown snapshot. A front end opens with `hello`; core replies `welcome` + snapshot. Version mismatch → "reload the panel".
+- **Validation.** Commands are validated at core with Valibot schemas (types derived from them). Snapshots and cues are plain types.
+- **Reopen.** After the handshake the game jumps to the current state; cues are not replayed. View-only state (selection, camera, open panes) lives in the webview (`setState`) and never reaches core.
+- **Permissions** are shown as an exact, unparaphrased `{ action, target, cwd }` rendered by core from the tool input; unrecognized tools fall back to `{ action: tool, target: <input JSON> }`.
+
+```ts
+type Reading<T> =
+  | { kind: 'exact'; value: T }
+  | { kind: 'estimated'; value: T; basis: string }   // e.g. "tokens × price table"
+  | { kind: 'unknown' };
+type MicroUsd = number;                              // integer
+
+interface Snapshot {                                 // seq lives on the CoreMessage
+  campaign: CampaignView | null;                     // { id, title, gold: Reading<MicroUsd>, ... }; M1 shape: #11
+  islands: IslandView[];                             // { id, name, branch, taskPoints: TaskPointView[] }
+  heroes: HeroView[];
+  needsYou: NeedsYouItem[];                          // oldest first
+}
+
+interface HeroView {
+  id: string; name: string; classId: string;
+  islandId: string; taskPointId: string | null;
+  state: ExecutionState | { kind: 'unknown' };       // states and triggers: #10
+  activity: { kind: ActivityKind; detail?: string } | null;
+  hp: Reading<{ used: number; max: number }>;
+  gold: Reading<MicroUsd>;
+  queuedMessages: number;
+}
+
+type NeedsYouItem =
+  | { kind: 'permission'; id: string; heroId: string; action: string; target: string; cwd: string }
+  | { kind: 'question'; id: string; heroId: string; questions: AskUserQuestion[] };
+
+type Command =                                       // validated at core
+  | { type: 'hello'; protocolVersion: number }
+  | { type: 'sendMessage'; commandId: string; heroId: string; text: string; priority: 'now' | 'next' }
+  | { type: 'stopHero'; commandId: string; heroId: string }   // interrupt + clear adapter queue
+  | { type: 'answerPermission'; commandId: string; itemId: string; decision: 'allow' | 'deny'; note?: string }
+  | { type: 'answerQuestion'; commandId: string; itemId: string; answers: Record<string, string | string[]> };
+  // starting a hero: #11
+
+type CoreMessage =
+  | { type: 'welcome'; seq: number; protocolVersion: number }
+  | { type: 'snapshot'; seq: number; snapshot: Snapshot }
+  | { type: 'cue'; seq: number; cue: Cue };
+
+type Cue =                                           // #10 may add more
+  | { type: 'commandRejected'; commandId: string; reason: string }
+  | { type: 'needsYouAdded'; itemId: string }
+  | { type: 'activityFinished'; heroId: string; kind: ActivityKind; outcome: 'ok' | 'failed' };
+```
+
 ### 11.3 Agent adapter interface (sketch)
 
 ```ts
@@ -492,7 +552,7 @@ interface AgentCapabilities {
 }
 
 interface SessionOptions {
-  role: 'elder' | 'council' | 'warrior' | 'reviewer';
+  role: 'elder' | 'council' | 'hero' | 'reviewer';
   model: string;
   cwd: string;
   systemPrompt: string;
@@ -525,7 +585,7 @@ type AgentEvent =
   | { type: 'error'; error: string };
 ```
 
-- **Model registry:** models with adapter id, vendor model name, price info (for gold), context window. Warrior classes reference registry entries.
+- **Model registry:** models with adapter id, vendor model name, price info (for gold), context window. Hero classes reference registry entries.
 - Other adapter families (git host, tickets) follow the same pattern: interface + capability flags.
 
 ### 11.4 Claude Agent SDK adapter: mapping (verify against current docs)
@@ -561,7 +621,7 @@ Verified 2026-10-04 against `@anthropic-ai/claude-agent-sdk@0.3.289` ([research]
 ### 11.6 Security and permissions
 - Per-role tool allowlists; reviewers and council read-only.
 - A short default allowlist of safe actions (read, search, run tests); everything else becomes a permission request in "Needs you".
-- Warriors are confined to their worktree.
+- Heros are confined to their worktree.
 - Pack files are images/audio/manifest only.
 - **Auth:** v1 uses the user's own Anthropic API key (or a Bedrock/Vertex/Foundry credential), read from settings, VS Code SecretStorage or the environment. The extension never runs its own claude.ai login and never handles claude.ai credentials: Anthropic does not allow third-party developers to offer claude.ai login without approval. For local development the developer may use their own Pro/Max login. Reusing a subscription login the user already made in Claude Code needs written confirmation from Anthropic; recheck terms before M10. See [research](https://github.com/sandrofi84/ibitsa/blob/research/auth/docs/research/auth.md).
 
@@ -592,7 +652,7 @@ Verified 2026-10-04 against `@anthropic-ai/claude-agent-sdk@0.3.289` ([research]
 | # | Milestone | Done when |
 |---|---|---|
 | M0 | Scaffold | Monorepo, protocol types, esbuild + Vite builds, F5 opens an empty game panel, `agent-fake` replaying a log drives a token on a map in the standalone game. Placeholder asset pack generated to spec. |
-| M1 | One warrior | Claude SDK adapter; one warrior in one worktree; live activity animations, HP bar, gold; stop and send message (queued/now); "Needs you" for permissions/questions. |
+| M1 | One hero | Claude SDK adapter; one hero in one worktree; live activity animations, HP bar, gold; stop and send message (queued/now); "Needs you" for permissions/questions. |
 | M2 | Command bar & actions | `@` targets and files, `/` actions as skills, preview, controls, Command Palette entries. |
 | M3 | Elder & council | Research brief, council selection, single council session, `ask_user` with voices and "Why?", plan + decision records saved, approval loop, quick-quest path. |
 | M4 | Parties & map | Multiple worktrees, separate and stacked layouts, bridges, party assembly, blocked states. |
