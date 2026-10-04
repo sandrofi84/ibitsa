@@ -544,6 +544,15 @@ type AgentEvent =
 | Gold pouch | `maxBudgetUsd` |
 | Activity mapping | tool-use messages; `PreToolUse`/`PostToolUse` hooks |
 
+Verified 2026-10-04 against `@anthropic-ai/claude-agent-sdk@0.3.289` ([research](https://github.com/sandrofi84/ibitsa/blob/research/agent-sdk-m1/docs/research/agent-sdk-m1.md)). Every row exists; corrections to the table and the §11.3 sketch:
+- **Compaction:** no `compact()` method; send `/compact` as a prompt and watch `status: 'compacting'` then `compact_boundary`.
+- **Questions:** AskUserQuestion arrives through `canUseTool` like a permission; answered by returning `updatedInput: { questions, answers }`.
+- **Priority** (`'now' | 'next' | 'later'`, default `'next'`) is a field on each streamed message, not a `streamInput` argument.
+- **Cost:** `total_cost_usd` and `modelUsage` are running totals; `maxBudgetUsd` applies per call, so a resumed session starts a fresh budget.
+- **`allowedTools`** only auto-approves; `tools` / `disallowedTools` restrict.
+- **Stop:** `interrupt()` does not cancel messages already queued; the adapter must hold its own queue.
+- All control methods require streaming input mode.
+
 ### 11.5 ACP adapter
 - Generic adapter for any Agent Client Protocol agent (Codex, Gemini CLI, Copilot, OpenCode, …). Reports reduced capabilities; the core uses fallbacks (§11.3).
 
