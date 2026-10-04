@@ -15,7 +15,7 @@
 
 ## 1. Overview
 
-Quest for Ibitsa is a VS Code extension that turns working with AI coding agents (Claude Code first) into a 2D pixel-art RPG. The user leads a **campaign**: a **council** of advisors researches and plans the work with the user, then **parties** of **heros** (coding agents) carry out the plan on a Super Mario World–style overworld map. Councillors return to review the heroes' work before a pull request is opened.
+Quest for Ibitsa is a VS Code extension that turns working with AI coding agents (Claude Code first) into a 2D pixel-art RPG. The user leads a **campaign**: a **council** of advisors researches and plans the work with the user, then **parties** of **heroes** (coding agents) carry out the plan on a Super Mario World–style overworld map. Councillors return to review the heroes' work before a pull request is opened.
 
 Every character is backed by a real agent session. The game layer makes multi-agent work visible (who is working, waiting, stuck, or low on context), keeps the human in charge of every key decision, and makes cost visible.
 
@@ -83,7 +83,7 @@ Every character is backed by a real agent session. The game layer makes multi-ag
 6. **Plan proposal.** The elder presents the plan: tasks, dependencies, branching strategy (separate or stacked), suggested hero classes, acceptance criteria per reviewing councillor, decision records.
 7. **Approval.** The user approves, or requests changes with context. The plan is saved to the repo.
 8. **Assemble parties.** One party per worktree. The user picks the hero class per party and which councillors join each party (= will review its work). All pre-filled with recommendations from the plan.
-9. **Adventure.** Heros work on the map. The user can talk to any party or to the council at any time.
+9. **Adventure.** Heroes work on the map. The user can talk to any party or to the council at any time.
 10. **Review loop.** When a hero submits a task, its party's councillors review it concurrently against the agreed criteria. Blocking findings send the hero back. Loop ends when all are satisfied or the loop limit escalates to the user.
 11. **PR.** A passed task can open a PR from its task point. PR status is shown as a badge.
 12. **Campaign end.** The council writes the **campaign record**. The user chooses to keep (default), compact or empty the council's context.
@@ -172,7 +172,7 @@ ask_user({
 - Councillor skills must not be auto-invoked by the model in normal Claude Code use (`disable-model-invocation: true`; consider `user-invocable: false`). **[OPEN]** confirm best location so they don't clutter the user's normal `/` menu.
 
 ### 4.8 Talking to the council mid-campaign
-- `@council` messages go to the council session (resumed). It does **not** stop heros.
+- `@council` messages go to the council session (resumed). It does **not** stop heroes.
 - The game master gives the council a **compact status report** (tasks done, current findings, blockers, PR states), never heroes' transcripts.
 - Plan changes become a **plan amendment** naming affected parties and potential rework. The user confirms. Affected parties receive it as a **queued** message (delivered after their current step).
 
@@ -187,7 +187,7 @@ ask_user({
 
 ---
 
-## 5. Parties and heros
+## 5. Parties and heroes
 
 ### 5.1 Composition
 - One party per worktree/branch.
@@ -323,7 +323,7 @@ Shown in the same hover menu, visually distinct:
 - **Home Village** island with the **council hut**; it represents `main` and the campaign start.
 - Each worktree/branch is an **island**; tasks are **task points** connected by dotted paths, colored by state (locked, active, done, under review).
 - Separate strategy: islands scattered, each reached from the village. Stacked: islands in a line with **bridges**; locked drawbridges.
-- Heros are **round tokens** with HP bars; councillors are **square tokens** with a parchment border and name plate, no HP bar.
+- Heroes are **round tokens** with HP bars; councillors are **square tokens** with a parchment border and name plate, no HP bar.
 - Councillors walk from the hut to a task point when a review starts and return when done.
 - PR badges float above task points (or islands, for stacked).
 - **Ibitsa** sits on the map's horizon as the campaign's destination: visible but out of reach until the campaign's work is shipped.
@@ -432,7 +432,7 @@ Character animations:
 ## 10. Token efficiency rules
 
 1. **Game master is code, not an LLM.** State transitions are free and deterministic.
-2. **Research once.** The elder's brief is shared; heros get the plan's "files likely touched" list instead of exploring.
+2. **Research once.** The elder's brief is shared; heroes get the plan's "files likely touched" list instead of exploring.
 3. **Single council session**, one model; questions batched.
 4. **Fresh contexts over bloated ones.** Research transcript is dropped after the brief; new tasks start new sessions; low-HP "rest" may restart from a handoff summary.
 5. **Model tiering.** Cheap models for research, summaries, simple tasks and first-pass reviews; strong models for planning and hard tasks.
@@ -621,7 +621,7 @@ Verified 2026-10-04 against `@anthropic-ai/claude-agent-sdk@0.3.289` ([research]
 ### 11.6 Security and permissions
 - Per-role tool allowlists; reviewers and council read-only.
 - A short default allowlist of safe actions (read, search, run tests); everything else becomes a permission request in "Needs you".
-- Heros are confined to their worktree.
+- Heroes are confined to their worktree.
 - Pack files are images/audio/manifest only.
 - **Auth:** v1 uses the user's own Anthropic API key (or a Bedrock/Vertex/Foundry credential), read from settings, VS Code SecretStorage or the environment. The extension never runs its own claude.ai login and never handles claude.ai credentials: Anthropic does not allow third-party developers to offer claude.ai login without approval. For local development the developer may use their own Pro/Max login. Reusing a subscription login the user already made in Claude Code needs written confirmation from Anthropic; recheck terms before M10. See [research](https://github.com/sandrofi84/ibitsa/blob/research/auth/docs/research/auth.md).
 

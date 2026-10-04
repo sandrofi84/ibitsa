@@ -1,6 +1,6 @@
 # Ibitsa
 
-Ibitsa (Quest for Ibitsa) presents work with AI coding agents as a pixel-art RPG: a council plans with the user, parties of heros carry out the plan, and councillors review the result. Every character stands for a real agent session.
+Ibitsa (Quest for Ibitsa) presents work with AI coding agents as a pixel-art RPG: a council plans with the user, parties of heroes carry out the plan, and councillors review the result. Every character stands for a real agent session.
 
 ## Campaign
 
