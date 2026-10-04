@@ -377,6 +377,8 @@ Any item can be **extended**, **replaced** or **disabled**. The UI shows where e
 ### 9.1 Rendering
 - Pixel art at internal resolution **480×270**, integer-scaled (letterboxed) to the panel.
 - Base tile **16×16 px**.
+- **Engine: Phaser 4**, pinned to an exact version (`4.2.1`, no `^`) and upgraded deliberately. Integer zoom and letterbox via `Scale.NONE` + `MAX_ZOOM` + `CENTER_BOTH` + `pixelArt` (reapply `setMaxZoom()` on resize). Renderer is `Phaser.WEBGL` only: without WebGL the panel shows a plain HTML notice and the game does not start; core and agents are unaffected. See [research](https://github.com/sandrofi84/ibitsa/blob/research/phaser-vs-pixijs/docs/research/phaser-vs-pixijs.md).
+- **The engine stays inside `game`.** No other package imports Phaser. `game` renders from `protocol` snapshots and events and sends `protocol` commands; nothing engine-specific crosses that boundary. Pack formats (§9.3) are engine-neutral (frame size, animation rows, 9-slice insets), not Phaser atlases or Tiled maps. Tiled may be used inside `game` for fixed scenes (village, hut interior) as an internal detail; dynamic layouts (islands, task points) are built in code.
 
 ### 9.2 Visual asset spec (draft)
 
@@ -459,7 +461,7 @@ packages/
     agent-fake/         replays recorded sessions (tests, demos, game dev)
     git-github/         PRs, badges (gh / GitHub API)
     tickets-*/          later: GitHub Issues, Linear, Jira
-  game/         webview renderer (Vite + Phaser or PixiJS [OPEN])
+  game/         webview renderer (Vite + Phaser 4)
   extension/    VS Code shell: panels, commands, storage, wiring (esbuild)
   assets/       default pack, manifest schema, validator
 ```
@@ -579,7 +581,8 @@ Verified 2026-10-04 against `@anthropic-ai/claude-agent-sdk@0.3.289` ([research]
   - Core: Vitest with the `agent-fake` adapter. No tokens spent in tests.
   - Full integration: F5 Extension Development Host.
 - **Tests:** Vitest (unit), `@vscode/test-cli` / `@vscode/test-electron` (integration, headless in CI), Playwright against the standalone game build (visual/e2e).
-- **Webview:** load assets via `asWebviewUri` and `localResourceRoots` (including user pack folders); strict CSP; bundle everything (no CDNs); don't rely on `retainContextWhenHidden`.
+- **Webview:** load assets via `asWebviewUri` and `localResourceRoots` (including user pack folders); strict CSP (no `unsafe-eval`, `img-src ${webview.cspSource}` only); bundle everything (no CDNs); don't rely on `retainContextWhenHidden`. Phaser's built-in textures (`__DEFAULT`, `__MISSING`, `__WHITE`) come from bundled PNGs via its `images` config rather than `data:` URIs.
+- **Engine check (first M0 work):** F5 opens the game panel; Phaser renders a 480×270 scene integer-scaled and letterboxed to the panel, re-scales on resize, with no CSP errors in the console. If this fails, reopen the engine choice before anything else builds on Phaser (fallback for a `data:` need: allow `img-src data:`).
 - **Publishing:** `vsce` to the VS Code Marketplace and `ovsx` to Open VSX (Cursor, VSCodium, Windsurf, …). GitHub Actions: build, test, package, publish on tag.
 
 ---
@@ -606,7 +609,7 @@ Verified 2026-10-04 against `@anthropic-ai/claude-agent-sdk@0.3.289` ([research]
 1. Name registration: domains (ibitsa.com, ibitsa.dev, questforibitsa.com), GitHub org, npm scope, Marketplace/Open VSX publisher; trademark search (EUIPO TMview, USPTO). Initial checks found no conflicting software use.
 2. Rogue = Haiku confirmed? Default class roster and names.
 3. Character sprite size: 16×16 (more CC0 art available) vs 32×32 (more readable).
-4. Game engine: Phaser vs PixiJS.
+4. ~~Game engine: Phaser vs PixiJS.~~ Settled: Phaser 4 (§9.1).
 5. Councillor skill location so they don't clutter the normal `/` menu.
 6. Whether Claude Code tolerates extra frontmatter fields (for action `target`), else sidecar.
 7. Confirm SDK invocation of custom skills via `/name` prompts.
