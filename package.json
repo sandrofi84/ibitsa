@@ -1,5 +1,5 @@
 {
-  "name": "ibitsa",
+  "name": "ibitsa-monorepo",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@12.9.1",

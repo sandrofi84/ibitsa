@@ -2,12 +2,18 @@
   "name": "@ibitsa/game",
   "private": true,
   "type": "module",
-  "exports": {
-    ".": "./src/index.ts"
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "textures": "node scripts/make-default-textures.mjs"
   },
   "dependencies": {
+    "@ibitsa/agent-fake": "workspace:*",
     "@ibitsa/core": "workspace:*",
     "@ibitsa/protocol": "workspace:*",
-    "@ibitsa/agent-fake": "workspace:*"
+    "phaser": "4.2.1"
+  },
+  "devDependencies": {
+    "vite": "8.3.2"
   }
 }

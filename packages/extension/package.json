@@ -1,12 +1,42 @@
 {
-  "name": "@ibitsa/extension",
+  "name": "ibitsa",
+  "displayName": "Quest for Ibitsa",
+  "description": "Work with AI coding agents as a pixel-art RPG.",
+  "version": "0.0.0",
+  "publisher": "ibitsa-dev",
   "private": true,
   "type": "module",
-  "exports": {
-    ".": "./src/index.ts"
+  "engines": {
+    "vscode": "^1.120.0"
+  },
+  "main": "./dist/extension.cjs",
+  "activationEvents": [
+    "onWebviewPanel:ibitsa.game"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "ibitsa.openGame",
+        "title": "Open Game",
+        "category": "Ibitsa"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "test:integration": "vscode-test"
   },
   "dependencies": {
-    "@ibitsa/runtime": "workspace:*",
-    "@ibitsa/protocol": "workspace:*"
+    "@ibitsa/protocol": "workspace:*",
+    "@ibitsa/runtime": "workspace:*"
+  },
+  "devDependencies": {
+    "@ibitsa/game": "workspace:*",
+    "@types/mocha": "10.0.10",
+    "@types/vscode": "1.120.0",
+    "@vscode/test-cli": "0.0.15",
+    "@vscode/test-electron": "3.1.0",
+    "esbuild": "0.28.2",
+    "mocha": "12.0.3"
   }
 }
