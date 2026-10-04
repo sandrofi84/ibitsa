@@ -213,20 +213,37 @@ ask_user({
 - Worktrees are created by the game master (`git worktree add`), default location: a sibling folder `../<repo>.ibitsa/<branch>` (configurable).
 
 ### 5.4 Execution states
-Each hero is always in exactly one state, mapped from agent events:
+Each hero is always in exactly one state, mapped from agent events (settled in [#10](https://github.com/sandrofi84/ibitsa/issues/10)). When several conditions hold, the highest row wins; every pending "Needs you" item stays queued regardless.
 
-| State | Source | Map display |
+| State | Source (Claude SDK adapter) | Map display |
 |---|---|---|
-| traveling | dispatched, session starting | walking along path |
-| working: read/search | read/search tools | reading animation |
-| working: edit | write/edit tools | work animation |
-| working: run/test | shell/test tools | test animation |
-| waiting on you | question or permission request | gold "?" bubble + "Needs you" entry |
-| blocked | dependency not done | padlock; at drawbridge if stacked |
-| resting | context compaction | rest animation |
-| submitted | task declared done | idle at task point; councillors walk out |
-| stalled | stall detection (§10) | warning bubble, auto-paused |
-| error | adapter error | hurt animation + log |
+| unknown | core has lost contact: session not yet confirmed resumed after a reload, adapter died without a terminal event, or no events for 5 min with no tool running | grey "?" over a frozen token; tooltip gives the reason |
+| error | the session cannot continue: crash, auth failure, `error_during_execution`, non-retryable API error. Not a failing tool | hurt animation + log; "Needs you": retry / stop |
+| out of gold | core's gold pouch rule (§7.3) | `outOfGold` animation (empty pouch); "Needs you": raise cap / stop |
+| stalled | stall detection (§10.11); core auto-pauses (interrupt + hold queue) | warning bubble; "Needs you": continue / message / stop |
+| waiting on you | a pending `canUseTool` call (permission or AskUserQuestion) | gold "?" bubble + "Needs you" entry |
+| resting | `status: 'compacting'` until `compact_result` | rest animation |
+| working: *kind* | `PreToolUse` until `PostToolUse`/`PostToolUseFailure`; `think` while mid-turn with no tool running | animation per kind (below) |
+| blocked | dependency not done (M4) | padlock; at drawbridge if stacked |
+| submitted | hero called `submit_task({ summary })` | idle at task point; councillors walk out |
+| idle | turn ended without `submit_task`, or after a stop | idle at task point; last message as a "Needs you" `reply` |
+| traveling | dispatched, until the session's `system`/`init` message | walking along path; the game may speed the walk so the token arrives within ~1 s, never shows work before `init` |
+
+**Activity kinds** (from the tool, including tools run by subagents):
+
+| Kind | Tools |
+|---|---|
+| read | Read, NotebookRead |
+| search | Grep, Glob, WebSearch, WebFetch |
+| edit | Write, Edit, MultiEdit, NotebookEdit |
+| test | Bash whose command matches a test pattern: defaults (`test`, `vitest`, `jest`, `pytest`, `go test`, `cargo test`, `pnpm`/`npm`/`yarn test`, `playwright`) plus the worktree `package.json` `test*` scripts |
+| run | any other Bash command |
+| think | no tool running mid-turn (text or thinking) |
+| other | anything else (MCP tools, TodoWrite, Skill, …): generic work animation |
+
+- A tool failure is not an error: it emits `activityFinished { outcome: 'failed' }` (hurt cue) and the hero stays working. "Failed" = `PostToolUseFailure` or a tool result with `is_error` (verify Bash non-zero exits in M1). API retries keep the current state and emit a `retrying` cue.
+- Subagent activity animates the character the subagent stands for: a hero's own helpers animate the hero; review subagents (M5) animate their councillor.
+- **`submit_task`** is an in-process MCP tool (`mcp__ibitsa__submit_task`) the hero's system prompt tells it to call when finished. For an agent without custom tools, the turn ends in `idle` and the user marks the task done from the `reply` item.
 
 ### 5.5 Review loop (run by the game master, never by the hero)
 1. Hero declares the task done.
@@ -332,6 +349,9 @@ Shown in the same hover menu, visually distinct:
 ### 7.3 HP and gold
 - **HP** = remaining context window (from adapter context usage; estimated if unavailable). Resting (compaction) restores HP.
 - **Gold** = spend. Shown per hero, per party and per campaign. Budget caps act as a hero's "gold pouch".
+- **HP source:** the last assistant message's `usage` (input + cache-read + cache-creation tokens) ÷ the model's `contextWindow`, exact as of the last request; reset from `compact_boundary.post_tokens` after a rest. Before the first request, or if the adapter reports no usage, HP is `unknown`.
+- **Gold source:** the cumulative `total_cost_usd` on each turn's `result`, exact, updated at turn end. No price table in M1 (a forecast table may return for M4's estimated cost).
+- **Gold pouch rule (core, adapter-agnostic):** a hero is out of gold when its exact gold reaches its cap. Enforcement depends on adapter capabilities: with a native cap (`budgetCap`, Claude SDK) core passes `maxBudgetUsd = cap − spent` on every start and resume (so restarts can't reset it), the adapter reports `budgetExhausted`, and core also checks its own total at each turn end; with reported cost but no native cap, core checks at each usage event and interrupts (may overshoot by one turn; the UI says "cap checked at turn end"); with no reported cost, gold is `unknown` and no cap is possible (party assembly says so). Raising the cap updates core's cap and, with a native cap, resumes with the new remainder.
 - Optional end-of-campaign efficiency score.
 
 ### 7.4 Accessibility
@@ -396,7 +416,7 @@ Any item can be **extended**, **replaced** or **disabled**. The UI shows where e
 
 Character animations:
 - **Required:** idle (4 frames), walk (4), work (4).
-- **Optional:** test, ask, blocked, rest, celebrate, hurt, review (councillors). Missing optional animations fall back (e.g. test → work).
+- **Optional:** test, ask, blocked, rest, celebrate, hurt, review (councillors), outOfGold. Missing optional animations fall back (e.g. test → work, outOfGold → idle).
 
 ### 9.3 Packs
 - A pack = folder with `pack.json` manifest + PNG images + audio. **No scripts.** Size limits enforced.
@@ -440,8 +460,8 @@ Character animations:
 7. **Cache-friendly prompts.** Identical system prompt per role; variable content at the end; never put changing values (timestamps, HP) in system prompts.
 8. **Free checks before LLM reviews**; reviewers get the diff + check output, not the repo; only relevant reviewers; re-reviews only by flaggers on the delta.
 9. **Structured, short outputs** (JSON verdicts, plans); the game renders flavor text itself.
-10. **Budgets:** per-hero caps and a per-campaign cap.
-11. **Stall detection:** same file edited repeatedly, same test failing in a loop, or no progress for N turns → auto-pause and raise "?".
+10. **Budgets:** per-hero caps and a per-campaign cap, enforced by core (§7.3).
+11. **Stall detection** (defaults, configurable): the same test command fails 4 times in a row (a pass resets it); one file edited 12 times with no passing test between; 6 turns in a row with an unchanged worktree diff (hash of `git diff HEAD`) and no passing test → auto-pause and raise a `stalled` "Needs you" item (continue resets the counters / send a message / stop). Defaults are guesses, to be tuned against replayed sessions.
 12. **Estimate vs actual logging** per task type and model, used to improve effort estimates.
 
 ---
@@ -498,10 +518,24 @@ interface Snapshot {                                 // seq lives on the CoreMes
   needsYou: NeedsYouItem[];                          // oldest first
 }
 
+type ExecutionState =
+  | { kind: 'unknown'; reason: string }
+  | { kind: 'error'; message: string }
+  | { kind: 'outOfGold' }
+  | { kind: 'stalled'; reason: string }
+  | { kind: 'waitingOnYou' }
+  | { kind: 'resting' }
+  | { kind: 'working' }                              // what: HeroView.activity
+  | { kind: 'blocked' }                              // M4
+  | { kind: 'submitted'; summary: string }
+  | { kind: 'idle' }
+  | { kind: 'traveling' };
+type ActivityKind = 'read' | 'search' | 'edit' | 'test' | 'run' | 'think' | 'other';
+
 interface HeroView {
   id: string; name: string; classId: string;
   islandId: string; taskPointId: string | null;
-  state: ExecutionState | { kind: 'unknown' };       // states and triggers: #10
+  state: ExecutionState;                             // §5.4
   activity: { kind: ActivityKind; detail?: string } | null;
   hp: Reading<{ used: number; max: number }>;
   gold: Reading<MicroUsd>;
@@ -510,7 +544,11 @@ interface HeroView {
 
 type NeedsYouItem =
   | { kind: 'permission'; id: string; heroId: string; action: string; target: string; cwd: string }
-  | { kind: 'question'; id: string; heroId: string; questions: AskUserQuestion[] };
+  | { kind: 'question'; id: string; heroId: string; questions: AskUserQuestion[] }
+  | { kind: 'reply'; id: string; heroId: string; text: string }        // answered with sendMessage or markDone
+  | { kind: 'stalled'; id: string; heroId: string; reason: string }    // resumeHero / sendMessage / stopHero
+  | { kind: 'outOfGold'; id: string; heroId: string; cap: MicroUsd; capEnforcement: 'native' | 'turnEnd' }  // raiseBudget / stopHero
+  | { kind: 'error'; id: string; heroId: string; message: string };    // resumeHero / stopHero
 
 type Command =                                       // validated at core
   | { type: 'hello'; protocolVersion: number }
@@ -518,6 +556,9 @@ type Command =                                       // validated at core
   | { type: 'stopHero'; commandId: string; heroId: string }   // interrupt + clear adapter queue
   | { type: 'answerPermission'; commandId: string; itemId: string; decision: 'allow' | 'deny'; note?: string }
   | { type: 'answerQuestion'; commandId: string; itemId: string; answers: Record<string, string | string[]> };
+  | { type: 'resumeHero'; commandId: string; heroId: string }        // continue after stall, retry after error
+  | { type: 'raiseBudget'; commandId: string; heroId: string; addMicroUsd: MicroUsd }
+  | { type: 'markDone'; commandId: string; heroId: string };           // user marks the task submitted
   // starting a hero: #11
 
 type CoreMessage =
@@ -525,10 +566,11 @@ type CoreMessage =
   | { type: 'snapshot'; seq: number; snapshot: Snapshot }
   | { type: 'cue'; seq: number; cue: Cue };
 
-type Cue =                                           // #10 may add more
+type Cue =
   | { type: 'commandRejected'; commandId: string; reason: string }
   | { type: 'needsYouAdded'; itemId: string }
-  | { type: 'activityFinished'; heroId: string; kind: ActivityKind; outcome: 'ok' | 'failed' };
+  | { type: 'activityFinished'; heroId: string; kind: ActivityKind; outcome: 'ok' | 'failed' }
+  | { type: 'retrying'; heroId: string; reason: string };
 ```
 
 ### 11.3 Agent adapter interface (sketch)
@@ -575,7 +617,7 @@ interface AgentSession {
 }
 
 type AgentEvent =
-  | { type: 'activity'; kind: 'read' | 'search' | 'edit' | 'run' | 'test' | 'think'; detail?: string }
+  | { type: 'activity'; kind: 'read' | 'search' | 'edit' | 'run' | 'test' | 'think' | 'other'; detail?: string }
   | { type: 'message'; text: string }
   | { type: 'question'; id: string; payload: AskUserPayload }
   | { type: 'permission'; id: string; tool: string; input: unknown; reason?: string }
@@ -585,6 +627,7 @@ type AgentEvent =
   | { type: 'error'; error: string };
 ```
 
+- **#10 additions** (see §5.4, §7.3): activity comes from tool start/end (Claude SDK: `PreToolUse`/`PostToolUse`/`PostToolUseFailure` hooks) and carries an outcome; `submit_task` is a custom tool the core supplies to heroes; the adapter maps its native budget stop to a generic `budgetExhausted` event; retries surface as a `retrying` event. The full event union is finalized with the #2 corrections when the adapter is built.
 - **Model registry:** models with adapter id, vendor model name, price info (for gold), context window. Hero classes reference registry entries.
 - Other adapter families (git host, tickets) follow the same pattern: interface + capability flags.
 

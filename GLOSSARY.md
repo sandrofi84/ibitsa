@@ -87,7 +87,7 @@ A named pairing of agent runtime and model that a hero is created from (Paladin,
 _Avoid_: Tier, role
 
 **Execution state**:
-Exactly one of a hero's current conditions (traveling, working, waiting on you, blocked, resting, submitted, stalled, error), always derived from real agent events.
+Exactly one of a hero's current conditions (traveling, working, waiting on you, blocked, resting, submitted, idle, stalled, out of gold, error, or unknown when contact with the session is lost), always derived from real agent events.
 
 **Review**:
 A councillor's check of a submitted task against its acceptance criteria, ending in a verdict.
