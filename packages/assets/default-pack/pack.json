@@ -1,0 +1,215 @@
+{
+  "name": "default",
+  "version": "0.1.0",
+  "characters": {
+    "hero.paladin": {
+      "role": "hero",
+      "sheet": "characters/hero-paladin.png",
+      "frame": {
+        "width": 16,
+        "height": 16
+      },
+      "animations": {
+        "idle": {
+          "row": 0,
+          "frames": 4,
+          "fps": 4
+        },
+        "walk": {
+          "row": 1,
+          "frames": 4,
+          "fps": 8
+        },
+        "work": {
+          "row": 2,
+          "frames": 4,
+          "fps": 4
+        }
+      },
+      "portrait": "portraits/hero-paladin.png"
+    },
+    "hero.barbarian": {
+      "role": "hero",
+      "sheet": "characters/hero-barbarian.png",
+      "frame": {
+        "width": 16,
+        "height": 16
+      },
+      "animations": {
+        "idle": {
+          "row": 0,
+          "frames": 4,
+          "fps": 4
+        },
+        "walk": {
+          "row": 1,
+          "frames": 4,
+          "fps": 8
+        },
+        "work": {
+          "row": 2,
+          "frames": 4,
+          "fps": 4
+        }
+      },
+      "portrait": "portraits/hero-barbarian.png"
+    },
+    "hero.ranger": {
+      "role": "hero",
+      "sheet": "characters/hero-ranger.png",
+      "frame": {
+        "width": 16,
+        "height": 16
+      },
+      "animations": {
+        "idle": {
+          "row": 0,
+          "frames": 4,
+          "fps": 4
+        },
+        "walk": {
+          "row": 1,
+          "frames": 4,
+          "fps": 8
+        },
+        "work": {
+          "row": 2,
+          "frames": 4,
+          "fps": 4
+        }
+      },
+      "portrait": "portraits/hero-ranger.png"
+    },
+    "hero.rogue": {
+      "role": "hero",
+      "sheet": "characters/hero-rogue.png",
+      "frame": {
+        "width": 16,
+        "height": 16
+      },
+      "animations": {
+        "idle": {
+          "row": 0,
+          "frames": 4,
+          "fps": 4
+        },
+        "walk": {
+          "row": 1,
+          "frames": 4,
+          "fps": 8
+        },
+        "work": {
+          "row": 2,
+          "frames": 4,
+          "fps": 4
+        }
+      },
+      "portrait": "portraits/hero-rogue.png"
+    },
+    "councillor.elder": {
+      "role": "councillor",
+      "sheet": "characters/councillor-elder.png",
+      "frame": {
+        "width": 16,
+        "height": 16
+      },
+      "animations": {
+        "idle": {
+          "row": 0,
+          "frames": 4,
+          "fps": 4
+        },
+        "walk": {
+          "row": 1,
+          "frames": 4,
+          "fps": 8
+        },
+        "work": {
+          "row": 2,
+          "frames": 4,
+          "fps": 4
+        }
+      },
+      "portrait": "portraits/councillor-elder.png"
+    },
+    "councillor.default": {
+      "role": "councillor",
+      "sheet": "characters/councillor-default.png",
+      "frame": {
+        "width": 16,
+        "height": 16
+      },
+      "animations": {
+        "idle": {
+          "row": 0,
+          "frames": 4,
+          "fps": 4
+        },
+        "walk": {
+          "row": 1,
+          "frames": 4,
+          "fps": 8
+        },
+        "work": {
+          "row": 2,
+          "frames": 4,
+          "fps": 4
+        }
+      },
+      "portrait": "portraits/councillor-default.png"
+    }
+  },
+  "tiles": {
+    "image": "map/tiles.png",
+    "tileSize": 16,
+    "tiles": {
+      "water": {
+        "index": 0,
+        "frames": 4
+      },
+      "grass": {
+        "index": 4
+      },
+      "sand": {
+        "index": 5
+      },
+      "shore": {
+        "index": 6
+      },
+      "pathDot": {
+        "index": 7
+      }
+    }
+  },
+  "island": {
+    "image": "map/island.png",
+    "height": 96,
+    "leftCap": 48,
+    "middle": 32,
+    "rightCap": 48
+  },
+  "taskPoints": {
+    "image": "map/task-points.png",
+    "size": 16,
+    "states": [
+      "locked",
+      "active",
+      "done",
+      "underReview"
+    ]
+  },
+  "buildings": {
+    "hut": {
+      "image": "map/hut.png",
+      "width": 64,
+      "height": 64
+    }
+  },
+  "ui": {
+    "dialogueFrame": {
+      "image": "ui/dialogue-frame.png",
+      "size": 24,
+      "inset": 8
+    }
+  }
+}

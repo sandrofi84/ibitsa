@@ -5,5 +5,10 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "dependencies": {}
+  "scripts": {
+    "generate": "node scripts/generate.ts"
+  },
+  "dependencies": {
+    "valibot": "^1.5.0"
+  }
 }

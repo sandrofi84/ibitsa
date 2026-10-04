@@ -200,7 +200,11 @@ importers:
         specifier: workspace:*
         version: link:../../protocol
 
-  packages/assets: {}
+  packages/assets:
+    dependencies:
+      valibot:
+        specifier: ^1.5.0
+        version: 1.5.0(typescript@7.0.2)
 
   packages/core:
     dependencies:
