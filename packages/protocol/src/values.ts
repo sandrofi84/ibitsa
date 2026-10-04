@@ -9,3 +9,6 @@ export type Reading<T> =
 
 /** Money in integer micro-dollars, converted once from the agent's float in the adapter. */
 export type MicroUsd = number;
+
+// Deliberate type error to prove CI fails (throwaway PR, never merged).
+export const broken: number = 'not a number';
