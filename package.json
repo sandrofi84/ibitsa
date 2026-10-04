@@ -1,0 +1,30 @@
+{
+  "name": "ibitsa",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.9.1",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "check": "biome check . && tsc -b && vitest run",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "typecheck": "tsc -b",
+    "test": "vitest run",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@commitlint/cli": "21.2.3",
+    "@commitlint/config-conventional": "21.2.3",
+    "@types/node": "^24.19.1",
+    "husky": "9.1.7",
+    "lint-staged": "17.6.0",
+    "typescript": "7.0.2",
+    "vitest": "5.0.3"
+  },
+  "lint-staged": {
+    "*": "biome check --write --no-errors-on-unmatched --files-ignore-unknown=true"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["es2023", "dom", "dom.iterable"]
+  },
+  "references": [
+    {
+      "path": "../core"
+    },
+    {
+      "path": "../protocol"
+    },
+    {
+      "path": "../adapters/agent-fake"
+    }
+  ]
+}

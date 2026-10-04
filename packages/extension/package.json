@@ -1,0 +1,12 @@
+{
+  "name": "@ibitsa/extension",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@ibitsa/runtime": "workspace:*",
+    "@ibitsa/protocol": "workspace:*"
+  }
+}
