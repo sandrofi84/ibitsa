@@ -552,7 +552,7 @@ type AgentEvent =
 - A short default allowlist of safe actions (read, search, run tests); everything else becomes a permission request in "Needs you".
 - Warriors are confined to their worktree.
 - Pack files are images/audio/manifest only.
-- **Auth:** v1 uses the user's Anthropic API key via the SDK. Before supporting Claude subscription sign-in in a published extension, check Anthropic's current terms for third-party tools. **[OPEN]**
+- **Auth:** v1 uses the user's own Anthropic API key (or a Bedrock/Vertex/Foundry credential), read from settings, VS Code SecretStorage or the environment. The extension never runs its own claude.ai login and never handles claude.ai credentials: Anthropic does not allow third-party developers to offer claude.ai login without approval. For local development the developer may use their own Pro/Max login. Reusing a subscription login the user already made in Claude Code needs written confirmation from Anthropic; recheck terms before M10. See [research](https://github.com/sandrofi84/ibitsa/blob/research/auth/docs/research/auth.md).
 
 ---
 
