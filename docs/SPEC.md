@@ -211,6 +211,9 @@ ask_user({
 - **Stacked:** islands are **in a line, connected by bridges**. Each branch is based on the previous one. A bridge is a raised, locked drawbridge until the island before it is cleared. Each PR targets the previous branch.
 - The council proposes the strategy in the plan; the user approves it.
 - Worktrees are created by the game master (`git worktree add`), default location: a sibling folder `../<repo>.ibitsa/<branch>` (configurable).
+- **Base:** chosen when the work starts, defaulting to the repo's default branch (`origin/HEAD`, else `main`/`master`). If the workspace has uncommitted changes, warn that they won't be in the worktree.
+- **Branch name:** `ibitsa/<slug of task title>`, suffixed `-2`, `-3`… if taken.
+- **Setup:** an optional project setting `worktree.setup` (e.g. `"pnpm install --frozen-lockfile"`, empty by default) that the game master runs right after `git worktree add`, while the hero is still traveling. A failure puts the hero in `error` with the command output. No lockfile guessing.
 
 ### 5.4 Execution states
 Each hero is always in exactly one state, mapped from agent events (settled in [#10](https://github.com/sandrofi84/ibitsa/issues/10)). When several conditions hold, the highest row wins; every pending "Needs you" item stays queued regardless.
@@ -246,7 +249,7 @@ Each hero is always in exactly one state, mapped from agent events (settled in [
 - **`submit_task`** is an in-process MCP tool (`mcp__ibitsa__submit_task`) the hero's system prompt tells it to call when finished. For an agent without custom tools, the turn ends in `idle` and the user marks the task done from the `reply` item.
 
 ### 5.5 Review loop (run by the game master, never by the hero)
-1. Hero declares the task done.
+1. Hero declares the task done by calling `submit_task`. The game master first checks that the worktree has no uncommitted changes and at least one commit beyond its base; otherwise the tool call is rejected with the reason ("commit your changes first") and the hero keeps working. Heroes commit their own work as they go.
 2. Game master runs **free deterministic checks** in the worktree (tests, lint, typecheck, and configured tools such as axe, npm audit, semgrep). Failures go straight back to the hero.
 3. Game master launches each of the party's reviewing councillors **concurrently**: read-only, review-mode prompt, councillor's own model (per-councillor effort applies here), given the diff, check outputs, the task's acceptance criteria and relevant decision records.
 4. Each returns a structured verdict:
@@ -512,7 +515,7 @@ type Reading<T> =
 type MicroUsd = number;                              // integer
 
 interface Snapshot {                                 // seq lives on the CoreMessage
-  campaign: CampaignView | null;                     // { id, title, gold: Reading<MicroUsd>, ... }; M1 shape: #11
+  campaign: CampaignView | null;                     // { id, title, status: 'active' | 'finished' | 'abandoned', gold: Reading<MicroUsd> }
   islands: IslandView[];                             // { id, name, branch, taskPoints: TaskPointView[] }
   heroes: HeroView[];
   needsYou: NeedsYouItem[];                          // oldest first
@@ -559,7 +562,10 @@ type Command =                                       // validated at core
   | { type: 'resumeHero'; commandId: string; heroId: string }        // continue after stall, retry after error
   | { type: 'raiseBudget'; commandId: string; heroId: string; addMicroUsd: MicroUsd }
   | { type: 'markDone'; commandId: string; heroId: string };           // user marks the task submitted
-  // starting a hero: #11
+  | { type: 'startQuest'; commandId: string; description: string; heroName: string; classId: string; baseRef: string }  // M1 quick quest (§14.1)
+  | { type: 'finishQuest'; commandId: string }
+  | { type: 'abandonQuest'; commandId: string }
+  | { type: 'removeWorktree'; commandId: string; islandId: string };  // refused unless the worktree is clean
 
 type CoreMessage =
   | { type: 'welcome'; seq: number; protocolVersion: number }
@@ -664,7 +670,19 @@ Verified 2026-10-04 against `@anthropic-ai/claude-agent-sdk@0.3.289` ([research]
 ### 11.6 Security and permissions
 - Per-role tool allowlists; reviewers and council read-only.
 - A short default allowlist of safe actions (read, search, run tests); everything else becomes a permission request in "Needs you".
-- Heroes are confined to their worktree.
+- Heroes are confined to their worktree. Hero session settings (Claude SDK adapter, settled in [#11](https://github.com/sandrofi84/ibitsa/issues/11); checked against the [permissions](https://code.claude.com/docs/en/agent-sdk/permissions) and [sandboxing](https://code.claude.com/docs/en/sandboxing) docs on 2026-10-04):
+
+| Setting | Value | Effect |
+|---|---|---|
+| `cwd` | the hero's worktree | file reads inside it need no approval |
+| `permissionMode` | `'acceptEdits'`, always passed explicitly (omitting it can start in auto mode) | edits and `mkdir`/`rm`/`mv`/`cp`/`sed` inside the worktree are auto-approved; outside → "Needs you" |
+| `sandbox` | enabled, `autoAllowBashIfSandboxed: true`, `failIfUnavailable: true` (macOS, Linux, WSL2) | shell commands run without prompts but can write only to the worktree, temp, and the main repo's shared `.git` (not `hooks/` or `config`); each new network domain → "Needs you"; a missing bubblewrap/socat is an `error` naming the dependency, never a silent unsandboxed run |
+| unsandboxed retry | ask rule on `Bash(dangerouslyDisableSandbox:true)` | escaping the sandbox always goes to "Needs you" |
+| native Windows | no sandbox available | non-read-only shell commands → "Needs you", except commands matching the test patterns (§5.4), which get allow rules |
+| `WebFetch`, `WebSearch` | not pre-approved | → "Needs you" |
+| `settingSources` | setting `hero.settingSources`, default `['project']` | the repo's `CLAUDE.md`, project skills and project rules apply. Users may add `'user'` to load their own skills and `CLAUDE.md`; this also loads their personal permission rules and hooks, which can widen what a hero may do without asking, and the setting says so |
+
+"Always allow" from a permission item is deferred.
 - Pack files are images/audio/manifest only.
 - **Auth:** v1 uses the user's own Anthropic API key (or a Bedrock/Vertex/Foundry credential), read from settings, VS Code SecretStorage or the environment. The extension never runs its own claude.ai login and never handles claude.ai credentials: Anthropic does not allow third-party developers to offer claude.ai login without approval. For local development the developer may use their own Pro/Max login. Reusing a subscription login the user already made in Claude Code needs written confirmation from Anthropic; recheck terms before M10. See [research](https://github.com/sandrofi84/ibitsa/blob/research/auth/docs/research/auth.md).
 
@@ -673,6 +691,7 @@ Verified 2026-10-04 against `@anthropic-ai/claude-agent-sdk@0.3.289` ([research]
 ## 12. Persistence and recovery
 - Every session id, campaign state and plan version is persisted so a VS Code restart resumes the campaign: sessions are resumed, map state is rebuilt from core state.
 - All agent events are appended to a per-campaign event log (workspace storage). Logs double as replay fixtures for `agent-fake`.
+- **M1:** campaign state and the hero's session id are persisted in workspace storage; the id is chosen up front with the SDK `sessionId` option, so it is saved before the first event. After a window reload the hero is `unknown` ("session not resumed") and an `error`-kind "Needs you" item offers resume (SDK `resume`) or stop. No automatic resume until M7.
 
 ---
 
@@ -695,7 +714,7 @@ Verified 2026-10-04 against `@anthropic-ai/claude-agent-sdk@0.3.289` ([research]
 | # | Milestone | Done when |
 |---|---|---|
 | M0 | Scaffold | Monorepo, protocol types, esbuild + Vite builds, F5 opens an empty game panel, `agent-fake` replaying a log drives a token on a map in the standalone game. Placeholder asset pack generated to spec. |
-| M1 | One hero | Claude SDK adapter; one hero in one worktree; live activity animations, HP bar, gold; stop and send message (queued/now); "Needs you" for permissions/questions. |
+| M1 | One hero | Claude SDK adapter; one hero in one worktree, started as a hand-made quick quest (§14.1); live activity animations, HP bar, gold; stop and send message (queued/now); "Needs you" for permissions/questions. |
 | M2 | Command bar & actions | `@` targets and files, `/` actions as skills, preview, controls, Command Palette entries. |
 | M3 | Elder & council | Research brief, council selection, single council session, `ask_user` with voices and "Why?", plan + decision records saved, approval loop, quick-quest path. |
 | M4 | Parties & map | Multiple worktrees, separate and stacked layouts, bridges, party assembly, blocked states. |
@@ -705,6 +724,14 @@ Verified 2026-10-04 against `@anthropic-ai/claude-agent-sdk@0.3.289` ([research]
 | M8 | Customization | Settings layers, Guild Hall, councillor editing, class/model mapping, asset & sound packs with validator and recolor, sounds. |
 | M9 | Agent-agnostic | ACP adapter with capability fallbacks. |
 | M10 | Release | Real art, accessibility pass, docs, Marketplace + Open VSX publishing. |
+
+### 14.1 M1: the hand-started quick quest
+Settled in [#11](https://github.com/sandrofi84/ibitsa/issues/11).
+- M1 runs a real **campaign**: a quick quest with one task, one island, one party (one hero, no councillors). The elder step is skipped because it doesn't exist yet; M3 adds it in front and M5 adds councillors, without changing the model. The campaign lives in runtime state only; `brief.md`/`plan.md` arrive with M3.
+- **New Quest form** in the game panel (Command Palette: "Ibitsa: New Quest"): multi-line description (first line, truncated, is the title), hero name (pick from a default list per class or type one), hero class (§5.2 defaults, Ranger preselected; SDK model aliases), base branch (§5.3). Sends `startQuest`.
+- The island is named after the quest title; the hero keeps the user's chosen name everywhere.
+- **One quest at a time:** starting another is disabled until the current one is finished or abandoned.
+- **After `submit_task`:** the task point shows done (unreviewed) and the hero is `submitted`. From the hero's detail pane the user can send a message (the hero resumes work and the task point is active again) or **finish quest**: the session closes, the branch and worktree are kept, and the pane shows the branch with "open worktree in new window" and "remove worktree" (only if clean). **Abandon quest** works from any state, same outcome, marked abandoned. No celebration scene and no campaign record in M1.
 
 ---
 
