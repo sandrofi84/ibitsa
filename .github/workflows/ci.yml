@@ -1,0 +1,59 @@
+# CI from M0 (spec §13): every PR and push to main, Ubuntu only.
+# macOS/Windows runners join at M1; platform packaging and publishing at M10.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6 # version from package.json "packageManager"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint and format (Biome)
+        run: pnpm exec biome ci .
+
+      - name: Typecheck
+        run: pnpm exec tsc -b
+
+      - name: Unit tests and fixture golden files (Vitest)
+        run: pnpm exec vitest run
+
+      - name: Build extension and game
+        run: pnpm -r build
+
+      - name: Install Playwright browser
+        run: pnpm --filter @ibitsa/game exec playwright install --with-deps chromium
+
+      - name: End-to-end tests against the standalone game (Playwright)
+        run: pnpm --filter @ibitsa/game test:e2e
+
+      - name: Extension integration tests (VS Code under xvfb)
+        working-directory: packages/extension
+        run: xvfb-run -a -s "-screen 0 1920x1080x24" pnpm test:integration
+
+      - name: Upload Playwright results
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-results
+          path: packages/game/test-results/
+          if-no-files-found: ignore

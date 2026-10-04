@@ -1,9 +1,10 @@
 import { defineConfig } from '@vscode/test-cli';
 
+// --enable-unsafe-swiftshader: CI runners have no GPU; lets Chromium fall back to software WebGL.
 const common = {
   version: 'stable',
   mocha: { ui: 'tdd', timeout: 60_000 },
-  launchArgs: ['--disable-extensions'],
+  launchArgs: ['--disable-extensions', '--enable-unsafe-swiftshader'],
 };
 
 export default defineConfig([
