@@ -476,7 +476,7 @@ TypeScript throughout. pnpm workspaces monorepo:
 
 ```
 packages/
-  core/         game master, campaign state machine, rules, plan/decision model (no vscode imports)
+  core/         game master, campaign state machine, rules, plan/decision model; pure (no vscode or Node imports, ADR 0001)
   protocol/     shared types: commands, events, state snapshots (used by core, game, extension)
   adapters/
     agent-claude-sdk/   native Claude Agent SDK adapter (first-class)
@@ -485,12 +485,14 @@ packages/
     git-github/         PRs, badges (gh / GitHub API)
     tickets-*/          later: GitHub Issues, Linear, Jira
   game/         webview renderer (Vite + Phaser 4)
-  extension/    VS Code shell: panels, commands, storage, wiring (esbuild)
+  runtime/      carries out core effects (git, adapters, timers), writes the event log, rebuilds state on start (Node, no vscode imports)
+  extension/    VS Code shell: panels, commands, storage, wiring; hosts runtime in v1 (esbuild)
   assets/       default pack, manifest schema, validator
 ```
 
 ### 11.2 Process model
-- v1: core runs inside the extension host.
+- v1: core and runtime run inside the extension host.
+- **Pure core** ([ADR 0001](adr/0001-pure-core-event-sourced.md)): `step(state, input) → { state, outputs, effects }`. Inputs are normalized `AgentEvent`s, commands, game master results (worktree created, setup finished, `submit_task` check) and `timerFired`. Each input's `t` is the core's "now". Effects are requests (create worktree, start session, send message, interrupt, `setTimer`/`cancelTimer`). The **runtime** carries out effects, feeds results back as inputs, and appends each input to the event log before stepping. The standalone game runs the real core in the browser with a small browser runtime (agent-fake + replay controls).
 - Core communicates with the shell and the game **only through `protocol` messages** (commands in, events and state snapshots out), so it can later move to a background daemon (campaigns survive window reloads; other front ends possible) without rewrite.
 - The webview never talks to agents. It renders state and sends user intents. On reopen, it rebuilds from the core's state snapshot.
 
@@ -689,9 +691,19 @@ Verified 2026-10-04 against `@anthropic-ai/claude-agent-sdk@0.3.289` ([research]
 ---
 
 ## 12. Persistence and recovery
-- Every session id, campaign state and plan version is persisted so a VS Code restart resumes the campaign: sessions are resumed, map state is rebuilt from core state.
-- All agent events are appended to a per-campaign event log (workspace storage). Logs double as replay fixtures for `agent-fake`.
-- **M1:** campaign state and the hero's session id are persisted in workspace storage; the id is chosen up front with the SDK `sessionId` option, so it is saved before the first event. After a window reload the hero is `unknown` ("session not resumed") and an `error`-kind "Needs you" item offers resume (SDK `resume`) or stop. No automatic resume until M7.
+Settled in [#9](https://github.com/sandrofi84/ibitsa/issues/9); see [ADR 0001](adr/0001-pure-core-event-sourced.md).
+- **The event log is the record.** One per campaign at `<workspace storage>/campaigns/<id>/events.jsonl`: append-only JSONL of the core's inputs, written before each step. There is no separate state file. Plan and decision documents in `.ibitsa/campaigns/` (§8.3) are outputs, not recovery state.
+  ```jsonc
+  {"kind":"header","logVersion":1,"protocolVersion":1,"campaignId":"…","startedAt":"2026-10-04T15:02:11.120Z"}
+  {"t":0,"kind":"gm","event":{"type":"worktreeCreated","islandId":"i1","path":"…","branch":"ibitsa/fix-login"}}
+  {"t":1840,"kind":"agent","heroId":"h1","event":{"type":"activity","phase":"start","kind":"read","detail":"src/auth.ts"}}
+  {"t":9120,"kind":"command","command":{"type":"answerPermission","itemId":"p1","decision":"allow"}}
+  ```
+  `t` is ms since the header. A torn last line (crash mid-write) is skipped on read. `logVersion` lets old logs be migrated or rejected.
+- **Recovery:** on start, the runtime replays the log through the core at `instant` speed without carrying out effects. Effects with no logged result come back as unknown, never as success. Session ids are chosen up front (SDK `sessionId`) and logged before the first event, so they survive. Checkpoints (a state snapshot every N inputs) only if rebuilding gets slow.
+- **M1:** after a window reload the hero is `unknown` ("session not resumed") and an `error`-kind "Needs you" item offers resume (SDK `resume`) or stop. No automatic resume until M7.
+- **Sensitive content:** logs hold message text, paths and commands, so they stay in workspace storage and are never committed or uploaded automatically. Size cap per log (default 20 MB); past it, older activity `detail` strings are trimmed, never inputs that affect state. "Ibitsa: Export Replay" writes a fixture copy with paths relative to the worktree and optional blanking of message text.
+- **Raw SDK messages** are not logged; the Claude adapter keeps its own small SDK-message fixtures for its mapping tests.
 
 ---
 
@@ -699,8 +711,9 @@ Verified 2026-10-04 against `@anthropic-ai/claude-agent-sdk@0.3.289` ([research]
 - **Builds:** esbuild for `extension` (Node, `vscode` external); Vite for `game`.
 - **Agent SDK packaging:** the Claude Agent SDK runs a native `claude` binary that it ships as per-platform optional npm dependencies. Keep the SDK external to esbuild (it locates the binary next to its own module) and load it with `import()` (ESM only). Publish **platform-specific VSIX packages** (`vsce package --target`): darwin-x64/arm64, linux-x64/arm64, alpine-x64/arm64, win32-x64/arm64, to both registries, built on one CI runner with `npm ci --os/--cpu/--libc`. Optional setting `ibitsa.claudeCodePath` → `pathToClaudeCodeExecutable`. See [research](https://github.com/sandrofi84/ibitsa/blob/research/sdk-vsix-packaging/docs/research/sdk-vsix-packaging.md).
 - **Fast loops:**
-  - Game: run `game` standalone in a browser with Vite HMR, driven by a fake core replaying recorded event logs.
-  - Core: Vitest with the `agent-fake` adapter. No tokens spent in tests.
+  - Game: run `game` standalone in a browser with Vite HMR: the real core plus `agent-fake` replaying an event log (§12). A dev overlay (not shipped) controls speed (0.25×–16×, `instant`), gap cap (pauses over 3 s shortened to 3 s; off for exact timing), pause/step and loop (restart with a fresh core). **Auto** mode replays recorded commands; **interactive** mode pauses at each recorded command until the user sends one of the same type in the game, feeds that instead, and flags "diverged from recording" if it differs.
+  - M0 fixture: a hand-written scenario, `packages/adapters/agent-fake/fixtures/m0-walk.jsonl` (travel, read, edit, failing test, edit, passing test, permission question, submit). Exported M1 recordings join it later.
+  - Core: Vitest with the `agent-fake` adapter. No tokens spent in tests. Each committed fixture is replayed at `instant` speed and its protocol output (cue sequence, final snapshot, snapshots at marked points) compared with golden files; behaviour changes need a deliberate `vitest -u`.
   - Full integration: F5 Extension Development Host.
 - **Tests:** Vitest (unit), `@vscode/test-cli` / `@vscode/test-electron` (integration, headless in CI), Playwright against the standalone game build (visual/e2e).
 - **Webview:** load assets via `asWebviewUri` and `localResourceRoots` (including user pack folders); strict CSP (no `unsafe-eval`, `img-src ${webview.cspSource}` only); bundle everything (no CDNs); don't rely on `retainContextWhenHidden`. Phaser's built-in textures (`__DEFAULT`, `__MISSING`, `__WHITE`) come from bundled PNGs via its `images` config rather than `data:` URIs.
