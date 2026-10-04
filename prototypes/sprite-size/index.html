@@ -1,0 +1,416 @@
+<!doctype html>
+<!--
+  PROTOTYPE — throwaway. Answers issue #7: character sprites 16×16 or 32×32?
+  World map at 480×270 internal resolution, 16×16 tiles, integer-scaled and letterboxed
+  into a simulated panel. Variants via ?variant=A|B|C (A = 16×16, B = 32×32, C = zoomed crop of both).
+  All art is placeholder drawn in code. The 32×32 sprites are the 16×16 templates upscaled
+  with a 1px outline, shading and face detail added — real 32×32 art would carry more detail still.
+  Open the file in a browser. ←/→ switch variants.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sprite Size Prototype</title>
+<style>
+  :root { --bg:#111; --fg:#ddd; --muted:#888; --bar:#fff; --barfg:#111; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:13px/1.4 system-ui, sans-serif; }
+  header { display:flex; flex-wrap:wrap; gap:12px; align-items:center; padding:10px 16px; border-bottom:1px solid #333; }
+  header select, header label { font:inherit; }
+  #state { color:var(--muted); font:12px/1.4 ui-monospace, monospace; white-space:pre; padding:8px 16px; }
+  #stage { display:flex; justify-content:center; padding:8px 16px 90px; overflow:auto; }
+  .panel { background:#000; outline:1px dashed #444; display:flex; align-items:center; justify-content:center; flex:none; }
+  .panel canvas { image-rendering: pixelated; display:block; }
+  .compare { display:flex; flex-direction:column; gap:12px; align-items:center; }
+  .compare h3 { margin:0; font-weight:600; font-size:13px; color:var(--muted); }
+  #switcher { position:fixed; left:50%; bottom:16px; transform:translateX(-50%); display:flex; gap:8px; align-items:center;
+    background:var(--bar); color:var(--barfg); border-radius:999px; padding:6px 10px; box-shadow:0 4px 18px rgba(0,0,0,.5); font-weight:600; }
+  #switcher button { border:0; background:#eee; border-radius:999px; width:32px; height:32px; font-size:16px; cursor:pointer; }
+  #label { min-width:220px; text-align:center; }
+</style>
+</head>
+<body>
+<header>
+  <strong>#7 · Sprite size</strong>
+  <label>Panel <select id="preset"></select></label>
+  <label id="zoomWrap">Crop zoom <select id="cropZoom"><option>3</option><option selected>4</option><option>5</option><option>6</option></select></label>
+  <label><input type="checkbox" id="animate" checked> animate</label>
+</header>
+<div id="state"></div>
+<div id="stage"></div>
+<div id="switcher"><button id="prev" aria-label="Previous variant">←</button><span id="label"></span><button id="next" aria-label="Next variant">→</button></div>
+
+<script>
+const W = 480, H = 270;
+const VARIANTS = { A: '16×16 sprites', B: '32×32 sprites', C: 'Zoomed crop, both sizes' };
+const PRESETS = [
+  ['fit', 'Fit this browser window'],
+  ['1180x640', 'Editor tab, 13–14" laptop (1180×640)'],
+  ['1500x820', 'Editor tab, 1080p monitor (1500×820)'],
+  ['2300x1200', 'Editor tab, 1440p/4K monitor (2300×1200)'],
+  ['720x640', 'Split editor, half width (720×640)'],
+];
+
+// ---------- palette ----------
+const C = {
+  water:'#2b5f9e', water2:'#336db0', wave:'#8fc1ef', foam:'#d8ecff',
+  grass:'#5dab3c', grass2:'#4a9530', sand:'#e8d48a', sand2:'#cdb56a', cliff:'#8a5a2e', cliff2:'#5e3b1c',
+  dot:'#f3ead2', dotShadow:'#1f4a7c', ink:'#1a1420', plate:'#efe0b8', plateEdge:'#8a6a3a',
+  locked:'#8a8a8a', active:'#f2c230', done:'#4fd16a', review:'#6aa8ff',
+};
+
+// ---------- tiny 3×5 pixel font ----------
+const FONT = {A:"010101111101101",B:"110101110101110",C:"011100100100011",D:"110101101101110",E:"111100110100111",
+F:"111100110100100",G:"011100101101011",H:"101101111101101",I:"111010010010111",J:"001001001101010",K:"101101110101101",
+L:"100100100100111",M:"101111111101101",N:"110101101101101",O:"010101101101010",P:"110101110100100",Q:"010101101110011",
+R:"110101110101101",S:"011100010001110",T:"111010010010010",U:"101101101101111",V:"101101101101010",W:"101101111111101",
+X:"101101010101101",Y:"101101010010010",Z:"111001010100111","?":"110001010000010","!":"010010010000010"," ":"000000000000000"};
+function text(g, s, x, y, col) {
+  g.fillStyle = col;
+  for (const ch of s.toUpperCase()) {
+    const f = FONT[ch] || FONT[' '];
+    for (let i = 0; i < 15; i++) if (f[i] === '1') g.fillRect(x + (i % 3), y + Math.floor(i / 3), 1, 1);
+    x += 4;
+  }
+}
+const textW = s => s.length * 4 - 1;
+
+// ---------- sprite templates (16×16) ----------
+const T_HERO = [
+  "................",
+  "......oooo......",
+  ".....ohhhho.....",
+  "....ohhhhhho....",
+  "....ohhsssso....",
+  "....ohsesseo....",
+  "....ohhsssso.w..",
+  ".....obbbbo..w..",
+  "....obbllbbo.w..",
+  "...osbbbbbbsow..",
+  "....obbbbbbo.w..",
+  "....oppppppo....",
+  "....opp..ppo....",
+  "....opp..ppo....",
+  "....off..ffo....",
+  "....ooo..ooo....",
+];
+const T_SAGE = [
+  ".......oo.......",
+  "......ohho......",
+  ".....ohhhho.....",
+  "....ohhhhhho....",
+  "...oooooooooo...",
+  "....osssssso....",
+  "....osesssso....",
+  "....owwwwwwo....",
+  "...orrwwwwrro...",
+  "..orrrwwwwrrro..",
+  "..orrrrwwrrrro..",
+  "..orrrrrrrrrro..",
+  "..orrryyyyrrro..",
+  "..orrrrrrrrrro..",
+  "..orrrrrrrrrro..",
+  "..oooooooooooo..",
+];
+const PAL = {
+  ranger:{o:C.ink,h:'#3f8a3a',s:'#f1c19a',e:'#1b1b1b',b:'#7a9a3a',l:'#6b4423',w:'#9a6a3b',p:'#4a3a2a',f:'#2a1d14'},
+  barbarian:{o:C.ink,h:'#c0392b',s:'#e8b088',e:'#1b1b1b',b:'#8a5a3a',l:'#3a2a1a',w:'#b8c0c8',p:'#5a4030',f:'#2a1d14'},
+  mira:{o:C.ink,h:'#5a3d8a',s:'#f1c19a',e:'#1b1b1b',w:'#e8e8e8',r:'#6e4aa8',y:'#f2c230'},
+  tor:{o:C.ink,h:'#2d6a6a',s:'#d9a77f',e:'#1b1b1b',w:'#c8c8c8',r:'#3a8a8a',y:'#e86a3a'},
+};
+function shade(hex, k) {
+  const n = parseInt(hex.slice(1), 16);
+  const f = v => Math.max(0, Math.min(255, Math.round(v * k)));
+  return '#' + [n >> 16, (n >> 8) & 255, n & 255].map(f).map(v => v.toString(16).padStart(2, '0')).join('');
+}
+// returns a canvas of size×size
+const spriteCache = {};
+function sprite(tpl, palName, size) {
+  const key = palName + tpl.length + tpl[1] + size;
+  if (spriteCache[key]) return spriteCache[key];
+  const pal = PAL[palName];
+  const cv = document.createElement('canvas'); cv.width = cv.height = size;
+  const g = cv.getContext('2d');
+  if (size === 16) {
+    tpl.forEach((row, y) => [...row].forEach((ch, x) => { if (ch !== '.') { g.fillStyle = pal[ch]; g.fillRect(x, y, 1, 1); } }));
+  } else {
+    // 2× upscale, then thin the outline to 1px, shade the right side, add face detail
+    const grid = [];
+    for (let y = 0; y < 32; y++) { grid.push([]); for (let x = 0; x < 32; x++) grid[y].push(tpl[y >> 1][x >> 1]); }
+    const at = (x, y) => (x < 0 || y < 0 || x > 31 || y > 31) ? '.' : grid[y][x];
+    const out = grid.map(r => r.slice());
+    for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) {
+      if (grid[y][x] !== 'o') continue;
+      const touchesEmpty = [[1,0],[-1,0],[0,1],[0,-1]].some(([dx, dy]) => at(x + dx, y + dy) === '.');
+      if (!touchesEmpty) { // inner half of a 2px outline: take a neighbouring fill colour
+        const n = [[1,0],[-1,0],[0,1],[0,-1]].map(([dx, dy]) => at(x + dx, y + dy)).find(c => c !== 'o' && c !== '.');
+        out[y][x] = n || 'o';
+      }
+    }
+    for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) {
+      const ch = out[y][x]; if (ch === '.') continue;
+      let col = pal[ch];
+      if (ch !== 'o' && ch !== 'e') {
+        const right = at(x + 1, y) === '.' || out[y][x + 1] === 'o' || at(x + 2, y) === '.';
+        const left = out[y][x - 1] === 'o';
+        if (right) col = shade(col, 0.78); else if (left) col = shade(col, 1.12);
+        if ((x + y) % 7 === 0 && ch === 'r') col = shade(col, 0.9); // cloth texture
+      }
+      if (ch === 'e') col = (y % 2 === 0 && x % 2 === 1) ? '#ffffff' : pal.e; // eye highlight
+      g.fillStyle = col; g.fillRect(x, y, 1, 1);
+    }
+  }
+  return (spriteCache[key] = cv);
+}
+
+// ---------- map pieces ----------
+const hash = (x, y) => ((x * 73856093) ^ (y * 19349663)) >>> 0;
+function water(g, frame) {
+  g.fillStyle = C.water; g.fillRect(0, 0, W, H);
+  for (let ty = 0; ty < H; ty += 16) for (let tx = 0; tx < W; tx += 16) {
+    if (hash(tx, ty) % 3 === 0) { g.fillStyle = C.water2; g.fillRect(tx, ty, 16, 16); }
+    const h = hash(tx + 7, ty + 3);
+    if (h % 4 === 0) { // 4-frame wave
+      const ox = tx + (h % 10), oy = ty + ((h >>> 4) % 12);
+      const s = (frame + (h % 4)) % 4;
+      g.fillStyle = C.wave;
+      g.fillRect(ox + s, oy, 3, 1); if (s > 1) g.fillRect(ox + s + 3, oy - 1, 2, 1);
+    }
+  }
+}
+function island(g, x, y, mids) {
+  const w = 96 + 32 * mids;
+  const insetTop = [8, 5, 3, 2, 1, 1];
+  for (let r = 0; r < 96; r++) {
+    let inset = r < 6 ? insetTop[r] : 0;
+    if (r >= 84) inset = 2 + (r - 84);
+    let col;
+    if (r < 2) col = C.sand; else if (r < 58) col = C.grass;
+    else if (r < 64) col = C.sand; else if (r < 86) col = C.cliff; else col = C.foam;
+    g.fillStyle = col; g.fillRect(x + inset, y + r, w - inset * 2, 1);
+    if (col === C.grass) { g.fillStyle = C.sand; g.fillRect(x + inset, y + r, 2, 1); g.fillRect(x + w - inset - 2, y + r, 2, 1); }
+    if (col === C.cliff) {
+      g.fillStyle = C.cliff2;
+      for (let cx = x + inset + 3; cx < x + w - inset; cx += 9) g.fillRect(cx + (r % 3 === 0 ? 1 : 0), y + r, 1, 1);
+    }
+    if (col === C.sand && r >= 58) { g.fillStyle = C.sand2; if (r === 63) g.fillRect(x + inset, y + r, w - inset * 2, 1); }
+  }
+  for (let i = 0; i < w * 3; i++) { // grass tufts
+    const h = hash(x + i, y + i * 3);
+    const gx = x + 4 + (h % (w - 8)), gy = y + 4 + ((h >>> 8) % 52);
+    if (h % 5 === 0) { g.fillStyle = C.grass2; g.fillRect(gx, gy, 1, 2); g.fillRect(gx + 1, gy + 1, 1, 1); }
+  }
+  return w;
+}
+function hut(g, x, y) {
+  g.fillStyle = '#7a4a24'; g.fillRect(x + 8, y + 28, 48, 34);
+  g.fillStyle = '#5e3818'; for (let i = 0; i < 34; i += 4) g.fillRect(x + 8, y + 28 + i, 48, 1);
+  g.fillStyle = '#b8392b';
+  for (let r = 0; r < 28; r++) { const half = 4 + r; g.fillRect(x + 32 - half, y + r + 2, half * 2, 1); }
+  g.fillStyle = '#8a2a20'; for (let r = 4; r < 28; r += 4) { const half = 4 + r; g.fillRect(x + 32 - half, y + r + 2, half * 2, 1); }
+  g.fillStyle = '#2a1a10'; g.fillRect(x + 26, y + 44, 12, 18);
+  g.fillStyle = '#f2c230'; g.fillRect(x + 35, y + 53, 1, 2);
+  g.fillStyle = '#e8d48a'; g.fillRect(x + 12, y + 36, 8, 7); g.fillRect(x + 44, y + 36, 8, 7);
+}
+function ibitsa(g) {
+  g.globalAlpha = 0.55;
+  g.fillStyle = C.sand; g.fillRect(410, 22, 46, 4); g.fillRect(414, 20, 38, 2);
+  g.fillStyle = C.grass; g.fillRect(418, 18, 30, 2);
+  g.fillStyle = '#6b4423'; g.fillRect(430, 8, 2, 12);
+  g.fillStyle = '#3f8a3a'; g.fillRect(424, 6, 14, 2); g.fillRect(426, 4, 10, 2); g.fillRect(422, 8, 4, 1); g.fillRect(436, 8, 4, 1);
+  g.globalAlpha = 1;
+  text(g, 'IBITSA', 421, 28, 'rgba(255,255,255,.45)');
+}
+function pathDots(g, pts) {
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [x1, y1] = pts[i], [x2, y2] = pts[i + 1];
+    const len = Math.hypot(x2 - x1, y2 - y1), n = Math.floor(len / 5);
+    for (let k = 1; k < n; k++) {
+      const px = Math.round(x1 + (x2 - x1) * k / n), py = Math.round(y1 + (y2 - y1) * k / n);
+      g.fillStyle = C.dotShadow; g.fillRect(px, py + 1, 2, 2);
+      g.fillStyle = C.dot; g.fillRect(px, py, 2, 2);
+    }
+  }
+}
+function taskPoint(g, x, y, state) {
+  const col = C[state];
+  g.fillStyle = C.ink; g.fillRect(x + 2, y + 3, 12, 11); g.fillRect(x + 3, y + 2, 10, 13);
+  g.fillStyle = col; g.fillRect(x + 3, y + 3, 10, 10); g.fillRect(x + 4, y + 2, 8, 12);
+  g.fillStyle = C.ink; // state icon, never colour alone
+  if (state === 'locked') { g.fillRect(x + 6, y + 5, 4, 1); g.fillRect(x + 5, y + 6, 1, 2); g.fillRect(x + 10, y + 6, 1, 2); g.fillRect(x + 5, y + 8, 6, 4); }
+  if (state === 'done') { g.fillRect(x + 5, y + 8, 1, 1); g.fillRect(x + 6, y + 9, 1, 1); g.fillRect(x + 7, y + 10, 1, 1); g.fillRect(x + 8, y + 9, 1, 1); g.fillRect(x + 9, y + 8, 1, 1); g.fillRect(x + 10, y + 7, 1, 1); g.fillRect(x + 11, y + 6, 1, 1); }
+  if (state === 'active') { g.fillRect(x + 7, y + 5, 2, 4); g.fillRect(x + 7, y + 10, 2, 2); }
+  if (state === 'review') { g.fillRect(x + 5, y + 7, 6, 3); g.fillStyle = col; g.fillRect(x + 7, y + 8, 2, 1); }
+}
+
+// ---------- tokens ----------
+function heroToken(g, cx, feet, size, pal, hp, frame, bubble) {
+  const bob = frame % 2;
+  const bw = size === 16 ? 12 : 22, bh = size === 16 ? 4 : 6;
+  g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(cx, feet, bw / 2, bh / 2, 0, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = '#f3ead2'; g.lineWidth = 1; g.beginPath(); g.ellipse(cx, feet, bw / 2, bh / 2, 0, 0, Math.PI * 2); g.stroke();
+  const sp = sprite(T_HERO, pal, size);
+  g.drawImage(sp, Math.round(cx - size / 2), feet - size + 1 - bob);
+  const barW = size === 16 ? 12 : 20, barH = size === 16 ? 2 : 3;
+  const bx = Math.round(cx - barW / 2), by = feet - size - (size === 16 ? 3 : 5);
+  g.fillStyle = C.ink; g.fillRect(bx - 1, by - 1, barW + 2, barH + 2);
+  g.fillStyle = '#3a2a2a'; g.fillRect(bx, by, barW, barH);
+  g.fillStyle = hp > .5 ? '#4fd16a' : hp > .25 ? '#f2c230' : '#e8483a'; g.fillRect(bx, by, Math.round(barW * hp), barH);
+  if (bubble) {
+    const s = size === 16 ? 9 : 11, x = Math.round(cx - s / 2), y = by - s - 3;
+    g.fillStyle = C.ink; g.fillRect(x - 1, y - 1, s + 2, s + 2);
+    g.fillStyle = '#f2c230'; g.fillRect(x, y, s, s); g.fillRect(x + (s >> 1) - 1, y + s, 2, 2);
+    text(g, '?', x + (s >> 1) - 1, y + (s >> 1) - 2, C.ink);
+  }
+}
+function sageToken(g, cx, feet, size, pal, name, frame) {
+  const bob = frame % 2;
+  const bw = size === 16 ? 14 : 24, bh = size === 16 ? 5 : 7;
+  const x0 = Math.round(cx - bw / 2), y0 = feet - Math.floor(bh / 2);
+  g.fillStyle = C.plateEdge; g.fillRect(x0 - 1, y0 - 1, bw + 2, bh + 2);
+  g.fillStyle = C.plate; g.fillRect(x0, y0, bw, bh);
+  g.drawImage(sprite(T_SAGE, pal, size), Math.round(cx - size / 2), feet - size + 1 - bob);
+  const tw = textW(name), px = Math.round(cx - tw / 2) - 2, py = y0 + bh + 2;
+  g.fillStyle = C.plateEdge; g.fillRect(px - 1, py - 1, tw + 6, 9);
+  g.fillStyle = C.plate; g.fillRect(px, py, tw + 4, 7);
+  text(g, name, px + 2, py + 1, C.ink);
+}
+
+// ---------- scene ----------
+const VILLAGE = { x: 16, y: 150, mids: 1 };
+const ISLE1 = { x: 196, y: 44, mids: 4 }, ISLE2 = { x: 228, y: 160, mids: 2 };
+const tps1 = [0, 1, 2, 3, 4].map(i => ({ x: ISLE1.x + 28 + i * 40, y: ISLE1.y + 22 }));
+const tps2 = [0, 1, 2].map(i => ({ x: ISLE2.x + 32 + i * 40, y: ISLE2.y + 22 }));
+const states1 = ['done', 'review', 'active', 'locked', 'locked'];
+const states2 = ['active', 'locked', 'locked'];
+const DOOR = { x: VILLAGE.x + 64, y: VILLAGE.y + 32 };
+const walkPath = [[DOOR.x, DOOR.y], [176, 150], [190, 110], [tps1[1].x + 8, tps1[1].y + 12]];
+
+function along(pts, t) {
+  const segs = []; let total = 0;
+  for (let i = 0; i < pts.length - 1; i++) { const l = Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]); segs.push(l); total += l; }
+  let d = t * total;
+  for (let i = 0; i < segs.length; i++) {
+    if (d <= segs[i]) { const k = d / segs[i]; return [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * k, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * k]; }
+    d -= segs[i];
+  }
+  return pts[pts.length - 1];
+}
+
+function drawScene(g, size, frame, tick) {
+  water(g, frame);
+  ibitsa(g);
+  island(g, VILLAGE.x, VILLAGE.y, VILLAGE.mids);
+  island(g, ISLE1.x, ISLE1.y, ISLE1.mids);
+  island(g, ISLE2.x, ISLE2.y, ISLE2.mids);
+  hut(g, VILLAGE.x + 32, VILLAGE.y - 30);
+  text(g, 'HOME VILLAGE', VILLAGE.x + 18, VILLAGE.y + 70, '#fff');
+  text(g, 'FIX LOGIN', ISLE1.x + 8, ISLE1.y + 70, '#fff');
+  text(g, 'RATE LIMIT', ISLE2.x + 8, ISLE2.y + 70, '#fff');
+  pathDots(g, walkPath);
+  pathDots(g, [[DOOR.x + 6, DOOR.y + 4], [200, 210], [tps2[0].x + 8, tps2[0].y + 12]]);
+  for (let i = 0; i < tps1.length - 1; i++) pathDots(g, [[tps1[i].x + 16, tps1[i].y + 8], [tps1[i + 1].x, tps1[i + 1].y + 8]]);
+  for (let i = 0; i < tps2.length - 1; i++) pathDots(g, [[tps2[i].x + 16, tps2[i].y + 8], [tps2[i + 1].x, tps2[i + 1].y + 8]]);
+  tps1.forEach((p, i) => taskPoint(g, p.x, p.y, states1[i]));
+  tps2.forEach((p, i) => taskPoint(g, p.x, p.y, states2[i]));
+
+  const off = size === 16 ? 10 : 17; // side-by-side spacing when two characters share a task point
+  // councillor reviewing task 2 next to... the hero who submitted it
+  const r = tps1[1];
+  sageToken(g, r.x + 8 + off, r.y + 13, size, 'tor', 'TOR', frame);
+  // hero working on island 1, task 3
+  const a = tps1[2];
+  heroToken(g, a.x + 8, a.y + 13, size, 'ranger', 0.72, frame, false);
+  // hero on island 2 waiting on you
+  const b = tps2[0];
+  heroToken(g, b.x + 8, b.y + 13, size, 'barbarian', 0.31, frame, true);
+  // councillor walking out of the hut
+  const [wx, wy] = along(walkPath, (tick % 120) / 120);
+  sageToken(g, Math.round(wx), Math.round(wy) + 4, size, 'mira', 'MIRA', frame);
+  // councillor waiting at the hut
+  sageToken(g, DOOR.x - 22, DOOR.y + 22, size, 'tor', 'ELDER', frame);
+}
+
+// ---------- rendering / UI ----------
+const params = new URLSearchParams(location.search);
+let variant = VARIANTS[params.get('variant')] ? params.get('variant') : 'A';
+let preset = params.get('panel') || '1500x820';
+const presetSel = document.getElementById('preset'), cropSel = document.getElementById('cropZoom');
+PRESETS.forEach(([v, l]) => presetSel.add(new Option(l, v)));
+presetSel.value = PRESETS.some(p => p[0] === preset) ? preset : '1500x820';
+
+const off16 = document.createElement('canvas'), off32 = document.createElement('canvas');
+[off16, off32].forEach(c => { c.width = W; c.height = H; });
+let frame = 0, tick = 0;
+
+function panelSize() {
+  if (presetSel.value === 'fit') return [window.innerWidth - 32, window.innerHeight - 200];
+  return presetSel.value.split('x').map(Number);
+}
+function blit(canvas, src, z, sx = 0, sy = 0, sw = W, sh = H) {
+  canvas.width = sw * z; canvas.height = sh * z;
+  const g = canvas.getContext('2d'); g.imageSmoothingEnabled = false;
+  g.drawImage(src, sx, sy, sw, sh, 0, 0, sw * z, sh * z);
+}
+function render() {
+  drawScene(off16.getContext('2d'), 16, frame, tick);
+  drawScene(off32.getContext('2d'), 32, frame, tick);
+  const stage = document.getElementById('stage');
+  const [pw, ph] = panelSize();
+  const z = Math.max(1, Math.floor(Math.min(pw / W, ph / H)));
+  if (stage.dataset.v !== variant + presetSel.value + cropSel.value + innerWidth) {
+    stage.dataset.v = variant + presetSel.value + cropSel.value + innerWidth;
+    stage.innerHTML = '';
+    if (variant === 'C') {
+      const wrap = document.createElement('div'); wrap.className = 'compare';
+      wrap.innerHTML = '<h3>16×16</h3><canvas id="c16"></canvas><h3>32×32</h3><canvas id="c32"></canvas>';
+      stage.appendChild(wrap);
+    } else {
+      const p = document.createElement('div'); p.className = 'panel';
+      p.style.width = pw + 'px'; p.style.height = ph + 'px';
+      p.innerHTML = '<canvas id="main"></canvas>';
+      stage.appendChild(p);
+    }
+  }
+  const cz = +cropSel.value;
+  if (variant === 'C') {
+    blit(document.getElementById('c16'), off16, cz, 180, 10, 250, 140);
+    blit(document.getElementById('c32'), off32, cz, 180, 10, 250, 140);
+  } else {
+    blit(document.getElementById('main'), variant === 'A' ? off16 : off32, z);
+  }
+  document.getElementById('zoomWrap').style.display = variant === 'C' ? '' : 'none';
+  document.getElementById('label').textContent = `${variant} (${VARIANTS[variant]})`;
+  const sz = variant === 'B' ? 32 : 16;
+  document.getElementById('state').textContent = variant === 'C'
+    ? `variant C · crop of x180–430, y10–150 at ×${cz} · same scene at both sizes`
+    : `variant ${variant} · panel ${pw}×${ph} · integer zoom ×${z} → canvas ${W * z}×${H * z} (letterbox ${pw - W * z}×${ph - H * z})\n` +
+      `character ${sz}×${sz} → ${sz * z}×${sz * z} screen px · tile 16×16 → ${16 * z}px · task points 40px apart (${40 * z}px)\n` +
+      `scene: 2 heroes (Ranger working, 72% HP; Barbarian waiting on you, 31% HP) · 3 councillors (Tor reviewing beside a task, Mira walking, Elder at hut)`;
+}
+
+function setVariant(v) {
+  variant = v; params.set('variant', v); params.set('panel', presetSel.value);
+  history.replaceState(null, '', '?' + params.toString()); render();
+}
+const keys = Object.keys(VARIANTS);
+const step = d => setVariant(keys[(keys.indexOf(variant) + d + keys.length) % keys.length]);
+document.getElementById('prev').onclick = () => step(-1);
+document.getElementById('next').onclick = () => step(1);
+addEventListener('keydown', e => {
+  if (e.target.closest('input, textarea, select, [contenteditable]')) return;
+  if (e.key === 'ArrowLeft') step(-1);
+  if (e.key === 'ArrowRight') step(1);
+});
+presetSel.onchange = () => setVariant(variant);
+cropSel.onchange = render;
+addEventListener('resize', render);
+setInterval(() => {
+  if (!document.getElementById('animate').checked) return;
+  tick++; if (tick % 3 === 0) frame = (frame + 1) % 4; render();
+}, 100);
+setVariant(variant);
+</script>
+</body>
+</html>
