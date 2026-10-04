@@ -15,7 +15,7 @@
 
 ## 1. Overview
 
-Quest for Ibitsa is a VS Code extension that turns working with AI coding agents (Claude Code first) into a 2D pixel-art RPG. The user leads a **campaign**: a **council** of advisors researches and plans the work with the user, then **parties** of **heros** (coding agents) carry out the plan on a Super Mario World–style overworld map. Councillors return to review the heros' work before a pull request is opened.
+Quest for Ibitsa is a VS Code extension that turns working with AI coding agents (Claude Code first) into a 2D pixel-art RPG. The user leads a **campaign**: a **council** of advisors researches and plans the work with the user, then **parties** of **heros** (coding agents) carry out the plan on a Super Mario World–style overworld map. Councillors return to review the heroes' work before a pull request is opened.
 
 Every character is backed by a real agent session. The game layer makes multi-agent work visible (who is working, waiting, stuck, or low on context), keeps the human in charge of every key decision, and makes cost visible.
 
@@ -173,7 +173,7 @@ ask_user({
 
 ### 4.8 Talking to the council mid-campaign
 - `@council` messages go to the council session (resumed). It does **not** stop heros.
-- The game master gives the council a **compact status report** (tasks done, current findings, blockers, PR states), never heros' transcripts.
+- The game master gives the council a **compact status report** (tasks done, current findings, blockers, PR states), never heroes' transcripts.
 - Plan changes become a **plan amendment** naming affected parties and potential rework. The user confirms. Affected parties receive it as a **queued** message (delivered after their current step).
 
 ### 4.9 Campaign end
