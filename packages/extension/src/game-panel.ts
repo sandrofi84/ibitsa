@@ -91,7 +91,7 @@ function renderHtml(webview: vscode.Webview, extensionUri: vscode.Uri): string {
     <meta charset="utf-8" />
     <meta http-equiv="Content-Security-Policy" content="${csp}" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" href="${asset('index.css')}" />
+    <link rel="stylesheet" href="${asset('main.css')}" />
     <title>Ibitsa</title>
   </head>
   <body>

@@ -21,3 +21,116 @@ body {
   margin: 20vh auto 0;
   padding: 0 16px;
 }
+
+.needs-you {
+  position: fixed;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  width: min(560px, calc(100vw - 32px));
+  max-height: 40vh;
+  overflow: auto;
+  font:
+    13px / 1.45 system-ui,
+    sans-serif;
+  color: #1a1420;
+}
+
+.needs-you .item {
+  background: #efe0b8;
+  border: 2px solid #8a6a3a;
+  border-radius: 4px;
+  padding: 8px 10px;
+  margin-top: 8px;
+}
+
+.needs-you p,
+.needs-you blockquote {
+  margin: 0 0 6px;
+}
+
+.needs-you .muted {
+  color: #5e4a2a;
+  font-size: 12px;
+}
+
+.needs-you code {
+  font:
+    12px / 1.4 ui-monospace,
+    monospace;
+  background: #fff6dc;
+  padding: 0 3px;
+  word-break: break-all;
+}
+
+.needs-you .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+.needs-you textarea {
+  flex: 1 1 100%;
+  font: inherit;
+}
+
+.needs-you button {
+  font: inherit;
+  padding: 3px 10px;
+  border: 1px solid #5e3b1c;
+  background: #fff6dc;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.needs-you button:focus-visible {
+  outline: 2px solid #1a1420;
+}
+
+.toast {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a1420;
+  color: #efe0b8;
+  font:
+    13px / 1.4 system-ui,
+    sans-serif;
+  padding: 6px 12px;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.toast.visible {
+  opacity: 1;
+}
+
+.dev-overlay {
+  position: fixed;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  background: rgba(20, 20, 28, 0.88);
+  color: #ddd;
+  font:
+    12px / 1.4 system-ui,
+    sans-serif;
+  border-radius: 6px;
+  max-width: 220px;
+}
+
+.dev-overlay .row {
+  display: flex;
+  gap: 4px;
+}
+
+.dev-overlay output {
+  color: #f2c230;
+}

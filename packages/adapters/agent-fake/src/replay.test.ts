@@ -150,6 +150,13 @@ describe('Replay', () => {
       expect(fed).toHaveLength(3);
     });
 
+    it('replays command types it is not told to wait for', () => {
+      const { clock, fed, replay } = setup({ mode: 'interactive', interactiveTypes: ['stopHero'] });
+      replay.play();
+      clock.advance(60_000);
+      expect(fed).toHaveLength(3);
+    });
+
     it('flags a live command that differs from the recording', () => {
       const { clock, replay } = setup({ mode: 'interactive' });
       replay.play();

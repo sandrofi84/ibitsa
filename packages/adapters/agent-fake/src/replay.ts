@@ -9,6 +9,8 @@ export interface ReplayOptions {
   loop: boolean;
   /** `interactive` pauses at each recorded command until a live command of the same type replaces it. */
   mode: 'auto' | 'interactive';
+  /** In interactive mode, the command types to wait for; others replay as recorded. Default: all. */
+  interactiveTypes: Command['type'][] | null;
 }
 
 export const DEFAULT_OPTIONS: ReplayOptions = {
@@ -16,6 +18,7 @@ export const DEFAULT_OPTIONS: ReplayOptions = {
   gapCapMs: 3_000,
   loop: false,
   mode: 'auto',
+  interactiveTypes: null,
 };
 
 export interface ReplayStatus {
@@ -55,7 +58,7 @@ export class Replay {
   private waitingFor: Command['type'] | null = null;
   private diverged = false;
   private timer: unknown = null;
-  private options: ReplayOptions;
+  private opts: ReplayOptions;
 
   constructor(
     private readonly log: EventLog,
@@ -63,7 +66,11 @@ export class Replay {
     options: Partial<ReplayOptions> = {},
     private readonly clock: Clock = defaultClock,
   ) {
-    this.options = { ...DEFAULT_OPTIONS, ...options };
+    this.opts = { ...DEFAULT_OPTIONS, ...options };
+  }
+
+  get options(): Readonly<ReplayOptions> {
+    return this.opts;
   }
 
   get status(): ReplayStatus {
@@ -78,7 +85,7 @@ export class Replay {
   }
 
   setOptions(options: Partial<ReplayOptions>): void {
-    this.options = { ...this.options, ...options };
+    this.opts = { ...this.opts, ...options };
     if (this.playing) this.schedule();
   }
 
@@ -107,7 +114,7 @@ export class Replay {
    */
   submitLive(command: Command): boolean {
     const record = this.log.records[this.position];
-    if (this.options.mode !== 'interactive' || !this.waitingFor || record?.kind !== 'command') {
+    if (this.opts.mode !== 'interactive' || !this.waitingFor || record?.kind !== 'command') {
       return false;
     }
     if (command.type !== record.command.type) return false;
@@ -124,11 +131,7 @@ export class Replay {
   private advance(): void {
     const record = this.log.records[this.position];
     if (!record) return;
-    if (
-      this.options.mode === 'interactive' &&
-      record.kind === 'command' &&
-      record.command.type !== 'hello'
-    ) {
+    if (this.waitsFor(record)) {
       this.waitingFor = record.command.type;
       return;
     }
@@ -137,8 +140,14 @@ export class Replay {
     this.afterFeed();
   }
 
+  private waitsFor(record: LogRecord): record is Extract<LogRecord, { kind: 'command' }> {
+    if (this.opts.mode !== 'interactive' || record.kind !== 'command') return false;
+    const type = record.command.type;
+    return type !== 'hello' && (this.opts.interactiveTypes?.includes(type) ?? true);
+  }
+
   private afterFeed(): void {
-    if (this.position < this.log.records.length || !this.options.loop) return;
+    if (this.position < this.log.records.length || !this.opts.loop) return;
     this.position = 0;
     this.diverged = false;
     this.callbacks.restart?.();
@@ -151,7 +160,7 @@ export class Replay {
       this.playing = false;
       return;
     }
-    if (this.options.speed === 'instant') {
+    if (this.opts.speed === 'instant') {
       // Bounded so `instant` + `loop` cannot spin forever.
       let budget = this.log.records.length;
       while (
@@ -168,7 +177,7 @@ export class Replay {
       this.emit();
       return;
     }
-    const delay = this.delayBefore(this.position) / this.options.speed;
+    const delay = this.delayBefore(this.position) / this.opts.speed;
     this.timer = this.clock.setTimeout(() => {
       this.timer = null;
       this.advance();
@@ -181,7 +190,7 @@ export class Replay {
     const t = this.log.records[index]?.t ?? 0;
     const previous = index === 0 ? 0 : (this.log.records[index - 1]?.t ?? 0);
     const gap = t - previous;
-    return this.options.gapCapMs === null ? gap : Math.min(gap, this.options.gapCapMs);
+    return this.opts.gapCapMs === null ? gap : Math.min(gap, this.opts.gapCapMs);
   }
 
   private cancel(): void {
