@@ -3,7 +3,9 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./manifest": "./src/manifest.ts",
+    "./default-pack/*": "./default-pack/*"
   },
   "scripts": {
     "generate": "node scripts/generate.ts"

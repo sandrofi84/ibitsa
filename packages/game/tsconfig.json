@@ -1,7 +1,8 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "lib": ["es2023", "dom", "dom.iterable"]
+    "lib": ["es2023", "dom", "dom.iterable"],
+    "types": ["vite/client"]
   },
   "references": [
     {
@@ -12,6 +13,9 @@
     },
     {
       "path": "../adapters/agent-fake"
+    },
+    {
+      "path": "../assets"
     }
   ]
 }
