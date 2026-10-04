@@ -14,7 +14,7 @@ export default defineConfig({
   },
   webServer: {
     command:
-      'corepack pnpm build:standalone && corepack pnpm exec vite preview --mode standalone --port 4320 --strictPort',
+      'vite build --mode standalone && vite preview --mode standalone --port 4320 --strictPort',
     url: 'http://localhost:4320',
     timeout: 120_000,
     reuseExistingServer: false,
