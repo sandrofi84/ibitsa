@@ -409,7 +409,7 @@ Any item can be **extended**, **replaced** or **disabled**. The UI shows where e
 
 | Asset | Size | Contents |
 |---|---|---|
-| Character sprite sheet | 32×32 px per frame **[OPEN: 16×16 vs 32×32]** | One row per animation; facing right, mirrored for left |
+| Character sprite sheet | 16×16 px per frame (settled in [#7](https://github.com/sandrofi84/ibitsa/issues/7): one tile per character keeps tokens on the 16px grid, a councillor fits beside a hero at a task point, more CC0 art exists; expression lives in portraits) | One row per animation; facing right, mirrored for left |
 | Portrait | 64×64 px | Neutral; optional 2-frame talking loop |
 | Map tileset | 16×16 tiles | Water (4-frame loop), shoreline, grass, path dots |
 | Island pieces | 96 px tall: left cap 48w, repeatable middle 32w, right cap 48w | Islands stretch to fit task count |
@@ -757,7 +757,7 @@ Settled in [#11](https://github.com/sandrofi84/ibitsa/issues/11).
 ## 15. Open questions
 1. Name registration: domains (ibitsa.com, ibitsa.dev, questforibitsa.com), GitHub org, npm scope, Marketplace/Open VSX publisher; trademark search (EUIPO TMview, USPTO). Initial checks found no conflicting software use.
 2. Rogue = Haiku confirmed? Default class roster and names.
-3. Character sprite size: 16×16 (more CC0 art available) vs 32×32 (more readable).
+3. ~~Character sprite size: 16×16 vs 32×32.~~ Settled: 16×16 (§9.2).
 4. ~~Game engine: Phaser vs PixiJS.~~ Settled: Phaser 4 (§9.1).
 5. Councillor skill location so they don't clutter the normal `/` menu.
 6. Whether Claude Code tolerates extra frontmatter fields (for action `target`), else sidecar.
