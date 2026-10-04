@@ -511,6 +511,8 @@ Settled in [#8](https://github.com/sandrofi84/ibitsa/issues/8). The webview and 
 - **Reopen.** After the handshake the game jumps to the current state; cues are not replayed. View-only state (selection, camera, open panes) lives in the webview (`setState`) and never reaches core.
 - **Permissions** are shown as an exact, unparaphrased `{ action, target, cwd }` rendered by core from the tool input; unrecognized tools fall back to `{ action: tool, target: <input JSON> }`.
 
+Exact shapes live in `packages/protocol` (authoritative); this is the outline.
+
 ```ts
 type Reading<T> =
   | { kind: 'exact'; value: T }
@@ -524,52 +526,47 @@ interface Snapshot {                                 // seq lives on the CoreMes
   heroes: HeroView[];
   needsYou: NeedsYouItem[];                          // oldest first
 }
+interface TaskPointView { id: string; title: string; state: 'locked' | 'active' | 'underReview' | 'done' | 'doneUnreviewed' }
 
-type ExecutionState =
-  | { kind: 'unknown'; reason: string }
-  | { kind: 'error'; message: string }
-  | { kind: 'outOfGold' }
-  | { kind: 'stalled'; reason: string }
-  | { kind: 'waitingOnYou' }
-  | { kind: 'resting' }
+type ExecutionState =                                // §5.4
+  | { kind: 'unknown'; reason: string } | { kind: 'error'; message: string } | { kind: 'outOfGold' }
+  | { kind: 'stalled'; reason: string } | { kind: 'waitingOnYou' } | { kind: 'resting' }
   | { kind: 'working' }                              // what: HeroView.activity
   | { kind: 'blocked' }                              // M4
-  | { kind: 'submitted'; summary: string }
-  | { kind: 'idle' }
-  | { kind: 'traveling' };
+  | { kind: 'submitted'; summary: string } | { kind: 'idle' } | { kind: 'traveling' };
 type ActivityKind = 'read' | 'search' | 'edit' | 'test' | 'run' | 'think' | 'other';
 
 interface HeroView {
   id: string; name: string; classId: string;
   islandId: string; taskPointId: string | null;
-  state: ExecutionState;                             // §5.4
+  state: ExecutionState;
   activity: { kind: ActivityKind; detail?: string } | null;
   hp: Reading<{ used: number; max: number }>;
   gold: Reading<MicroUsd>;
   queuedMessages: number;
 }
 
-type NeedsYouItem =
-  | { kind: 'permission'; id: string; heroId: string; action: string; target: string; cwd: string }
-  | { kind: 'question'; id: string; heroId: string; questions: AskUserQuestion[] }
-  | { kind: 'reply'; id: string; heroId: string; text: string }        // answered with sendMessage or markDone
-  | { kind: 'stalled'; id: string; heroId: string; reason: string }    // resumeHero / sendMessage / stopHero
-  | { kind: 'outOfGold'; id: string; heroId: string; cap: MicroUsd; capEnforcement: 'native' | 'turnEnd' }  // raiseBudget / stopHero
-  | { kind: 'error'; id: string; heroId: string; message: string };    // resumeHero / stopHero
+type NeedsYouItem =                                  // answered by:
+  | { kind: 'permission'; id; heroId; action: string; target: string; cwd: string }   // answerPermission
+  | { kind: 'question'; id; heroId; questions: AskUserQuestion[] }                     // answerQuestion
+  | { kind: 'reply'; id; heroId; text: string }                                        // sendMessage / markDone
+  | { kind: 'stalled'; id; heroId; reason: string }                                    // resumeHero / sendMessage / stopHero
+  | { kind: 'outOfGold'; id; heroId; cap: MicroUsd; capEnforcement: 'native' | 'turnEnd' }  // raiseBudget / stopHero
+  | { kind: 'error'; id; heroId; message: string };                                   // resumeHero / stopHero
+// AskUserQuestion mirrors the Claude SDK: { question, header, options: { label, description, preview? }[], multiSelect }
 
-type Command =                                       // validated at core
+type Command =                                       // Valibot strict objects, validated at core
   | { type: 'hello'; protocolVersion: number }
-  | { type: 'sendMessage'; commandId: string; heroId: string; text: string; priority: 'now' | 'next' }
-  | { type: 'stopHero'; commandId: string; heroId: string }   // interrupt + clear adapter queue
-  | { type: 'answerPermission'; commandId: string; itemId: string; decision: 'allow' | 'deny'; note?: string }
-  | { type: 'answerQuestion'; commandId: string; itemId: string; answers: Record<string, string | string[]> };
-  | { type: 'resumeHero'; commandId: string; heroId: string }        // continue after stall, retry after error
-  | { type: 'raiseBudget'; commandId: string; heroId: string; addMicroUsd: MicroUsd }
-  | { type: 'markDone'; commandId: string; heroId: string };           // user marks the task submitted
-  | { type: 'startQuest'; commandId: string; description: string; heroName: string; classId: string; baseRef: string }  // M1 quick quest (§14.1)
-  | { type: 'finishQuest'; commandId: string }
-  | { type: 'abandonQuest'; commandId: string }
-  | { type: 'removeWorktree'; commandId: string; islandId: string };  // refused unless the worktree is clean
+  | { type: 'sendMessage'; commandId; heroId; text: string; priority: 'now' | 'next' }
+  | { type: 'stopHero'; commandId; heroId }          // interrupt + clear adapter queue
+  | { type: 'answerPermission'; commandId; itemId; decision: 'allow' | 'deny'; note?: string }
+  | { type: 'answerQuestion'; commandId; itemId; answers: Record<string, string | string[]> }
+  | { type: 'resumeHero'; commandId; heroId }        // continue after stall, retry after error, resume after reload
+  | { type: 'raiseBudget'; commandId; heroId; addMicroUsd: MicroUsd }
+  | { type: 'markDone'; commandId; heroId }          // user marks the task submitted
+  | { type: 'startQuest'; commandId; description; heroName; classId; baseRef }  // M1 quick quest (§14.1)
+  | { type: 'finishQuest'; commandId } | { type: 'abandonQuest'; commandId }
+  | { type: 'removeWorktree'; commandId; islandId }; // refused unless the worktree is clean
 
 type CoreMessage =
   | { type: 'welcome'; seq: number; protocolVersion: number }
@@ -626,15 +623,23 @@ interface AgentSession {
   close(): Promise<void>;
 }
 
+// Normalized adapter output (packages/protocol; #2 and #10 corrections applied). Core input only.
 type AgentEvent =
-  | { type: 'activity'; kind: 'read' | 'search' | 'edit' | 'run' | 'test' | 'think' | 'other'; detail?: string }
+  | { type: 'sessionStarted'; sessionId: string }    // ends traveling
+  | { type: 'turnStarted' }
+  | { type: 'turnEnded'; queuedTurns: number }
+  | { type: 'activityStarted'; toolUseId: string; kind: ActivityKind; detail?: string }
+  | { type: 'activityFinished'; toolUseId: string; outcome: 'ok' | 'failed' }
   | { type: 'message'; text: string }
-  | { type: 'question'; id: string; payload: AskUserPayload }
-  | { type: 'permission'; id: string; tool: string; input: unknown; reason?: string }
-  | { type: 'usage'; inputTokens: number; outputTokens: number; costUsd?: number; contextUsed?: number; contextMax?: number }
-  | { type: 'compacted' }
-  | { type: 'done'; summary?: string }
-  | { type: 'error'; error: string };
+  | { type: 'question'; requestId: string; questions: AskUserQuestion[] }
+  | { type: 'permission'; requestId: string; tool: string; input: unknown; title?: string; description?: string }
+  | { type: 'usage'; contextUsed?: number; contextMax?: number; totalCost?: MicroUsd }  // running totals; omitted = unknown
+  | { type: 'resting' }
+  | { type: 'compacted'; trigger: 'manual' | 'auto'; preTokens: number; postTokens?: number }
+  | { type: 'taskSubmitted'; toolUseId: string; summary: string }  // submit_task; core runs the submit check
+  | { type: 'budgetExhausted' }
+  | { type: 'retrying'; reason: string }
+  | { type: 'error'; message: string };               // the session cannot continue
 ```
 
 - **#10 additions** (see §5.4, §7.3): activity comes from tool start/end (Claude SDK: `PreToolUse`/`PostToolUse`/`PostToolUseFailure` hooks) and carries an outcome; `submit_task` is a custom tool the core supplies to heroes; the adapter maps its native budget stop to a generic `budgetExhausted` event; retries surface as a `retrying` event. The full event union is finalized with the #2 corrections when the adapter is built.
