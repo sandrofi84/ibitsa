@@ -706,7 +706,7 @@ Settled in [#9](https://github.com/sandrofi84/ibitsa/issues/9); see [ADR 0001](a
   {"t":1840,"kind":"agent","heroId":"h1","event":{"type":"activity","phase":"start","kind":"read","detail":"src/auth.ts"}}
   {"t":9120,"kind":"command","command":{"type":"answerPermission","itemId":"p1","decision":"allow"}}
   ```
-  `t` is ms since the header. A torn last line (crash mid-write) is skipped on read. `logVersion` lets old logs be migrated or rejected.
+  `t` is ms since the header. Each record is exactly a core input (`CoreInput` in `packages/core`); fixtures may add an optional `mark` naming a point where tests capture a snapshot. A torn last line (crash mid-write) is skipped on read. `logVersion` lets old logs be migrated or rejected.
 - **Recovery:** on start, the runtime replays the log through the core at `instant` speed without carrying out effects. Effects with no logged result come back as unknown, never as success. Session ids are chosen up front (SDK `sessionId`) and logged before the first event, so they survive. Checkpoints (a state snapshot every N inputs) only if rebuilding gets slow.
 - **M1:** after a window reload the hero is `unknown` ("session not resumed") and an `error`-kind "Needs you" item offers resume (SDK `resume`) or stop. No automatic resume until M7.
 - **Sensitive content:** logs hold message text, paths and commands, so they stay in workspace storage and are never committed or uploaded automatically. Size cap per log (default 20 MB); past it, older activity `detail` strings are trimmed, never inputs that affect state. "Ibitsa: Export Replay" writes a fixture copy with paths relative to the worktree and optional blanking of message text.

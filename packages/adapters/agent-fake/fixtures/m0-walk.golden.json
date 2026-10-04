@@ -1,0 +1,414 @@
+{
+  "cues": [
+    {
+      "t": 4200,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "read",
+        "outcome": "ok"
+      }
+    },
+    {
+      "t": 5100,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "search",
+        "outcome": "ok"
+      }
+    },
+    {
+      "t": 7400,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "edit",
+        "outcome": "ok"
+      }
+    },
+    {
+      "t": 11800,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "test",
+        "outcome": "failed"
+      }
+    },
+    {
+      "t": 13600,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "edit",
+        "outcome": "ok"
+      }
+    },
+    {
+      "t": 17500,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "test",
+        "outcome": "ok"
+      }
+    },
+    {
+      "t": 18500,
+      "cue": {
+        "type": "needsYouAdded",
+        "itemId": "n5"
+      }
+    },
+    {
+      "t": 25000,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "run",
+        "outcome": "ok"
+      }
+    },
+    {
+      "t": 26000,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "other",
+        "outcome": "ok"
+      }
+    }
+  ],
+  "marks": [
+    {
+      "mark": "traveling",
+      "t": 0,
+      "snapshot": {
+        "campaign": {
+          "id": "c1",
+          "title": "Fix the login redirect",
+          "status": "active",
+          "gold": {
+            "kind": "unknown"
+          }
+        },
+        "islands": [
+          {
+            "id": "i2",
+            "name": "Fix the login redirect",
+            "branch": "ibitsa/fix-the-login-redirect",
+            "taskPoints": [
+              {
+                "id": "t3",
+                "title": "Fix the login redirect",
+                "state": "active"
+              }
+            ]
+          }
+        ],
+        "heroes": [
+          {
+            "id": "h4",
+            "name": "Ranger Ilse",
+            "classId": "ranger",
+            "islandId": "i2",
+            "taskPointId": "t3",
+            "state": {
+              "kind": "traveling"
+            },
+            "activity": null,
+            "hp": {
+              "kind": "unknown"
+            },
+            "gold": {
+              "kind": "unknown"
+            },
+            "queuedMessages": 0
+          }
+        ],
+        "needsYou": []
+      }
+    },
+    {
+      "mark": "arrived",
+      "t": 2500,
+      "snapshot": {
+        "campaign": {
+          "id": "c1",
+          "title": "Fix the login redirect",
+          "status": "active",
+          "gold": {
+            "kind": "unknown"
+          }
+        },
+        "islands": [
+          {
+            "id": "i2",
+            "name": "Fix the login redirect",
+            "branch": "ibitsa/fix-the-login-redirect",
+            "taskPoints": [
+              {
+                "id": "t3",
+                "title": "Fix the login redirect",
+                "state": "active"
+              }
+            ]
+          }
+        ],
+        "heroes": [
+          {
+            "id": "h4",
+            "name": "Ranger Ilse",
+            "classId": "ranger",
+            "islandId": "i2",
+            "taskPointId": "t3",
+            "state": {
+              "kind": "working"
+            },
+            "activity": {
+              "kind": "think"
+            },
+            "hp": {
+              "kind": "unknown"
+            },
+            "gold": {
+              "kind": "unknown"
+            },
+            "queuedMessages": 0
+          }
+        ],
+        "needsYou": []
+      }
+    },
+    {
+      "mark": "tests-green",
+      "t": 17500,
+      "snapshot": {
+        "campaign": {
+          "id": "c1",
+          "title": "Fix the login redirect",
+          "status": "active",
+          "gold": {
+            "kind": "exact",
+            "value": 42000
+          }
+        },
+        "islands": [
+          {
+            "id": "i2",
+            "name": "Fix the login redirect",
+            "branch": "ibitsa/fix-the-login-redirect",
+            "taskPoints": [
+              {
+                "id": "t3",
+                "title": "Fix the login redirect",
+                "state": "active"
+              }
+            ]
+          }
+        ],
+        "heroes": [
+          {
+            "id": "h4",
+            "name": "Ranger Ilse",
+            "classId": "ranger",
+            "islandId": "i2",
+            "taskPointId": "t3",
+            "state": {
+              "kind": "working"
+            },
+            "activity": {
+              "kind": "think"
+            },
+            "hp": {
+              "kind": "exact",
+              "value": {
+                "used": 18000,
+                "max": 200000
+              }
+            },
+            "gold": {
+              "kind": "exact",
+              "value": 42000
+            },
+            "queuedMessages": 0
+          }
+        ],
+        "needsYou": []
+      }
+    },
+    {
+      "mark": "waiting-on-you",
+      "t": 18500,
+      "snapshot": {
+        "campaign": {
+          "id": "c1",
+          "title": "Fix the login redirect",
+          "status": "active",
+          "gold": {
+            "kind": "exact",
+            "value": 97000
+          }
+        },
+        "islands": [
+          {
+            "id": "i2",
+            "name": "Fix the login redirect",
+            "branch": "ibitsa/fix-the-login-redirect",
+            "taskPoints": [
+              {
+                "id": "t3",
+                "title": "Fix the login redirect",
+                "state": "active"
+              }
+            ]
+          }
+        ],
+        "heroes": [
+          {
+            "id": "h4",
+            "name": "Ranger Ilse",
+            "classId": "ranger",
+            "islandId": "i2",
+            "taskPointId": "t3",
+            "state": {
+              "kind": "waitingOnYou"
+            },
+            "activity": null,
+            "hp": {
+              "kind": "exact",
+              "value": {
+                "used": 41000,
+                "max": 200000
+              }
+            },
+            "gold": {
+              "kind": "exact",
+              "value": 97000
+            },
+            "queuedMessages": 0
+          }
+        ],
+        "needsYou": [
+          {
+            "kind": "permission",
+            "id": "n5",
+            "heroId": "h4",
+            "action": "Run command",
+            "target": "git commit -am \"fix: clear return URL on logout\"",
+            "cwd": "../demo.ibitsa/ibitsa/fix-the-login-redirect"
+          }
+        ]
+      }
+    },
+    {
+      "mark": "submitted",
+      "t": 27000,
+      "snapshot": {
+        "campaign": {
+          "id": "c1",
+          "title": "Fix the login redirect",
+          "status": "active",
+          "gold": {
+            "kind": "exact",
+            "value": 108000
+          }
+        },
+        "islands": [
+          {
+            "id": "i2",
+            "name": "Fix the login redirect",
+            "branch": "ibitsa/fix-the-login-redirect",
+            "taskPoints": [
+              {
+                "id": "t3",
+                "title": "Fix the login redirect",
+                "state": "doneUnreviewed"
+              }
+            ]
+          }
+        ],
+        "heroes": [
+          {
+            "id": "h4",
+            "name": "Ranger Ilse",
+            "classId": "ranger",
+            "islandId": "i2",
+            "taskPointId": "t3",
+            "state": {
+              "kind": "submitted",
+              "summary": "Logout now clears the stored return URL; added a regression test."
+            },
+            "activity": null,
+            "hp": {
+              "kind": "exact",
+              "value": {
+                "used": 44000,
+                "max": 200000
+              }
+            },
+            "gold": {
+              "kind": "exact",
+              "value": 108000
+            },
+            "queuedMessages": 0
+          }
+        ],
+        "needsYou": []
+      }
+    }
+  ],
+  "final": {
+    "campaign": {
+      "id": "c1",
+      "title": "Fix the login redirect",
+      "status": "active",
+      "gold": {
+        "kind": "exact",
+        "value": 108000
+      }
+    },
+    "islands": [
+      {
+        "id": "i2",
+        "name": "Fix the login redirect",
+        "branch": "ibitsa/fix-the-login-redirect",
+        "taskPoints": [
+          {
+            "id": "t3",
+            "title": "Fix the login redirect",
+            "state": "doneUnreviewed"
+          }
+        ]
+      }
+    ],
+    "heroes": [
+      {
+        "id": "h4",
+        "name": "Ranger Ilse",
+        "classId": "ranger",
+        "islandId": "i2",
+        "taskPointId": "t3",
+        "state": {
+          "kind": "submitted",
+          "summary": "Logout now clears the stored return URL; added a regression test."
+        },
+        "activity": null,
+        "hp": {
+          "kind": "exact",
+          "value": {
+            "used": 44000,
+            "max": 200000
+          }
+        },
+        "gold": {
+          "kind": "exact",
+          "value": 108000
+        },
+        "queuedMessages": 0
+      }
+    ],
+    "needsYou": []
+  }
+}

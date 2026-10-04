@@ -25,7 +25,12 @@
   },
   "overrides": [
     {
-      "includes": ["packages/core/**", "packages/protocol/**", "packages/game/src/**"],
+      "includes": [
+        "packages/core/**",
+        "packages/protocol/**",
+        "packages/game/src/**",
+        "packages/adapters/agent-fake/**"
+      ],
       "linter": {
         "rules": {
           "correctness": {
