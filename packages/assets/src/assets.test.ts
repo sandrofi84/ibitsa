@@ -93,7 +93,8 @@ describe('regenerating', () => {
     const { manifest, files } = buildDefaultPack();
     const committed = readdirSync(PACK, { recursive: true, withFileTypes: true })
       .filter((e) => !e.isDirectory())
-      .map((e) => join(e.parentPath, e.name).slice(PACK.length))
+      // Pack paths use / on every OS.
+      .map((e) => join(e.parentPath, e.name).slice(PACK.length).replaceAll('\\', '/'))
       .sort();
     expect(committed).toEqual([...Object.keys(files), 'pack.json'].sort());
     for (const [path, bytes] of Object.entries(files)) {
