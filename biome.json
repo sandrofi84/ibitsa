@@ -75,16 +75,6 @@
           }
         }
       }
-    },
-    {
-      "includes": ["**/*.css"],
-      "linter": {
-        "rules": {
-          "style": {
-            "noDescendingSpecificity": "off"
-          }
-        }
-      }
     }
   ]
 }

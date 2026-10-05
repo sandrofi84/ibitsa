@@ -135,6 +135,8 @@ body {
   color: #f2c230;
 }
 
+/* ---------- New quest button ---------- */
+
 .new-quest-button {
   position: fixed;
   top: 8px;
@@ -149,7 +151,13 @@ body {
   cursor: pointer;
 }
 
-dialog.new-quest {
+.new-quest-button:focus-visible {
+  outline: 2px solid #1a1420;
+}
+
+/* ---------- New Quest dialog and onboarding card ---------- */
+
+.new-quest {
   width: min(480px, calc(100vw - 32px));
   border: 2px solid #8a6a3a;
   border-radius: 6px;
@@ -161,31 +169,29 @@ dialog.new-quest {
   padding: 16px;
 }
 
-dialog.new-quest::backdrop {
+.new-quest::backdrop {
   background: rgba(0, 0, 0, 0.55);
 }
 
-dialog.new-quest h2,
-.hero-pane h2 {
+.new-quest h2 {
   margin: 0 0 10px;
   font-size: 15px;
 }
 
-dialog.new-quest label {
+.new-quest label {
   display: block;
   margin-bottom: 10px;
 }
 
-dialog.new-quest label > span {
+.new-quest label > span {
   display: block;
   font-weight: 600;
   margin-bottom: 3px;
 }
 
-dialog.new-quest textarea,
-dialog.new-quest input,
-dialog.new-quest select,
-.hero-pane textarea {
+.new-quest textarea,
+.new-quest input,
+.new-quest select {
   width: 100%;
   box-sizing: border-box;
   font: inherit;
@@ -196,28 +202,25 @@ dialog.new-quest select,
   color: #1a1420;
 }
 
-dialog.new-quest .note,
-.hero-pane .note {
+.new-quest .note {
   color: #5e4a2a;
   font-size: 12px;
   margin: 0 0 8px;
 }
 
-dialog.new-quest .error {
+.new-quest .error {
   color: #9a1e12;
   margin: 0 0 8px;
 }
 
-dialog.new-quest .actions,
-.hero-pane .controls {
+.new-quest .actions {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 8px;
 }
 
-dialog.new-quest button,
-.hero-pane button {
+.new-quest button {
   font: inherit;
   padding: 3px 10px;
   border: 1px solid #5e3b1c;
@@ -226,23 +229,16 @@ dialog.new-quest button,
   cursor: pointer;
 }
 
-dialog.new-quest button:disabled {
+.new-quest button:focus-visible {
+  outline: 2px solid #1a1420;
+}
+
+.new-quest button:disabled {
   opacity: 0.55;
   cursor: default;
 }
 
-dialog.new-quest button:focus-visible,
-.hero-pane button:focus-visible,
-.new-quest-button:focus-visible {
-  outline: 2px solid #1a1420;
-}
-
-/* With the hero pane docked left, the Needs You panel takes the space to its right. */
-body.hero-pane-open .needs-you {
-  left: 308px;
-  transform: none;
-  width: min(560px, calc(100vw - 324px));
-}
+/* ---------- Hero pane ---------- */
 
 .hero-pane {
   position: fixed;
@@ -262,6 +258,11 @@ body.hero-pane-open .needs-you {
     sans-serif;
 }
 
+.hero-pane h2 {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+
 .hero-pane dl {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -276,4 +277,48 @@ body.hero-pane-open .needs-you {
 .hero-pane dd {
   margin: 0;
   word-break: break-word;
+}
+
+.hero-pane textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  padding: 4px 6px;
+  border: 1px solid #8a6a3a;
+  border-radius: 3px;
+  background: #fff6dc;
+  color: #1a1420;
+}
+
+.hero-pane .note {
+  color: #5e4a2a;
+  font-size: 12px;
+  margin: 0 0 8px;
+}
+
+.hero-pane .controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.hero-pane button {
+  font: inherit;
+  padding: 3px 10px;
+  border: 1px solid #5e3b1c;
+  background: #fff6dc;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.hero-pane button:focus-visible {
+  outline: 2px solid #1a1420;
+}
+
+/* With the hero pane docked left, the Needs You panel takes the space to its right. */
+body.hero-pane-open .needs-you {
+  left: 308px;
+  transform: none;
+  width: min(560px, calc(100vw - 324px));
 }
