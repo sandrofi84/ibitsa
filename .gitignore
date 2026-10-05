@@ -7,3 +7,4 @@ dist/
 dist-standalone/
 test-results/
 playwright-report/
+coverage/
