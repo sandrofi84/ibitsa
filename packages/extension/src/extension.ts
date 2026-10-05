@@ -5,6 +5,9 @@ import { agentEnvironment } from './agent-environment';
 import { API_KEY_SECRET, resolveCredentials } from './credentials';
 import type { IbitsaApi } from './extension.types';
 import { GAME_VIEW_TYPE, GamePanel } from './game-panel';
+import { API_KEYS_URL, HostChannel } from './host-channel';
+import { anthropicKeyValidator } from './key-validator';
+import type { KeyValidator } from './key-validator.types';
 import { missingCredentialsAdapter } from './placeholders';
 import { RuntimeHost } from './runtime-host';
 import type { DependencyFactory, Notifier } from './runtime-host.types';
@@ -35,6 +38,8 @@ export function activate(context: vscode.ExtensionContext): IbitsaApi {
   let notify: Notifier = async (message) =>
     (await vscode.window.showInformationMessage(message, 'Open Game')) === 'Open Game';
 
+  let validateKey: KeyValidator = anthropicKeyValidator();
+
   const openGame = () => GamePanel.show(context.extensionUri);
   const workspaceDir = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
   const storageDir = context.storageUri?.fsPath;
@@ -53,11 +58,27 @@ export function activate(context: vscode.ExtensionContext): IbitsaApi {
         })
       : null;
   GamePanel.host = host;
-  if (testing) GamePanel.testLog = [];
+  GamePanel.hostChannel = new HostChannel({
+    credentials: () => resolveCredentials(context.secrets, process.env),
+    development,
+    storeApiKey: (key) => context.secrets.store(API_KEY_SECRET, key),
+    validateKey: () => validateKey,
+    openApiKeyPage: () => void vscode.env.openExternal(vscode.Uri.parse(API_KEYS_URL)),
+    openWorktree: () => void vscode.commands.executeCommand('ibitsa.openWorktree'),
+    post: (event) => GamePanel.postHost(event),
+  });
+  if (testing) {
+    GamePanel.testLog = [];
+    GamePanel.hostTestLog = [];
+  }
 
   context.subscriptions.push(
     { dispose: () => host?.dispose() },
     vscode.commands.registerCommand('ibitsa.openGame', openGame),
+    vscode.commands.registerCommand('ibitsa.newQuest', () => {
+      openGame();
+      GamePanel.postHost({ channel: 'host', type: 'openNewQuest' });
+    }),
     vscode.commands.registerCommand('ibitsa.setApiKey', async () => {
       const key = await vscode.window.showInputBox({
         title: 'Anthropic API key',
@@ -98,7 +119,13 @@ export function activate(context: vscode.ExtensionContext): IbitsaApi {
       useNotifier: (notifier) => {
         notify = notifier;
       },
+      useKeyValidator: (validator) => {
+        validateKey = validator;
+      },
       posted: () => GamePanel.testLog ?? [],
+      hostEvents: () => GamePanel.hostTestLog ?? [],
+      storageDir: () => storageDir,
+      forgetApiKey: () => context.secrets.delete(API_KEY_SECRET),
       receive: (raw) => GamePanel.deliver(raw),
       restartRuntime: async () => {
         host?.dispose();

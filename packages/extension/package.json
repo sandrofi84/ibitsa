@@ -21,6 +21,11 @@
         "category": "Ibitsa"
       },
       {
+        "command": "ibitsa.newQuest",
+        "title": "New Quest",
+        "category": "Ibitsa"
+      },
+      {
         "command": "ibitsa.setApiKey",
         "title": "Set API Key",
         "category": "Ibitsa"
@@ -78,6 +83,7 @@
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "0.3.289",
+    "@anthropic-ai/sdk": "0.131.0",
     "@ibitsa/agent-claude-sdk": "workspace:*",
     "@ibitsa/core": "workspace:*",
     "@ibitsa/protocol": "workspace:*",

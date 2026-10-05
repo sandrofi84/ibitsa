@@ -1,4 +1,6 @@
 import * as assert from 'node:assert/strict';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { GameMasterEvent } from '@ibitsa/core';
 import type { AgentEvent, CoreMessage, Snapshot } from '@ibitsa/protocol';
 import type { AgentAdapter, AgentSession, GameMaster, SessionStart } from '@ibitsa/runtime';
@@ -166,6 +168,44 @@ suite('extension wiring (#36)', () => {
       () => gameTabLabel() === 'Ibitsa · 1 waiting',
       'the waiting count in the tab title',
     );
+  });
+
+  test('an API key saved from the game never reaches the runtime, its log or the game protocol', async () => {
+    const key = 'sk-ant-integration-test-key-0123456789';
+    api.useKeyValidator(async (k) =>
+      k === key ? { ok: true } : { ok: false, reason: 'rejected' },
+    );
+    try {
+      api.receive({ channel: 'host', type: 'credentialsStatus' });
+      api.receive({ channel: 'host', type: 'saveApiKey', key: 'sk-ant-wrong' });
+      await until(() => api.hostEvents().some((e) => e.type === 'apiKeyRejected'), 'a rejection');
+      api.receive({ channel: 'host', type: 'saveApiKey', key });
+      await until(() => api.hostEvents().some((e) => e.type === 'apiKeyAccepted'), 'an acceptance');
+      assert.ok(api.hostEvents().some((e) => e.type === 'credentials'));
+
+      assert.ok(!JSON.stringify(api.posted()).includes(key), 'not in any core message');
+      const dir = api.storageDir();
+      assert.ok(dir, 'workspace storage exists');
+      const files = readdirSync(dir, { recursive: true, withFileTypes: true }).filter((f) =>
+        f.isFile(),
+      );
+      assert.ok(
+        files.some((f) => f.name === 'events.jsonl'),
+        'the campaign log is there to check',
+      );
+      for (const f of files) {
+        const text = readFileSync(join(f.parentPath, f.name), 'utf8');
+        assert.ok(!text.includes(key), `not in ${f.name}`);
+        assert.ok(!text.includes('saveApiKey'), `no host request logged in ${f.name}`);
+      }
+    } finally {
+      await api.forgetApiKey();
+    }
+  });
+
+  test('"Ibitsa: New Quest" asks the game to open the form', async () => {
+    await vscode.commands.executeCommand('ibitsa.newQuest');
+    await until(() => api.hostEvents().some((e) => e.type === 'openNewQuest'), 'openNewQuest');
   });
 
   test('a reload rebuilds the quest from the log and offers to resume', async () => {
