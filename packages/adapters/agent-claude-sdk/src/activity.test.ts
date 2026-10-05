@@ -85,6 +85,14 @@ describe('classify (spec §5.4)', () => {
     ).toBe('notes.txt');
   });
 
+  it('shortens Windows paths, with either separator, and shows them with /', () => {
+    for (const file_path of ['C:\\wt\\src\\a.ts', 'C:\\wt/src\\a.ts']) {
+      expect(classify({ tool: 'Edit', input: { file_path }, cwd: 'C:\\wt', tests }).detail).toBe(
+        'src/a.ts',
+      );
+    }
+  });
+
   it('leaves the detail out when the input lacks the expected field', () => {
     expect(classify({ tool: 'Read', input: {}, cwd, tests })).toEqual({ kind: 'read' });
     expect(classify({ tool: 'Grep', input: null, cwd, tests })).toEqual({ kind: 'search' });

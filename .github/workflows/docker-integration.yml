@@ -1,0 +1,20 @@
+# Proves `pnpm test:integration:docker` (#39) still works whenever its files change.
+name: Docker integration runner
+
+on:
+  pull_request:
+    paths:
+      - scripts/integration.Dockerfile
+      - scripts/test-integration-docker.mjs
+      - .github/workflows/docker-integration.yml
+  workflow_dispatch:
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: VS Code integration suites in the container
+        run: node scripts/test-integration-docker.mjs

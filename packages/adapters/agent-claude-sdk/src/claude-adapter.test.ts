@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 import { ClaudeAdapter } from './claude-adapter';
 import type { SdkModule } from './claude-adapter.types';
 import { HERO_INSTRUCTIONS, SUBMIT_TOOL } from './claude-session';
+import { commandExists } from './hero-settings';
 
 type Script = (ctx: {
   options: Options;
@@ -526,4 +527,44 @@ describe('hero settings in sessions (#35)', () => {
     await flush();
     expect(fake.calls[0]?.options.settingSources).toEqual(['project', 'user']);
   });
+});
+
+// No platform injected: these run on the CI runner's real OS (#39), each only where it applies.
+describe('ClaudeAdapter on the real platform', () => {
+  async function realOptions(): Promise<Options> {
+    const fake = fakeSdk(async function* ({ input }) {
+      await input.next();
+      yield init;
+    });
+    new ClaudeAdapter({
+      env: () => ({ ANTHROPIC_API_KEY: 'sk-test' }),
+      loadSdk: async () => fake.sdk,
+    }).startSession(start, () => {});
+    await flush();
+    return fake.calls[0]?.options ?? {};
+  }
+
+  it.runIf(process.platform === 'darwin')(
+    'on macOS, confines the hero in the Seatbelt sandbox, which the OS provides',
+    async () => {
+      const options = await realOptions();
+      expect(options.sandbox).toEqual({
+        enabled: true,
+        autoAllowBashIfSandboxed: true,
+        failIfUnavailable: true,
+      });
+      expect(options.permissionMode).toBe('acceptEdits');
+      expect(commandExists('sandbox-exec')).toBe(true);
+    },
+  );
+
+  it.runIf(process.platform === 'win32')(
+    'on Windows, runs without a sandbox: commands ask, except the test runs',
+    async () => {
+      const options = await realOptions();
+      expect(options.sandbox).toBeUndefined();
+      expect(options.permissionMode).toBe('acceptEdits');
+      expect(options.allowedTools).toEqual(expect.arrayContaining(['Bash(npm test)']));
+    },
+  );
 });

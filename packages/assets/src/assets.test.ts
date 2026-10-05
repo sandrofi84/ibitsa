@@ -1,14 +1,15 @@
 import { cpSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { engineTextures } from './art.ts';
 import { buildDefaultPack } from './generate.ts';
 import type { Manifest } from './manifest.schema.ts';
 import { validatePack } from './validate.ts';
 
-const PACK = new URL('../default-pack/', import.meta.url).pathname;
-const TEXTURES = new URL('../../game/public/textures/', import.meta.url).pathname;
+const PACK = fileURLToPath(new URL('../default-pack/', import.meta.url));
+const TEXTURES = fileURLToPath(new URL('../../game/public/textures/', import.meta.url));
 
 const temps: string[] = [];
 afterEach(() => {
@@ -92,7 +93,8 @@ describe('regenerating', () => {
     const { manifest, files } = buildDefaultPack();
     const committed = readdirSync(PACK, { recursive: true, withFileTypes: true })
       .filter((e) => !e.isDirectory())
-      .map((e) => join(e.parentPath, e.name).slice(PACK.length))
+      // Pack paths use / on every OS.
+      .map((e) => join(e.parentPath, e.name).slice(PACK.length).replaceAll('\\', '/'))
       .sort();
     expect(committed).toEqual([...Object.keys(files), 'pack.json'].sort());
     for (const [path, bytes] of Object.entries(files)) {
