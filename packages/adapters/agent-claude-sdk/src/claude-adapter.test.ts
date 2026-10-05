@@ -217,6 +217,7 @@ describe('ClaudeAdapter sessions', () => {
     const events: AgentEvent[] = [];
     new ClaudeAdapter({
       env: () => ({}),
+      platform: 'darwin', // on Linux without bubblewrap the sandbox preflight would answer first
       loadSdk: async () => {
         throw new Error('Claude Code executable not found');
       },
