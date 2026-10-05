@@ -1,4 +1,4 @@
-import type { CoreMessage } from '@ibitsa/protocol';
+import type { CoreMessage, HostEvent } from '@ibitsa/protocol';
 import type { Diagnostics, Host, VsCodeApi } from './host.types';
 
 declare const acquireVsCodeApi: (() => VsCodeApi) | undefined;
@@ -21,6 +21,13 @@ export function webviewHost(): Host {
         if (data && typeof data.type === 'string' && CORE_MESSAGE_TYPES.has(data.type)) {
           listener(data as CoreMessage);
         }
+      });
+    },
+    request: (request) => vscode?.postMessage(request),
+    onHostEvent: (listener) => {
+      window.addEventListener('message', (event: MessageEvent) => {
+        const data = event.data as { channel?: unknown } | null;
+        if (data?.channel === 'host') listener(data as HostEvent);
       });
     },
   };

@@ -1,8 +1,9 @@
 import { randomBytes } from 'node:crypto';
-import type { CoreMessage } from '@ibitsa/protocol';
+import type { CoreMessage, HostEvent } from '@ibitsa/protocol';
 import type { Connection } from '@ibitsa/runtime';
 import * as vscode from 'vscode';
 import type { GameDiagnostics } from './game-panel.types';
+import { type HostChannel, isHostMessage } from './host-channel';
 import type { RuntimeHost } from './runtime-host';
 
 export const GAME_VIEW_TYPE = 'ibitsa.game';
@@ -15,6 +16,10 @@ export class GamePanel {
   static host: RuntimeHost | null = null;
   /** Messages sent to the webview, kept only when integration tests ask for them. */
   static testLog: CoreMessage[] | null = null;
+  /** Credentials and editor actions; host messages never reach the runtime (spec §11.6). */
+  static hostChannel: HostChannel | null = null;
+  /** Host events sent to the webview, kept only when integration tests ask for them. */
+  static hostTestLog: HostEvent[] | null = null;
   private static waiting = 0;
 
   static get visible(): boolean {
@@ -35,6 +40,15 @@ export class GamePanel {
   /** Reconnects to a restarted runtime (integration tests simulate a window reload this way). */
   static async reconnect(): Promise<void> {
     await GamePanel.current?.connect();
+  }
+
+  /** Sends a host event, held until the game has said hello so a just-opened tab doesn't miss it. */
+  static postHost(event: HostEvent): void {
+    GamePanel.hostTestLog?.push(event);
+    const current = GamePanel.current;
+    if (!current) return;
+    if (current.ready) void current.panel.webview.postMessage(event);
+    else current.heldHostEvents.push(event);
   }
 
   static show(extensionUri: vscode.Uri): void {
@@ -67,6 +81,8 @@ export class GamePanel {
   private connection: Connection | null = null;
   /** Messages that arrived before the runtime finished starting. */
   private pending: unknown[] = [];
+  private ready = false;
+  private heldHostEvents: HostEvent[] = [];
 
   private constructor(
     private readonly panel: vscode.WebviewPanel,
@@ -103,6 +119,16 @@ export class GamePanel {
     if (isDiagnostics(message)) {
       GamePanel.lastDiagnostics = message;
       return;
+    }
+    if (isHostMessage(message)) {
+      GamePanel.hostChannel
+        ?.receive(message)
+        .catch((e: unknown) => console.error('[ibitsa] host request failed', e));
+      return;
+    }
+    if ((message as { type?: unknown } | null)?.type === 'hello') {
+      this.ready = true;
+      for (const event of this.heldHostEvents.splice(0)) void this.panel.webview.postMessage(event);
     }
     if (this.connection) this.connection.receive(message);
     else if (GamePanel.host) this.pending.push(message);

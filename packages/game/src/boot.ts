@@ -1,9 +1,11 @@
 import * as Phaser from 'phaser';
 import type { Started } from './boot.types';
 import { GameClient } from './client';
+import { mountHeroPane } from './hero-pane';
 import { reportDiagnostics } from './host';
 import type { Diagnostics, Host } from './host.types';
 import { mountNeedsYouPanel } from './needs-you-panel';
+import { mountNewQuestForm } from './new-quest-form';
 import { PackScene } from './pack-scene';
 import { HEIGHT, WIDTH, WorldScene } from './world-scene';
 
@@ -41,6 +43,8 @@ export function startGame(root: HTMLElement, host: Host): Started {
   }
 
   mountNeedsYouPanel(client);
+  mountNewQuestForm({ client, host });
+  mountHeroPane({ client, host });
   const game = new Phaser.Game({
     type: Phaser.WEBGL,
     parent: root,
