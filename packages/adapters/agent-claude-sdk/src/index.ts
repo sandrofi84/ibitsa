@@ -1,3 +1,4 @@
 // Native Claude Agent SDK adapter (spec §11.3, §11.4).
-export { CLASS_MODELS, ClaudeAdapter } from './claude-adapter';
-export type { ClaudeAdapterOptions, QueryFunction } from './claude-adapter.types';
+export { ClaudeAdapter } from './claude-adapter';
+export type { ClaudeAdapterOptions, SdkModule } from './claude-adapter.types';
+export { CLASS_MODELS, HERO_INSTRUCTIONS, SUBMIT_TOOL } from './claude-session';
