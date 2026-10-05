@@ -100,6 +100,7 @@ describe('starting a quest', () => {
         id: 'i2',
         name: 'Fix the login redirect',
         branch: 'ibitsa/fix-the-login-redirect',
+        worktree: 'creating',
         taskPoints: [{ id: 't3', title: 'Fix the login redirect', state: 'active' }],
       },
     ]);

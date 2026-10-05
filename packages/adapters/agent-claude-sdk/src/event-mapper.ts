@@ -17,12 +17,19 @@ export class EventMapper {
   /** From the latest result's `modelUsage[*].contextWindow`; HP stays unknown until the first one. */
   private contextMax: number | undefined;
   private contextUsed: number | undefined;
+  /** Set by a stop: the SDK ends an interrupted turn with an error result, which is no error here. */
+  private stopping = false;
   private readonly cwd: string;
   private readonly tests: TestDetector;
 
   constructor({ cwd, tests }: { cwd: string; tests: TestDetector }) {
     this.cwd = cwd;
     this.tests = tests;
+  }
+
+  /** The user stopped the hero; the turn's result, whatever its subtype, just ends the turn. */
+  interrupted(): void {
+    if (this.inTurn) this.stopping = true;
   }
 
   message(m: SDKMessage): AgentEvent[] {
@@ -69,8 +76,10 @@ export class EventMapper {
               : {}),
           },
         ];
+        const stopped = this.stopping;
+        this.stopping = false;
         if (m.subtype === 'error_max_budget_usd') events.push({ type: 'budgetExhausted' });
-        else if (m.subtype === 'success' && !m.is_error) {
+        else if (stopped || (m.subtype === 'success' && !m.is_error)) {
           events.push({ type: 'turnEnded', queuedTurns: m.queued_turn_count ?? 0 });
         } else {
           const detail = m.subtype === 'success' ? m.result : m.subtype.replaceAll('_', ' ');

@@ -222,7 +222,7 @@ Each hero is always in exactly one state, mapped from agent events (settled in [
 | State | Source (Claude SDK adapter) | Map display |
 |---|---|---|
 | unknown | core has lost contact: session not yet confirmed resumed after a reload, adapter died without a terminal event, or no events for 5 min with no tool running | grey "?" over a frozen token; tooltip gives the reason |
-| error | the session cannot continue: crash, auth failure, `error_during_execution`, non-retryable API error. Not a failing tool | hurt animation + log; "Needs you": retry / stop |
+| error | the session cannot continue: crash, auth failure, `error_during_execution` (except right after a stop, which just ends the turn), non-retryable API error, the session cut off by a reload. Not a failing tool | hurt animation + log; "Needs you": resume / stop |
 | out of gold | core's gold pouch rule (§7.3) | `outOfGold` animation (empty pouch); "Needs you": raise cap / stop |
 | stalled | stall detection (§10.11); core auto-pauses (interrupt + hold queue) | warning bubble; "Needs you": continue / message / stop |
 | waiting on you | a pending `canUseTool` call (permission or AskUserQuestion) | gold "?" bubble + "Needs you" entry |

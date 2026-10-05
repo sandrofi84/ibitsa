@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import m0Walk from '../fixtures/m0-walk.jsonl?raw';
+import m1Demo from '../fixtures/m1-demo.jsonl?raw';
 import m1Real from '../fixtures/m1-real.jsonl?raw';
 import m1RealLive from '../fixtures/m1-real.live.json';
 import m1Trouble from '../fixtures/m1-trouble.jsonl?raw';
@@ -8,7 +9,12 @@ import { replayThroughCore } from './run';
 
 // Every committed fixture replays through the real core; its protocol output is compared with a golden
 // file. A rule change that alters the output fails here until the golden files are updated (vitest -u).
-const fixtures = { 'm0-walk': m0Walk, 'm1-trouble': m1Trouble, 'm1-real': m1Real };
+const fixtures = {
+  'm0-walk': m0Walk,
+  'm1-trouble': m1Trouble,
+  'm1-real': m1Real,
+  'm1-demo': m1Demo,
+};
 
 describe.each(Object.entries(fixtures))('fixture %s', (name, text) => {
   const output = replayThroughCore(parseLog(text));
@@ -86,6 +92,28 @@ describe('m1-real', () => {
   it('ends finished, with the task submitted and nothing waiting', () => {
     expect(output.final.campaign?.status).toBe('finished');
     expect(output.final.islands[0]?.taskPoints[0]?.state).toBe('doneUnreviewed');
+    expect(output.cues.some((c) => c.cue.type === 'commandRejected')).toBe(false);
+  });
+});
+
+describe('m1-demo', () => {
+  // The M1 demo (#40), played by hand in VS Code and saved with "Ibitsa: Export Replay".
+  const output = replayThroughCore(parseLog(m1Demo));
+  const at = (mark: string) => output.marks.find((m) => m.mark === mark)?.snapshot;
+
+  it('survives a reload: the hero shows as not resumed until you resume it', () => {
+    expect(at('reloaded')?.heroes[0]?.state).toEqual({
+      kind: 'unknown',
+      reason: 'Session not resumed after a restart.',
+    });
+    expect(at('reloaded')?.needsYou.map((i) => i.kind)).toEqual(['error']);
+    expect(at('resumed')?.needsYou).toEqual([]);
+  });
+
+  it('submits, finishes and removes the worktree', () => {
+    expect(at('submitted')?.heroes[0]?.state.kind).toBe('submitted');
+    expect(output.final.campaign?.status).toBe('finished');
+    expect(output.final.islands[0]?.worktree).toBe('removed');
     expect(output.cues.some((c) => c.cue.type === 'commandRejected')).toBe(false);
   });
 });

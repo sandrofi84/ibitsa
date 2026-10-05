@@ -11,6 +11,7 @@ const withTasks = (n: number): Snapshot => ({
       id: 'i2',
       name: 'Island',
       branch: 'b',
+      worktree: 'ready',
       taskPoints: Array.from({ length: n }, (_, i) => ({
         id: `t${i}`,
         title: '',

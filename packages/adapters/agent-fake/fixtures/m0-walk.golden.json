@@ -98,6 +98,7 @@
             "id": "i2",
             "name": "Fix the login redirect",
             "branch": "ibitsa/fix-the-login-redirect",
+            "worktree": "creating",
             "taskPoints": [
               {
                 "id": "t3",
@@ -147,6 +148,7 @@
             "id": "i2",
             "name": "Fix the login redirect",
             "branch": "ibitsa/fix-the-login-redirect",
+            "worktree": "ready",
             "taskPoints": [
               {
                 "id": "t3",
@@ -199,6 +201,7 @@
             "id": "i2",
             "name": "Fix the login redirect",
             "branch": "ibitsa/fix-the-login-redirect",
+            "worktree": "ready",
             "taskPoints": [
               {
                 "id": "t3",
@@ -256,6 +259,7 @@
             "id": "i2",
             "name": "Fix the login redirect",
             "branch": "ibitsa/fix-the-login-redirect",
+            "worktree": "ready",
             "taskPoints": [
               {
                 "id": "t3",
@@ -320,6 +324,7 @@
             "id": "i2",
             "name": "Fix the login redirect",
             "branch": "ibitsa/fix-the-login-redirect",
+            "worktree": "ready",
             "taskPoints": [
               {
                 "id": "t3",
@@ -374,6 +379,7 @@
         "id": "i2",
         "name": "Fix the login redirect",
         "branch": "ibitsa/fix-the-login-redirect",
+        "worktree": "ready",
         "taskPoints": [
           {
             "id": "t3",

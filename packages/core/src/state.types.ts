@@ -38,6 +38,8 @@ export interface Island {
   branch: string;
   baseRef: string;
   worktreePath: string | null;
+  /** Set once "Remove worktree" succeeds; `worktreePath` is null both before creation and after. */
+  worktreeRemoved: boolean;
   /** `description` is the task text the hero is started with. */
   taskPoints: { id: string; title: string; description: string; state: TaskPointState }[];
 }

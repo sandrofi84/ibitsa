@@ -15,6 +15,7 @@ export function view(state: CoreState): Snapshot {
       id: i.id,
       name: i.name,
       branch: i.branch,
+      worktree: i.worktreeRemoved ? 'removed' : i.worktreePath ? 'ready' : 'creating',
       taskPoints: i.taskPoints.map(({ id, title, state }) => ({ id, title, state })),
     })),
     heroes: state.heroes.map((record) => new Hero({ record, ctx }).view()),

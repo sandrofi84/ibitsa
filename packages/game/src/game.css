@@ -276,7 +276,10 @@ body {
 
 .hero-pane dd {
   margin: 0;
-  word-break: break-word;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .hero-pane textarea {

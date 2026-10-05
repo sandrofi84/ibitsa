@@ -462,7 +462,10 @@ describe('removing the worktree', () => {
       commandId: 'w2',
       reason: 'The worktree has uncommitted changes.',
     });
+    expect(view(h.state).islands[0]?.worktree).toBe('ready');
     h.gm({ type: 'worktreeRemoved', islandId: 'i2' });
+    // The game shows the removal; the pane confirms it instead of leaving the button (#40).
+    expect(view(h.state).islands[0]?.worktree).toBe('removed');
     h.command({ type: 'removeWorktree', commandId: 'w3', islandId: 'i2' });
     expect(h.cues).toContainEqual({
       type: 'commandRejected',
