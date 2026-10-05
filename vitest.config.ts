@@ -42,7 +42,7 @@ export default defineConfig({
         },
         'packages/assets/src/**': { lines: 94, statements: 92, branches: 85, functions: 92 },
         'packages/game/src/**': { lines: 95, statements: 95, branches: 90, functions: 95 },
-        'packages/runtime/src/**': { lines: 88, statements: 88, branches: 76, functions: 80 },
+        'packages/runtime/src/**': { lines: 91, statements: 90, branches: 80, functions: 83 },
       },
     },
   },

@@ -2,6 +2,7 @@ import {
   appendFileSync,
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   rmSync,
   statSync,
@@ -41,6 +42,18 @@ export class CampaignStore {
     if (!existsSync(pointer)) return null;
     const id = readFileSync(pointer, 'utf8').trim();
     return id && existsSync(this.logPath(id)) ? id : null;
+  }
+
+  /** The running campaign, else the one whose log changed last: what "Export Replay" exports. */
+  latestId(): string | null {
+    const active = this.activeId();
+    if (active) return active;
+    if (!existsSync(this.root)) return null;
+    const logs = readdirSync(this.root, { withFileTypes: true })
+      .filter((d) => d.isDirectory() && existsSync(this.logPath(d.name)))
+      .map((d) => ({ id: d.name, modified: statSync(this.logPath(d.name)).mtimeMs }))
+      .sort((a, b) => b.modified - a.modified);
+    return logs[0]?.id ?? null;
   }
 
   read(id: string): EventLog {
