@@ -226,6 +226,19 @@ describe('ClaudeAdapter sessions', () => {
     expect(events).toEqual([{ type: 'error', message: 'Claude Code executable not found' }]);
   });
 
+  it('uses the real platform when none is given', async () => {
+    const events: AgentEvent[] = [];
+    new ClaudeAdapter({
+      env: () => ({}),
+      hasCommand: () => true, // so the Linux preflight passes on any runner
+      loadSdk: async () => {
+        throw new Error('no SDK here');
+      },
+    }).startSession(start, (e) => events.push(e));
+    await flush();
+    expect(events).toEqual([{ type: 'error', message: 'no SDK here' }]);
+  });
+
   it('stops reporting once closed', async () => {
     const g = gate();
     const fake = fakeSdk(async function* () {
