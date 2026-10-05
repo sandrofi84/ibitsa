@@ -12,6 +12,9 @@
     },
     {
       "path": "../protocol"
+    },
+    {
+      "path": "../adapters/agent-claude-sdk"
     }
   ]
 }

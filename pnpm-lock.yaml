@@ -232,6 +232,12 @@ importers:
 
   packages/extension:
     dependencies:
+      '@anthropic-ai/claude-agent-sdk':
+        specifier: 0.3.289
+        version: 0.3.289(@anthropic-ai/sdk@0.131.0(zod@4.6.5))(@modelcontextprotocol/sdk@1.32.0(supports-color@10.2.2)(zod@4.6.5))(zod@4.6.5)
+      '@ibitsa/agent-claude-sdk':
+        specifier: workspace:*
+        version: link:../adapters/agent-claude-sdk
       '@ibitsa/core':
         specifier: workspace:*
         version: link:../core
@@ -241,6 +247,9 @@ importers:
       '@ibitsa/runtime':
         specifier: workspace:*
         version: link:../runtime
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
     devDependencies:
       '@ibitsa/game':
         specifier: workspace:*

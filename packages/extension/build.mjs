@@ -13,7 +13,9 @@ const common = {
   platform: 'node',
   format: 'cjs',
   target: 'node22',
-  external: ['vscode'],
+  // The Agent SDK is ESM-only and finds its native binary next to its own module (spec §13); zod must
+  // be the same copy the SDK uses.
+  external: ['vscode', '@anthropic-ai/claude-agent-sdk', 'zod'],
   sourcemap: true,
 };
 await esbuild.build({

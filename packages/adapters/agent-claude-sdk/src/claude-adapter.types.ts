@@ -1,4 +1,9 @@
-import type { createSdkMcpServer, query, tool } from '@anthropic-ai/claude-agent-sdk';
+import type {
+  createSdkMcpServer,
+  query,
+  SettingSource,
+  tool,
+} from '@anthropic-ai/claude-agent-sdk';
 
 /** The parts of the SDK the adapter uses; injectable so tests run without the SDK or tokens. */
 export interface SdkModule {
@@ -13,4 +18,9 @@ export interface ClaudeAdapterOptions {
   /** `ibitsa.claudeCodePath`; empty or undefined uses the binary bundled with the SDK. */
   claudeCodePath?: () => string | undefined;
   loadSdk?: () => Promise<SdkModule>;
+  /** `ibitsa.hero.settingSources`; defaults to `['project']` (spec §11.6). */
+  settingSources?: () => SettingSource[];
+  /** Injectable for tests; defaults to the real platform and a PATH lookup. */
+  platform?: NodeJS.Platform;
+  hasCommand?: (name: string) => boolean;
 }

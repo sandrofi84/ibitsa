@@ -24,6 +24,11 @@ export class TestDetector {
     this.scripts = testScripts(cwd);
   }
 
+  /** The worktree's own `test*` script names. */
+  get scriptNames(): readonly string[] {
+    return this.scripts;
+  }
+
   isTest(command: string): boolean {
     return (
       DEFAULT_TEST_PATTERNS.some((p) => p.test(command)) ||

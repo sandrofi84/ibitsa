@@ -16,6 +16,8 @@ import { TestDetector } from './activity';
 import type { SdkModule } from './claude-adapter.types';
 import type { ClaudeSessionInit, Pending, PermissionAnswer } from './claude-session.types';
 import { EventMapper } from './event-mapper';
+import { heroSettings, sandboxProblem } from './hero-settings';
+import type { HeroSettings } from './hero-settings.types';
 import { InputQueue } from './input-queue';
 
 /** Hero classes → SDK model aliases (spec §5.2, §14.1). Unknown classes get Sonnet. */
@@ -134,9 +136,27 @@ export class ClaudeSession implements AgentSession {
 
   private async run(init: ClaudeSessionInit): Promise<void> {
     try {
+      const platform = init.adapter.platform ?? process.platform;
+      const problem = sandboxProblem({
+        platform,
+        ...(init.adapter.hasCommand ? { hasCommand: init.adapter.hasCommand } : {}),
+      });
+      if (problem) {
+        this.emit({ type: 'error', message: problem });
+        return;
+      }
       const sdk = await (init.adapter.loadSdk ?? loadSdk)();
-      const mapper = new EventMapper({ cwd: init.cwd, tests: new TestDetector(init.cwd) });
-      const query = sdk.query({ prompt: this.input, options: this.options({ init, sdk, mapper }) });
+      const tests = new TestDetector(init.cwd);
+      const mapper = new EventMapper({ cwd: init.cwd, tests });
+      const hero = heroSettings({
+        platform,
+        settingSources: init.adapter.settingSources?.() ?? ['project'],
+        testScripts: tests.scriptNames,
+      });
+      const query = sdk.query({
+        prompt: this.input,
+        options: this.options({ init, sdk, mapper, hero }),
+      });
       this.query = query;
       if (this.closed) query.close();
       if (init.prompt) this.input.push(userMessage({ text: init.prompt, priority: 'next' }));
@@ -157,10 +177,12 @@ export class ClaudeSession implements AgentSession {
     init,
     sdk,
     mapper,
+    hero,
   }: {
     init: ClaudeSessionInit;
     sdk: SdkModule;
     mapper: EventMapper;
+    hero: HeroSettings;
   }): Options {
     const hook =
       <I>(map: (input: I) => AgentEvent[]): HookCallback =>
@@ -189,11 +211,9 @@ export class ClaudeSession implements AgentSession {
       ...init.session,
       env: init.adapter.env(),
       systemPrompt: { type: 'preset', preset: 'claude_code', append: HERO_INSTRUCTIONS },
-      // Explicit: omitting it can start a session in auto mode (#11). #35 applies the full hero settings.
-      permissionMode: 'default',
-      settingSources: ['project'],
+      ...hero,
       mcpServers: { ibitsa },
-      allowedTools: [SUBMIT_TOOL],
+      allowedTools: [SUBMIT_TOOL, ...(hero.allowedTools ?? [])],
       canUseTool: this.canUseTool,
       hooks: {
         PreToolUse: [

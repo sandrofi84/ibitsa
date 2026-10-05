@@ -1,24 +1,37 @@
+import { ClaudeAdapter } from '@ibitsa/agent-claude-sdk';
 import { GitGameMaster } from '@ibitsa/runtime';
 import * as vscode from 'vscode';
+import { agentEnvironment } from './agent-environment';
 import { API_KEY_SECRET, resolveCredentials } from './credentials';
 import type { IbitsaApi } from './extension.types';
 import { GAME_VIEW_TYPE, GamePanel } from './game-panel';
-import { unavailableAdapter } from './placeholders';
+import { missingCredentialsAdapter } from './placeholders';
 import { RuntimeHost } from './runtime-host';
 import type { DependencyFactory, Notifier } from './runtime-host.types';
 import { readUserSettings } from './settings';
 
 export function activate(context: vscode.ExtensionContext): IbitsaApi {
   const testing = process.env.IBITSA_TESTING === '1';
-  // The Claude adapter is a placeholder until #33; it reports clearly that it isn't built yet.
-  let dependencies: DependencyFactory = ({ workspaceDir }) => ({
-    adapter: unavailableAdapter,
-    gameMaster: new GitGameMaster({
-      repoDir: workspaceDir,
-      setupCommand: () =>
-        vscode.workspace.getConfiguration('ibitsa').get<string>('worktree.setup') ?? '',
-    }),
-  });
+  const config = () => vscode.workspace.getConfiguration('ibitsa');
+  // In development the SDK may fall back to the developer's own Claude Code login (spec §11.6).
+  const development = context.extensionMode === vscode.ExtensionMode.Development;
+  let dependencies: DependencyFactory = ({ workspaceDir, credentials }) => {
+    const env = agentEnvironment({ credentials, env: process.env, allowLogin: development });
+    return {
+      adapter: env
+        ? new ClaudeAdapter({
+            env: () => env,
+            claudeCodePath: () => config().get<string>('claudeCodePath'),
+            settingSources: () =>
+              config().get<('project' | 'user' | 'local')[]>('hero.settingSources') ?? ['project'],
+          })
+        : missingCredentialsAdapter,
+      gameMaster: new GitGameMaster({
+        repoDir: workspaceDir,
+        setupCommand: () => config().get<string>('worktree.setup') ?? '',
+      }),
+    };
+  };
   let notify: Notifier = async (message) =>
     (await vscode.window.showInformationMessage(message, 'Open Game')) === 'Open Game';
 

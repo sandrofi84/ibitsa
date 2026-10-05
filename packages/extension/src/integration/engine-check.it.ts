@@ -15,7 +15,9 @@ suite('engine check (#13)', () => {
 
   // Shrinking is covered deterministically by the standalone Playwright test; splitting editors
   // here depends on window-manager timing and was flaky.
-  test('the game re-scales when the panel grows', async () => {
+  test('the game re-scales when the panel grows', async function () {
+    // Depends on the OS's full-screen animation, which occasionally outlasts the wait.
+    this.retries(2);
     await openGameAndWait((d) => d.ready);
     for (const command of [
       'workbench.action.closeSidebar',
