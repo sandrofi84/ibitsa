@@ -26,9 +26,9 @@ export class DevHost implements Host {
   private readonly statusListeners: ((s: ReplayStatus) => void)[] = [];
 
   constructor(log: EventLog, options: Partial<ReplayOptions>) {
-    this.replay = new Replay(
+    this.replay = new Replay({
       log,
-      {
+      callbacks: {
         feed: (record) => {
           const { mark: _mark, ...input } = record;
           const result = step(this.state, input);
@@ -44,8 +44,8 @@ export class DevHost implements Host {
           for (const l of this.statusListeners) l(s);
         },
       },
-      { interactiveTypes: ANSWERABLE, ...options },
-    );
+      options: { interactiveTypes: ANSWERABLE, ...options },
+    });
   }
 
   onMessage(listener: (m: CoreMessage) => void): void {

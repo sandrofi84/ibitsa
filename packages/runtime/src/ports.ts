@@ -15,9 +15,13 @@ export interface AgentSession {
   send(text: string, priority: 'now' | 'next'): void;
   /** Interrupt and drop anything the adapter is holding (a full stop). */
   interrupt(): void;
-  respondToPermission(requestId: string, decision: 'allow' | 'deny', note?: string): void;
+  respondToPermission(answer: {
+    requestId: string;
+    decision: 'allow' | 'deny';
+    note?: string;
+  }): void;
   answerQuestion(requestId: string, answers: Record<string, string | string[]>): void;
-  completeSubmit(toolUseId: string, accepted: boolean, reason?: string): void;
+  completeSubmit(result: { toolUseId: string; accepted: boolean; reason?: string }): void;
   close(): void;
 }
 

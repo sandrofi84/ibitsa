@@ -23,7 +23,7 @@ const host = new DevHost(parseLog(text), options);
 const root = document.getElementById('game');
 if (!root) throw new Error('missing #game element');
 const { client, zoom } = startGame(root, host);
-mountOverlay(host, Object.keys(fixtures), name);
+mountOverlay({ host, fixtures: Object.keys(fixtures), current: name });
 
 // Read by the Playwright tests.
 const w = window as unknown as { __ibitsa?: unknown };

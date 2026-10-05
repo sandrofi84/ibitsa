@@ -21,27 +21,37 @@ export class Raster {
     this.data = new Uint8Array(width * height * 4);
   }
 
-  set(x: number, y: number, color: Rgba): void {
+  set({ x, y, color }: { x: number; y: number; color: Rgba }): void {
     if (x < 0 || y < 0 || x >= this.width || y >= this.height || color[3] === 0) return;
     this.data.set(color, (y * this.width + x) * 4);
   }
 
-  rect(x: number, y: number, w: number, h: number, color: Rgba): void {
-    for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) this.set(i, j, color);
+  rect({ x, y, w, h, color }: { x: number; y: number; w: number; h: number; color: Rgba }): void {
+    for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) this.set({ x: i, y: j, color });
   }
 
   /** Draw a character template: one string per row, each char a palette key ('.' = transparent). */
-  pattern(x: number, y: number, rows: readonly string[], palette: Record<string, Rgba>): void {
+  pattern({
+    x,
+    y,
+    rows,
+    palette,
+  }: {
+    x: number;
+    y: number;
+    rows: readonly string[];
+    palette: Record<string, Rgba>;
+  }): void {
     rows.forEach((row, j) => {
       [...row].forEach((ch, i) => {
         const color = palette[ch];
-        if (color) this.set(x + i, y + j, color);
+        if (color) this.set({ x: x + i, y: y + j, color });
       });
     });
   }
 
   /** Copy another raster in, scaled by an integer factor. */
-  blit(src: Raster, x: number, y: number, scale = 1): void {
+  blit({ src, x, y, scale = 1 }: { src: Raster; x: number; y: number; scale?: number }): void {
     for (let j = 0; j < src.height; j++) {
       for (let i = 0; i < src.width; i++) {
         const o = (j * src.width + i) * 4;
@@ -51,12 +61,12 @@ export class Raster {
           src.data[o + 2] ?? 0,
           src.data[o + 3] ?? 0,
         ];
-        this.rect(x + i * scale, y + j * scale, scale, scale, color);
+        this.rect({ x: x + i * scale, y: y + j * scale, w: scale, h: scale, color });
       }
     }
   }
 
   png(): Buffer {
-    return encodePng(this.width, this.height, this.data);
+    return encodePng({ width: this.width, height: this.height, rgba: this.data });
   }
 }

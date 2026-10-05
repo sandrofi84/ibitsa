@@ -210,13 +210,21 @@ export class Runtime {
         session?.interrupt();
         return;
       case 'answerPermission':
-        session?.respondToPermission(effect.requestId, effect.decision, effect.note);
+        session?.respondToPermission({
+          requestId: effect.requestId,
+          decision: effect.decision,
+          ...(effect.note === undefined ? {} : { note: effect.note }),
+        });
         return;
       case 'answerQuestion':
         session?.answerQuestion(effect.requestId, effect.answers);
         return;
       case 'completeSubmit':
-        session?.completeSubmit(effect.toolUseId, effect.accepted, effect.reason);
+        session?.completeSubmit({
+          toolUseId: effect.toolUseId,
+          accepted: effect.accepted,
+          ...(effect.reason === undefined ? {} : { reason: effect.reason }),
+        });
         return;
       case 'closeSession':
         session?.close();
