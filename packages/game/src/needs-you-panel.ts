@@ -139,7 +139,7 @@ function renderItem({
       );
       actions.append(
         intentButton({
-          label: item.kind === 'stalled' ? 'Continue' : 'Retry',
+          label: item.kind === 'stalled' ? 'Continue' : 'Resume',
           intent: () => ({ type: 'resumeHero', heroId: item.heroId }),
           client,
         }),
