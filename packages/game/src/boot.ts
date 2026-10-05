@@ -7,7 +7,8 @@ import type { Diagnostics, Host } from './host.types';
 import { mountNeedsYouPanel } from './needs-you-panel';
 import { mountNewQuestForm } from './new-quest-form';
 import { PackScene } from './pack-scene';
-import { HEIGHT, WIDTH, WorldScene } from './world-scene';
+import { ViewState } from './view-state';
+import { HEIGHT, HERO_SELECTED, WIDTH, WorldScene } from './world-scene';
 
 function hasWebGL(root: HTMLElement): boolean {
   if (root.dataset.forceNoWebgl === 'true') return false;
@@ -39,12 +40,12 @@ export function startGame(root: HTMLElement, host: Host): Started {
       '<p class="notice">Ibitsa needs WebGL, and it isn’t available here, so the game can’t start. ' +
       'Your agents are not affected.</p>';
     reportDiagnostics(diagnostics);
-    return { client, zoom: () => 0 };
+    return { client, zoom: () => 0, heroOnPage: () => null };
   }
 
   mountNeedsYouPanel(client);
   mountNewQuestForm({ client, host });
-  mountHeroPane({ client, host });
+  const heroPane = mountHeroPane({ client, host, view: new ViewState(host.viewStorage) });
   const game = new Phaser.Game({
     type: Phaser.WEBGL,
     parent: root,
@@ -68,6 +69,7 @@ export function startGame(root: HTMLElement, host: Host): Started {
   });
   game.registry.set('assetBase', assetBase);
   game.registry.set('client', client);
+  game.events.on(HERO_SELECTED, () => heroPane.open());
 
   const report = () => {
     diagnostics = {
@@ -91,5 +93,13 @@ export function startGame(root: HTMLElement, host: Host): Started {
     }).observe(root);
     client.start();
   });
-  return { client, zoom: () => diagnostics.zoom };
+  const heroOnPage = () => {
+    const scene = game.scene.getScene('world') as WorldScene | null;
+    const at = scene?.heroPosition();
+    if (!at) return null;
+    const rect = game.canvas.getBoundingClientRect();
+    const zoom = game.scale.zoom;
+    return { x: rect.left + at.x * zoom, y: rect.top + at.y * zoom };
+  };
+  return { client, zoom: () => diagnostics.zoom, heroOnPage };
 }

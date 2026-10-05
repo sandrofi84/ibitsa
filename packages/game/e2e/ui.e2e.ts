@@ -9,6 +9,7 @@ interface Probe {
     heroes: { state: { kind: string }; queuedMessages: number }[];
   } | null;
   hostRequests(): { type: string; key?: string }[];
+  heroOnPage(): { x: number; y: number } | null;
 }
 
 const probe = <T>(page: Page, read: (p: Probe) => T) =>
@@ -132,4 +133,54 @@ test('without credentials the onboarding card comes first; a rejected key says w
     'saveApiKey',
     'saveApiKey',
   ]);
+});
+
+test('the hero pane docks right, collapses to a tab, and opens when you click the hero', async ({
+  page,
+}) => {
+  await page.goto('/?fixture=live');
+  await page.getByRole('button', { name: 'New quest' }).click();
+  await page.getByLabel('Task').fill('Tidy the README');
+  await page.getByRole('button', { name: 'Start quest' }).click();
+  await expect.poll(() => heroState(page)).toBe('idle');
+
+  const pane = page.getByRole('region', { name: 'Hero' });
+  const tab = pane.getByRole('button', { name: /hero pane/ });
+  const message = pane.getByLabel('Message to the hero');
+  await expect(tab).toHaveAttribute('aria-expanded', 'true');
+  const box = await pane.boundingBox();
+  expect(box && box.x + box.width).toBeGreaterThan(1000 - 20);
+
+  // Mouse.
+  await tab.click();
+  await expect(tab).toHaveAttribute('aria-expanded', 'false');
+  await expect(message).toBeHidden();
+  await expect(tab).toContainText('Ranger Ilse');
+  await page.screenshot({ path: 'test-results/ui-pane-collapsed.png' });
+
+  // Keyboard.
+  await tab.focus();
+  await page.keyboard.press('Enter');
+  await expect(message).toBeVisible();
+  await page.keyboard.press('Space');
+  await expect(message).toBeHidden();
+
+  // Clicking the hero on the map opens the pane and focuses it.
+  const hero = await probe(page, (p) => p.heroOnPage());
+  expect(hero).not.toBeNull();
+  await page.mouse.click(hero?.x ?? 0, hero?.y ?? 0);
+  await expect(message).toBeVisible();
+  await expect(tab).toBeFocused();
+});
+
+test('nothing overlaps at a larger panel size', async ({ page }) => {
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await page.goto('/?fixture=live');
+  await page.getByRole('button', { name: 'New quest' }).click();
+  await page.getByLabel('Task').fill('Tidy the README');
+  await page.getByRole('button', { name: 'Start quest' }).click();
+  await expect.poll(() => heroState(page)).toBe('idle');
+  await page.screenshot({ path: 'test-results/ui-pane-1400.png' });
+  const box = await page.getByRole('region', { name: 'Hero' }).boundingBox();
+  expect(box && box.x + box.width).toBeGreaterThan(1400 - 20);
 });

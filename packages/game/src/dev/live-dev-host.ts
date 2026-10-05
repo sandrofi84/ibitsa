@@ -16,6 +16,7 @@ import {
   type RepoView,
 } from '@ibitsa/protocol';
 import type { Host } from '../host.types';
+import { MemoryViewStorage } from '../view-state';
 import { FakeHostChannel } from './fake-host-channel';
 
 const STEP_MS = 120;
@@ -25,6 +26,7 @@ const STEP_MS = 120;
  * so the UI can be played end to end (forms, messages, stop, finish) without an agent.
  */
 export class LiveDevHost implements Host {
+  readonly viewStorage = new MemoryViewStorage();
   readonly channel: FakeHostChannel;
   private state: CoreState = initialState();
   private seq = 0;

@@ -16,6 +16,7 @@ export default defineConfig({
         'packages/assets/src/**',
         'packages/game/src/client.ts',
         'packages/game/src/layout.ts',
+        'packages/game/src/view-state.ts',
         'packages/game/src/dev/dev-host.ts',
         'packages/game/src/dev/live-dev-host.ts',
         'packages/game/src/dev/fake-host-channel.ts',

@@ -8,6 +8,7 @@ import {
   PROTOCOL_VERSION,
 } from '@ibitsa/protocol';
 import type { Host } from '../host.types';
+import { MemoryViewStorage } from '../view-state';
 import { FakeHostChannel } from './fake-host-channel';
 
 /** Commands the game's UI can send; interactive replays wait for these and replay the rest. */
@@ -27,6 +28,7 @@ const ANSWERABLE: Command['type'][] = [
  */
 export class DevHost implements Host {
   readonly replay: Replay;
+  readonly viewStorage = new MemoryViewStorage();
   readonly channel = new FakeHostChannel({ credentialsReady: true });
   private state: CoreState = initialState();
   private seq = 0;

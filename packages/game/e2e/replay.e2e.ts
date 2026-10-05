@@ -61,6 +61,10 @@ test('lets you answer the permission yourself in interactive mode', async ({ pag
   // The replay starts waiting when it reaches the recorded answer, a moment after the request appears.
   await expect.poll(() => probe(page, (p) => p.status().waitingFor)).toBe('answerPermission');
   await page.screenshot({ path: 'test-results/m0-walk-waiting.png' });
+  // The open hero pane and the Needs You panel never cover each other (#61).
+  const pane = await page.getByRole('region', { name: 'Hero' }).boundingBox();
+  const panel = await item.boundingBox();
+  expect(pane && panel && panel.x + panel.width <= pane.x).toBe(true);
 
   await item.getByRole('button', { name: 'Allow' }).click();
   await expect(item).toHaveCount(0);

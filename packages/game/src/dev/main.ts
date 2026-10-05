@@ -42,8 +42,13 @@ if (name === 'live') {
         ? null
         : { defaultBranch: 'main', branches: ['main', 'feature/x'], uncommittedChanges: 2 },
   });
-  const { client, zoom } = startGame(root, host);
-  w.__ibitsa = { snapshot: () => client.snapshot, hostRequests: () => host.channel.requests, zoom };
+  const { client, zoom, heroOnPage } = startGame(root, host);
+  w.__ibitsa = {
+    snapshot: () => client.snapshot,
+    hostRequests: () => host.channel.requests,
+    zoom,
+    heroOnPage,
+  };
 } else {
   const host = new DevHost(parseLog(text), options);
   const { client, zoom } = startGame(root, host);
