@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import {
   type CoreInput,
   type CoreState,
+  DEFAULT_SETTINGS,
   type Effect,
   initialState,
   type LogRecord,
@@ -9,7 +10,14 @@ import {
   view,
 } from '@ibitsa/core';
 import { type CoreMessage, type Cue, PROTOCOL_VERSION, parseCommand } from '@ibitsa/protocol';
-import type { AgentAdapter, AgentSession, Clock, FrontEnd, GameMaster } from './ports';
+import type {
+  AgentAdapter,
+  AgentSession,
+  Clock,
+  FrontEnd,
+  GameMaster,
+  UserSettings,
+} from './ports';
 import { type CampaignLog, CampaignStore } from './storage';
 
 /** Snapshots go out at most this often (spec §11.2.1: throttled, ~10/s). */
@@ -20,6 +28,8 @@ export interface RuntimeOptions {
   adapter: AgentAdapter;
   gameMaster: GameMaster;
   clock: Clock;
+  /** Read when a quest starts; defaults to no cap and the default stall thresholds. */
+  settings?: () => UserSettings;
   /** Campaign ids; injectable for tests. */
   newId?: () => string;
 }
@@ -52,24 +62,19 @@ export class Runtime {
     this.newId = options.newId ?? randomUUID;
   }
 
-  /** Rebuild the active campaign, if any, by replaying its log without carrying out effects. */
+  /**
+   * Rebuild the active campaign, if any, by replaying its log without carrying out effects, then tell core
+   * the old process is gone (spec §12). Core decides what survives: M1 marks sessions as not resumed.
+   */
   start(): void {
     const id = this.store.activeId();
     if (!id) return;
     const { header, records } = this.store.read(id);
     this.log = this.store.open(id, header);
-    const pending = new Map<string, number>();
-    for (const { mark: _mark, ...input } of records) {
-      const result = step(this.state, input);
-      this.state = result.state;
-      if (input.kind === 'timer') pending.delete(input.timerId);
-      for (const effect of result.effects) {
-        if (effect.type === 'setTimer') pending.set(effect.timerId, effect.at);
-        if (effect.type === 'cancelTimer') pending.delete(effect.timerId);
-      }
+    for (const { mark: _mark, ...input } of records) this.state = step(this.state, input).state;
+    if (this.state.campaign?.status === 'active') {
+      this.input({ kind: 'gm', t: this.t(), event: { type: 'runtimeRestarted' } });
     }
-    // Timers that were still pending when the runtime stopped are armed again.
-    for (const [timerId, at] of pending) this.arm(timerId, at);
   }
 
   get snapshotState(): CoreState {
@@ -116,8 +121,29 @@ export class Runtime {
       // A new quest is a new campaign with its own log and a fresh core.
       this.state = initialState();
       this.log = this.store.create(this.newId(), new Date(this.options.clock.now()));
+      this.input({
+        kind: 'gm',
+        t: this.t(),
+        event: { type: 'questSettings', ...this.questSettings() },
+      });
     }
     this.input({ kind: 'command', t: this.t(), command });
+  }
+
+  private questSettings() {
+    const user = this.options.settings?.() ?? {
+      budgetMicroUsd: DEFAULT_SETTINGS.budgetMicroUsd,
+      stall: DEFAULT_SETTINGS.stall,
+    };
+    const { budgetCap, costReported } = this.options.adapter.capabilities;
+    return {
+      ...user,
+      budget: budgetCap
+        ? ('native' as const)
+        : costReported
+          ? ('turnEnd' as const)
+          : ('none' as const),
+    };
   }
 
   private t(): number {
@@ -203,6 +229,60 @@ export class Runtime {
         }
         return;
       }
+      case 'resumeSession': {
+        const heroId = effect.heroId;
+        const { type: _type, ...resume } = effect;
+        try {
+          this.sessions.get(heroId)?.close();
+          this.sessions.set(
+            heroId,
+            this.options.adapter.resumeSession(resume, (event) =>
+              this.input({ kind: 'agent', t: this.t(), heroId, event }),
+            ),
+          );
+        } catch (e) {
+          this.input({
+            kind: 'agent',
+            t: this.t(),
+            heroId,
+            event: { type: 'error', message: String(e) },
+          });
+        }
+        return;
+      }
+      case 'observeDiff':
+        void this.options.gameMaster
+          .observeDiff({ worktreePath: effect.worktreePath })
+          .then((hash) =>
+            this.input({
+              kind: 'gm',
+              t: this.t(),
+              event: { type: 'diffObserved', heroId: effect.heroId, hash },
+            }),
+          )
+          .catch(() => {
+            // No hash, no evidence either way: the no-progress rule simply doesn't advance.
+          });
+        return;
+      case 'removeWorktree':
+        void this.options.gameMaster
+          .removeWorktree({ worktreePath: effect.worktreePath })
+          .catch((e: unknown) => ({ ok: false as const, reason: String(e) }))
+          .then((result) =>
+            this.input({
+              kind: 'gm',
+              t: this.t(),
+              event: result.ok
+                ? { type: 'worktreeRemoved', islandId: effect.islandId }
+                : {
+                    type: 'worktreeRemoveFailed',
+                    islandId: effect.islandId,
+                    commandId: effect.commandId,
+                    reason: result.reason,
+                  },
+            }),
+          );
+        return;
       case 'sendMessage':
         session?.send(effect.text, effect.priority);
         return;
