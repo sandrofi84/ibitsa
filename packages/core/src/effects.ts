@@ -1,7 +1,29 @@
 /** Requests core makes of the runtime. Core never performs them itself (ADR 0001). */
 export type Effect =
   | { type: 'createWorktree'; islandId: string; branch: string; baseRef: string }
-  | { type: 'startSession'; heroId: string; cwd: string; classId: string; prompt: string }
+  /** `maxBudgetMicroUsd` = cap − spent, for adapters that stop natively (spec §7.3). */
+  | {
+      type: 'startSession';
+      heroId: string;
+      cwd: string;
+      classId: string;
+      prompt: string;
+      maxBudgetMicroUsd?: number;
+    }
+  /** Resume a session by id; `prompt` restarts work that was interrupted. */
+  | {
+      type: 'resumeSession';
+      heroId: string;
+      sessionId: string;
+      cwd: string;
+      classId: string;
+      prompt?: string;
+      maxBudgetMicroUsd?: number;
+    }
+  /** Report the worktree's diff hash; the result comes back as `diffObserved`. */
+  | { type: 'observeDiff'; heroId: string; worktreePath: string }
+  /** Remove a finished quest's worktree if it is clean. */
+  | { type: 'removeWorktree'; islandId: string; worktreePath: string; commandId: string }
   | { type: 'sendMessage'; heroId: string; text: string; priority: 'now' | 'next' }
   /** Interrupt the turn and drop the adapter's queued messages. */
   | { type: 'interrupt'; heroId: string }

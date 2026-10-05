@@ -11,6 +11,6 @@ export {
 } from './event-log';
 export type { CoreInput, GameMasterEvent } from './inputs';
 export { describePermission } from './permissions';
-export { type CoreState, initialState } from './state';
-export { SILENCE_MS, type StepResult, step } from './step';
+export { type CoreState, DEFAULT_SETTINGS, initialState, type QuestSettings } from './state';
+export { CONTINUE_PROMPT, SILENCE_MS, type StepResult, step } from './step';
 export { deriveState, sumGold, view } from './view';

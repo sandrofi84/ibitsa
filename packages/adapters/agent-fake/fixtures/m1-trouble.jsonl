@@ -1,0 +1,46 @@
+{"kind":"header","logVersion":1,"protocolVersion":1,"campaignId":"m1-trouble","startedAt":"2026-10-05T10:00:00.000Z"}
+{"t":0,"kind":"gm","event":{"type":"questSettings","budgetMicroUsd":300000,"budget":"native","stall":{"testFailures":4,"fileEdits":12,"noProgressTurns":6}}}
+{"t":10,"kind":"command","command":{"type":"startQuest","commandId":"q1","description":"Make the date parser accept ISO week dates\nparseDate('2026-W41-1') should return Monday 5 October 2026.","heroName":"Barbarian Brann","classId":"barbarian","baseRef":"main"}}
+{"t":500,"kind":"gm","event":{"type":"worktreeCreated","islandId":"i2","path":"../demo.ibitsa/ibitsa/make-the-date-parser-accept-iso-week-dates","branch":"ibitsa/make-the-date-parser-accept-iso-week-dates"}}
+{"t":2400,"kind":"agent","heroId":"h4","event":{"type":"sessionStarted","sessionId":"s-trouble"},"mark":"arrived"}
+{"t":3000,"kind":"agent","heroId":"h4","event":{"type":"activityStarted","toolUseId":"u1","kind":"read","detail":"src/date/parse.ts"}}
+{"t":3800,"kind":"agent","heroId":"h4","event":{"type":"activityFinished","toolUseId":"u1","outcome":"ok"}}
+{"t":4000,"kind":"agent","heroId":"h4","event":{"type":"activityStarted","toolUseId":"u2","kind":"edit","detail":"src/date/parse.ts"}}
+{"t":5200,"kind":"agent","heroId":"h4","event":{"type":"activityFinished","toolUseId":"u2","outcome":"ok"}}
+{"t":5400,"kind":"agent","heroId":"h4","event":{"type":"usage","contextUsed":21000,"contextMax":200000,"totalCost":61000}}
+{"t":6000,"kind":"agent","heroId":"h4","event":{"type":"activityStarted","toolUseId":"t0","kind":"test","detail":"pnpm test date"}}
+{"t":8500,"kind":"agent","heroId":"h4","event":{"type":"activityFinished","toolUseId":"t0","outcome":"failed"}}
+{"t":8700,"kind":"agent","heroId":"h4","event":{"type":"activityStarted","toolUseId":"e0","kind":"edit","detail":"src/date/parse.ts"}}
+{"t":9400,"kind":"agent","heroId":"h4","event":{"type":"activityFinished","toolUseId":"e0","outcome":"ok"}}
+{"t":10000,"kind":"agent","heroId":"h4","event":{"type":"activityStarted","toolUseId":"t1","kind":"test","detail":"pnpm test date"}}
+{"t":12500,"kind":"agent","heroId":"h4","event":{"type":"activityFinished","toolUseId":"t1","outcome":"failed"}}
+{"t":12700,"kind":"agent","heroId":"h4","event":{"type":"activityStarted","toolUseId":"e1","kind":"edit","detail":"src/date/parse.ts"}}
+{"t":13400,"kind":"agent","heroId":"h4","event":{"type":"activityFinished","toolUseId":"e1","outcome":"ok"}}
+{"t":14000,"kind":"agent","heroId":"h4","event":{"type":"activityStarted","toolUseId":"t2","kind":"test","detail":"pnpm test date"}}
+{"t":16500,"kind":"agent","heroId":"h4","event":{"type":"activityFinished","toolUseId":"t2","outcome":"failed"}}
+{"t":16700,"kind":"agent","heroId":"h4","event":{"type":"activityStarted","toolUseId":"e2","kind":"edit","detail":"src/date/parse.ts"}}
+{"t":17400,"kind":"agent","heroId":"h4","event":{"type":"activityFinished","toolUseId":"e2","outcome":"ok"}}
+{"t":18000,"kind":"agent","heroId":"h4","event":{"type":"activityStarted","toolUseId":"t3","kind":"test","detail":"pnpm test date"}}
+{"t":20500,"kind":"agent","heroId":"h4","event":{"type":"activityFinished","toolUseId":"t3","outcome":"failed"},"mark":"stalled"}
+{"t":22200,"kind":"agent","heroId":"h4","event":{"type":"turnEnded","queuedTurns":0}}
+{"t":22300,"kind":"gm","event":{"type":"diffObserved","heroId":"h4","hash":"d1"}}
+{"t":28000,"kind":"command","command":{"type":"resumeHero","commandId":"r1","heroId":"h4"}}
+{"t":28300,"kind":"agent","heroId":"h4","event":{"type":"turnStarted"}}
+{"t":28600,"kind":"agent","heroId":"h4","event":{"type":"activityStarted","toolUseId":"u3","kind":"read","detail":"src/date/week.ts"}}
+{"t":29400,"kind":"agent","heroId":"h4","event":{"type":"activityFinished","toolUseId":"u3","outcome":"ok"}}
+{"t":29600,"kind":"agent","heroId":"h4","event":{"type":"activityStarted","toolUseId":"u4","kind":"edit","detail":"src/date/week.ts"}}
+{"t":31000,"kind":"agent","heroId":"h4","event":{"type":"activityFinished","toolUseId":"u4","outcome":"ok"}}
+{"t":31200,"kind":"agent","heroId":"h4","event":{"type":"usage","contextUsed":52000,"contextMax":200000,"totalCost":301500}}
+{"t":31300,"kind":"agent","heroId":"h4","event":{"type":"budgetExhausted"}}
+{"t":31400,"kind":"agent","heroId":"h4","event":{"type":"turnEnded","queuedTurns":0},"mark":"out-of-gold"}
+{"t":31500,"kind":"gm","event":{"type":"diffObserved","heroId":"h4","hash":"d2"}}
+{"t":37000,"kind":"command","command":{"type":"raiseBudget","commandId":"b1","heroId":"h4","addMicroUsd":200000}}
+{"t":38500,"kind":"agent","heroId":"h4","event":{"type":"sessionStarted","sessionId":"s-trouble"}}
+{"t":39000,"kind":"agent","heroId":"h4","event":{"type":"activityStarted","toolUseId":"t9","kind":"test","detail":"pnpm test date"}}
+{"t":41500,"kind":"agent","heroId":"h4","event":{"type":"activityFinished","toolUseId":"t9","outcome":"ok"},"mark":"tests-green"}
+{"t":41700,"kind":"agent","heroId":"h4","event":{"type":"activityStarted","toolUseId":"u9","kind":"other","detail":"submit_task"}}
+{"t":41800,"kind":"agent","heroId":"h4","event":{"type":"taskSubmitted","toolUseId":"u9","summary":"parseDate understands ISO week dates; added tests."}}
+{"t":42200,"kind":"gm","event":{"type":"submitChecked","heroId":"h4","toolUseId":"u9","ok":true}}
+{"t":42300,"kind":"agent","heroId":"h4","event":{"type":"activityFinished","toolUseId":"u9","outcome":"ok"}}
+{"t":42500,"kind":"agent","heroId":"h4","event":{"type":"usage","contextUsed":58000,"contextMax":200000,"totalCost":352000}}
+{"t":42800,"kind":"agent","heroId":"h4","event":{"type":"turnEnded","queuedTurns":0},"mark":"submitted"}

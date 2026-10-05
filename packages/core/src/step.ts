@@ -2,7 +2,9 @@ import type { AgentEvent, Command, Cue } from '@ibitsa/protocol';
 import type { Effect } from './effects';
 import type { CoreInput, GameMasterEvent } from './inputs';
 import { describePermission } from './permissions';
-import type { CoreState, Hero } from './state';
+import { capFor, overBudget, remainder } from './pouch';
+import { type CoreState, freshWatch, type Hero, type PendingItem } from './state';
+import { afterEdit, afterTest, afterTurn } from './watch';
 
 export interface StepResult {
   state: CoreState;
@@ -13,6 +15,8 @@ export interface StepResult {
 /** No events for this long, with no tool running mid-turn, means core has lost contact (§5.4). */
 export const SILENCE_MS = 5 * 60_000;
 const TITLE_MAX = 60;
+/** What a hero is told when it should pick its work back up. */
+export const CONTINUE_PROMPT = 'Continue with the task.';
 
 /** The whole game master: pure, deterministic, no I/O (ADR 0001). */
 export function step(state: CoreState, input: CoreInput): StepResult {
@@ -53,12 +57,31 @@ class Context {
     return this.state.heroes.find((h) => h.id === heroId);
   }
 
+  private island(hero: Hero) {
+    return this.state.islands.find((i) => i.id === hero.islandId);
+  }
+
   private reject(commandId: string, reason: string): void {
     this.cues.push({ type: 'commandRejected', commandId, reason });
   }
 
-  private removeItems(predicate: (i: CoreState['needsYou'][number]) => boolean): void {
+  private removeItems(predicate: (i: PendingItem) => boolean): void {
     this.state.needsYou = this.state.needsYou.filter((i) => !predicate(i));
+  }
+
+  private removeHeroItems(hero: Hero, kinds: PendingItem['kind'][]): void {
+    this.removeItems((i) => i.heroId === hero.id && kinds.includes(i.kind));
+  }
+
+  /** Adds a "Needs you" item and announces it. One item of each kind per hero at most. */
+  private ask(item: DistributiveOmit<PendingItem, 'id'>): void {
+    if (this.state.needsYou.some((i) => i.heroId === item.heroId && i.kind === item.kind)) {
+      if (item.kind !== 'permission' && item.kind !== 'question') return;
+    }
+    const id = this.newId('n');
+    const { kind, ...rest } = item;
+    this.state.needsYou.push({ kind, id, ...rest } as PendingItem);
+    if (item.kind !== 'reply') this.cues.push({ type: 'needsYouAdded', itemId: id });
   }
 
   /** Arm the silence timer while a turn is in progress with no tool running; disarm otherwise. */
@@ -68,14 +91,106 @@ class Context {
     );
     const expectingEvents =
       (!hero.sessionStarted || (hero.inTurn && hero.runningTools.length === 0)) &&
+      hero.sessionLive &&
       !waiting &&
       !hero.resting &&
-      hero.error === null;
+      hero.error === null &&
+      hero.stalled === null &&
+      !hero.outOfGold;
     this.effects.push(
       expectingEvents
         ? { type: 'setTimer', timerId: silenceTimer(hero.id), at: this.t + SILENCE_MS }
         : { type: 'cancelTimer', timerId: silenceTimer(hero.id) },
     );
+  }
+
+  // ---------- rules that pause a hero ----------
+
+  /** Stall rules fired: auto-pause and ask (spec §10 item 11). */
+  private stall(hero: Hero, reason: string): void {
+    if (hero.stalled !== null) return;
+    hero.stalled = reason;
+    hero.queuedMessages = 0;
+    this.effects.push({ type: 'interrupt', heroId: hero.id });
+    this.ask({ kind: 'stalled', heroId: hero.id, reason });
+  }
+
+  private clearStall(hero: Hero): void {
+    hero.stalled = null;
+    hero.watch = freshWatch();
+    this.removeHeroItems(hero, ['stalled']);
+  }
+
+  /** The gold pouch is empty (spec §7.3). */
+  private outOfGold(hero: Hero): void {
+    if (hero.outOfGold) return;
+    hero.outOfGold = true;
+    hero.inTurn = false;
+    hero.runningTools = [];
+    if (hero.cap) {
+      this.ask({
+        kind: 'outOfGold',
+        heroId: hero.id,
+        cap: hero.cap.microUsd,
+        capEnforcement: hero.cap.enforcement,
+      });
+    }
+  }
+
+  private fail(hero: Hero, message: string): void {
+    hero.error = message;
+    hero.inTurn = false;
+    hero.runningTools = [];
+    this.ask({ kind: 'error', heroId: hero.id, message });
+  }
+
+  /** Bring a hero's session back: resume it if it has one, otherwise start over from what exists. */
+  private revive(hero: Hero, prompt?: string): void {
+    const island = this.island(hero);
+    if (!island?.worktreePath) {
+      if (island) {
+        this.effects.push({
+          type: 'createWorktree',
+          islandId: island.id,
+          branch: island.branch,
+          baseRef: island.baseRef,
+        });
+      }
+      return;
+    }
+    hero.sessionLive = true;
+    if (hero.sessionId) {
+      this.effects.push({
+        type: 'resumeSession',
+        heroId: hero.id,
+        sessionId: hero.sessionId,
+        cwd: island.worktreePath,
+        classId: hero.classId,
+        ...(prompt === undefined ? {} : { prompt }),
+        ...remainder(hero),
+      });
+    } else {
+      const task = island.taskPoints.find((tp) => tp.id === hero.taskPointId);
+      this.effects.push({
+        type: 'startSession',
+        heroId: hero.id,
+        cwd: island.worktreePath,
+        classId: hero.classId,
+        prompt: task?.description ?? '',
+        ...remainder(hero),
+      });
+    }
+    this.watchSilence(hero);
+  }
+
+  /** Get a paused hero going again with a message. */
+  private continueWith(
+    hero: Hero,
+    { text, priority }: { text: string; priority: 'now' | 'next' },
+  ): void {
+    if (!hero.sessionLive) this.revive(hero);
+    if (hero.inTurn && priority === 'next') hero.queuedMessages++;
+    this.effects.push({ type: 'sendMessage', heroId: hero.id, text, priority });
   }
 
   // ---------- commands ----------
@@ -97,14 +212,14 @@ class Context {
           this.reject(command.commandId, 'The hero has not arrived yet.');
           return;
         }
-        if (hero.inTurn && command.priority === 'next') hero.queuedMessages++;
-        this.removeItems((i) => i.heroId === hero.id && i.kind === 'reply');
-        this.effects.push({
-          type: 'sendMessage',
-          heroId: hero.id,
-          text: command.text,
-          priority: command.priority,
-        });
+        if (hero.outOfGold) {
+          this.reject(command.commandId, 'The hero is out of gold. Raise the cap first.');
+          return;
+        }
+        // Answering a stall with a message is one of its choices (spec §10 item 11).
+        if (hero.stalled !== null) this.clearStall(hero);
+        this.removeHeroItems(hero, ['reply']);
+        this.continueWith(hero, { text: command.text, priority: command.priority });
         return;
       }
       case 'stopHero': {
@@ -114,7 +229,17 @@ class Context {
           return;
         }
         hero.queuedMessages = 0;
-        this.effects.push({ type: 'interrupt', heroId: hero.id });
+        if (hero.stalled !== null) this.clearStall(hero);
+        if (hero.error !== null) {
+          hero.error = null;
+          this.removeHeroItems(hero, ['error']);
+        }
+        if (hero.outOfGold) {
+          hero.outOfGold = false;
+          this.removeHeroItems(hero, ['outOfGold']);
+        }
+        if (hero.sessionLive) this.effects.push({ type: 'interrupt', heroId: hero.id });
+        this.watchSilence(hero);
         return;
       }
       case 'answerPermission':
@@ -144,6 +269,43 @@ class Context {
         }
         const hero = this.hero(item.heroId);
         if (hero) this.watchSilence(hero);
+        return;
+      }
+      case 'resumeHero': {
+        const hero = this.hero(command.heroId);
+        if (!hero) {
+          this.reject(command.commandId, 'No such hero.');
+          return;
+        }
+        if (hero.stalled !== null) {
+          this.clearStall(hero);
+          this.continueWith(hero, { text: CONTINUE_PROMPT, priority: 'next' });
+          return;
+        }
+        if (hero.error !== null || hero.unknownReason !== null || !hero.sessionLive) {
+          const wasWorking = hero.unknownReason !== null || hero.error !== null;
+          hero.error = null;
+          hero.unknownReason = null;
+          this.removeHeroItems(hero, ['error']);
+          this.revive(hero, wasWorking && !hero.submitted ? CONTINUE_PROMPT : undefined);
+          return;
+        }
+        this.reject(command.commandId, 'Nothing to resume.');
+        return;
+      }
+      case 'raiseBudget': {
+        const hero = this.hero(command.heroId);
+        if (!hero?.cap) {
+          this.reject(command.commandId, 'This hero has no gold pouch.');
+          return;
+        }
+        hero.cap = { ...hero.cap, microUsd: hero.cap.microUsd + command.addMicroUsd };
+        if (hero.outOfGold && !overBudget(hero)) {
+          hero.outOfGold = false;
+          this.removeHeroItems(hero, ['outOfGold']);
+          if (hero.cap.enforcement === 'native') this.revive(hero, CONTINUE_PROMPT);
+          else this.continueWith(hero, { text: CONTINUE_PROMPT, priority: 'next' });
+        }
         return;
       }
       case 'markDone': {
@@ -179,11 +341,24 @@ class Context {
         }
         this.endQuest('abandoned');
         return;
-      case 'resumeHero':
-      case 'raiseBudget':
-      case 'removeWorktree':
-        this.reject(command.commandId, 'Not available yet.');
+      case 'removeWorktree': {
+        const island = this.state.islands.find((i) => i.id === command.islandId);
+        if (this.state.campaign?.status === 'active') {
+          this.reject(command.commandId, 'Finish or abandon the quest first.');
+          return;
+        }
+        if (!island?.worktreePath) {
+          this.reject(command.commandId, 'There is no worktree to remove.');
+          return;
+        }
+        this.effects.push({
+          type: 'removeWorktree',
+          islandId: island.id,
+          worktreePath: island.worktreePath,
+          commandId: command.commandId,
+        });
         return;
+      }
     }
   }
 
@@ -230,6 +405,11 @@ class Context {
       hp: { kind: 'unknown' },
       gold: { kind: 'unknown' },
       queuedMessages: 0,
+      sessionId: null,
+      sessionLive: true,
+      stalled: null,
+      cap: capFor(this.state.settings),
+      watch: freshWatch(),
     };
     this.state.heroes = [hero];
     this.state.needsYou = [];
@@ -247,7 +427,7 @@ class Context {
 
   private submit(hero: Hero, summary: string): void {
     hero.submitted = { summary };
-    this.removeItems((i) => i.heroId === hero.id && i.kind === 'reply');
+    this.removeHeroItems(hero, ['reply']);
     for (const island of this.state.islands) {
       for (const tp of island.taskPoints) {
         if (tp.id === hero.taskPointId) tp.state = 'doneUnreviewed';
@@ -259,6 +439,11 @@ class Context {
 
   gameMaster(event: GameMasterEvent): void {
     switch (event.type) {
+      case 'questSettings': {
+        const { type: _type, ...settings } = event;
+        this.state.settings = settings;
+        return;
+      }
       case 'worktreeCreated': {
         const island = this.state.islands.find((i) => i.id === event.islandId);
         if (!island) return;
@@ -272,6 +457,7 @@ class Context {
             cwd: event.path,
             classId: hero.classId,
             prompt: task?.description ?? '',
+            ...remainder(hero),
           });
           this.watchSilence(hero);
         }
@@ -279,7 +465,8 @@ class Context {
       }
       case 'worktreeFailed':
         for (const hero of this.state.heroes.filter((h) => h.islandId === event.islandId)) {
-          hero.error = `Could not create the worktree: ${event.message}`;
+          this.fail(hero, `Could not create the worktree: ${event.message}`);
+          this.watchSilence(hero);
         }
         return;
       case 'submitChecked': {
@@ -306,6 +493,51 @@ class Context {
         }
         return;
       }
+      case 'diffObserved': {
+        const hero = this.hero(event.heroId);
+        if (!hero) return;
+        const reason = afterTurn({
+          watch: hero.watch,
+          diffHash: event.hash,
+          limits: this.state.settings.stall,
+        });
+        if (reason) this.stall(hero, reason);
+        return;
+      }
+      case 'worktreeRemoved': {
+        const island = this.state.islands.find((i) => i.id === event.islandId);
+        if (island) island.worktreePath = null;
+        return;
+      }
+      case 'worktreeRemoveFailed':
+        this.reject(event.commandId, event.reason);
+        return;
+      case 'runtimeRestarted':
+        this.restarted();
+        return;
+    }
+  }
+
+  /** Every session died with the old process (spec §12): say so, and offer to resume. */
+  private restarted(): void {
+    if (this.state.campaign?.status !== 'active') return;
+    // Requests waiting on the old process can no longer be answered.
+    this.removeItems((i) => i.kind === 'permission' || i.kind === 'question');
+    for (const hero of this.state.heroes) {
+      const wasActive = !hero.submitted || hero.inTurn;
+      hero.sessionLive = false;
+      hero.inTurn = false;
+      hero.runningTools = [];
+      hero.resting = false;
+      hero.pendingSubmit = null;
+      this.effects.push({ type: 'cancelTimer', timerId: silenceTimer(hero.id) });
+      if (!wasActive || hero.error !== null || hero.outOfGold) continue;
+      hero.unknownReason = 'Session not resumed after a restart.';
+      this.ask({
+        kind: 'error',
+        heroId: hero.id,
+        message: 'The session stopped when VS Code reloaded.',
+      });
     }
   }
 
@@ -315,30 +547,33 @@ class Context {
     const hero = this.hero(heroId);
     if (!hero) return;
     hero.unknownReason = null; // any event proves contact
+    const limits = this.state.settings.stall;
     switch (event.type) {
       case 'sessionStarted':
         hero.sessionStarted = true;
+        hero.sessionLive = true;
+        hero.sessionId = event.sessionId;
         hero.inTurn = true; // the session starts by working on its prompt
         break;
       case 'turnStarted':
         hero.inTurn = true;
         hero.queuedMessages = 0;
-        this.removeItems((i) => i.heroId === hero.id && i.kind === 'reply');
+        this.removeHeroItems(hero, ['reply']);
         break;
-      case 'turnEnded':
+      case 'turnEnded': {
         hero.runningTools = [];
+        const worktreePath = this.island(hero)?.worktreePath;
+        if (worktreePath) this.effects.push({ type: 'observeDiff', heroId: hero.id, worktreePath });
         if (event.queuedTurns > 0) break;
         hero.inTurn = false;
         hero.queuedMessages = 0;
-        if (!hero.submitted) {
-          this.state.needsYou.push({
-            kind: 'reply',
-            id: this.newId('n'),
-            heroId: hero.id,
-            text: hero.lastMessage ?? '',
-          });
+        if (hero.cap?.enforcement === 'native' && overBudget(hero)) this.outOfGold(hero);
+        const paused = hero.stalled !== null || hero.outOfGold || hero.error !== null;
+        if (!hero.submitted && !paused) {
+          this.ask({ kind: 'reply', heroId: hero.id, text: hero.lastMessage ?? '' });
         }
         break;
+      }
       case 'activityStarted':
         hero.inTurn = true;
         hero.runningTools.push({
@@ -350,51 +585,57 @@ class Context {
       case 'activityFinished': {
         const tool = hero.runningTools.find((r) => r.toolUseId === event.toolUseId);
         hero.runningTools = hero.runningTools.filter((r) => r.toolUseId !== event.toolUseId);
-        if (tool) {
-          this.cues.push({
-            type: 'activityFinished',
-            heroId: hero.id,
-            kind: tool.kind,
-            outcome: event.outcome,
-          });
-        }
+        if (!tool) break;
+        this.cues.push({
+          type: 'activityFinished',
+          heroId: hero.id,
+          kind: tool.kind,
+          outcome: event.outcome,
+        });
+        const detail = tool.detail ?? '';
+        const reason =
+          tool.kind === 'test'
+            ? afterTest({ watch: hero.watch, command: detail, ok: event.outcome === 'ok', limits })
+            : tool.kind === 'edit' && event.outcome === 'ok'
+              ? afterEdit({ watch: hero.watch, file: detail, limits })
+              : null;
+        if (reason) this.stall(hero, reason);
         break;
       }
       case 'message':
         hero.lastMessage = event.text;
         break;
       case 'permission': {
-        const id = this.newId('n');
-        const cwd =
-          this.state.islands.find((i) => i.id === hero.islandId)?.worktreePath ?? '(unknown)';
-        this.state.needsYou.push({
+        const cwd = this.island(hero)?.worktreePath ?? '(unknown)';
+        this.ask({
           kind: 'permission',
-          id,
           heroId: hero.id,
           requestId: event.requestId,
           ...describePermission(event.tool, event.input),
           cwd,
         });
-        this.cues.push({ type: 'needsYouAdded', itemId: id });
         break;
       }
-      case 'question': {
-        const id = this.newId('n');
-        this.state.needsYou.push({
+      case 'question':
+        this.ask({
           kind: 'question',
-          id,
           heroId: hero.id,
           requestId: event.requestId,
           questions: event.questions,
         });
-        this.cues.push({ type: 'needsYouAdded', itemId: id });
         break;
-      }
       case 'usage':
         if (event.contextUsed !== undefined && event.contextMax !== undefined) {
           hero.hp = { kind: 'exact', value: { used: event.contextUsed, max: event.contextMax } };
         }
-        if (event.totalCost !== undefined) hero.gold = { kind: 'exact', value: event.totalCost };
+        if (event.totalCost !== undefined) {
+          hero.gold = { kind: 'exact', value: event.totalCost };
+          // Without a native cap, core enforces the pouch at each usage report (may overshoot a turn).
+          if (hero.cap?.enforcement === 'turnEnd' && overBudget(hero) && !hero.outOfGold) {
+            this.effects.push({ type: 'interrupt', heroId: hero.id });
+            this.outOfGold(hero);
+          }
+        }
         break;
       case 'resting':
         hero.resting = true;
@@ -410,17 +651,13 @@ class Context {
         this.effects.push({ type: 'checkSubmit', heroId: hero.id, toolUseId: event.toolUseId });
         break;
       case 'budgetExhausted':
-        hero.outOfGold = true;
-        hero.inTurn = false;
-        hero.runningTools = [];
+        this.outOfGold(hero);
         break;
       case 'retrying':
         this.cues.push({ type: 'retrying', heroId: hero.id, reason: event.reason });
         break;
       case 'error':
-        hero.error = event.message;
-        hero.inTurn = false;
-        hero.runningTools = [];
+        this.fail(hero, event.message);
         break;
     }
     this.watchSilence(hero);
@@ -437,6 +674,8 @@ class Context {
       : `The session has not started after ${minutes} min.`;
   }
 }
+
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 
 function slug(text: string): string {
   return text

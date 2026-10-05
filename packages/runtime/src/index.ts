@@ -6,8 +6,10 @@ export {
   type Clock,
   type FrontEnd,
   type GameMaster,
+  type SessionResume,
   type SessionStart,
   systemClock,
+  type UserSettings,
 } from './ports';
 export { type Connection, Runtime, type RuntimeOptions, SNAPSHOT_INTERVAL_MS } from './runtime';
 export { CampaignLog, CampaignStore, LOG_SIZE_CAP } from './storage';

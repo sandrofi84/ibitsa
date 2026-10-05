@@ -1,4 +1,4 @@
-import type { CoreState, GameMasterEvent } from '@ibitsa/core';
+import type { GameMasterEvent } from '@ibitsa/core';
 import type { AgentEvent, CoreMessage } from '@ibitsa/protocol';
 
 /** Starting one hero's agent session (spec §11.3). The adapter reports everything through `onEvent`. */
@@ -9,6 +9,18 @@ export interface SessionStart {
   cwd: string;
   classId: string;
   prompt: string;
+  /** For adapters with a native cap: what is left of the gold pouch (spec §7.3). */
+  maxBudgetMicroUsd?: number;
+}
+
+export interface SessionResume {
+  heroId: string;
+  sessionId: string;
+  cwd: string;
+  classId: string;
+  /** Sent after resuming when interrupted work should continue. */
+  prompt?: string;
+  maxBudgetMicroUsd?: number;
 }
 
 export interface AgentSession {
@@ -26,7 +38,10 @@ export interface AgentSession {
 }
 
 export interface AgentAdapter {
+  /** What the agent can do about cost (spec §7.3, §11.3). */
+  capabilities: { budgetCap: boolean; costReported: boolean };
   startSession(start: SessionStart, onEvent: (event: AgentEvent) => void): AgentSession;
+  resumeSession(resume: SessionResume, onEvent: (event: AgentEvent) => void): AgentSession;
 }
 
 /** The game master's own work in the repo (spec §5.3, §5.5); results come back as core inputs. */
@@ -42,6 +57,12 @@ export interface GameMaster {
     worktreePath: string;
     baseRef: string;
   }): Promise<GameMasterEvent>;
+  /** A hash of the worktree's diff against HEAD, for the no-progress stall rule. */
+  observeDiff(request: { worktreePath: string }): Promise<string>;
+  /** Removes the worktree if it is clean. */
+  removeWorktree(request: {
+    worktreePath: string;
+  }): Promise<{ ok: true } | { ok: false; reason: string }>;
 }
 
 export interface Clock {
@@ -62,5 +83,8 @@ export interface FrontEnd {
   post(message: CoreMessage): void;
 }
 
-/** Read-only view of core state for effects that need context (e.g. a hero's worktree). */
-export type StateReader = () => CoreState;
+/** Settings the user controls; the runtime logs them before each quest starts. */
+export interface UserSettings {
+  budgetMicroUsd: number | null;
+  stall: { testFailures: number; fileEdits: number; noProgressTurns: number };
+}

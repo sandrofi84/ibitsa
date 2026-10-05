@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import m0Walk from '../fixtures/m0-walk.jsonl?raw';
+import m1Trouble from '../fixtures/m1-trouble.jsonl?raw';
 import { parseLog } from './log';
 import { replayThroughCore } from './run';
 
 // Every committed fixture replays through the real core; its protocol output is compared with a golden
 // file. A rule change that alters the output fails here until the golden files are updated (vitest -u).
-const fixtures = { 'm0-walk': m0Walk };
+const fixtures = { 'm0-walk': m0Walk, 'm1-trouble': m1Trouble };
 
 describe.each(Object.entries(fixtures))('fixture %s', (name, text) => {
   const output = replayThroughCore(parseLog(text));
@@ -49,5 +50,25 @@ describe('m0-walk', () => {
     });
     expect(cues).toContainEqual({ type: 'needsYouAdded', itemId: 'n5' });
     expect(cues.some((c) => c.type === 'commandRejected')).toBe(false);
+  });
+});
+
+describe('m1-trouble', () => {
+  const output = replayThroughCore(parseLog(m1Trouble));
+  const at = (mark: string) => output.marks.find((m) => m.mark === mark)?.snapshot;
+
+  it('stalls on a test failing 4 times, then runs out of gold, then finishes after a raise', () => {
+    expect(at('stalled')?.heroes[0]?.state).toEqual({
+      kind: 'stalled',
+      reason: 'The same test failed 4 times in a row: pnpm test date',
+    });
+    expect(at('stalled')?.needsYou.map((i) => i.kind)).toEqual(['stalled']);
+    expect(at('out-of-gold')?.heroes[0]?.state).toEqual({ kind: 'outOfGold' });
+    expect(at('out-of-gold')?.needsYou).toEqual([
+      { kind: 'outOfGold', id: 'n6', heroId: 'h4', cap: 300_000, capEnforcement: 'native' },
+    ]);
+    expect(at('submitted')?.heroes[0]?.state.kind).toBe('submitted');
+    expect(output.final.needsYou).toEqual([]);
+    expect(output.cues.some((c) => c.cue.type === 'commandRejected')).toBe(false);
   });
 });

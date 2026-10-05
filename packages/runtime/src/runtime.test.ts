@@ -4,7 +4,15 @@ import { join } from 'node:path';
 import { type GameMasterEvent, parseLog, SILENCE_MS, view } from '@ibitsa/core';
 import type { AgentEvent, Command, CoreMessage } from '@ibitsa/protocol';
 import { afterEach, describe, expect, it } from 'vitest';
-import type { AgentAdapter, AgentSession, Clock, GameMaster, SessionStart } from './ports';
+import type {
+  AgentAdapter,
+  AgentSession,
+  Clock,
+  GameMaster,
+  SessionResume,
+  SessionStart,
+  UserSettings,
+} from './ports';
 import { Runtime, SNAPSHOT_INTERVAL_MS } from './runtime';
 
 class ManualClock implements Clock {
@@ -66,9 +74,17 @@ class FakeSession implements AgentSession {
 }
 
 class FakeAdapter implements AgentAdapter {
+  capabilities = { budgetCap: true, costReported: true };
   sessions: FakeSession[] = [];
+  resumed: SessionResume[] = [];
   startSession(start: SessionStart, onEvent: (e: AgentEvent) => void): AgentSession {
     const s = new FakeSession(start, onEvent);
+    this.sessions.push(s);
+    return s;
+  }
+  resumeSession(resume: SessionResume, onEvent: (e: AgentEvent) => void): AgentSession {
+    this.resumed.push(resume);
+    const s = new FakeSession({ ...resume, prompt: resume.prompt ?? '' }, onEvent);
     this.sessions.push(s);
     return s;
   }
@@ -99,6 +115,20 @@ class FakeGameMaster implements GameMaster {
     this.requests.push(['checkSubmit', r]);
     return { type: 'submitChecked', heroId: r.heroId, toolUseId: r.toolUseId, ok: this.submitOk };
   }
+  diffHash = 'same';
+  async observeDiff(r: { worktreePath: string }): Promise<string> {
+    this.requests.push(['observeDiff', r]);
+    return this.diffHash;
+  }
+  removeOk = true;
+  async removeWorktree(r: {
+    worktreePath: string;
+  }): Promise<{ ok: true } | { ok: false; reason: string }> {
+    this.requests.push(['removeWorktree', r]);
+    return this.removeOk
+      ? { ok: true }
+      : { ok: false, reason: 'The worktree has uncommitted changes.' };
+  }
 }
 
 const dirs: string[] = [];
@@ -106,7 +136,10 @@ afterEach(() => {
   for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });
 });
 
-function setup(storageDir = mkdtempSync(join(tmpdir(), 'ibitsa-runtime-'))) {
+function setup(
+  storageDir = mkdtempSync(join(tmpdir(), 'ibitsa-runtime-')),
+  settings?: UserSettings,
+) {
   if (!dirs.includes(storageDir)) dirs.push(storageDir);
   const clock = new ManualClock();
   const adapter = new FakeAdapter();
@@ -118,6 +151,7 @@ function setup(storageDir = mkdtempSync(join(tmpdir(), 'ibitsa-runtime-'))) {
     gameMaster,
     clock,
     newId: () => `camp-${++n}`,
+    ...(settings ? { settings: () => settings } : {}),
   });
   runtime.start();
   const received: CoreMessage[] = [];
@@ -138,8 +172,8 @@ const logOf = (storageDir: string, id = 'camp-1') =>
   parseLog(readFileSync(join(storageDir, 'campaigns', id, 'events.jsonl'), 'utf8'));
 
 /** Start a quest and let the worktree and session come up. */
-async function arrived() {
-  const env = setup();
+async function arrived(settings?: UserSettings) {
+  const env = setup(undefined, settings);
   env.connection.receive(startQuest);
   await flush();
   const session = env.adapter.sessions[0];
@@ -221,7 +255,11 @@ describe('effects and the log', () => {
     });
     const log = logOf(storageDir);
     expect(log.header).toMatchObject({ kind: 'header', logVersion: 1, campaignId: 'camp-1' });
-    expect(log.records.map((r) => r.kind)).toEqual(['command', 'gm', 'agent']);
+    expect(log.records.map((r) => r.kind)).toEqual(['gm', 'command', 'gm', 'agent']);
+    expect(log.records[0]).toMatchObject({
+      kind: 'gm',
+      event: { type: 'questSettings', budgetMicroUsd: null, budget: 'native' },
+    });
   });
 
   it('routes answers, messages and stops to the hero session', async () => {
@@ -290,15 +328,66 @@ describe('effects and the log', () => {
     expect(session.calls.at(-1)).toEqual(['close']);
     connection.receive({ ...startQuest, commandId: 'q2' });
     await flush();
-    expect(logOf(storageDir, 'camp-2').records[0]).toMatchObject({
+    expect(logOf(storageDir, 'camp-2').records[1]).toMatchObject({
       kind: 'command',
       command: { commandId: 'q2' },
     });
   });
 });
 
+describe('settings', () => {
+  it('logs the user budget with the enforcement the adapter supports', async () => {
+    const { storageDir, session } = await arrived({
+      budgetMicroUsd: 2_000_000,
+      stall: { testFailures: 3, fileEdits: 10, noProgressTurns: 5 },
+    });
+    expect(logOf(storageDir).records[0]).toMatchObject({
+      event: {
+        type: 'questSettings',
+        budgetMicroUsd: 2_000_000,
+        budget: 'native',
+        stall: { testFailures: 3 },
+      },
+    });
+    expect(session.start.maxBudgetMicroUsd).toBe(2_000_000);
+  });
+});
+
+describe('M1 effects', () => {
+  it('observes the diff after each turn', async () => {
+    const { gameMaster, session, storageDir } = await arrived();
+    session.emit({ type: 'turnEnded', queuedTurns: 0 });
+    await flush();
+    expect(gameMaster.requests).toContainEqual([
+      'observeDiff',
+      { worktreePath: '/wt/ibitsa/fix-the-login-redirect' },
+    ]);
+    expect(logOf(storageDir).records.at(-1)).toMatchObject({
+      kind: 'gm',
+      event: { type: 'diffObserved', hash: 'same' },
+    });
+  });
+
+  it('removes a finished quest worktree, and reports a refusal', async () => {
+    const { connection, gameMaster, received } = await arrived();
+    connection.receive({ type: 'abandonQuest', commandId: 'x' });
+    gameMaster.removeOk = false;
+    connection.receive({ type: 'removeWorktree', commandId: 'w1', islandId: 'i2' });
+    await flush();
+    expect(received).toContainEqual(
+      expect.objectContaining({
+        cue: {
+          type: 'commandRejected',
+          commandId: 'w1',
+          reason: 'The worktree has uncommitted changes.',
+        },
+      }),
+    );
+  });
+});
+
 describe('recovery', () => {
-  it('rebuilds the same state from the log without carrying out effects again', async () => {
+  it('rebuilds the campaign from the log without carrying out effects again, then marks the hero not resumed', async () => {
     const first = await arrived();
     first.session.emit({
       type: 'activityStarted',
@@ -307,22 +396,39 @@ describe('recovery', () => {
       detail: 'pnpm test',
     });
     first.session.emit({ type: 'activityFinished', toolUseId: 'u1', outcome: 'failed' });
-    const expected = JSON.stringify(view(first.runtime.snapshotState));
+    const before = view(first.runtime.snapshotState);
     first.runtime.dispose();
 
     const second = setup(first.storageDir);
-    expect(JSON.stringify(view(second.runtime.snapshotState))).toBe(expected);
+    const after = view(second.runtime.snapshotState);
+    expect(after.campaign).toEqual(before.campaign);
+    expect(after.islands).toEqual(before.islands);
+    expect(after.heroes[0]?.state).toEqual({
+      kind: 'unknown',
+      reason: 'Session not resumed after a restart.',
+    });
+    expect(after.needsYou.map((i) => i.kind)).toEqual(['error']);
     expect(second.gameMaster.requests).toEqual([]);
     expect(second.adapter.sessions).toEqual([]);
+    expect(logOf(first.storageDir).records.at(-1)).toMatchObject({
+      kind: 'gm',
+      event: { type: 'runtimeRestarted' },
+    });
   });
 
-  it('re-arms timers that were pending', async () => {
+  it('resumes the session by id when you choose resume', async () => {
     const first = await arrived();
     first.runtime.dispose();
     const second = setup(first.storageDir);
-    expect(second.clock.pending).toBe(1);
-    second.clock.advance(SILENCE_MS);
-    expect(view(second.runtime.snapshotState).heroes[0]?.state.kind).toBe('unknown');
+    second.connection.receive({ type: 'resumeHero', commandId: 'r', heroId: 'h4' });
+    expect(second.adapter.resumed).toEqual([
+      expect.objectContaining({
+        heroId: 'h4',
+        sessionId: first.session.start.sessionId,
+        cwd: '/wt/ibitsa/fix-the-login-redirect',
+      }),
+    ]);
+    expect(second.clock.pending).toBeGreaterThan(0); // silence timer armed for the resumed session
   });
 
   it('tolerates a torn last line', async () => {
@@ -333,7 +439,7 @@ describe('recovery', () => {
       '{"t":9,"kind":"agent","he',
     );
     const second = setup(first.storageDir);
-    expect(view(second.runtime.snapshotState).heroes[0]?.state.kind).toBe('working');
+    expect(view(second.runtime.snapshotState).campaign?.status).toBe('active');
   });
 
   it('does not resume a campaign that has ended', async () => {

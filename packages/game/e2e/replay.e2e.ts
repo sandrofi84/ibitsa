@@ -48,7 +48,8 @@ test('lets you answer the permission yourself in interactive mode', async ({ pag
   await expect(item).toContainText('Ranger Ilse wants to run command:', { timeout: 20_000 });
   await expect(item.locator('code')).toHaveText('git commit -am "fix: clear return URL on logout"');
   expect(await probe(page, (p) => p.snapshot()?.heroes[0]?.state.kind)).toBe('waitingOnYou');
-  expect(await probe(page, (p) => p.status().waitingFor)).toBe('answerPermission');
+  // The replay starts waiting when it reaches the recorded answer, a moment after the request appears.
+  await expect.poll(() => probe(page, (p) => p.status().waitingFor)).toBe('answerPermission');
   await page.screenshot({ path: 'test-results/m0-walk-waiting.png' });
 
   await item.getByRole('button', { name: 'Allow' }).click();

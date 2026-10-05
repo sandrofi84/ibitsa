@@ -2,11 +2,12 @@
 import '../game.css';
 import { parseLog, type ReplayOptions } from '@ibitsa/agent-fake';
 import m0Walk from '@ibitsa/agent-fake/fixtures/m0-walk.jsonl?raw';
+import m1Trouble from '@ibitsa/agent-fake/fixtures/m1-trouble.jsonl?raw';
 import { startGame } from '../boot';
 import { DevHost } from './dev-host';
 import { mountOverlay } from './overlay';
 
-const fixtures: Record<string, string> = { 'm0-walk': m0Walk };
+const fixtures: Record<string, string> = { 'm0-walk': m0Walk, 'm1-trouble': m1Trouble };
 
 const params = new URLSearchParams(location.search);
 const name = params.get('fixture') ?? 'm0-walk';
