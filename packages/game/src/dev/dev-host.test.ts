@@ -44,4 +44,13 @@ describe('DevHost', () => {
       }),
     ]);
   });
+
+  it('answers host requests as if credentials were set', async () => {
+    const host = new DevHost(parseLog(m0Walk), {});
+    const events: string[] = [];
+    host.onHostEvent((e) => events.push(e.type));
+    host.request({ channel: 'host', type: 'credentialsStatus' });
+    await flush();
+    expect(events).toEqual(['credentials']);
+  });
 });

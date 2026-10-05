@@ -17,6 +17,8 @@ export default defineConfig({
         'packages/game/src/client.ts',
         'packages/game/src/layout.ts',
         'packages/game/src/dev/dev-host.ts',
+        'packages/game/src/dev/live-dev-host.ts',
+        'packages/game/src/dev/fake-host-channel.ts',
       ],
       exclude: ['**/*.test.ts', '**/*.types.ts', '**/*.schema.ts', '**/*.d.ts', '**/index.ts'],
       reporter: ['text', 'html', 'json-summary'],
@@ -24,7 +26,7 @@ export default defineConfig({
       // Floors at today's numbers, rounded down: coverage may rise, never quietly drop.
       // Raise a floor when a package's coverage goes up.
       thresholds: {
-        'packages/core/src/**': { lines: 95, statements: 94, branches: 87, functions: 98 },
+        'packages/core/src/**': { lines: 95, statements: 95, branches: 88, functions: 100 },
         'packages/protocol/src/**': { lines: 100, statements: 100, branches: 100, functions: 100 },
         'packages/adapters/agent-fake/src/**': {
           lines: 96,
@@ -39,7 +41,7 @@ export default defineConfig({
           functions: 97,
         },
         'packages/assets/src/**': { lines: 94, statements: 92, branches: 85, functions: 92 },
-        'packages/game/src/**': { lines: 92, statements: 91, branches: 82, functions: 92 },
+        'packages/game/src/**': { lines: 95, statements: 95, branches: 90, functions: 95 },
         'packages/runtime/src/**': { lines: 88, statements: 88, branches: 76, functions: 80 },
       },
     },

@@ -1,7 +1,14 @@
 import { type EventLog, Replay, type ReplayOptions, type ReplayStatus } from '@ibitsa/agent-fake';
 import { type CoreState, initialState, step, view } from '@ibitsa/core';
-import { type Command, type CoreMessage, PROTOCOL_VERSION } from '@ibitsa/protocol';
+import {
+  type Command,
+  type CoreMessage,
+  type HostEvent,
+  type HostRequest,
+  PROTOCOL_VERSION,
+} from '@ibitsa/protocol';
 import type { Host } from '../host.types';
+import { FakeHostChannel } from './fake-host-channel';
 
 /** Commands the game's UI can send; interactive replays wait for these and replay the rest. */
 const ANSWERABLE: Command['type'][] = [
@@ -20,6 +27,7 @@ const ANSWERABLE: Command['type'][] = [
  */
 export class DevHost implements Host {
   readonly replay: Replay;
+  readonly channel = new FakeHostChannel({ credentialsReady: true });
   private state: CoreState = initialState();
   private seq = 0;
   private readonly listeners: ((m: CoreMessage) => void)[] = [];
@@ -46,6 +54,14 @@ export class DevHost implements Host {
       },
       options: { interactiveTypes: ANSWERABLE, ...options },
     });
+  }
+
+  request(request: HostRequest): void {
+    this.channel.request(request);
+  }
+
+  onHostEvent(listener: (event: HostEvent) => void): void {
+    this.channel.onHostEvent(listener);
   }
 
   onMessage(listener: (m: CoreMessage) => void): void {

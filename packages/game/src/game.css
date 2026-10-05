@@ -134,3 +134,139 @@ body {
 .dev-overlay output {
   color: #f2c230;
 }
+
+.new-quest-button {
+  position: fixed;
+  top: 8px;
+  left: 12px;
+  font:
+    13px / 1.4 system-ui,
+    sans-serif;
+  padding: 4px 12px;
+  border: 1px solid #5e3b1c;
+  background: #efe0b8;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+dialog.new-quest {
+  width: min(480px, calc(100vw - 32px));
+  border: 2px solid #8a6a3a;
+  border-radius: 6px;
+  background: #efe0b8;
+  color: #1a1420;
+  font:
+    13px / 1.45 system-ui,
+    sans-serif;
+  padding: 16px;
+}
+
+dialog.new-quest::backdrop {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+dialog.new-quest h2,
+.hero-pane h2 {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+
+dialog.new-quest label {
+  display: block;
+  margin-bottom: 10px;
+}
+
+dialog.new-quest label > span {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+
+dialog.new-quest textarea,
+dialog.new-quest input,
+dialog.new-quest select,
+.hero-pane textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  padding: 4px 6px;
+  border: 1px solid #8a6a3a;
+  border-radius: 3px;
+  background: #fff6dc;
+  color: #1a1420;
+}
+
+dialog.new-quest .note,
+.hero-pane .note {
+  color: #5e4a2a;
+  font-size: 12px;
+  margin: 0 0 8px;
+}
+
+dialog.new-quest .error {
+  color: #9a1e12;
+  margin: 0 0 8px;
+}
+
+dialog.new-quest .actions,
+.hero-pane .controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+dialog.new-quest button,
+.hero-pane button {
+  font: inherit;
+  padding: 3px 10px;
+  border: 1px solid #5e3b1c;
+  background: #fff6dc;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+dialog.new-quest button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+dialog.new-quest button:focus-visible,
+.hero-pane button:focus-visible,
+.new-quest-button:focus-visible {
+  outline: 2px solid #1a1420;
+}
+
+.hero-pane {
+  position: fixed;
+  /* Bottom left, clear of the HUD the canvas draws along its top edge. */
+  bottom: 12px;
+  left: 12px;
+  width: min(260px, calc(100vw - 32px));
+  max-height: calc(100vh - 96px);
+  overflow: auto;
+  background: rgba(239, 224, 184, 0.96);
+  border: 2px solid #8a6a3a;
+  border-radius: 4px;
+  padding: 10px;
+  color: #1a1420;
+  font:
+    13px / 1.4 system-ui,
+    sans-serif;
+}
+
+.hero-pane dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 8px;
+  margin: 0 0 8px;
+}
+
+.hero-pane dt {
+  font-weight: 600;
+}
+
+.hero-pane dd {
+  margin: 0;
+  word-break: break-word;
+}

@@ -15,6 +15,8 @@ class FakeHost implements Host {
   deliver(m: CoreMessage): void {
     this.listener(m);
   }
+  request(): void {}
+  onHostEvent(): void {}
 }
 
 const snap = (title: string): Snapshot => ({
