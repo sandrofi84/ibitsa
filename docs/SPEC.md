@@ -695,7 +695,9 @@ Verified 2026-10-04 against `@anthropic-ai/claude-agent-sdk@0.3.289` ([research]
 
 "Always allow" from a permission item is deferred.
 - Pack files are images/audio/manifest only.
-- **Auth:** v1 uses the user's own Anthropic API key (or a Bedrock/Vertex/Foundry credential), read from VS Code SecretStorage (command "Ibitsa: Set API Key") or the environment (`ANTHROPIC_API_KEY`; `CLAUDE_CODE_USE_BEDROCK`/`VERTEX`/`FOUNDRY` pass through). Not a plain setting: Settings Sync would copy it in clear text. The extension never runs its own claude.ai login and never handles claude.ai credentials: Anthropic does not allow third-party developers to offer claude.ai login without approval. For local development the developer may use their own Pro/Max login. Reusing a subscription login the user already made in Claude Code needs written confirmation from Anthropic; recheck terms before M10. See [research](https://github.com/sandrofi84/ibitsa/blob/research/auth/docs/research/auth.md).
+- **Auth:** v1 uses the user's own Anthropic API key (or a Bedrock/Vertex/Foundry credential), read from VS Code SecretStorage (command "Ibitsa: Set API Key") or the environment (`ANTHROPIC_API_KEY`; `CLAUDE_CODE_USE_BEDROCK`/`VERTEX`/`FOUNDRY` pass through). Not a plain setting: Settings Sync would copy it in clear text.
+  - **First run:** when the user starts a quest and no credentials are found, the game shows one onboarding card: a **Get an API key** button that opens the Anthropic Console's API keys page in the browser, and a field to paste the key. The extension checks the key with a request that spends no tokens (listing models) and stores it in SecretStorage; a bad key fails there, not mid-quest. The key travels only between the webview and the extension, over a channel outside the protocol: it never passes through core or the event log.
+  - **claude.ai sign-in:** only with Anthropic's approval, which has not been requested yet. Anthropic does not allow third-party developers to offer claude.ai login without approval, so until then the extension runs no claude.ai login and handles no claude.ai credentials. For local development the developer may use their own Pro/Max login. Reusing a subscription login the user already made in Claude Code also needs Anthropic's written confirmation; recheck terms before M10. See [research](https://github.com/sandrofi84/ibitsa/blob/research/auth/docs/research/auth.md).
 
 ---
 
@@ -771,7 +773,7 @@ Settled in [#11](https://github.com/sandrofi84/ibitsa/issues/11).
 6. Whether Claude Code tolerates extra frontmatter fields (for action `target`), else sidecar.
 7. Confirm SDK invocation of custom skills via `/name` prompts.
 8. ACP capability coverage per agent.
-9. Subscription sign-in for a published extension (terms).
+9. Subscription (claude.ai) sign-in for the published extension: possible only with Anthropic's approval; not requested yet (§11.6).
 10. Default max parallel parties.
 11. Specialist dives (planning subagents): add later or not.
 12. Optional `@ibitsa` VS Code chat participant.
