@@ -322,7 +322,7 @@ Shown in the same hover menu, visually distinct:
 
 ### 6.4 "Needs you" queue
 - All questions and permission requests from any session go into one queue (panel + map bubbles).
-- VS Code notification and panel badge when the panel is not focused.
+- VS Code notification (with "Open Game") when the game tab is not visible, and the waiting count in the tab title ("Ibitsa · 2 waiting"): editor tabs have no badge API.
 - Focus mode: only "needs you" makes sound.
 
 ---
@@ -695,7 +695,7 @@ Verified 2026-10-04 against `@anthropic-ai/claude-agent-sdk@0.3.289` ([research]
 
 "Always allow" from a permission item is deferred.
 - Pack files are images/audio/manifest only.
-- **Auth:** v1 uses the user's own Anthropic API key (or a Bedrock/Vertex/Foundry credential), read from settings, VS Code SecretStorage or the environment. The extension never runs its own claude.ai login and never handles claude.ai credentials: Anthropic does not allow third-party developers to offer claude.ai login without approval. For local development the developer may use their own Pro/Max login. Reusing a subscription login the user already made in Claude Code needs written confirmation from Anthropic; recheck terms before M10. See [research](https://github.com/sandrofi84/ibitsa/blob/research/auth/docs/research/auth.md).
+- **Auth:** v1 uses the user's own Anthropic API key (or a Bedrock/Vertex/Foundry credential), read from VS Code SecretStorage (command "Ibitsa: Set API Key") or the environment (`ANTHROPIC_API_KEY`; `CLAUDE_CODE_USE_BEDROCK`/`VERTEX`/`FOUNDRY` pass through). Not a plain setting: Settings Sync would copy it in clear text. The extension never runs its own claude.ai login and never handles claude.ai credentials: Anthropic does not allow third-party developers to offer claude.ai login without approval. For local development the developer may use their own Pro/Max login. Reusing a subscription login the user already made in Claude Code needs written confirmation from Anthropic; recheck terms before M10. See [research](https://github.com/sandrofi84/ibitsa/blob/research/auth/docs/research/auth.md).
 
 ---
 

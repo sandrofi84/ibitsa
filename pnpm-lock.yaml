@@ -217,6 +217,9 @@ importers:
 
   packages/extension:
     dependencies:
+      '@ibitsa/core':
+        specifier: workspace:*
+        version: link:../core
       '@ibitsa/protocol':
         specifier: workspace:*
         version: link:../protocol

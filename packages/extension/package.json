@@ -19,14 +19,65 @@
         "command": "ibitsa.openGame",
         "title": "Open Game",
         "category": "Ibitsa"
+      },
+      {
+        "command": "ibitsa.setApiKey",
+        "title": "Set API Key",
+        "category": "Ibitsa"
+      },
+      {
+        "command": "ibitsa.openWorktree",
+        "title": "Open Worktree in New Window",
+        "category": "Ibitsa"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Ibitsa",
+      "properties": {
+        "ibitsa.hero.budgetUsd": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "default": null,
+          "minimum": 0,
+          "markdownDescription": "A hero's gold pouch in US dollars. When it's spent, the hero stops and asks before spending more. Leave empty for no cap."
+        },
+        "ibitsa.worktree.setup": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "A command run in each new worktree before the hero starts, e.g. `pnpm install --frozen-lockfile`. Empty runs nothing."
+        },
+        "ibitsa.hero.settingSources": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "project",
+              "user",
+              "local"
+            ]
+          },
+          "default": [
+            "project"
+          ],
+          "uniqueItems": true,
+          "markdownDescription": "Which Claude Code settings hero sessions load. `project`: the repo's `CLAUDE.md`, skills and rules. Adding `user` also loads your personal `~/.claude` skills and `CLAUDE.md` **and your personal permission rules and hooks**, which can let a hero do more without asking."
+        },
+        "ibitsa.claudeCodePath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Path to a `claude` executable to use instead of the one bundled with the extension. Empty uses the bundled one."
+        }
+      }
+    }
   },
   "scripts": {
     "build": "node build.mjs",
     "test:integration": "vscode-test"
   },
   "dependencies": {
+    "@ibitsa/core": "workspace:*",
     "@ibitsa/protocol": "workspace:*",
     "@ibitsa/runtime": "workspace:*"
   },
