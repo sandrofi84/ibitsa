@@ -58,6 +58,7 @@ export class ClaudeSession implements AgentSession {
   >();
   private readonly held: string[] = [];
   private query: Query | null = null;
+  private mapper: EventMapper | null = null;
   private closed = false;
   private busy = false;
   private submitToolUseId: string | null = null;
@@ -80,6 +81,7 @@ export class ClaudeSession implements AgentSession {
   /** A full stop: interrupt and drop everything still held. */
   interrupt(): void {
     this.held.length = 0;
+    this.mapper?.interrupted();
     void this.query?.interrupt();
   }
 
@@ -148,6 +150,7 @@ export class ClaudeSession implements AgentSession {
       const sdk = await (init.adapter.loadSdk ?? loadSdk)();
       const tests = new TestDetector(init.cwd);
       const mapper = new EventMapper({ cwd: init.cwd, tests });
+      this.mapper = mapper;
       const hero = heroSettings({
         platform,
         settingSources: init.adapter.settingSources?.() ?? ['project'],

@@ -94,6 +94,29 @@ describe('EventMapper.message', () => {
     });
   });
 
+  it('ends a stopped turn quietly, though the SDK reports it as an error (#40)', () => {
+    const m = mapper();
+    m.interrupted();
+    expect(m.message(result({ subtype: 'error_during_execution', is_error: true })).at(-1)).toEqual(
+      { type: 'turnEnded', queuedTurns: 0 },
+    );
+    // Only that one result: a later failure is an error again.
+    m.message(assistant('again'));
+    expect(m.message(result({ subtype: 'error_during_execution', is_error: true })).at(-1)).toEqual(
+      { type: 'error', message: 'error during execution' },
+    );
+  });
+
+  it('ignores a stop while waiting for orders', () => {
+    const m = mapper();
+    m.message(result());
+    m.interrupted();
+    m.message(assistant('hi'));
+    expect(m.message(result({ subtype: 'error_during_execution', is_error: true })).at(-1)).toEqual(
+      { type: 'error', message: 'error during execution' },
+    );
+  });
+
   it('reports execution failures and failed results as errors', () => {
     expect(
       mapper()
