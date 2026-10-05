@@ -188,4 +188,26 @@ describe('ReplayExport', () => {
       n: 1,
     });
   });
+
+  it('treats /var and /private/var as the same place, whichever the log used', () => {
+    const viaVar = scripted('/var/folders/x/wt');
+    const record = viaVar.records[3] as Extract<LogRecord, { kind: 'agent' }>;
+    record.event = {
+      type: 'activityStarted',
+      toolUseId: 'u1',
+      kind: 'read',
+      detail: '/private/var/folders/x/wt/a.ts',
+    };
+    expect(parseLog(exportOf(viaVar)).records[3]).toMatchObject({ event: { detail: 'a.ts' } });
+
+    const viaPrivate = scripted('/private/tmp/wt');
+    const other = viaPrivate.records[3] as Extract<LogRecord, { kind: 'agent' }>;
+    other.event = {
+      type: 'activityStarted',
+      toolUseId: 'u1',
+      kind: 'read',
+      detail: '/tmp/wt/b.ts',
+    };
+    expect(parseLog(exportOf(viaPrivate)).records[3]).toMatchObject({ event: { detail: 'b.ts' } });
+  });
 });
