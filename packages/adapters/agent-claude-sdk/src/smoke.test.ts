@@ -41,4 +41,46 @@ describe.skipIf(process.env.IBITSA_SMOKE !== '1')('live Claude session (smoke)',
     expect(events.some((e) => e.type === 'usage' && e.totalCost !== undefined)).toBe(true);
     expect(events.at(-1)?.type).toBe('turnEnded');
   }, 180_000);
+
+  it('asks permission, asks a question, and submits through submit_task', async () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'ibitsa-smoke-'));
+    const events: AgentEvent[] = [];
+    const done = new Promise<void>((resolve) => {
+      const session = new ClaudeAdapter({ env: () => ({ ...process.env }) }).startSession(
+        {
+          heroId: 'h1',
+          sessionId: crypto.randomUUID(),
+          cwd,
+          classId: 'rogue',
+          prompt:
+            'First use the AskUserQuestion tool to ask whether the file should be called hello.txt or hi.txt (two options). Then create that file containing the word hi by running `echo hi > <name>` with the Bash tool. Then call the submit_task tool with a one-sentence summary. This folder is not a git repository; do not commit.',
+        },
+        (event) => {
+          events.push(event);
+          // Answer the way "Needs you" and core would.
+          if (event.type === 'question') {
+            const q = event.questions[0];
+            session.answerQuestion(event.requestId, {
+              [q?.question ?? '']: q?.options[0]?.label ?? 'hello.txt',
+            });
+          }
+          if (event.type === 'permission')
+            session.respondToPermission({ requestId: event.requestId, decision: 'allow' });
+          if (event.type === 'taskSubmitted')
+            session.completeSubmit({ toolUseId: event.toolUseId, accepted: true });
+          if (event.type === 'turnEnded' || event.type === 'error') {
+            session.close();
+            resolve();
+          }
+        },
+      );
+    });
+    await done;
+    rmSync(cwd, { recursive: true, force: true });
+    console.log(JSON.stringify(events, null, 2));
+    expect(events.some((e) => e.type === 'question')).toBe(true);
+    expect(events.some((e) => e.type === 'permission')).toBe(true);
+    expect(events.some((e) => e.type === 'taskSubmitted')).toBe(true);
+    expect(events.at(-1)?.type).toBe('turnEnded');
+  }, 240_000);
 });
