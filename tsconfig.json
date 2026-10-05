@@ -21,6 +21,9 @@
     },
     {
       "path": "packages/assets"
+    },
+    {
+      "path": "packages/adapters/agent-claude-sdk"
     }
   ]
 }

@@ -12,6 +12,7 @@ export default {
         'core',
         'runtime',
         'agent-fake',
+        'agent-claude-sdk',
         'game',
         'extension',
         'assets',

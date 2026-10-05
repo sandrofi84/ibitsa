@@ -245,7 +245,7 @@ Each hero is always in exactly one state, mapped from agent events (settled in [
 | think | no tool running mid-turn (text or thinking) |
 | other | anything else (MCP tools, TodoWrite, Skill, …): generic work animation |
 
-- A tool failure is not an error: it emits `activityFinished { outcome: 'failed' }` (hurt cue) and the hero stays working. "Failed" = `PostToolUseFailure` or a tool result with `is_error` (verify Bash non-zero exits in M1). API retries keep the current state and emit a `retrying` cue.
+- A tool failure is not an error: it emits `activityFinished { outcome: 'failed' }` (hurt cue) and the hero stays working. "Failed" = `PostToolUseFailure` or a tool result with `is_error` (verified live on 2026-10-05 with SDK 0.3.289: a Bash command with a non-zero exit arrives as failed). API retries keep the current state and emit a `retrying` cue.
 - Subagent activity animates the character the subagent stands for: a hero's own helpers animate the hero; review subagents (M5) animate their councillor.
 - **`submit_task`** is an in-process MCP tool (`mcp__ibitsa__submit_task`) the hero's system prompt tells it to call when finished. For an agent without custom tools, the turn ends in `idle` and the user marks the task done from the `reply` item.
 
