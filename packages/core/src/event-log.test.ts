@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  LogFormatError,
-  type LogHeader,
-  type LogRecord,
-  parseLog,
-  serializeLine,
-} from './event-log';
+import { LogFormatError, parseLog, serializeLine } from './event-log';
+import type { LogHeader, LogRecord } from './event-log.types';
 
 const header: LogHeader = {
   kind: 'header',

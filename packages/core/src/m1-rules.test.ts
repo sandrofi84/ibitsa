@@ -1,9 +1,11 @@
 import type { AgentEvent, Command, Cue, HeroView } from '@ibitsa/protocol';
 import { describe, expect, it } from 'vitest';
-import type { Effect } from './effects';
-import type { CoreInput, GameMasterEvent } from './inputs';
-import { type CoreState, DEFAULT_SETTINGS, initialState, type QuestSettings } from './state';
-import { CONTINUE_PROMPT, step } from './step';
+import type { Effect } from './effects.types';
+import { CONTINUE_PROMPT } from './hero';
+import type { CoreInput, GameMasterEvent } from './inputs.types';
+import { DEFAULT_SETTINGS, initialState } from './state';
+import type { CoreState, QuestSettings } from './state.types';
+import { step } from './step';
 import { view } from './view';
 
 type InputWithoutTime = CoreInput extends infer I
