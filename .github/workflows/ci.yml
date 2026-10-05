@@ -1,5 +1,5 @@
-# CI from M0 (spec §13): every PR and push to main, Ubuntu only.
-# macOS/Windows runners join at M1; platform packaging and publishing at M10.
+# CI (spec §13): every PR and push to main. Ubuntu runs everything; macOS and Windows run the unit and
+# integration tests (sandbox and platform behaviour, §11.6). Platform packaging and publishing at M10.
 name: CI
 
 on:
@@ -68,3 +68,38 @@ jobs:
           name: playwright-results
           path: packages/game/test-results/
           if-no-files-found: ignore
+
+  platforms:
+    # Unit and integration tests where hero sessions behave differently: the Seatbelt sandbox on macOS,
+    # no sandbox on native Windows. Coverage floors and Playwright run on Ubuntu only.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm exec tsc -b
+
+      - name: Unit tests and fixture golden files (Vitest)
+        run: pnpm exec vitest run
+
+      - name: Build extension and game
+        run: pnpm -r build
+
+      - name: Extension integration tests (VS Code)
+        working-directory: packages/extension
+        run: pnpm test:integration

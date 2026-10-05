@@ -1,0 +1,4 @@
+# LF everywhere, so Windows checkouts match the fixtures, golden files and Biome's formatting.
+* text=auto eol=lf
+*.png binary
+*.ogg binary

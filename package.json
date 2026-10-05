@@ -13,7 +13,8 @@
     "typecheck": "tsc -b",
     "test": "vitest run --coverage",
     "prepare": "husky",
-    "conventions": "node scripts/check-conventions.mjs"
+    "conventions": "node scripts/check-conventions.mjs",
+    "test:integration:docker": "node scripts/test-integration-docker.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
