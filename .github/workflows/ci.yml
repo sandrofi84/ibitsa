@@ -37,8 +37,16 @@ jobs:
       - name: Typecheck
         run: pnpm exec tsc -b
 
-      - name: Unit tests and fixture golden files (Vitest)
-        run: pnpm exec vitest run
+      - name: Unit tests, fixture golden files and coverage floors (Vitest)
+        run: pnpm exec vitest run --coverage
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: coverage/
+          if-no-files-found: ignore
 
       - name: Build extension and game
         run: pnpm -r build
