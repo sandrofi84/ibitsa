@@ -1,0 +1,479 @@
+{
+  "cues": [
+    {
+      "t": 3800,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "read",
+        "outcome": "ok"
+      }
+    },
+    {
+      "t": 5200,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "edit",
+        "outcome": "ok"
+      }
+    },
+    {
+      "t": 8500,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "test",
+        "outcome": "failed"
+      }
+    },
+    {
+      "t": 9400,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "edit",
+        "outcome": "ok"
+      }
+    },
+    {
+      "t": 12500,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "test",
+        "outcome": "failed"
+      }
+    },
+    {
+      "t": 13400,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "edit",
+        "outcome": "ok"
+      }
+    },
+    {
+      "t": 16500,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "test",
+        "outcome": "failed"
+      }
+    },
+    {
+      "t": 17400,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "edit",
+        "outcome": "ok"
+      }
+    },
+    {
+      "t": 20500,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "test",
+        "outcome": "failed"
+      }
+    },
+    {
+      "t": 20500,
+      "cue": {
+        "type": "needsYouAdded",
+        "itemId": "n5"
+      }
+    },
+    {
+      "t": 29400,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "read",
+        "outcome": "ok"
+      }
+    },
+    {
+      "t": 31000,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "edit",
+        "outcome": "ok"
+      }
+    },
+    {
+      "t": 31300,
+      "cue": {
+        "type": "needsYouAdded",
+        "itemId": "n6"
+      }
+    },
+    {
+      "t": 41500,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "test",
+        "outcome": "ok"
+      }
+    },
+    {
+      "t": 42300,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "other",
+        "outcome": "ok"
+      }
+    }
+  ],
+  "marks": [
+    {
+      "mark": "arrived",
+      "t": 2400,
+      "snapshot": {
+        "campaign": {
+          "id": "c1",
+          "title": "Make the date parser accept ISO week dates",
+          "status": "active",
+          "gold": {
+            "kind": "unknown"
+          }
+        },
+        "islands": [
+          {
+            "id": "i2",
+            "name": "Make the date parser accept ISO week dates",
+            "branch": "ibitsa/make-the-date-parser-accept-iso-week-dates",
+            "taskPoints": [
+              {
+                "id": "t3",
+                "title": "Make the date parser accept ISO week dates",
+                "state": "active"
+              }
+            ]
+          }
+        ],
+        "heroes": [
+          {
+            "id": "h4",
+            "name": "Barbarian Brann",
+            "classId": "barbarian",
+            "islandId": "i2",
+            "taskPointId": "t3",
+            "state": {
+              "kind": "working"
+            },
+            "activity": {
+              "kind": "think"
+            },
+            "hp": {
+              "kind": "unknown"
+            },
+            "gold": {
+              "kind": "unknown"
+            },
+            "queuedMessages": 0
+          }
+        ],
+        "needsYou": []
+      }
+    },
+    {
+      "mark": "stalled",
+      "t": 20500,
+      "snapshot": {
+        "campaign": {
+          "id": "c1",
+          "title": "Make the date parser accept ISO week dates",
+          "status": "active",
+          "gold": {
+            "kind": "exact",
+            "value": 61000
+          }
+        },
+        "islands": [
+          {
+            "id": "i2",
+            "name": "Make the date parser accept ISO week dates",
+            "branch": "ibitsa/make-the-date-parser-accept-iso-week-dates",
+            "taskPoints": [
+              {
+                "id": "t3",
+                "title": "Make the date parser accept ISO week dates",
+                "state": "active"
+              }
+            ]
+          }
+        ],
+        "heroes": [
+          {
+            "id": "h4",
+            "name": "Barbarian Brann",
+            "classId": "barbarian",
+            "islandId": "i2",
+            "taskPointId": "t3",
+            "state": {
+              "kind": "stalled",
+              "reason": "The same test failed 4 times in a row: pnpm test date"
+            },
+            "activity": null,
+            "hp": {
+              "kind": "exact",
+              "value": {
+                "used": 21000,
+                "max": 200000
+              }
+            },
+            "gold": {
+              "kind": "exact",
+              "value": 61000
+            },
+            "queuedMessages": 0
+          }
+        ],
+        "needsYou": [
+          {
+            "kind": "stalled",
+            "id": "n5",
+            "heroId": "h4",
+            "reason": "The same test failed 4 times in a row: pnpm test date"
+          }
+        ]
+      }
+    },
+    {
+      "mark": "out-of-gold",
+      "t": 31400,
+      "snapshot": {
+        "campaign": {
+          "id": "c1",
+          "title": "Make the date parser accept ISO week dates",
+          "status": "active",
+          "gold": {
+            "kind": "exact",
+            "value": 301500
+          }
+        },
+        "islands": [
+          {
+            "id": "i2",
+            "name": "Make the date parser accept ISO week dates",
+            "branch": "ibitsa/make-the-date-parser-accept-iso-week-dates",
+            "taskPoints": [
+              {
+                "id": "t3",
+                "title": "Make the date parser accept ISO week dates",
+                "state": "active"
+              }
+            ]
+          }
+        ],
+        "heroes": [
+          {
+            "id": "h4",
+            "name": "Barbarian Brann",
+            "classId": "barbarian",
+            "islandId": "i2",
+            "taskPointId": "t3",
+            "state": {
+              "kind": "outOfGold"
+            },
+            "activity": null,
+            "hp": {
+              "kind": "exact",
+              "value": {
+                "used": 52000,
+                "max": 200000
+              }
+            },
+            "gold": {
+              "kind": "exact",
+              "value": 301500
+            },
+            "queuedMessages": 0
+          }
+        ],
+        "needsYou": [
+          {
+            "kind": "outOfGold",
+            "id": "n6",
+            "heroId": "h4",
+            "cap": 300000,
+            "capEnforcement": "native"
+          }
+        ]
+      }
+    },
+    {
+      "mark": "tests-green",
+      "t": 41500,
+      "snapshot": {
+        "campaign": {
+          "id": "c1",
+          "title": "Make the date parser accept ISO week dates",
+          "status": "active",
+          "gold": {
+            "kind": "exact",
+            "value": 301500
+          }
+        },
+        "islands": [
+          {
+            "id": "i2",
+            "name": "Make the date parser accept ISO week dates",
+            "branch": "ibitsa/make-the-date-parser-accept-iso-week-dates",
+            "taskPoints": [
+              {
+                "id": "t3",
+                "title": "Make the date parser accept ISO week dates",
+                "state": "active"
+              }
+            ]
+          }
+        ],
+        "heroes": [
+          {
+            "id": "h4",
+            "name": "Barbarian Brann",
+            "classId": "barbarian",
+            "islandId": "i2",
+            "taskPointId": "t3",
+            "state": {
+              "kind": "working"
+            },
+            "activity": {
+              "kind": "think"
+            },
+            "hp": {
+              "kind": "exact",
+              "value": {
+                "used": 52000,
+                "max": 200000
+              }
+            },
+            "gold": {
+              "kind": "exact",
+              "value": 301500
+            },
+            "queuedMessages": 0
+          }
+        ],
+        "needsYou": []
+      }
+    },
+    {
+      "mark": "submitted",
+      "t": 42800,
+      "snapshot": {
+        "campaign": {
+          "id": "c1",
+          "title": "Make the date parser accept ISO week dates",
+          "status": "active",
+          "gold": {
+            "kind": "exact",
+            "value": 352000
+          }
+        },
+        "islands": [
+          {
+            "id": "i2",
+            "name": "Make the date parser accept ISO week dates",
+            "branch": "ibitsa/make-the-date-parser-accept-iso-week-dates",
+            "taskPoints": [
+              {
+                "id": "t3",
+                "title": "Make the date parser accept ISO week dates",
+                "state": "doneUnreviewed"
+              }
+            ]
+          }
+        ],
+        "heroes": [
+          {
+            "id": "h4",
+            "name": "Barbarian Brann",
+            "classId": "barbarian",
+            "islandId": "i2",
+            "taskPointId": "t3",
+            "state": {
+              "kind": "submitted",
+              "summary": "parseDate understands ISO week dates; added tests."
+            },
+            "activity": null,
+            "hp": {
+              "kind": "exact",
+              "value": {
+                "used": 58000,
+                "max": 200000
+              }
+            },
+            "gold": {
+              "kind": "exact",
+              "value": 352000
+            },
+            "queuedMessages": 0
+          }
+        ],
+        "needsYou": []
+      }
+    }
+  ],
+  "final": {
+    "campaign": {
+      "id": "c1",
+      "title": "Make the date parser accept ISO week dates",
+      "status": "active",
+      "gold": {
+        "kind": "exact",
+        "value": 352000
+      }
+    },
+    "islands": [
+      {
+        "id": "i2",
+        "name": "Make the date parser accept ISO week dates",
+        "branch": "ibitsa/make-the-date-parser-accept-iso-week-dates",
+        "taskPoints": [
+          {
+            "id": "t3",
+            "title": "Make the date parser accept ISO week dates",
+            "state": "doneUnreviewed"
+          }
+        ]
+      }
+    ],
+    "heroes": [
+      {
+        "id": "h4",
+        "name": "Barbarian Brann",
+        "classId": "barbarian",
+        "islandId": "i2",
+        "taskPointId": "t3",
+        "state": {
+          "kind": "submitted",
+          "summary": "parseDate understands ISO week dates; added tests."
+        },
+        "activity": null,
+        "hp": {
+          "kind": "exact",
+          "value": {
+            "used": 58000,
+            "max": 200000
+          }
+        },
+        "gold": {
+          "kind": "exact",
+          "value": 352000
+        },
+        "queuedMessages": 0
+      }
+    ],
+    "needsYou": []
+  }
+}

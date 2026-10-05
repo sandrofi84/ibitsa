@@ -13,6 +13,7 @@ export function deriveState(hero: Hero, state: CoreState): ExecutionState {
   if (hero.unknownReason !== null) return { kind: 'unknown', reason: hero.unknownReason };
   if (hero.error !== null) return { kind: 'error', message: hero.error };
   if (hero.outOfGold) return { kind: 'outOfGold' };
+  if (hero.stalled !== null) return { kind: 'stalled', reason: hero.stalled };
   const asking = state.needsYou.some(
     (i) => i.heroId === hero.id && (i.kind === 'permission' || i.kind === 'question'),
   );
@@ -75,7 +76,7 @@ export function view(state: CoreState): Snapshot {
     })),
     heroes: state.heroes.map((h) => heroView(h, state)),
     needsYou: state.needsYou.map((item): NeedsYouItem => {
-      if (item.kind === 'reply') return { ...item };
+      if (item.kind !== 'permission' && item.kind !== 'question') return { ...item };
       const { requestId: _requestId, ...visible } = item;
       return visible;
     }),

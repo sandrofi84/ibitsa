@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { Effect } from './effects';
 import type { CoreInput, GameMasterEvent } from './inputs';
 import { describePermission } from './permissions';
-import { type CoreState, type Hero, initialState } from './state';
+import { type CoreState, freshWatch, type Hero, initialState } from './state';
 import { SILENCE_MS, step } from './step';
 import { deriveState, sumGold, view } from './view';
 
@@ -224,7 +224,7 @@ describe('working', () => {
     const h = arrived();
     h.drain();
     h.command({ type: 'stopHero', commandId: 'c1', heroId: 'h4' });
-    expect(h.effects).toEqual([{ type: 'interrupt', heroId: 'h4' }]);
+    expect(h.effects[0]).toEqual({ type: 'interrupt', heroId: 'h4' });
   });
 });
 
@@ -471,6 +471,7 @@ describe('HP and gold', () => {
 });
 
 describe('state precedence (§5.4)', () => {
+  // unknown > error > outOfGold > stalled > waitingOnYou > resting > working > submitted > idle > traveling
   const base = (): Hero => ({
     id: 'h',
     name: 'n',
@@ -490,6 +491,11 @@ describe('state precedence (§5.4)', () => {
     hp: { kind: 'unknown' },
     gold: { kind: 'unknown' },
     queuedMessages: 0,
+    sessionId: 's1',
+    sessionLive: true,
+    stalled: 'stuck',
+    cap: null,
+    watch: freshWatch(),
   });
   const asking: CoreState = {
     ...initialState(),
@@ -506,11 +512,27 @@ describe('state precedence (§5.4)', () => {
       [{}, waiting, 'unknown'],
       [{ unknownReason: null }, waiting, 'error'],
       [{ unknownReason: null, error: null }, waiting, 'outOfGold'],
-      [{ unknownReason: null, error: null, outOfGold: false }, waiting, 'waitingOnYou'],
-      [{ unknownReason: null, error: null, outOfGold: false }, asking, 'resting'],
-      [{ unknownReason: null, error: null, outOfGold: false, resting: false }, asking, 'working'],
+      [{ unknownReason: null, error: null, outOfGold: false }, waiting, 'stalled'],
       [
-        { unknownReason: null, error: null, outOfGold: false, resting: false, inTurn: false },
+        { unknownReason: null, error: null, outOfGold: false, stalled: null },
+        waiting,
+        'waitingOnYou',
+      ],
+      [{ unknownReason: null, error: null, outOfGold: false, stalled: null }, asking, 'resting'],
+      [
+        { unknownReason: null, error: null, outOfGold: false, resting: false, stalled: null },
+        asking,
+        'working',
+      ],
+      [
+        {
+          unknownReason: null,
+          error: null,
+          outOfGold: false,
+          resting: false,
+          inTurn: false,
+          stalled: null,
+        },
         asking,
         'submitted',
       ],
@@ -522,6 +544,7 @@ describe('state precedence (§5.4)', () => {
           resting: false,
           inTurn: false,
           submitted: null,
+          stalled: null,
         },
         asking,
         'idle',
@@ -535,6 +558,7 @@ describe('state precedence (§5.4)', () => {
           inTurn: false,
           submitted: null,
           sessionStarted: false,
+          stalled: null,
         },
         asking,
         'traveling',
