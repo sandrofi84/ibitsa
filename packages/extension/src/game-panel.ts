@@ -1,6 +1,9 @@
 import { randomBytes } from 'node:crypto';
+import type { CoreMessage } from '@ibitsa/protocol';
+import type { Connection } from '@ibitsa/runtime';
 import * as vscode from 'vscode';
 import type { GameDiagnostics } from './game-panel.types';
+import type { RuntimeHost } from './runtime-host';
 
 export const GAME_VIEW_TYPE = 'ibitsa.game';
 
@@ -8,6 +11,31 @@ export const GAME_VIEW_TYPE = 'ibitsa.game';
 export class GamePanel {
   private static current: GamePanel | undefined;
   static lastDiagnostics: GameDiagnostics | undefined;
+  /** Null without a workspace folder: the game opens, but no quest can run. */
+  static host: RuntimeHost | null = null;
+  /** Messages sent to the webview, kept only when integration tests ask for them. */
+  static testLog: CoreMessage[] | null = null;
+  private static waiting = 0;
+
+  static get visible(): boolean {
+    return GamePanel.current?.panel.visible ?? false;
+  }
+
+  /** VS Code editor tabs have no badge, so the title carries the "Needs you" count (spec §6.4). */
+  static setWaiting(count: number): void {
+    GamePanel.waiting = count;
+    GamePanel.current?.updateTitle();
+  }
+
+  /** Feeds a message as if the webview sent it (integration tests). */
+  static deliver(raw: unknown): void {
+    GamePanel.current?.receive(raw);
+  }
+
+  /** Reconnects to a restarted runtime (integration tests simulate a window reload this way). */
+  static async reconnect(): Promise<void> {
+    await GamePanel.current?.connect();
+  }
 
   static show(extensionUri: vscode.Uri): void {
     if (GamePanel.current) {
@@ -36,17 +64,52 @@ export class GamePanel {
     };
   }
 
+  private connection: Connection | null = null;
+  /** Messages that arrived before the runtime finished starting. */
+  private pending: unknown[] = [];
+
   private constructor(
     private readonly panel: vscode.WebviewPanel,
     extensionUri: vscode.Uri,
   ) {
     panel.webview.html = renderHtml(panel.webview, extensionUri);
-    panel.webview.onDidReceiveMessage((message: unknown) => {
-      if (isDiagnostics(message)) GamePanel.lastDiagnostics = message;
-    });
+    panel.webview.onDidReceiveMessage((message: unknown) => this.receive(message));
     panel.onDidDispose(() => {
+      this.connection?.close();
       if (GamePanel.current?.panel === panel) GamePanel.current = undefined;
     });
+    this.updateTitle();
+    this.connect().catch((e: unknown) =>
+      console.error('[ibitsa] could not connect to the runtime', e),
+    );
+  }
+
+  private async connect(): Promise<void> {
+    this.connection?.close();
+    this.connection = null;
+    const host = GamePanel.host;
+    if (!host) return;
+    const connection = await host.connect({
+      post: (message) => {
+        GamePanel.testLog?.push(message);
+        void this.panel.webview.postMessage(message);
+      },
+    });
+    this.connection = connection;
+    for (const message of this.pending.splice(0)) connection.receive(message);
+  }
+
+  private receive(message: unknown): void {
+    if (isDiagnostics(message)) {
+      GamePanel.lastDiagnostics = message;
+      return;
+    }
+    if (this.connection) this.connection.receive(message);
+    else if (GamePanel.host) this.pending.push(message);
+  }
+
+  private updateTitle(): void {
+    this.panel.title = GamePanel.waiting > 0 ? `Ibitsa · ${GamePanel.waiting} waiting` : 'Ibitsa';
   }
 }
 
