@@ -1,5 +1,5 @@
-import type { ActivityKind, AskUserQuestion } from './snapshot';
-import type { MicroUsd } from './values';
+import type { ActivityKind, AskUserQuestion } from './snapshot.types';
+import type { MicroUsd } from './values.types';
 
 /**
  * Normalized adapter output for one session (spec §11.3, with the #2 and #10 corrections).

@@ -1,14 +1,14 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { extname, join, relative, sep } from 'node:path';
 import * as v from 'valibot';
-import { type Manifest, ManifestSchema, REQUIRED_ANIMATIONS, SPEC } from './manifest.ts';
+import { type Manifest, ManifestSchema } from './manifest.schema.ts';
+import { REQUIRED_ANIMATIONS, SPEC } from './manifest.ts';
 import { readPngSize } from './png.ts';
+import type { PackValidation } from './validate.types.ts';
 
 /** Packs hold images, audio and the manifest only: no scripts, nothing executable (spec §9.3). */
 const ALLOWED_EXTENSIONS = new Set(['.png', '.ogg', '.mp3', '.wav']);
 export const LIMITS = { fileBytes: 4 * 1024 * 1024, packBytes: 32 * 1024 * 1024 };
-
-export type PackValidation = { ok: true; manifest: Manifest } | { ok: false; errors: string[] };
 
 function listFiles(dir: string): string[] {
   return readdirSync(dir, { recursive: true, withFileTypes: true })

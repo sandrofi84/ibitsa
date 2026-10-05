@@ -1,4 +1,4 @@
-import type { MicroUsd, Reading } from './values';
+import type { MicroUsd, Reading } from './values.types';
 
 /** The whole world as front ends see it: glossary terms, no layout (spec §11.2.1). */
 export interface Snapshot {

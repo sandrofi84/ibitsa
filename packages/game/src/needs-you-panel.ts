@@ -1,5 +1,6 @@
 import type { NeedsYouItem, Snapshot } from '@ibitsa/protocol';
-import type { CommandIntent, GameClient } from './client';
+import type { GameClient } from './client';
+import type { CommandIntent } from './client.types';
 
 /**
  * The "Needs you" queue (spec §6.4) as plain DOM below the map: keyboard-accessible, readable text,

@@ -1,12 +1,7 @@
 import { type CoreState, initialState, step, view } from '@ibitsa/core';
 import type { Cue, Snapshot } from '@ibitsa/protocol';
 import type { EventLog } from './log';
-
-export interface ReplayOutput {
-  cues: { t: number; cue: Cue }[];
-  marks: { mark: string; t: number; snapshot: Snapshot }[];
-  final: Snapshot;
-}
+import type { ReplayOutput } from './run.types';
 
 /** Replays a whole log through a fresh core at `instant` speed, without carrying out effects (ADR 0001). */
 export function replayThroughCore(log: EventLog): ReplayOutput {

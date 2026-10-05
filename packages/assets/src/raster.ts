@@ -1,6 +1,5 @@
 import { encodePng } from './png.ts';
-
-export type Rgba = readonly [number, number, number, number];
+import type { Rgba } from './raster.types.ts';
 
 export function hex(color: string, alpha = 255): Rgba {
   const n = Number.parseInt(color.slice(1), 16);

@@ -5,10 +5,8 @@ import {
   PROTOCOL_VERSION,
   type Snapshot,
 } from '@ibitsa/protocol';
-import type { Host } from './host';
-
-type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
-export type CommandIntent = DistributiveOmit<Exclude<Command, { type: 'hello' }>, 'commandId'>;
+import type { CommandIntent } from './client.types';
+import type { Host } from './host.types';
 
 /**
  * The game's view of the core (spec §11.2.1): snapshots are the only source of state, cues are

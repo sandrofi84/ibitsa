@@ -17,28 +17,12 @@ import type {
   FrontEnd,
   GameMaster,
   UserSettings,
-} from './ports';
+} from './ports.types';
+import type { Connection, RuntimeOptions } from './runtime.types';
 import { type CampaignLog, CampaignStore } from './storage';
 
 /** Snapshots go out at most this often (spec §11.2.1: throttled, ~10/s). */
 export const SNAPSHOT_INTERVAL_MS = 100;
-
-export interface RuntimeOptions {
-  storageDir: string;
-  adapter: AgentAdapter;
-  gameMaster: GameMaster;
-  clock: Clock;
-  /** Read when a quest starts; defaults to no cap and the default stall thresholds. */
-  settings?: () => UserSettings;
-  /** Campaign ids; injectable for tests. */
-  newId?: () => string;
-}
-
-export interface Connection {
-  /** Raw message from the front end; validated here because it crosses a trust boundary. */
-  receive(raw: unknown): void;
-  close(): void;
-}
 
 /**
  * Carries out core effects, writes every input to the event log before stepping, and rebuilds state from

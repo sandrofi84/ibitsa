@@ -14,7 +14,8 @@ import {
   taskPoints,
   tiles,
 } from './art.ts';
-import { type Manifest, SPEC, TASK_POINT_STATES } from './manifest.ts';
+import type { Manifest } from './manifest.schema.ts';
+import { SPEC, TASK_POINT_STATES } from './manifest.ts';
 
 /** The default pack: manifest plus every image, keyed by path inside the pack. */
 export function buildDefaultPack(): { manifest: Manifest; files: Record<string, Buffer> } {

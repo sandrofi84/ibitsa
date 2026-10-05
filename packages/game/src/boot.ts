@@ -1,6 +1,8 @@
 import * as Phaser from 'phaser';
+import type { Started } from './boot.types';
 import { GameClient } from './client';
-import { type Diagnostics, type Host, reportDiagnostics } from './host';
+import { reportDiagnostics } from './host';
+import type { Diagnostics, Host } from './host.types';
 import { mountNeedsYouPanel } from './needs-you-panel';
 import { PackScene } from './pack-scene';
 import { HEIGHT, WIDTH, WorldScene } from './world-scene';
@@ -9,13 +11,6 @@ function hasWebGL(root: HTMLElement): boolean {
   if (root.dataset.forceNoWebgl === 'true') return false;
   const canvas = document.createElement('canvas');
   return Boolean(canvas.getContext('webgl2') ?? canvas.getContext('webgl'));
-}
-
-/** Starts the game in `root`, talking to the core through `host`. Shared by the webview and standalone builds. */
-export interface Started {
-  client: GameClient;
-  /** Current integer zoom, 0 before the game is ready or without WebGL. */
-  zoom(): number;
 }
 
 export function startGame(root: HTMLElement, host: Host): Started {

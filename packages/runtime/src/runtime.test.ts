@@ -12,7 +12,7 @@ import type {
   SessionResume,
   SessionStart,
   UserSettings,
-} from './ports';
+} from './ports.types';
 import { Runtime, SNAPSHOT_INTERVAL_MS } from './runtime';
 
 class ManualClock implements Clock {
