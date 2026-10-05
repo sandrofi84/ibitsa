@@ -40,6 +40,16 @@ test('replays m0-walk to the submitted state', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test('replays the recorded real quest (m1-real) to the finish', async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto('/?fixture=m1-real&autoplay=1&speed=16');
+  await expect.poll(() => probe(page, (p) => p.status().finished), { timeout: 20_000 }).toBe(true);
+  expect(await probe(page, (p) => p.snapshot()?.heroes[0]?.state.kind)).toBe('submitted');
+  expect(await probe(page, (p) => p.status().diverged)).toBe(false);
+  await page.screenshot({ path: 'test-results/m1-real-finished.png' });
+  expect(errors).toEqual([]);
+});
+
 test('lets you answer the permission yourself in interactive mode', async ({ page }) => {
   const errors = watchErrors(page);
   await page.goto('/?autoplay=1&speed=16&mode=interactive');
