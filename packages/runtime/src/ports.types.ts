@@ -1,5 +1,5 @@
 import type { GameMasterEvent } from '@ibitsa/core';
-import type { AgentEvent, CoreMessage } from '@ibitsa/protocol';
+import type { AgentEvent, CoreMessage, RepoView } from '@ibitsa/protocol';
 
 /** Starting one hero's agent session (spec §11.3). The adapter reports everything through `onEvent`. */
 export interface SessionStart {
@@ -63,6 +63,8 @@ export interface GameMaster {
   removeWorktree(request: {
     worktreePath: string;
   }): Promise<{ ok: true } | { ok: false; reason: string }>;
+  /** Default branch, local branches and uncommitted changes of the workspace; null if not a git repo. */
+  scanRepo(): Promise<RepoView | null>;
 }
 
 export interface Clock {

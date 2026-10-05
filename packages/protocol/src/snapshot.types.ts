@@ -7,6 +7,16 @@ export interface Snapshot {
   heroes: HeroView[];
   /** Oldest first. */
   needsYou: NeedsYouItem[];
+  /** The workspace repository, for the New Quest form. Added by the runtime, not core; null if not a git repo. */
+  repo?: RepoView | null;
+}
+
+export interface RepoView {
+  defaultBranch: string;
+  /** Local branches, default first. */
+  branches: string[];
+  /** Uncommitted changes in the workspace: they won't be in a new worktree (spec §5.3). */
+  uncommittedChanges: number;
 }
 
 export interface CampaignView {

@@ -1,18 +1,23 @@
+import { GitGameMaster } from '@ibitsa/runtime';
 import * as vscode from 'vscode';
 import { API_KEY_SECRET, resolveCredentials } from './credentials';
 import type { IbitsaApi } from './extension.types';
 import { GAME_VIEW_TYPE, GamePanel } from './game-panel';
-import { unavailableAdapter, unavailableGameMaster } from './placeholders';
+import { unavailableAdapter } from './placeholders';
 import { RuntimeHost } from './runtime-host';
 import type { DependencyFactory, Notifier } from './runtime-host.types';
 import { readUserSettings } from './settings';
 
 export function activate(context: vscode.ExtensionContext): IbitsaApi {
   const testing = process.env.IBITSA_TESTING === '1';
-  // Until #32/#33: placeholders that report clearly that they aren't built yet.
-  let dependencies: DependencyFactory = () => ({
+  // The Claude adapter is a placeholder until #33; it reports clearly that it isn't built yet.
+  let dependencies: DependencyFactory = ({ workspaceDir }) => ({
     adapter: unavailableAdapter,
-    gameMaster: unavailableGameMaster,
+    gameMaster: new GitGameMaster({
+      repoDir: workspaceDir,
+      setupCommand: () =>
+        vscode.workspace.getConfiguration('ibitsa').get<string>('worktree.setup') ?? '',
+    }),
   });
   let notify: Notifier = async (message) =>
     (await vscode.window.showInformationMessage(message, 'Open Game')) === 'Open Game';

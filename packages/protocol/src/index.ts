@@ -13,6 +13,7 @@ export type {
   HeroView,
   IslandView,
   NeedsYouItem,
+  RepoView,
   Snapshot,
   TaskPointState,
   TaskPointView,

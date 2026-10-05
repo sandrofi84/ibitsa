@@ -213,6 +213,7 @@ ask_user({
 - Worktrees are created by the game master (`git worktree add`), default location: a sibling folder `../<repo>.ibitsa/<branch>` (configurable).
 - **Base:** chosen when the work starts, defaulting to the repo's default branch (`origin/HEAD`, else `main`/`master`). If the workspace has uncommitted changes, warn that they won't be in the worktree.
 - **Branch name:** `ibitsa/<slug of task title>`, suffixed `-2`, `-3`… if taken.
+- **Repo scan:** the git game master reports the default branch, local branches and the workspace's uncommitted changes. The runtime adds it to snapshots as `repo` (it is not core state: it's needed before any quest exists), rescanning on start, on each `hello` and when a quest ends.
 - **Setup:** an optional project setting `worktree.setup` (e.g. `"pnpm install --frozen-lockfile"`, empty by default) that the game master runs right after `git worktree add`, while the hero is still traveling. A failure puts the hero in `error` with the command output. No lockfile guessing.
 
 ### 5.4 Execution states
@@ -527,6 +528,7 @@ interface Snapshot {                                 // seq lives on the CoreMes
   islands: IslandView[];                             // { id, name, branch, taskPoints: TaskPointView[] }
   heroes: HeroView[];
   needsYou: NeedsYouItem[];                          // oldest first
+  repo?: { defaultBranch; branches; uncommittedChanges } | null;  // added by the runtime from the git game master's scan (New Quest form); null = not a git repo
 }
 interface TaskPointView { id: string; title: string; state: 'locked' | 'active' | 'underReview' | 'done' | 'doneUnreviewed' }
 

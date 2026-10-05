@@ -1,5 +1,4 @@
 import { type CoreState, initialState, step, view } from '@ibitsa/core';
-import type { Cue, Snapshot } from '@ibitsa/protocol';
 import type { EventLog } from './log';
 import type { ReplayOutput } from './run.types';
 
