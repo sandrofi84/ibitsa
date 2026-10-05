@@ -5,7 +5,10 @@
       "name": "Run Ibitsa",
       "type": "extensionHost",
       "request": "launch",
-      "args": ["--extensionDevelopmentPath=${workspaceFolder}/packages/extension"],
+      "args": [
+        "--disable-extensions",
+        "--extensionDevelopmentPath=${workspaceFolder}/packages/extension"
+      ],
       "outFiles": ["${workspaceFolder}/packages/extension/dist/**/*.cjs"],
       "preLaunchTask": "build"
     }

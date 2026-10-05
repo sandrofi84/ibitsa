@@ -59,9 +59,11 @@ git('-c', 'user.name=Ibitsa demo', '-c', 'user.email=demo@example.com', 'commit'
 
 const notes = join(dir, '..', 'ibitsa-demo-notes.md');
 console.log(`Demo repo ready: ${dir}
+The "strips accents" test fails on purpose: it's for the hero to find. Don't fix it yourself.
 
-Open it with "Run Ibitsa" (F5 in the Ibitsa repo), then File > Open Folder in the new window.
-Quest description to paste into "Ibitsa: New Quest":
+1. In the Ibitsa repo, press F5 ("Run Ibitsa"). A second VS Code window opens.
+2. In that window, File > Open Folder... and pick ${dir}.
+3. Still in that window, run "Ibitsa: New Quest" from the Command Palette and paste:
 
 Make slugify strip accents
 The "strips accents" test fails. Before you fix it, use AskUserQuestion to ask me whether
