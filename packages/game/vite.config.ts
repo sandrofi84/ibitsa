@@ -14,6 +14,7 @@ function defaultPack(): Plugin {
   return {
     name: 'ibitsa-default-pack',
     configureServer(server) {
+      // biome-ignore lint/complexity/useMaxParams: Connect's middleware signature is (req, res, next).
       server.middlewares.use('/pack/', (req, res, next) => {
         const path = decodeURIComponent((req.url ?? '').split('?')[0] ?? '').replace(/^\/+/, '');
         const file = join(PACK_DIR, path);

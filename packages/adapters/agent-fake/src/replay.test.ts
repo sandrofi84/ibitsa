@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { EventLog, LogRecord } from './log';
-import { type Clock, Replay, type ReplayStatus } from './replay';
+import { type Clock, Replay, type ReplayOptions, type ReplayStatus } from './replay';
 
 /** A manual clock: `advance(ms)` runs due callbacks in order. */
 class FakeClock implements Clock {
@@ -55,21 +55,21 @@ const log: EventLog = {
   ],
 };
 
-function setup(options: ConstructorParameters<typeof Replay>[2] = {}) {
+function setup(options: Partial<ReplayOptions> = {}) {
   const clock = new FakeClock();
   const fed: { at: number; record: LogRecord }[] = [];
   const statuses: ReplayStatus[] = [];
   let restarts = 0;
-  const replay = new Replay(
+  const replay = new Replay({
     log,
-    {
+    callbacks: {
       feed: (record) => fed.push({ at: clock.now, record }),
       restart: () => restarts++,
       status: (s) => statuses.push(s),
     },
     options,
     clock,
-  );
+  });
   return { clock, fed, statuses, replay, restarts: () => restarts };
 }
 

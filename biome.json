@@ -20,7 +20,15 @@
   },
   "linter": {
     "rules": {
-      "preset": "recommended"
+      "preset": "recommended",
+      "complexity": {
+        "useMaxParams": {
+          "level": "error",
+          "options": {
+            "max": 2
+          }
+        }
+      }
     }
   },
   "overrides": [

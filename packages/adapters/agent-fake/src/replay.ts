@@ -60,12 +60,24 @@ export class Replay {
   private timer: unknown = null;
   private opts: ReplayOptions;
 
-  constructor(
-    private readonly log: EventLog,
-    private readonly callbacks: ReplayCallbacks,
-    options: Partial<ReplayOptions> = {},
-    private readonly clock: Clock = defaultClock,
-  ) {
+  private readonly log: EventLog;
+  private readonly callbacks: ReplayCallbacks;
+  private readonly clock: Clock;
+
+  constructor({
+    log,
+    callbacks,
+    options = {},
+    clock = defaultClock,
+  }: {
+    log: EventLog;
+    callbacks: ReplayCallbacks;
+    options?: Partial<ReplayOptions>;
+    clock?: Clock;
+  }) {
+    this.log = log;
+    this.callbacks = callbacks;
+    this.clock = clock;
     this.opts = { ...DEFAULT_OPTIONS, ...options };
   }
 

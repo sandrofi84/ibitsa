@@ -2,7 +2,15 @@ import type { ReplayOptions, ReplayStatus } from '@ibitsa/agent-fake';
 import type { DevHost } from './dev-host';
 
 /** Replay controls for standalone development; not part of the extension build (spec §13). */
-export function mountOverlay(host: DevHost, fixtures: string[], current: string): void {
+export function mountOverlay({
+  host,
+  fixtures,
+  current,
+}: {
+  host: DevHost;
+  fixtures: string[];
+  current: string;
+}): void {
   const el = document.createElement('div');
   el.className = 'dev-overlay';
   el.innerHTML = `

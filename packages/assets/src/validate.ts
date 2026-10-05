@@ -60,7 +60,15 @@ export function validatePack(dir: string): PackValidation {
     if (!s) errors.push(`${label}: ${file} is not a PNG`);
     return s;
   };
-  const expect = (file: string, label: string, check: (w: number, h: number) => string | null) => {
+  const checkImage = ({
+    file,
+    label,
+    check,
+  }: {
+    file: string;
+    label: string;
+    check: (w: number, h: number) => string | null;
+  }) => {
     const s = size(file, label);
     if (!s) return;
     const problem = check(s.width, s.height);
@@ -83,25 +91,36 @@ export function validatePack(dir: string): PackValidation {
     const anims = Object.values(c.animations);
     const cols = Math.max(0, ...anims.map((a) => a.frames));
     const rows = Math.max(0, ...anims.map((a) => a.row + 1));
-    expect(c.sheet, label, (w, h) =>
-      w >= cols * c.frame.width &&
-      h >= rows * c.frame.height &&
-      w % c.frame.width === 0 &&
-      h % c.frame.height === 0
-        ? null
-        : `too small or not a whole number of ${c.frame.width}×${c.frame.height} frames for its animations`,
-    );
-    if (c.portrait) expect(c.portrait, `${label} portrait`, exactly(SPEC.portrait, SPEC.portrait));
+    checkImage({
+      file: c.sheet,
+      label,
+      check: (w, h) =>
+        w >= cols * c.frame.width &&
+        h >= rows * c.frame.height &&
+        w % c.frame.width === 0 &&
+        h % c.frame.height === 0
+          ? null
+          : `too small or not a whole number of ${c.frame.width}×${c.frame.height} frames for its animations`,
+    });
+    if (c.portrait)
+      checkImage({
+        file: c.portrait,
+        label: `${label} portrait`,
+        check: exactly(SPEC.portrait, SPEC.portrait),
+      });
   }
 
   const t = manifest.tiles;
   if (t.tileSize !== SPEC.tile) errors.push(`tiles: tileSize ${t.tileSize}, expected ${SPEC.tile}`);
   const slots = Math.max(0, ...Object.values(t.tiles).map((x) => x.index + (x.frames ?? 1)));
-  expect(t.image, 'tiles', (w, h) =>
-    h === t.tileSize && w >= slots * t.tileSize && w % t.tileSize === 0
-      ? null
-      : `expected ${t.tileSize} tall with ${slots} tiles`,
-  );
+  checkImage({
+    file: t.image,
+    label: 'tiles',
+    check: (w, h) =>
+      h === t.tileSize && w >= slots * t.tileSize && w % t.tileSize === 0
+        ? null
+        : `expected ${t.tileSize} tall with ${slots} tiles`,
+  });
 
   const i = manifest.island;
   if (
@@ -112,7 +131,11 @@ export function validatePack(dir: string): PackValidation {
   ) {
     errors.push('island: pieces must be 96 tall with caps of 48 and a middle of 32');
   }
-  expect(i.image, 'island', exactly(i.leftCap + i.middle + i.rightCap, i.height));
+  checkImage({
+    file: i.image,
+    label: 'island',
+    check: exactly(i.leftCap + i.middle + i.rightCap, i.height),
+  });
 
   const tp = manifest.taskPoints;
   if (tp.size !== SPEC.taskPoint)
@@ -120,12 +143,16 @@ export function validatePack(dir: string): PackValidation {
   for (const state of ['locked', 'active', 'done', 'underReview'] as const) {
     if (!tp.states.includes(state)) errors.push(`task points: missing state "${state}"`);
   }
-  expect(tp.image, 'task points', exactly(tp.size * tp.states.length, tp.size));
+  checkImage({
+    file: tp.image,
+    label: 'task points',
+    check: exactly(tp.size * tp.states.length, tp.size),
+  });
 
   for (const [key, b] of Object.entries(manifest.buildings)) {
     if (b.width % SPEC.tile !== 0 || b.height % SPEC.tile !== 0)
       errors.push(`building ${key}: size must be a multiple of 16`);
-    expect(b.image, `building ${key}`, exactly(b.width, b.height));
+    checkImage({ file: b.image, label: `building ${key}`, check: exactly(b.width, b.height) });
   }
   const hutSpec = manifest.buildings.hut;
   if (!hutSpec) errors.push('buildings: missing "hut"');
@@ -136,7 +163,7 @@ export function validatePack(dir: string): PackValidation {
   if (d.size !== SPEC.dialogueFrame)
     errors.push(`dialogue frame: size ${d.size}, expected ${SPEC.dialogueFrame}`);
   if (d.inset * 2 >= d.size) errors.push('dialogue frame: inset leaves no middle slice');
-  expect(d.image, 'dialogue frame', exactly(d.size, d.size));
+  checkImage({ file: d.image, label: 'dialogue frame', check: exactly(d.size, d.size) });
 
   return errors.length > 0 ? { ok: false, errors } : { ok: true, manifest };
 }

@@ -247,7 +247,7 @@ describe('effects and the log', () => {
     });
     connection.receive({ type: 'stopHero', commandId: 's1', heroId: 'h4' });
     expect(session.calls).toEqual([
-      ['respondToPermission', 'r1', 'allow', undefined],
+      ['respondToPermission', { requestId: 'r1', decision: 'allow' }],
       ['send', 'also docs', 'next'],
       ['interrupt'],
     ]);
@@ -267,7 +267,7 @@ describe('effects and the log', () => {
         baseRef: 'main',
       },
     ]);
-    expect(session.calls.at(-1)).toEqual(['completeSubmit', 'u9', true, undefined]);
+    expect(session.calls.at(-1)).toEqual(['completeSubmit', { toolUseId: 'u9', accepted: true }]);
   });
 
   it('fires timers as logged inputs', async () => {

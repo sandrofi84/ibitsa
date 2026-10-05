@@ -566,17 +566,37 @@ describe('purity', () => {
 
 describe('describePermission', () => {
   it.each([
-    ['Bash', { command: 'pnpm install' }, { action: 'Run command', target: 'pnpm install' }],
-    ['Edit', { file_path: 'src/auth.ts' }, { action: 'Edit file', target: 'src/auth.ts' }],
-    ['Write', { file_path: 'a.md', content: 'x' }, { action: 'Write file', target: 'a.md' }],
-    ['WebFetch', { url: 'https://x.dev' }, { action: 'Fetch URL', target: 'https://x.dev' }],
-    [
-      'mcp__db__query',
-      { sql: 'drop table' },
-      { action: 'mcp__db__query', target: '{"sql":"drop table"}' },
-    ],
-    ['Bash', { cmd: 'odd shape' }, { action: 'Bash', target: '{"cmd":"odd shape"}' }],
-  ])('%s %j', (tool, input, expected) => {
+    {
+      tool: 'Bash',
+      input: { command: 'pnpm install' },
+      expected: { action: 'Run command', target: 'pnpm install' },
+    },
+    {
+      tool: 'Edit',
+      input: { file_path: 'src/auth.ts' },
+      expected: { action: 'Edit file', target: 'src/auth.ts' },
+    },
+    {
+      tool: 'Write',
+      input: { file_path: 'a.md', content: 'x' },
+      expected: { action: 'Write file', target: 'a.md' },
+    },
+    {
+      tool: 'WebFetch',
+      input: { url: 'https://x.dev' },
+      expected: { action: 'Fetch URL', target: 'https://x.dev' },
+    },
+    {
+      tool: 'mcp__db__query',
+      input: { sql: 'drop table' },
+      expected: { action: 'mcp__db__query', target: '{"sql":"drop table"}' },
+    },
+    {
+      tool: 'Bash',
+      input: { cmd: 'odd shape' },
+      expected: { action: 'Bash', target: '{"cmd":"odd shape"}' },
+    },
+  ])('$tool $input', ({ tool, input, expected }) => {
     expect(describePermission(tool, input)).toEqual(expected);
   });
 });

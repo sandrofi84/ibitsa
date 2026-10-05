@@ -25,7 +25,15 @@ function chunk(type: string, data: Buffer): Buffer {
 
 const SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
-export function encodePng(width: number, height: number, rgba: Uint8Array): Buffer {
+export function encodePng({
+  width,
+  height,
+  rgba,
+}: {
+  width: number;
+  height: number;
+  rgba: Uint8Array;
+}): Buffer {
   const header = Buffer.alloc(13);
   header.writeUInt32BE(width, 0);
   header.writeUInt32BE(height, 4);

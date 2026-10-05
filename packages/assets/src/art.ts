@@ -155,17 +155,22 @@ export const ANIMATIONS = ['idle', 'walk', 'work'] as const;
 export const FRAMES = 4;
 
 /** One animation frame as template rows: bobbing, stepping or tool motion applied to the base pose. */
-function frameRows(
-  base: readonly string[],
-  role: CharacterArt['role'],
-  animation: (typeof ANIMATIONS)[number],
-  i: number,
-): string[] {
+function frameRows({
+  base,
+  role,
+  animation,
+  i,
+}: {
+  base: readonly string[];
+  role: CharacterArt['role'];
+  animation: (typeof ANIMATIONS)[number];
+  i: number;
+}): string[] {
   let rows = base.map((r) => r);
   const shiftDown = (n: number) => {
     rows = [...Array(n).fill('.'.repeat(F)), ...rows.slice(0, F - n)];
   };
-  const liftColumns = (from: number, to: number, top: number) => {
+  const liftColumns = ({ from, to, top }: { from: number; to: number; top: number }) => {
     // Move pixels in columns [from, to) of rows top..15 up by one.
     const grid = rows.map((r) => [...r]);
     for (let y = top; y < F; y++) {
@@ -194,10 +199,10 @@ function frameRows(
     if (i >= 2) shiftDown(1);
   } else if (animation === 'walk') {
     if (role === 'hero') {
-      if (i === 1) liftColumns(4, 8, 12);
-      if (i === 3) liftColumns(8, 12, 12);
+      if (i === 1) liftColumns({ from: 4, to: 8, top: 12 });
+      if (i === 3) liftColumns({ from: 8, to: 12, top: 12 });
     } else if (i % 2 === 1) {
-      liftColumns(i === 1 ? 2 : 8, i === 1 ? 8 : 14, 14);
+      liftColumns({ from: i === 1 ? 2 : 8, to: i === 1 ? 8 : 14, top: 14 });
     }
     if (i % 2 === 1) shiftDown(1);
   } else if (role === 'hero') {
@@ -216,7 +221,12 @@ export function characterSheet(art: CharacterArt): Raster {
   const sheet = new Raster(F * FRAMES, F * ANIMATIONS.length);
   ANIMATIONS.forEach((animation, row) => {
     for (let i = 0; i < FRAMES; i++) {
-      sheet.pattern(i * F, row * F, frameRows(base, art.role, animation, i), art.palette);
+      sheet.pattern({
+        x: i * F,
+        y: row * F,
+        rows: frameRows({ base, role: art.role, animation, i }),
+        palette: art.palette,
+      });
     }
   });
   return sheet;
@@ -224,11 +234,16 @@ export function characterSheet(art: CharacterArt): Raster {
 
 export function portrait(art: CharacterArt): Raster {
   const p = new Raster(64, 64);
-  p.rect(0, 0, 64, 64, INK);
-  p.rect(2, 2, 60, 60, art.backdrop);
+  p.rect({ x: 0, y: 0, w: 64, h: 64, color: INK });
+  p.rect({ x: 2, y: 2, w: 60, h: 60, color: art.backdrop });
   const sprite = new Raster(F, F);
-  sprite.pattern(0, 0, art.role === 'hero' ? HERO : COUNCILLOR, art.palette);
-  p.blit(sprite, 8, 10, 3);
+  sprite.pattern({
+    x: 0,
+    y: 0,
+    rows: art.role === 'hero' ? HERO : COUNCILLOR,
+    palette: art.palette,
+  });
+  p.blit({ src: sprite, x: 8, y: 10, scale: 3 });
   return p;
 }
 
@@ -254,31 +269,31 @@ export function tiles(): Raster {
   const t = new Raster(F * 8, F);
   for (let f = 0; f < 4; f++) {
     const x0 = f * F;
-    t.rect(x0, 0, F, F, WATER);
-    t.rect(x0, 8, F, 8, WATER_LIGHT);
-    t.rect(x0 + ((2 + f * 3) % F), 4, 3, 1, WAVE);
-    t.rect(x0 + ((9 + f * 3) % 13), 11, 3, 1, WAVE);
+    t.rect({ x: x0, y: 0, w: F, h: F, color: WATER });
+    t.rect({ x: x0, y: 8, w: F, h: 8, color: WATER_LIGHT });
+    t.rect({ x: x0 + ((2 + f * 3) % F), y: 4, w: 3, h: 1, color: WAVE });
+    t.rect({ x: x0 + ((9 + f * 3) % 13), y: 11, w: 3, h: 1, color: WAVE });
   }
-  t.rect(4 * F, 0, F, F, GRASS);
+  t.rect({ x: 4 * F, y: 0, w: F, h: F, color: GRASS });
   for (const [x, y] of [
     [3, 4],
     [10, 2],
     [7, 11],
     [13, 9],
   ] as const)
-    t.rect(4 * F + x, y, 1, 2, GRASS_DARK);
-  t.rect(5 * F, 0, F, F, SAND);
+    t.rect({ x: 4 * F + x, y, w: 1, h: 2, color: GRASS_DARK });
+  t.rect({ x: 5 * F, y: 0, w: F, h: F, color: SAND });
   for (const [x, y] of [
     [2, 3],
     [11, 6],
     [6, 12],
   ] as const)
-    t.set(5 * F + x, y, SAND_DARK);
-  t.rect(6 * F, 0, F, 10, GRASS);
-  t.rect(6 * F, 10, F, 6, SAND);
-  t.rect(6 * F, 10, F, 1, SAND_DARK);
-  t.rect(7 * F + 7, 7, 2, 2, DOT_SHADOW);
-  t.rect(7 * F + 7, 6, 2, 2, DOT);
+    t.set({ x: 5 * F + x, y, color: SAND_DARK });
+  t.rect({ x: 6 * F, y: 0, w: F, h: 10, color: GRASS });
+  t.rect({ x: 6 * F, y: 10, w: F, h: 6, color: SAND });
+  t.rect({ x: 6 * F, y: 10, w: F, h: 1, color: SAND_DARK });
+  t.rect({ x: 7 * F + 7, y: 7, w: 2, h: 2, color: DOT_SHADOW });
+  t.rect({ x: 7 * F + 7, y: 6, w: 2, h: 2, color: DOT });
   return t;
 }
 
@@ -290,16 +305,16 @@ export function island(): Raster {
   for (let r = 0; r < 96; r++) {
     const inset = r >= 84 ? 2 + (r - 84) : r < 6 ? (insetTop[r] as number) : 0;
     const color = r < 2 ? SAND : r < 58 ? GRASS : r < 64 ? SAND : r < 86 ? CLIFF : FOAM;
-    img.rect(inset, r, w - inset * 2, 1, color);
+    img.rect({ x: inset, y: r, w: w - inset * 2, h: 1, color });
     if (color === GRASS) {
-      img.rect(inset, r, 2, 1, SAND);
-      img.rect(w - inset - 2, r, 2, 1, SAND);
+      img.rect({ x: inset, y: r, w: 2, h: 1, color: SAND });
+      img.rect({ x: w - inset - 2, y: r, w: 2, h: 1, color: SAND });
     }
     if (color === CLIFF) {
       for (let x = inset + 3; x < w - inset; x += 8)
-        img.set(x + (r % 3 === 0 ? 1 : 0), r, CLIFF_DARK);
+        img.set({ x: x + (r % 3 === 0 ? 1 : 0), y: r, color: CLIFF_DARK });
     }
-    if (r === 63) img.rect(inset, r, w - inset * 2, 1, SAND_DARK);
+    if (r === 63) img.rect({ x: inset, y: r, w: w - inset * 2, h: 1, color: SAND_DARK });
   }
   // Tufts repeat every 32 px so the middle slice tiles seamlessly.
   for (let x = 6; x < w - 6; x += 32) {
@@ -310,8 +325,8 @@ export function island(): Raster {
       [9, 44],
     ] as const) {
       if (x + dx + 2 > w - 4) continue; // keep the sand rim clear
-      img.rect(x + dx, dy, 1, 2, GRASS_DARK);
-      img.set(x + dx + 1, dy + 1, GRASS_DARK);
+      img.rect({ x: x + dx, y: dy, w: 1, h: 2, color: GRASS_DARK });
+      img.set({ x: x + dx + 1, y: dy + 1, color: GRASS_DARK });
     }
   }
   return img;
@@ -330,18 +345,18 @@ export function taskPoints(states: readonly (keyof typeof TASK_POINT_COLORS)[]):
   states.forEach((state, i) => {
     const x = i * F;
     const color = TASK_POINT_COLORS[state];
-    img.rect(x + 2, 3, 12, 11, INK);
-    img.rect(x + 3, 2, 10, 13, INK);
-    img.rect(x + 3, 3, 10, 10, color);
-    img.rect(x + 4, 2, 8, 12, color);
+    img.rect({ x: x + 2, y: 3, w: 12, h: 11, color: INK });
+    img.rect({ x: x + 3, y: 2, w: 10, h: 13, color: INK });
+    img.rect({ x: x + 3, y: 3, w: 10, h: 10, color });
+    img.rect({ x: x + 4, y: 2, w: 8, h: 12, color });
     if (state === 'locked') {
-      img.rect(x + 6, 5, 4, 1, INK);
-      img.rect(x + 5, 6, 1, 2, INK);
-      img.rect(x + 10, 6, 1, 2, INK);
-      img.rect(x + 5, 8, 6, 4, INK);
+      img.rect({ x: x + 6, y: 5, w: 4, h: 1, color: INK });
+      img.rect({ x: x + 5, y: 6, w: 1, h: 2, color: INK });
+      img.rect({ x: x + 10, y: 6, w: 1, h: 2, color: INK });
+      img.rect({ x: x + 5, y: 8, w: 6, h: 4, color: INK });
     } else if (state === 'active') {
-      img.rect(x + 7, 5, 2, 4, INK);
-      img.rect(x + 7, 10, 2, 2, INK);
+      img.rect({ x: x + 7, y: 5, w: 2, h: 4, color: INK });
+      img.rect({ x: x + 7, y: 10, w: 2, h: 2, color: INK });
     } else if (state === 'done') {
       for (const [dx, dy] of [
         [5, 8],
@@ -352,10 +367,10 @@ export function taskPoints(states: readonly (keyof typeof TASK_POINT_COLORS)[]):
         [10, 7],
         [11, 6],
       ] as const)
-        img.set(x + dx, dy, INK);
+        img.set({ x: x + dx, y: dy, color: INK });
     } else {
-      img.rect(x + 5, 7, 6, 3, INK);
-      img.rect(x + 7, 8, 2, 1, color);
+      img.rect({ x: x + 5, y: 7, w: 6, h: 3, color: INK });
+      img.rect({ x: x + 7, y: 8, w: 2, h: 1, color });
     }
   });
   return img;
@@ -363,32 +378,38 @@ export function taskPoints(states: readonly (keyof typeof TASK_POINT_COLORS)[]):
 
 export function hut(): Raster {
   const img = new Raster(64, 64);
-  img.rect(8, 28, 48, 34, hex('#7a4a24'));
-  for (let i = 0; i < 34; i += 4) img.rect(8, 28 + i, 48, 1, hex('#5e3818'));
+  img.rect({ x: 8, y: 28, w: 48, h: 34, color: hex('#7a4a24') });
+  for (let i = 0; i < 34; i += 4) img.rect({ x: 8, y: 28 + i, w: 48, h: 1, color: hex('#5e3818') });
   for (let r = 0; r < 28; r++) {
     const half = 4 + r;
-    img.rect(32 - half, r + 2, half * 2, 1, r % 4 === 0 && r > 0 ? hex('#8a2a20') : hex('#b8392b'));
+    img.rect({
+      x: 32 - half,
+      y: r + 2,
+      w: half * 2,
+      h: 1,
+      color: r % 4 === 0 && r > 0 ? hex('#8a2a20') : hex('#b8392b'),
+    });
   }
-  img.rect(26, 44, 12, 18, hex('#2a1a10'));
-  img.rect(35, 53, 1, 2, hex('#f2c230'));
-  img.rect(12, 36, 8, 7, SAND);
-  img.rect(44, 36, 8, 7, SAND);
+  img.rect({ x: 26, y: 44, w: 12, h: 18, color: hex('#2a1a10') });
+  img.rect({ x: 35, y: 53, w: 1, h: 2, color: hex('#f2c230') });
+  img.rect({ x: 12, y: 36, w: 8, h: 7, color: SAND });
+  img.rect({ x: 44, y: 36, w: 8, h: 7, color: SAND });
   return img;
 }
 
 /** 24×24 9-slice dialogue frame with an 8 px inset. */
 export function dialogueFrame(): Raster {
   const img = new Raster(24, 24);
-  img.rect(0, 0, 24, 24, INK);
-  img.rect(2, 2, 20, 20, hex('#8a6a3a'));
-  img.rect(3, 3, 18, 18, hex('#efe0b8'));
+  img.rect({ x: 0, y: 0, w: 24, h: 24, color: INK });
+  img.rect({ x: 2, y: 2, w: 20, h: 20, color: hex('#8a6a3a') });
+  img.rect({ x: 3, y: 3, w: 18, h: 18, color: hex('#efe0b8') });
   for (const [x, y] of [
     [3, 3],
     [20, 3],
     [3, 20],
     [20, 20],
   ] as const)
-    img.set(x, y, hex('#f2c230'));
+    img.set({ x, y, color: hex('#f2c230') });
   return img;
 }
 
@@ -397,11 +418,15 @@ export function engineTextures(): Record<string, Raster> {
   const missing = new Raster(32, 32);
   for (let y = 0; y < 32; y++) {
     for (let x = 0; x < 32; x++)
-      missing.set(x, y, ((x >> 3) + (y >> 3)) % 2 === 0 ? hex('#ff00ff') : hex('#000000'));
+      missing.set({
+        x,
+        y,
+        color: ((x >> 3) + (y >> 3)) % 2 === 0 ? hex('#ff00ff') : hex('#000000'),
+      });
   }
   const white = new Raster(4, 4);
-  white.rect(0, 0, 4, 4, hex('#ffffff'));
+  white.rect({ x: 0, y: 0, w: 4, h: 4, color: hex('#ffffff') });
   const blank = new Raster(32, 32);
-  blank.rect(0, 0, 32, 32, CLEAR);
+  blank.rect({ x: 0, y: 0, w: 32, h: 32, color: CLEAR });
   return { 'default.png': blank, 'missing.png': missing, 'white.png': white };
 }

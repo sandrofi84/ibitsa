@@ -54,7 +54,7 @@ export class WorldScene extends Phaser.Scene {
     });
 
     const v = this.layout.village;
-    this.drawIsland(this.add.container(0, 0), v.x, v.y, v.middles);
+    this.drawIsland(this.add.container(0, 0), v);
     this.add.image(v.hut.x, v.hut.y, 'building:hut').setOrigin(0);
     this.add.text(v.x + 22, v.y + 70, 'HOME VILLAGE', textStyle());
 
@@ -72,9 +72,7 @@ export class WorldScene extends Phaser.Scene {
 
   private drawIsland(
     into: Phaser.GameObjects.Container,
-    x: number,
-    y: number,
-    middles: number,
+    { x, y, middles }: { x: number; y: number; middles: number },
   ): void {
     const i = this.manifest.island;
     into.add(this.add.image(x, y, 'island', 'left').setOrigin(0));
@@ -117,7 +115,7 @@ export class WorldScene extends Phaser.Scene {
       snapshot.islands.forEach((island, k) => {
         const l = this.layout.islands[k];
         if (!l) return;
-        this.drawIsland(this.questLayer, l.x, l.y, l.middles);
+        this.drawIsland(this.questLayer, l);
         this.questLayer.add(
           this.add.text(l.x + 8, l.y + 70, island.name.toUpperCase().slice(0, 28), textStyle()),
         );
@@ -148,7 +146,12 @@ export class WorldScene extends Phaser.Scene {
       seen.add(hero.id);
       let token = this.heroes.get(hero.id);
       if (!token) {
-        token = new HeroToken(this, hero, this.characterKey(hero.classId), this.layout);
+        token = new HeroToken({
+          scene: this,
+          hero,
+          character: this.characterKey(hero.classId),
+          layout: this.layout,
+        });
         this.heroes.set(hero.id, token);
       }
       token.update(hero, this.layout);
@@ -188,12 +191,22 @@ class HeroToken {
   private traveled = false;
   private state: HeroView['state']['kind'] = 'traveling';
 
-  constructor(
-    private readonly scene: Phaser.Scene,
-    hero: HeroView,
-    private readonly character: string,
-    layout: WorldLayout,
-  ) {
+  private readonly scene: Phaser.Scene;
+  private readonly character: string;
+
+  constructor({
+    scene,
+    hero,
+    character,
+    layout,
+  }: {
+    scene: Phaser.Scene;
+    hero: HeroView;
+    character: string;
+    layout: WorldLayout;
+  }) {
+    this.scene = scene;
+    this.character = character;
     const start =
       hero.state.kind === 'traveling'
         ? pathTo(layout, hero.taskPointId)[0]
