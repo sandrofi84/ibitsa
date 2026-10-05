@@ -60,7 +60,11 @@ test('start a quest, message the hero, stop, and finish', async ({ page }) => {
   await page.screenshot({ path: 'test-results/ui-hero-pane.png' });
   await pane.getByRole('button', { name: 'Finish quest' }).click();
   await expect(pane.getByRole('status')).toHaveText('The quest has ended. Its branch is kept.');
-  await expect(pane.getByRole('button', { name: 'Remove worktree' })).toBeVisible();
+  await pane.getByRole('button', { name: 'Remove worktree' }).click();
+  await expect(pane.getByRole('status')).toHaveText(
+    'Worktree removed. The branch ibitsa/fix-the-login-redirect is kept.',
+  );
+  await expect(pane.getByRole('button', { name: /worktree/ })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'New quest' })).toBeVisible();
   expect(errors).toEqual([]);
 });

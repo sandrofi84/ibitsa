@@ -64,7 +64,12 @@ export function mountHeroPane({ client, host }: { client: GameClient; host: Host
     ];
     if (hero.queuedMessages > 0) rows.push(['Queued', `${hero.queuedMessages} message(s)`]);
     facts.replaceChildren(
-      ...rows.flatMap(([k, v]) => [el('dt', { text: k }), el('dd', { text: v })]),
+      ...rows.flatMap(([k, v]) => {
+        // One line each, so the pane keeps its height as the state changes; the full text on hover.
+        const value = el('dd', { text: v });
+        value.title = v;
+        return [el('dt', { text: k }), value];
+      }),
     );
 
     const active = campaign.status === 'active';
@@ -114,13 +119,16 @@ export function mountHeroPane({ client, host }: { client: GameClient; host: Host
       abandon.dataset.control = 'abandon';
       items.push(abandon);
     }
-    items.push(
-      button({
-        label: 'Open worktree',
-        onClick: () => host.request({ channel: 'host', type: 'openWorktree' }),
-      }),
-    );
-    if (!active && island) {
+    const worktree = island?.worktree ?? 'creating';
+    if (worktree === 'ready') {
+      items.push(
+        button({
+          label: 'Open worktree',
+          onClick: () => host.request({ channel: 'host', type: 'openWorktree' }),
+        }),
+      );
+    }
+    if (!active && island && worktree === 'ready') {
       items.push(
         button({
           label: 'Remove worktree',
@@ -134,7 +142,11 @@ export function mountHeroPane({ client, host }: { client: GameClient; host: Host
     const focused = focusedEl && controls.contains(focusedEl) ? key(focusedEl) : null;
     controls.replaceChildren(...items);
     if (focused) items.find((b) => key(b) === focused)?.focus();
-    status.textContent = active ? '' : 'The quest has ended. Its branch is kept.';
+    status.textContent = active
+      ? ''
+      : worktree === 'removed'
+        ? `Worktree removed. The branch ${island?.branch ?? ''} is kept.`
+        : 'The quest has ended. Its branch is kept.';
   }
 }
 
