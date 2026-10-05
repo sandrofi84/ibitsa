@@ -13,6 +13,8 @@ export type {
   SessionStart,
   UserSettings,
 } from './ports.types';
+export { BLANKED, ReplayExport } from './replay-export';
+export type { ReplayExportOptions } from './replay-export.types';
 export { Runtime, SNAPSHOT_INTERVAL_MS } from './runtime';
 export type { Connection, RuntimeOptions } from './runtime.types';
 export { CampaignLog, CampaignStore, LOG_SIZE_CAP } from './storage';

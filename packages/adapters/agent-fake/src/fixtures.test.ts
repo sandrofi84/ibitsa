@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import m0Walk from '../fixtures/m0-walk.jsonl?raw';
+import m1Real from '../fixtures/m1-real.jsonl?raw';
+import m1RealLive from '../fixtures/m1-real.live.json';
 import m1Trouble from '../fixtures/m1-trouble.jsonl?raw';
 import { parseLog } from './log';
 import { replayThroughCore } from './run';
 
 // Every committed fixture replays through the real core; its protocol output is compared with a golden
 // file. A rule change that alters the output fails here until the golden files are updated (vitest -u).
-const fixtures = { 'm0-walk': m0Walk, 'm1-trouble': m1Trouble };
+const fixtures = { 'm0-walk': m0Walk, 'm1-trouble': m1Trouble, 'm1-real': m1Real };
 
 describe.each(Object.entries(fixtures))('fixture %s', (name, text) => {
   const output = replayThroughCore(parseLog(text));
@@ -69,6 +71,21 @@ describe('m1-trouble', () => {
     ]);
     expect(at('submitted')?.heroes[0]?.state.kind).toBe('submitted');
     expect(output.final.needsYou).toEqual([]);
+    expect(output.cues.some((c) => c.cue.type === 'commandRejected')).toBe(false);
+  });
+});
+
+describe('m1-real', () => {
+  // Recorded from a real quest (#38): see agent-claude-sdk/src/record.test.ts.
+  const output = replayThroughCore(parseLog(m1Real));
+
+  it('replays to the same final state as the live run', () => {
+    expect(output.final).toEqual(m1RealLive);
+  });
+
+  it('ends finished, with the task submitted and nothing waiting', () => {
+    expect(output.final.campaign?.status).toBe('finished');
+    expect(output.final.islands[0]?.taskPoints[0]?.state).toBe('doneUnreviewed');
     expect(output.cues.some((c) => c.cue.type === 'commandRejected')).toBe(false);
   });
 });

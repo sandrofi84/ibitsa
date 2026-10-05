@@ -1,0 +1,109 @@
+{
+  "cues": [
+    {
+      "t": 4832,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "run",
+        "outcome": "ok"
+      }
+    },
+    {
+      "t": 6187,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "run",
+        "outcome": "ok"
+      }
+    },
+    {
+      "t": 8072,
+      "cue": {
+        "type": "needsYouAdded",
+        "itemId": "n5"
+      }
+    },
+    {
+      "t": 8602,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "run",
+        "outcome": "ok"
+      }
+    },
+    {
+      "t": 10554,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "run",
+        "outcome": "ok"
+      }
+    },
+    {
+      "t": 10640,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "other",
+        "outcome": "ok"
+      }
+    }
+  ],
+  "marks": [],
+  "final": {
+    "campaign": {
+      "id": "c1",
+      "title": "Make slugify strip accents",
+      "status": "finished",
+      "gold": {
+        "kind": "exact",
+        "value": 117863
+      }
+    },
+    "islands": [
+      {
+        "id": "i2",
+        "name": "Make slugify strip accents",
+        "branch": "ibitsa/make-slugify-strip-accents",
+        "taskPoints": [
+          {
+            "id": "t3",
+            "title": "Make slugify strip accents",
+            "state": "doneUnreviewed"
+          }
+        ]
+      }
+    ],
+    "heroes": [
+      {
+        "id": "h4",
+        "name": "Ranger Wren",
+        "classId": "ranger",
+        "islandId": "i2",
+        "taskPointId": "t3",
+        "state": {
+          "kind": "submitted",
+          "summary": "slugify now normalizes to NFD and strips combining marks, so \"Crème Brûlée\" becomes \"creme-brulee\". Added a test; all 3 tests pass with node --test. Committed."
+        },
+        "activity": null,
+        "hp": {
+          "kind": "exact",
+          "value": {
+            "used": 23098,
+            "max": 1000000
+          }
+        },
+        "gold": {
+          "kind": "exact",
+          "value": 117863
+        },
+        "queuedMessages": 0
+      }
+    ],
+    "needsYou": []
+  }
+}
