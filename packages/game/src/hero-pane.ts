@@ -47,6 +47,8 @@ export function mountHeroPane({ client, host }: { client: GameClient; host: Host
     const hero = snapshot.heroes[0];
     const campaign = snapshot.campaign;
     pane.hidden = !hero || !campaign;
+    // The Needs You panel moves aside so the pane never covers it.
+    document.body.classList.toggle('hero-pane-open', !pane.hidden);
     if (!hero || !campaign) return;
     const heroClass = HERO_CLASSES.find((c) => c.id === hero.classId);
     title.textContent = hero.name;

@@ -237,6 +237,13 @@ dialog.new-quest button:focus-visible,
   outline: 2px solid #1a1420;
 }
 
+/* With the hero pane docked left, the Needs You panel takes the space to its right. */
+body.hero-pane-open .needs-you {
+  left: 308px;
+  transform: none;
+  width: min(560px, calc(100vw - 324px));
+}
+
 .hero-pane {
   position: fixed;
   /* Bottom left, clear of the HUD the canvas draws along its top edge. */
