@@ -1,5 +1,8 @@
 // Carries out core effects (git, adapters, timers), writes the event log, rebuilds state on start
 // (spec §11.2, §12; ADR 0001). Node, no vscode imports.
+
+export { GitGameMaster } from './git-game-master';
+export type { GitGameMasterOptions } from './git-game-master.types';
 export type {
   AgentAdapter,
   AgentSession,

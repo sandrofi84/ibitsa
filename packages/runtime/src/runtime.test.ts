@@ -2,7 +2,7 @@ import { appendFileSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { type GameMasterEvent, parseLog, SILENCE_MS, view } from '@ibitsa/core';
-import type { AgentEvent, Command, CoreMessage } from '@ibitsa/protocol';
+import type { AgentEvent, Command, CoreMessage, RepoView } from '@ibitsa/protocol';
 import { afterEach, describe, expect, it } from 'vitest';
 import type {
   AgentAdapter,
@@ -119,6 +119,16 @@ class FakeGameMaster implements GameMaster {
   async observeDiff(r: { worktreePath: string }): Promise<string> {
     this.requests.push(['observeDiff', r]);
     return this.diffHash;
+  }
+  repo: RepoView | null = {
+    defaultBranch: 'main',
+    branches: ['main', 'feature'],
+    uncommittedChanges: 2,
+  };
+  scans = 0;
+  async scanRepo(): Promise<RepoView | null> {
+    this.scans++;
+    return this.repo;
   }
   removeOk = true;
   async removeWorktree(r: {
@@ -332,6 +342,33 @@ describe('effects and the log', () => {
       kind: 'command',
       command: { commandId: 'q2' },
     });
+  });
+});
+
+describe('the repo scan', () => {
+  it('adds the repo to snapshots and rescans on hello', async () => {
+    const { connection, gameMaster, received } = setup();
+    await flush();
+    connection.receive({ type: 'hello', protocolVersion: 1 });
+    await flush();
+    const snapshots = received.filter((m) => m.type === 'snapshot');
+    const last = snapshots.at(-1);
+    expect(last?.type === 'snapshot' && last.snapshot.repo).toEqual({
+      defaultBranch: 'main',
+      branches: ['main', 'feature'],
+      uncommittedChanges: 2,
+    });
+    expect(gameMaster.scans).toBe(2); // on start and on hello
+  });
+
+  it('reports a workspace that is not a git repository as repo: null', async () => {
+    const { clock, connection, gameMaster, received } = setup();
+    gameMaster.repo = null;
+    connection.receive({ type: 'hello', protocolVersion: 1 });
+    await flush();
+    clock.advance(SNAPSHOT_INTERVAL_MS); // the rescan's snapshot falls inside the throttle window
+    const last = received.filter((m) => m.type === 'snapshot').at(-1);
+    expect(last?.type === 'snapshot' && last.snapshot.repo).toBeNull();
   });
 });
 

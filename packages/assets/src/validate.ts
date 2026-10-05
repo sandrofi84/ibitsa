@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { extname, join, relative, sep } from 'node:path';
 import * as v from 'valibot';
-import { type Manifest, ManifestSchema } from './manifest.schema.ts';
+import { ManifestSchema } from './manifest.schema.ts';
 import { REQUIRED_ANIMATIONS, SPEC } from './manifest.ts';
 import { readPngSize } from './png.ts';
 import type { PackValidation } from './validate.types.ts';

@@ -1,4 +1,4 @@
-import type { Command, CoreMessage } from '@ibitsa/protocol';
+import type { CoreMessage } from '@ibitsa/protocol';
 import type { Diagnostics, Host, VsCodeApi } from './host.types';
 
 declare const acquireVsCodeApi: (() => VsCodeApi) | undefined;

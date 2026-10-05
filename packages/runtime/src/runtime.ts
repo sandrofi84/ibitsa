@@ -9,15 +9,15 @@ import {
   step,
   view,
 } from '@ibitsa/core';
-import { type CoreMessage, type Cue, PROTOCOL_VERSION, parseCommand } from '@ibitsa/protocol';
-import type {
-  AgentAdapter,
-  AgentSession,
-  Clock,
-  FrontEnd,
-  GameMaster,
-  UserSettings,
-} from './ports.types';
+import {
+  type CoreMessage,
+  type Cue,
+  PROTOCOL_VERSION,
+  parseCommand,
+  type RepoView,
+  type Snapshot,
+} from '@ibitsa/protocol';
+import type { AgentSession, FrontEnd } from './ports.types';
 import type { Connection, RuntimeOptions } from './runtime.types';
 import { type CampaignLog, CampaignStore } from './storage';
 
@@ -30,6 +30,8 @@ export const SNAPSHOT_INTERVAL_MS = 100;
  */
 export class Runtime {
   private state: CoreState = initialState();
+  /** The latest repo scan; undefined until the first one finishes. */
+  private repo: RepoView | null | undefined;
   private log: CampaignLog | null = null;
   private seq = 0;
   private readonly frontEnds = new Set<FrontEnd>();
@@ -51,6 +53,7 @@ export class Runtime {
    * the old process is gone (spec §12). Core decides what survives: M1 marks sessions as not resumed.
    */
   start(): void {
+    this.rescanRepo();
     const id = this.store.activeId();
     if (!id) return;
     const { header, records } = this.store.read(id);
@@ -98,7 +101,8 @@ export class Runtime {
     const command = parsed.command;
     if (command.type === 'hello') {
       frontEnd.post({ type: 'welcome', seq: ++this.seq, protocolVersion: PROTOCOL_VERSION });
-      frontEnd.post({ type: 'snapshot', seq: ++this.seq, snapshot: view(this.state) });
+      frontEnd.post({ type: 'snapshot', seq: ++this.seq, snapshot: this.snapshot() });
+      this.rescanRepo();
       return;
     }
     if (command.type === 'startQuest' && this.state.campaign?.status !== 'active') {
@@ -150,6 +154,7 @@ export class Runtime {
     for (const effect of result.effects) this.perform(effect);
     if (this.state.campaign && this.state.campaign.status !== 'active') {
       this.store.clearActive();
+      this.rescanRepo();
     }
   }
 
@@ -346,11 +351,29 @@ export class Runtime {
     }, wait);
   }
 
+  /** Core's view plus the repo scan, which the New Quest form needs before any quest exists. */
+  private snapshot(): Snapshot {
+    const snapshot = view(this.state);
+    return this.repo === undefined ? snapshot : { ...snapshot, repo: this.repo };
+  }
+
+  private rescanRepo(): void {
+    this.options.gameMaster
+      .scanRepo()
+      .then((repo) => {
+        this.repo = repo;
+        this.scheduleSnapshot();
+      })
+      .catch(() => {
+        // No scan, no repo field: the form shows what it knows.
+      });
+  }
+
   private flushSnapshot(): void {
     if (!this.snapshotDirty) return;
     this.snapshotDirty = false;
     this.lastSnapshotAt = this.options.clock.now();
-    const message: CoreMessage = { type: 'snapshot', seq: ++this.seq, snapshot: view(this.state) };
+    const message: CoreMessage = { type: 'snapshot', seq: ++this.seq, snapshot: this.snapshot() };
     for (const f of this.frontEnds) f.post(message);
   }
 }
