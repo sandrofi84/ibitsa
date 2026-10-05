@@ -1,0 +1,346 @@
+{
+  "cues": [
+    {
+      "t": 5948,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "test",
+        "outcome": "ok"
+      }
+    },
+    {
+      "t": 5954,
+      "cue": {
+        "type": "needsYouAdded",
+        "itemId": "n5"
+      }
+    },
+    {
+      "t": 7828,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "other",
+        "outcome": "ok"
+      }
+    },
+    {
+      "t": 9124,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "read",
+        "outcome": "ok"
+      }
+    },
+    {
+      "t": 9517,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "read",
+        "outcome": "ok"
+      }
+    },
+    {
+      "t": 14333,
+      "cue": {
+        "type": "needsYouAdded",
+        "itemId": "n6"
+      }
+    },
+    {
+      "t": 38301,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "run",
+        "outcome": "ok"
+      }
+    },
+    {
+      "t": 41638,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "run",
+        "outcome": "ok"
+      }
+    },
+    {
+      "t": 45414,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "edit",
+        "outcome": "ok"
+      }
+    },
+    {
+      "t": 46196,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "edit",
+        "outcome": "ok"
+      }
+    },
+    {
+      "t": 47685,
+      "cue": {
+        "type": "needsYouAdded",
+        "itemId": "n7"
+      }
+    },
+    {
+      "t": 50739,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "test",
+        "outcome": "ok"
+      }
+    },
+    {
+      "t": 52565,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "run",
+        "outcome": "ok"
+      }
+    },
+    {
+      "t": 54582,
+      "cue": {
+        "type": "activityFinished",
+        "heroId": "h4",
+        "kind": "other",
+        "outcome": "ok"
+      }
+    }
+  ],
+  "marks": [
+    {
+      "mark": "reloaded",
+      "t": 14333,
+      "snapshot": {
+        "campaign": {
+          "id": "c1",
+          "title": "Make slugify strip accents",
+          "status": "active",
+          "gold": {
+            "kind": "unknown"
+          }
+        },
+        "islands": [
+          {
+            "id": "i2",
+            "name": "Make slugify strip accents",
+            "branch": "ibitsa/make-slugify-strip-accents-3",
+            "worktree": "ready",
+            "taskPoints": [
+              {
+                "id": "t3",
+                "title": "Make slugify strip accents",
+                "state": "active"
+              }
+            ]
+          }
+        ],
+        "heroes": [
+          {
+            "id": "h4",
+            "name": "Ranger Ilse",
+            "classId": "ranger",
+            "islandId": "i2",
+            "taskPointId": "t3",
+            "state": {
+              "kind": "unknown",
+              "reason": "Session not resumed after a restart."
+            },
+            "activity": null,
+            "hp": {
+              "kind": "unknown"
+            },
+            "gold": {
+              "kind": "unknown"
+            },
+            "queuedMessages": 0
+          }
+        ],
+        "needsYou": [
+          {
+            "kind": "error",
+            "id": "n6",
+            "heroId": "h4",
+            "message": "The session stopped when VS Code reloaded."
+          }
+        ]
+      }
+    },
+    {
+      "mark": "resumed",
+      "t": 36078,
+      "snapshot": {
+        "campaign": {
+          "id": "c1",
+          "title": "Make slugify strip accents",
+          "status": "active",
+          "gold": {
+            "kind": "unknown"
+          }
+        },
+        "islands": [
+          {
+            "id": "i2",
+            "name": "Make slugify strip accents",
+            "branch": "ibitsa/make-slugify-strip-accents-3",
+            "worktree": "ready",
+            "taskPoints": [
+              {
+                "id": "t3",
+                "title": "Make slugify strip accents",
+                "state": "active"
+              }
+            ]
+          }
+        ],
+        "heroes": [
+          {
+            "id": "h4",
+            "name": "Ranger Ilse",
+            "classId": "ranger",
+            "islandId": "i2",
+            "taskPointId": "t3",
+            "state": {
+              "kind": "working"
+            },
+            "activity": {
+              "kind": "think"
+            },
+            "hp": {
+              "kind": "unknown"
+            },
+            "gold": {
+              "kind": "unknown"
+            },
+            "queuedMessages": 0
+          }
+        ],
+        "needsYou": []
+      }
+    },
+    {
+      "mark": "submitted",
+      "t": 58272,
+      "snapshot": {
+        "campaign": {
+          "id": "c1",
+          "title": "Make slugify strip accents",
+          "status": "active",
+          "gold": {
+            "kind": "exact",
+            "value": 161964
+          }
+        },
+        "islands": [
+          {
+            "id": "i2",
+            "name": "Make slugify strip accents",
+            "branch": "ibitsa/make-slugify-strip-accents-3",
+            "worktree": "ready",
+            "taskPoints": [
+              {
+                "id": "t3",
+                "title": "Make slugify strip accents",
+                "state": "doneUnreviewed"
+              }
+            ]
+          }
+        ],
+        "heroes": [
+          {
+            "id": "h4",
+            "name": "Ranger Ilse",
+            "classId": "ranger",
+            "islandId": "i2",
+            "taskPointId": "t3",
+            "state": {
+              "kind": "submitted",
+              "summary": "slugify now strips accents (NFD normalize + remove combining marks). Underscores already became dashes via the existing non-alphanumeric regex; per the user's answer I added a test for that. All 4 tests pass (run with node v24, since the default node v14 lacks `--test`). I did not append to ~/ibitsa-demo-notes.md because it already contained two lines describing exactly this change, so another line would have been a duplicate."
+            },
+            "activity": null,
+            "hp": {
+              "kind": "exact",
+              "value": {
+                "used": 27696,
+                "max": 1000000
+              }
+            },
+            "gold": {
+              "kind": "exact",
+              "value": 161964
+            },
+            "queuedMessages": 0
+          }
+        ],
+        "needsYou": []
+      }
+    }
+  ],
+  "final": {
+    "campaign": {
+      "id": "c1",
+      "title": "Make slugify strip accents",
+      "status": "finished",
+      "gold": {
+        "kind": "exact",
+        "value": 161964
+      }
+    },
+    "islands": [
+      {
+        "id": "i2",
+        "name": "Make slugify strip accents",
+        "branch": "ibitsa/make-slugify-strip-accents-3",
+        "worktree": "removed",
+        "taskPoints": [
+          {
+            "id": "t3",
+            "title": "Make slugify strip accents",
+            "state": "doneUnreviewed"
+          }
+        ]
+      }
+    ],
+    "heroes": [
+      {
+        "id": "h4",
+        "name": "Ranger Ilse",
+        "classId": "ranger",
+        "islandId": "i2",
+        "taskPointId": "t3",
+        "state": {
+          "kind": "submitted",
+          "summary": "slugify now strips accents (NFD normalize + remove combining marks). Underscores already became dashes via the existing non-alphanumeric regex; per the user's answer I added a test for that. All 4 tests pass (run with node v24, since the default node v14 lacks `--test`). I did not append to ~/ibitsa-demo-notes.md because it already contained two lines describing exactly this change, so another line would have been a duplicate."
+        },
+        "activity": null,
+        "hp": {
+          "kind": "exact",
+          "value": {
+            "used": 27696,
+            "max": 1000000
+          }
+        },
+        "gold": {
+          "kind": "exact",
+          "value": 161964
+        },
+        "queuedMessages": 0
+      }
+    ],
+    "needsYou": []
+  }
+}
