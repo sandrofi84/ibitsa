@@ -69,6 +69,7 @@
         "id": "i2",
         "name": "Make slugify strip accents",
         "branch": "ibitsa/make-slugify-strip-accents",
+        "worktree": "ready",
         "taskPoints": [
           {
             "id": "t3",

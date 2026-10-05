@@ -50,6 +50,7 @@ export class Quest {
         branch,
         baseRef: command.baseRef,
         worktreePath: null,
+        worktreeRemoved: false,
         taskPoints: [{ id: taskPointId, title, description: command.description, state: 'active' }],
       },
     ];
@@ -124,7 +125,9 @@ export class Quest {
 
   worktreeRemoved(islandId: string): void {
     const island = this.ctx.state.islands.find((i) => i.id === islandId);
-    if (island) island.worktreePath = null;
+    if (!island) return;
+    island.worktreePath = null;
+    island.worktreeRemoved = true;
   }
 
   private end(status: 'finished' | 'abandoned'): void {

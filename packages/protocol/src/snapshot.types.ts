@@ -31,6 +31,8 @@ export interface IslandView {
   id: string;
   name: string;
   branch: string;
+  /** The hero's worktree: being created, there, or removed after the quest (#40). */
+  worktree: 'creating' | 'ready' | 'removed';
   taskPoints: TaskPointView[];
 }
 

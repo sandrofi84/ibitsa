@@ -150,6 +150,7 @@
             "id": "i2",
             "name": "Make the date parser accept ISO week dates",
             "branch": "ibitsa/make-the-date-parser-accept-iso-week-dates",
+            "worktree": "ready",
             "taskPoints": [
               {
                 "id": "t3",
@@ -202,6 +203,7 @@
             "id": "i2",
             "name": "Make the date parser accept ISO week dates",
             "branch": "ibitsa/make-the-date-parser-accept-iso-week-dates",
+            "worktree": "ready",
             "taskPoints": [
               {
                 "id": "t3",
@@ -265,6 +267,7 @@
             "id": "i2",
             "name": "Make the date parser accept ISO week dates",
             "branch": "ibitsa/make-the-date-parser-accept-iso-week-dates",
+            "worktree": "ready",
             "taskPoints": [
               {
                 "id": "t3",
@@ -328,6 +331,7 @@
             "id": "i2",
             "name": "Make the date parser accept ISO week dates",
             "branch": "ibitsa/make-the-date-parser-accept-iso-week-dates",
+            "worktree": "ready",
             "taskPoints": [
               {
                 "id": "t3",
@@ -385,6 +389,7 @@
             "id": "i2",
             "name": "Make the date parser accept ISO week dates",
             "branch": "ibitsa/make-the-date-parser-accept-iso-week-dates",
+            "worktree": "ready",
             "taskPoints": [
               {
                 "id": "t3",
@@ -439,6 +444,7 @@
         "id": "i2",
         "name": "Make the date parser accept ISO week dates",
         "branch": "ibitsa/make-the-date-parser-accept-iso-week-dates",
+        "worktree": "ready",
         "taskPoints": [
           {
             "id": "t3",
