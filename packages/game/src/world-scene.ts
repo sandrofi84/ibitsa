@@ -40,6 +40,12 @@ export class WorldScene extends Phaser.Scene {
     super('world');
   }
 
+  /** Where the first hero's sprite is, in canvas pixels (for tests and probes). */
+  heroPosition(): { x: number; y: number } | null {
+    const token = this.heroes.values().next().value;
+    return token ? token.position() : null;
+  }
+
   create(): void {
     this.manifest = this.cache.json.get(PACK_KEY) as Manifest;
     const waterIndex = this.manifest.tiles.tiles.water?.index ?? 0;
@@ -182,6 +188,9 @@ function gold(reading: Reading<number>): string {
   return reading.kind === 'estimated' ? `~${g}` : String(g);
 }
 
+/** Emitted on `game.events` with the hero's id when the hero is clicked on the map (#61). */
+export const HERO_SELECTED = 'heroSelected';
+
 /** A hero on the map: round token base, sprite, HP bar and status bubble (spec §7.2). */
 class HeroToken {
   private readonly container: Phaser.GameObjects.Container;
@@ -216,6 +225,9 @@ class HeroToken {
     base.fillStyle(0x000000, 0.35).fillEllipse(0, 0, 12, 4);
     base.lineStyle(1, 0xf3ead2).strokeEllipse(0, 0, 12, 4);
     this.sprite = scene.add.sprite(0, 1, character).setOrigin(0.5, 1);
+    this.sprite
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => scene.game.events.emit(HERO_SELECTED, hero.id));
     this.hpBar = scene.add.graphics();
     this.bubble = scene.add
       .text(0, -26, '', { ...textStyle('#1a1420'), backgroundColor: '#f2c230' })
@@ -227,6 +239,11 @@ class HeroToken {
       this.bubble,
     ]);
     this.container.setDepth(5);
+  }
+
+  /** The middle of the sprite, in canvas pixels. */
+  position(): { x: number; y: number } {
+    return { x: this.container.x, y: this.container.y - this.sprite.height / 2 };
   }
 
   update(hero: HeroView, layout: WorldLayout): void {

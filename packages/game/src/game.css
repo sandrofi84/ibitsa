@@ -111,7 +111,8 @@ body {
 
 .dev-overlay {
   position: fixed;
-  top: 8px;
+  /* Bottom right, under the hero pane and beside the Needs You panel (#61). */
+  bottom: 8px;
   right: 8px;
   display: flex;
   flex-direction: column;
@@ -242,12 +243,13 @@ body {
 
 .hero-pane {
   position: fixed;
-  /* Bottom left, clear of the HUD the canvas draws along its top edge. */
-  bottom: 12px;
-  left: 12px;
+  /* Top right: clear of the HUD along the canvas's top-left edge and of the village (#61). */
+  top: 12px;
+  right: 12px;
   width: min(260px, calc(100vw - 32px));
-  max-height: calc(100vh - 96px);
+  max-height: calc(100vh - 24px);
   overflow: auto;
+  box-sizing: border-box;
   background: rgba(239, 224, 184, 0.96);
   border: 2px solid #8a6a3a;
   border-radius: 4px;
@@ -319,9 +321,98 @@ body {
   outline: 2px solid #1a1420;
 }
 
-/* With the hero pane docked left, the Needs You panel takes the space to its right. */
+/* Collapsed, only the tab shows: the hero's name, a state dot and the "Needs you" count. */
+.hero-pane:has(.hero-pane-body[hidden]) {
+  width: auto;
+  padding: 4px;
+}
+
+.hero-pane-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  font: inherit;
+  font-weight: 600;
+  padding: 3px 8px;
+  border: 1px solid #5e3b1c;
+  background: #fff6dc;
+  border-radius: 3px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.hero-pane-tab:focus-visible {
+  outline: 2px solid #1a1420;
+}
+
+.hero-pane-tab .name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hero-pane-tab .state-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #8a8a8a;
+  flex: none;
+}
+
+.hero-pane-tab .state-dot[data-state="working"],
+.hero-pane-tab .state-dot[data-state="traveling"] {
+  background: #3f9b4a;
+}
+
+.hero-pane-tab .state-dot[data-state="idle"],
+.hero-pane-tab .state-dot[data-state="waitingOnYou"],
+.hero-pane-tab .state-dot[data-state="stalled"],
+.hero-pane-tab .state-dot[data-state="outOfGold"] {
+  background: #f2c230;
+}
+
+.hero-pane-tab .state-dot[data-state="error"],
+.hero-pane-tab .state-dot[data-state="unknown"] {
+  background: #c0392b;
+}
+
+.hero-pane-tab .state-dot[data-state="submitted"] {
+  background: #3a7bd5;
+}
+
+.hero-pane-tab .badge {
+  background: #c0392b;
+  color: #fff;
+  border-radius: 8px;
+  padding: 0 6px;
+  font-size: 11px;
+}
+
+.hero-pane-body {
+  margin-top: 8px;
+  animation: hero-pane-open 120ms ease-out;
+}
+
+@keyframes hero-pane-open {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-pane-body {
+    animation: none;
+  }
+}
+
+/* With the hero pane open on the right, the Needs You panel centres in the space to its left. */
 body.hero-pane-open .needs-you {
-  left: 308px;
+  left: 16px;
+  right: 288px;
+  margin: 0 auto;
   transform: none;
-  width: min(560px, calc(100vw - 324px));
+  width: min(560px, calc(100vw - 304px));
 }

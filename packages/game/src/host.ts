@@ -24,6 +24,10 @@ export function webviewHost(): Host {
       });
     },
     request: (request) => vscode?.postMessage(request),
+    viewStorage: {
+      load: () => vscode?.getState(),
+      save: (state) => vscode?.setState(state),
+    },
     onHostEvent: (listener) => {
       window.addEventListener('message', (event: MessageEvent) => {
         const data = event.data as { channel?: unknown } | null;

@@ -2,6 +2,7 @@ import type { Command, CoreMessage, Cue, Snapshot } from '@ibitsa/protocol';
 import { describe, expect, it } from 'vitest';
 import { GameClient } from './client';
 import type { Host } from './host.types';
+import { MemoryViewStorage } from './view-state';
 
 class FakeHost implements Host {
   sent: Command[] = [];
@@ -15,6 +16,7 @@ class FakeHost implements Host {
   deliver(m: CoreMessage): void {
     this.listener(m);
   }
+  readonly viewStorage = new MemoryViewStorage();
   request(): void {}
   onHostEvent(): void {}
 }
