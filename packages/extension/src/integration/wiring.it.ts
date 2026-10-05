@@ -208,6 +208,29 @@ suite('extension wiring (#36)', () => {
     await until(() => api.hostEvents().some((e) => e.type === 'openNewQuest'), 'openNewQuest');
   });
 
+  test('"Ibitsa: Export Replay" writes the campaign log with paths made relative', async () => {
+    const dir = api.storageDir();
+    assert.ok(dir);
+    const target = join(dir, 'exported.jsonl');
+    const written = await vscode.commands.executeCommand<string | undefined>(
+      'ibitsa.exportReplay',
+      {
+        target,
+        blankMessages: true,
+      },
+    );
+    assert.equal(written, target);
+    const lines = readFileSync(target, 'utf8')
+      .trim()
+      .split('\n')
+      .map((l) => JSON.parse(l));
+    assert.equal(lines[0].kind, 'header');
+    const created = lines.find((l) => l.event?.type === 'worktreeCreated');
+    assert.equal(created.event.path, '.');
+    const start = lines.find((l) => l.command?.type === 'startQuest');
+    assert.equal(start.command.description, 'Fix the login redirect');
+  });
+
   test('a reload rebuilds the quest from the log and offers to resume', async () => {
     await api.restartRuntime();
     api.receive({ type: 'hello', protocolVersion: 1 });

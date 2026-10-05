@@ -34,6 +34,11 @@
         "command": "ibitsa.openWorktree",
         "title": "Open Worktree in New Window",
         "category": "Ibitsa"
+      },
+      {
+        "command": "ibitsa.exportReplay",
+        "title": "Export Replay",
+        "category": "Ibitsa"
       }
     ],
     "configuration": {

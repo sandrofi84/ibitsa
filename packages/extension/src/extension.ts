@@ -3,6 +3,8 @@ import { GitGameMaster } from '@ibitsa/runtime';
 import * as vscode from 'vscode';
 import { agentEnvironment } from './agent-environment';
 import { API_KEY_SECRET, resolveCredentials } from './credentials';
+import { exportReplay } from './export-replay';
+import type { ExportReplayArgs } from './export-replay.types';
 import type { IbitsaApi } from './extension.types';
 import { GAME_VIEW_TYPE, GamePanel } from './game-panel';
 import { API_KEYS_URL, HostChannel } from './host-channel';
@@ -101,6 +103,9 @@ export function activate(context: vscode.ExtensionContext): IbitsaApi {
         forceNewWindow: true,
       });
     }),
+    vscode.commands.registerCommand('ibitsa.exportReplay', (args?: ExportReplayArgs) =>
+      exportReplay({ storageDir, workspaceDir, args }),
+    ),
     // Not contributed to the Command Palette: lets integration tests read the engine-check diagnostics.
     vscode.commands.registerCommand('ibitsa.internal.diagnostics', () => GamePanel.lastDiagnostics),
     vscode.window.registerWebviewPanelSerializer(GAME_VIEW_TYPE, {
