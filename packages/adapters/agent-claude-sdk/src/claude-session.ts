@@ -177,6 +177,8 @@ export class ClaudeSession implements AgentSession {
           'Submit your finished, committed work for this task, with a short summary of what you did.',
           { summary: z.string().describe('What you did, in a few sentences.') },
           async ({ summary }) => this.submitTask(summary),
+          // Loaded up front: otherwise the hero must find it with ToolSearch first (seen in the live check).
+          { alwaysLoad: true },
         ),
       ],
     });
