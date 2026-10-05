@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { engineTextures } from './art.ts';
 import { buildDefaultPack } from './generate.ts';
-import type { Manifest } from './manifest.ts';
+import type { Manifest } from './manifest.schema.ts';
 import { validatePack } from './validate.ts';
 
 const PACK = new URL('../default-pack/', import.meta.url).pathname;

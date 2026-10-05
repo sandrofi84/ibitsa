@@ -1,8 +1,9 @@
-import type { Manifest } from '@ibitsa/assets/manifest';
+import type { Manifest } from '@ibitsa/assets';
 import type { Cue, HeroView, Reading, Snapshot, TaskPointState } from '@ibitsa/protocol';
 import * as Phaser from 'phaser';
 import type { GameClient } from './client';
-import { heroSpot, layoutWorld, type Point, pathTo, type WorldLayout } from './layout';
+import { heroSpot, layoutWorld, pathTo } from './layout';
+import type { Point, WorldLayout } from './layout.types';
 import { PACK_KEY } from './pack-scene';
 
 export const WIDTH = 480;

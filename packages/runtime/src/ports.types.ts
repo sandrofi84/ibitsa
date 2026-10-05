@@ -72,12 +72,6 @@ export interface Clock {
   clearTimeout(handle: unknown): void;
 }
 
-export const systemClock: Clock = {
-  now: () => Date.now(),
-  setTimeout: (fn, ms) => setTimeout(fn, ms),
-  clearTimeout: (handle) => clearTimeout(handle as NodeJS.Timeout),
-};
-
 /** A connected front end (a webview, later a daemon client). */
 export interface FrontEnd {
   post(message: CoreMessage): void;

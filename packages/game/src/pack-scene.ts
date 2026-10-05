@@ -1,4 +1,4 @@
-import type { Manifest } from '@ibitsa/assets/manifest';
+import type { Manifest } from '@ibitsa/assets';
 import * as Phaser from 'phaser';
 
 export const PACK_KEY = 'pack';

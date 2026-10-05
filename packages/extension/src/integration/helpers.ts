@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import type { GameDiagnostics } from '../game-panel';
+import type { GameDiagnostics } from '../game-panel.types';
 
 export async function openGameAndWait(
   predicate: (d: GameDiagnostics) => boolean,

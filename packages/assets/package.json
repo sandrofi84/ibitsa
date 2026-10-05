@@ -4,7 +4,6 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./manifest": "./src/manifest.ts",
     "./default-pack/*": "./default-pack/*"
   },
   "scripts": {

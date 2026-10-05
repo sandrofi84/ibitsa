@@ -1,4 +1,5 @@
 import type { Snapshot } from '@ibitsa/protocol';
+import type { Point, WorldLayout } from './layout.types';
 
 // World map layout, computed in the game from the snapshot (spec §9.1: no coordinates in the protocol).
 // All values are in internal pixels on the 480×270 canvas.
@@ -6,25 +7,6 @@ import type { Snapshot } from '@ibitsa/protocol';
 export const ISLAND = { height: 96, leftCap: 48, middle: 32, rightCap: 48 } as const;
 const TASK_SPACING = 40;
 const TASK_SIZE = 16;
-
-export interface Point {
-  x: number;
-  y: number;
-}
-
-export interface IslandLayout {
-  id: string;
-  x: number;
-  y: number;
-  middles: number;
-  width: number;
-  taskPoints: { id: string; x: number; y: number }[];
-}
-
-export interface WorldLayout {
-  village: { x: number; y: number; middles: number; hut: Point; door: Point };
-  islands: IslandLayout[];
-}
 
 export function islandWidth(middles: number): number {
   return ISLAND.leftCap + ISLAND.middle * middles + ISLAND.rightCap;

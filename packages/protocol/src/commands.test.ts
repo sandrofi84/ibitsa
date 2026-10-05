@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { type Command, parseCommand } from './commands';
+import { parseCommand } from './commands';
+import type { Command } from './commands.schema';
 
 const valid: Command[] = [
   { type: 'hello', protocolVersion: 1 },

@@ -1,7 +1,7 @@
 import type { Command, CoreMessage, Cue, Snapshot } from '@ibitsa/protocol';
 import { describe, expect, it } from 'vitest';
 import { GameClient } from './client';
-import type { Host } from './host';
+import type { Host } from './host.types';
 
 class FakeHost implements Host {
   sent: Command[] = [];

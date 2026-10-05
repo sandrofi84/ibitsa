@@ -1,11 +1,24 @@
 import type { AgentEvent, Command, Cue, HeroView } from '@ibitsa/protocol';
 import { describe, expect, it } from 'vitest';
-import type { Effect } from './effects';
-import type { CoreInput, GameMasterEvent } from './inputs';
-import { describePermission } from './permissions';
-import { type CoreState, freshWatch, type Hero, initialState } from './state';
-import { SILENCE_MS, step } from './step';
-import { deriveState, sumGold, view } from './view';
+import type { Effect } from './effects.types';
+import { Hero, SILENCE_MS } from './hero';
+import type { CoreInput, GameMasterEvent } from './inputs.types';
+import { describePermission, NeedsYou } from './needs-you';
+import { Outbox } from './outbox';
+import { Quest } from './quest';
+import { initialState } from './state';
+import type { CoreState, HeroRecord } from './state.types';
+import { step } from './step';
+import { view } from './view';
+
+const sumGold = (golds: HeroRecord['gold'][]) =>
+  Quest.totalGold(golds.map((gold) => ({ gold }) as HeroRecord));
+
+function executionState(record: HeroRecord, state: CoreState) {
+  const outbox = new Outbox();
+  const ctx = { state, outbox, needsYou: new NeedsYou({ state, outbox }), t: 0 };
+  return new Hero({ record, ctx }).executionState();
+}
 
 /** Feeds inputs in order, collecting every cue and effect. */
 class Harness {
@@ -472,7 +485,7 @@ describe('HP and gold', () => {
 
 describe('state precedence (§5.4)', () => {
   // unknown > error > outOfGold > stalled > waitingOnYou > resting > working > submitted > idle > traveling
-  const base = (): Hero => ({
+  const base = (): HeroRecord => ({
     id: 'h',
     name: 'n',
     classId: 'ranger',
@@ -495,7 +508,7 @@ describe('state precedence (§5.4)', () => {
     sessionLive: true,
     stalled: 'stuck',
     cap: null,
-    watch: freshWatch(),
+    watch: Hero.freshWatch(),
   });
   const asking: CoreState = {
     ...initialState(),
@@ -508,7 +521,7 @@ describe('state precedence (§5.4)', () => {
 
   it('picks the highest condition that holds', () => {
     const h = base();
-    const order: [Partial<Hero>, CoreState, string][] = [
+    const order: [Partial<HeroRecord>, CoreState, string][] = [
       [{}, waiting, 'unknown'],
       [{ unknownReason: null }, waiting, 'error'],
       [{ unknownReason: null, error: null }, waiting, 'outOfGold'],
@@ -565,7 +578,7 @@ describe('state precedence (§5.4)', () => {
       ],
     ];
     for (const [patch, state, kind] of order) {
-      expect(deriveState({ ...h, ...patch }, state).kind).toBe(kind);
+      expect(executionState({ ...h, ...patch }, state).kind).toBe(kind);
     }
   });
 });

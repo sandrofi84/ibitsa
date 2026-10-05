@@ -28,6 +28,19 @@
             "max": 2
           }
         }
+      },
+      "style": {
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "patterns": [
+              {
+                "group": ["@ibitsa/*/**", "!@ibitsa/agent-fake/fixtures/**"],
+                "message": "Import from the package barrel (@ibitsa/<package>), not a file inside it. Fixture data is the only exception."
+              }
+            ]
+          }
+        }
       }
     }
   },
@@ -50,7 +63,13 @@
               "options": {
                 "paths": {
                   "vscode": "Only the extension may import vscode (ADR 0001)."
-                }
+                },
+                "patterns": [
+                  {
+                    "group": ["@ibitsa/*/**", "!@ibitsa/agent-fake/fixtures/**"],
+                    "message": "Import from the package barrel (@ibitsa/<package>), not a file inside it. Fixture data is the only exception."
+                  }
+                ]
               }
             }
           }

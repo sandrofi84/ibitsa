@@ -1,5 +1,5 @@
 import type { AgentEvent, Command } from '@ibitsa/protocol';
-import type { QuestSettings } from './state';
+import type { QuestSettings } from './state.types';
 
 /** Results of the game master's own work, reported by the runtime (spec §11.2). */
 export type GameMasterEvent =

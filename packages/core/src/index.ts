@@ -1,16 +1,13 @@
 // Pure game master: step(state, input) → { state, cues, effects }. No Node or vscode imports (ADR 0001).
-export type { Effect } from './effects';
-export {
-  type EventLog,
-  LOG_VERSION,
-  LogFormatError,
-  type LogHeader,
-  type LogRecord,
-  parseLog,
-  serializeLine,
-} from './event-log';
-export type { CoreInput, GameMasterEvent } from './inputs';
-export { describePermission } from './permissions';
-export { type CoreState, DEFAULT_SETTINGS, initialState, type QuestSettings } from './state';
-export { CONTINUE_PROMPT, SILENCE_MS, type StepResult, step } from './step';
-export { deriveState, sumGold, view } from './view';
+export type { Effect } from './effects.types';
+export { LOG_VERSION, LogFormatError, parseLog, serializeLine } from './event-log';
+export type { EventLog, LogHeader, LogRecord } from './event-log.types';
+export { CONTINUE_PROMPT, Hero, SILENCE_MS } from './hero';
+export type { CoreInput, GameMasterEvent } from './inputs.types';
+export { describePermission } from './needs-you';
+export { Quest } from './quest';
+export { DEFAULT_SETTINGS, initialState } from './state';
+export type { CoreState, HeroRecord, QuestSettings } from './state.types';
+export { step } from './step';
+export type { StepResult } from './step.types';
+export { view } from './view';

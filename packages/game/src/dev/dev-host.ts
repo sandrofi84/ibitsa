@@ -1,7 +1,7 @@
 import { type EventLog, Replay, type ReplayOptions, type ReplayStatus } from '@ibitsa/agent-fake';
 import { type CoreState, initialState, step, view } from '@ibitsa/core';
 import { type Command, type CoreMessage, PROTOCOL_VERSION } from '@ibitsa/protocol';
-import type { Host } from '../host';
+import type { Host } from '../host.types';
 
 /** Commands the game's UI can send; interactive replays wait for these and replay the rest. */
 const ANSWERABLE: Command['type'][] = [

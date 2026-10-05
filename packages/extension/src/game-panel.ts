@@ -1,17 +1,8 @@
 import { randomBytes } from 'node:crypto';
 import * as vscode from 'vscode';
+import type { GameDiagnostics } from './game-panel.types';
 
 export const GAME_VIEW_TYPE = 'ibitsa.game';
-
-/** Development diagnostics posted by the game for the engine check (#13); protocol messages replace them in #14. */
-export interface GameDiagnostics {
-  type: 'diagnostics';
-  ready: boolean;
-  renderer: 'webgl' | 'none';
-  zoom: number;
-  canvas: { width: number; height: number } | null;
-  cspViolations: string[];
-}
 
 /** The game as a single editor tab (spec §7.1). */
 export class GamePanel {

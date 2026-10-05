@@ -1,0 +1,112 @@
+import type { AnswerCommand, NewItem } from './needs-you.types';
+import type { Outbox } from './outbox';
+import { newId } from './state';
+import type { CoreState, PendingItem } from './state.types';
+
+/** The single queue of things waiting for the user (spec §6.4). */
+export class NeedsYou {
+  private readonly state: CoreState;
+  private readonly outbox: Outbox;
+
+  constructor({ state, outbox }: { state: CoreState; outbox: Outbox }) {
+    this.state = state;
+    this.outbox = outbox;
+  }
+
+  /**
+   * Adds an item and announces it. Permissions and questions are each their own request; every other
+   * kind appears at most once per hero.
+   */
+  ask(item: NewItem): void {
+    const repeatable = item.kind === 'permission' || item.kind === 'question';
+    if (
+      !repeatable &&
+      this.state.needsYou.some((i) => i.heroId === item.heroId && i.kind === item.kind)
+    ) {
+      return;
+    }
+    const id = newId(this.state, 'n');
+    const { kind, ...rest } = item;
+    this.state.needsYou.push({ kind, id, ...rest } as PendingItem);
+    if (item.kind !== 'reply') this.outbox.cue({ type: 'needsYouAdded', itemId: id });
+  }
+
+  /** Is the hero waiting on a permission or a question? */
+  isAsking(heroId: string): boolean {
+    return this.state.needsYou.some(
+      (i) => i.heroId === heroId && (i.kind === 'permission' || i.kind === 'question'),
+    );
+  }
+
+  removeFor(heroId: string, kinds: PendingItem['kind'][]): void {
+    this.state.needsYou = this.state.needsYou.filter(
+      (i) => !(i.heroId === heroId && kinds.includes(i.kind)),
+    );
+  }
+
+  /** Requests held by an agent process that no longer exists can't be answered. */
+  dropRequests(): void {
+    this.state.needsYou = this.state.needsYou.filter(
+      (i) => i.kind !== 'permission' && i.kind !== 'question',
+    );
+  }
+
+  clear(): void {
+    this.state.needsYou = [];
+  }
+
+  /** Forwards an answer to the hero's session. Returns the hero it was for, or null if nothing was waiting. */
+  answer(command: AnswerCommand): string | null {
+    const item = this.state.needsYou.find((i) => i.id === command.itemId);
+    const expected = command.type === 'answerPermission' ? 'permission' : 'question';
+    if (!item || item.kind !== expected) {
+      this.outbox.reject(command.commandId, 'That request is no longer waiting.');
+      return null;
+    }
+    this.state.needsYou = this.state.needsYou.filter((i) => i.id !== item.id);
+    if (item.kind === 'permission' && command.type === 'answerPermission') {
+      this.outbox.effect({
+        type: 'answerPermission',
+        heroId: item.heroId,
+        requestId: item.requestId,
+        decision: command.decision,
+        ...(command.note === undefined ? {} : { note: command.note }),
+      });
+    } else if (item.kind === 'question' && command.type === 'answerQuestion') {
+      this.outbox.effect({
+        type: 'answerQuestion',
+        heroId: item.heroId,
+        requestId: item.requestId,
+        answers: command.answers,
+      });
+    }
+    return item.heroId;
+  }
+}
+
+/**
+ * How a permission request is shown: exact text from the tool input, never paraphrased (spec §11.2.1).
+ * Tools we don't recognize fall back to their raw input so nothing is hidden.
+ */
+export function describePermission(
+  tool: string,
+  input: unknown,
+): { action: string; target: string } {
+  const field = (name: string): string | undefined => {
+    const value = (input as Record<string, unknown> | null)?.[name];
+    return typeof value === 'string' ? value : undefined;
+  };
+  const known: Record<string, [string, string]> = {
+    Bash: ['Run command', 'command'],
+    Edit: ['Edit file', 'file_path'],
+    MultiEdit: ['Edit file', 'file_path'],
+    Write: ['Write file', 'file_path'],
+    NotebookEdit: ['Edit notebook', 'notebook_path'],
+    WebFetch: ['Fetch URL', 'url'],
+    WebSearch: ['Search the web', 'query'],
+  };
+  const entry = known[tool];
+  const target = entry ? field(entry[1]) : undefined;
+  if (entry && target !== undefined) return { action: entry[0], target };
+  return { action: tool, target: JSON.stringify(input) ?? String(input) };
+}

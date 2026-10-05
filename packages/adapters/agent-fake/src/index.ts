@@ -8,12 +8,7 @@ export {
   parseLog,
   serializeLine,
 } from './log';
-export {
-  type Clock,
-  DEFAULT_OPTIONS,
-  Replay,
-  type ReplayCallbacks,
-  type ReplayOptions,
-  type ReplayStatus,
-} from './replay';
-export { type ReplayOutput, replayThroughCore } from './run';
+export { DEFAULT_OPTIONS, Replay } from './replay';
+export type { Clock, ReplayCallbacks, ReplayOptions, ReplayStatus } from './replay.types';
+export { replayThroughCore } from './run';
+export type { ReplayOutput } from './run.types';

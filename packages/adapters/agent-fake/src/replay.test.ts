@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { EventLog, LogRecord } from './log';
-import { type Clock, Replay, type ReplayOptions, type ReplayStatus } from './replay';
+import { Replay } from './replay';
+import type { Clock, ReplayOptions, ReplayStatus } from './replay.types';
 
 /** A manual clock: `advance(ms)` runs due callbacks in order. */
 class FakeClock implements Clock {
