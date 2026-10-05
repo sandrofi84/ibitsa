@@ -35,8 +35,8 @@ export default defineConfig({
         'packages/adapters/agent-claude-sdk/src/**': {
           lines: 96,
           statements: 94,
-          branches: 79,
-          functions: 88,
+          branches: 81,
+          functions: 89,
         },
         'packages/assets/src/**': { lines: 94, statements: 92, branches: 85, functions: 92 },
         'packages/game/src/**': { lines: 92, statements: 91, branches: 82, functions: 92 },

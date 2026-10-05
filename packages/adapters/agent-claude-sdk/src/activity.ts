@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import type { Activity } from './activity.types';
 
@@ -52,9 +52,10 @@ export function classify({
   };
   const path = (name: string) => {
     const value = field(name);
-    return value === undefined
-      ? undefined
-      : shorten(value.startsWith(cwd) ? relative(cwd, value) : value);
+    if (value === undefined) return undefined;
+    // Tools may report the resolved path (on macOS /var is a symlink to /private/var).
+    const root = [cwd, realpath(cwd)].find((dir) => value.startsWith(`${dir}/`));
+    return shorten(root ? relative(root, value) : value);
   };
   const withDetail = (kind: Activity['kind'], detail: string | undefined): Activity =>
     detail === undefined ? { kind } : { kind, detail };
@@ -88,6 +89,14 @@ export function classify({
 function shorten(text: string): string {
   const line = text.split('\n')[0] ?? '';
   return line.length > DETAIL_MAX ? `${line.slice(0, DETAIL_MAX - 1)}…` : line;
+}
+
+function realpath(dir: string): string {
+  try {
+    return realpathSync(dir);
+  } catch {
+    return dir;
+  }
 }
 
 function testScripts(cwd: string): string[] {

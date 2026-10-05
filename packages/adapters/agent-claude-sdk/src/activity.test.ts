@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -74,6 +74,23 @@ describe('classify (spec §5.4)', () => {
     },
   ])('$tool → $expected.kind', ({ tool, input, expected }) => {
     expect(classify({ tool, input, cwd, tests })).toEqual(expected);
+  });
+
+  it('shows paths relative to the worktree even when the tool reports the resolved path', () => {
+    const dir = worktree();
+    const resolved = realpathSync(dir);
+    expect(
+      classify({ tool: 'Read', input: { file_path: `${resolved}/notes.txt` }, cwd: dir, tests })
+        .detail,
+    ).toBe('notes.txt');
+  });
+
+  it('leaves the detail out when the input lacks the expected field', () => {
+    expect(classify({ tool: 'Read', input: {}, cwd, tests })).toEqual({ kind: 'read' });
+    expect(classify({ tool: 'Grep', input: null, cwd, tests })).toEqual({ kind: 'search' });
+    expect(classify({ tool: 'Edit', input: { file_path: 3 }, cwd, tests })).toEqual({
+      kind: 'edit',
+    });
   });
 
   it('keeps details short and to one line', () => {
