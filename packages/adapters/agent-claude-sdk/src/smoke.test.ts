@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AgentEvent } from '@ibitsa/protocol';
@@ -82,5 +82,45 @@ describe.skipIf(process.env.IBITSA_SMOKE !== '1')('live Claude session (smoke)',
     expect(events.some((e) => e.type === 'permission')).toBe(true);
     expect(events.some((e) => e.type === 'taskSubmitted')).toBe(true);
     expect(events.at(-1)?.type).toBe('turnEnded');
+  }, 240_000);
+
+  it('confines the hero: outside edits ask, sandboxed writes outside fail, escaping the sandbox asks', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'ibitsa-smoke-'));
+    const cwd = join(root, 'worktree');
+    mkdirSync(cwd);
+    const outside = join(root, 'outside.txt');
+    const events: AgentEvent[] = [];
+    const done = new Promise<void>((resolve) => {
+      const session = new ClaudeAdapter({ env: () => ({ ...process.env }) }).startSession(
+        {
+          heroId: 'h1',
+          sessionId: crypto.randomUUID(),
+          cwd,
+          classId: 'rogue',
+          prompt: `Do these three steps in order and report what happened after each. 1) Use the Write tool to create ${outside} containing "a". 2) Run \`echo b > ${outside}\` with the Bash tool. 3) If step 2 failed, run the same command again with the sandbox disabled. Do not try anything else.`,
+        },
+        (event) => {
+          events.push(event);
+          // Deny everything, as a careful user would here.
+          if (event.type === 'permission') {
+            session.respondToPermission({
+              requestId: event.requestId,
+              decision: 'deny',
+              note: 'Not outside the worktree.',
+            });
+          }
+          if (event.type === 'turnEnded' || event.type === 'error') {
+            session.close();
+            resolve();
+          }
+        },
+      );
+    });
+    await done;
+    const wroteOutside = existsSync(outside);
+    rmSync(root, { recursive: true, force: true });
+    console.log(JSON.stringify(events, null, 2));
+    expect(wroteOutside).toBe(false);
+    expect(events.some((e) => e.type === 'permission' && e.tool === 'Write')).toBe(true);
   }, 240_000);
 });

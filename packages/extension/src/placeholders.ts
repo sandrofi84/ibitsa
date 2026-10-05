@@ -1,7 +1,7 @@
 import type { AgentAdapter, AgentSession } from '@ibitsa/runtime';
 
-// Stand-in until the Claude adapter (#33) exists. It fails loudly, so a quest started now shows an
-// error item instead of hanging.
+// Stands in for the Claude adapter when there are no credentials, so a quest shows a clear error item
+// instead of the SDK falling back to a claude.ai login (spec §11.6). #37's first-run card replaces it.
 
 const noSession: AgentSession = {
   send: () => {},
@@ -12,18 +12,17 @@ const noSession: AgentSession = {
   close: () => {},
 };
 
-export const unavailableAdapter: AgentAdapter = {
+export const NO_CREDENTIALS_MESSAGE =
+  'No API key yet. Run "Ibitsa: Set API Key" (or set ANTHROPIC_API_KEY), then resume.';
+
+export const missingCredentialsAdapter: AgentAdapter = {
   capabilities: { budgetCap: true, costReported: true },
   startSession: (_start, onEvent) => {
-    queueMicrotask(() =>
-      onEvent({ type: 'error', message: "The Claude adapter isn't built yet (#33)." }),
-    );
+    queueMicrotask(() => onEvent({ type: 'error', message: NO_CREDENTIALS_MESSAGE }));
     return noSession;
   },
   resumeSession: (_resume, onEvent) => {
-    queueMicrotask(() =>
-      onEvent({ type: 'error', message: "The Claude adapter isn't built yet (#33)." }),
-    );
+    queueMicrotask(() => onEvent({ type: 'error', message: NO_CREDENTIALS_MESSAGE }));
     return noSession;
   },
 };

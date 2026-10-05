@@ -2,3 +2,4 @@
 export { ClaudeAdapter } from './claude-adapter';
 export type { ClaudeAdapterOptions, SdkModule } from './claude-adapter.types';
 export { CLASS_MODELS, HERO_INSTRUCTIONS, SUBMIT_TOOL } from './claude-session';
+export { heroSettings, sandboxProblem } from './hero-settings';

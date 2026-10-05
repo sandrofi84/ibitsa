@@ -99,11 +99,20 @@ const start = {
   prompt: 'Fix the login redirect',
 };
 
-function adapter(sdk: SdkModule, extra: { claudeCodePath?: string } = {}) {
+function adapter(
+  sdk: SdkModule,
+  extra: {
+    claudeCodePath?: string;
+    platform?: NodeJS.Platform;
+    hasCommand?: (name: string) => boolean;
+  } = {},
+) {
   return new ClaudeAdapter({
     env: () => ({ ANTHROPIC_API_KEY: 'sk-test' }),
     claudeCodePath: () => extra.claudeCodePath ?? '  ',
     loadSdk: async () => sdk,
+    platform: extra.platform ?? 'darwin',
+    hasCommand: extra.hasCommand ?? (() => true),
   });
 }
 
@@ -134,8 +143,10 @@ describe('ClaudeAdapter sessions', () => {
       sessionId: 'sess-1',
       env: { ANTHROPIC_API_KEY: 'sk-test' },
       systemPrompt: { type: 'preset', preset: 'claude_code', append: HERO_INSTRUCTIONS },
-      permissionMode: 'default',
+      permissionMode: 'acceptEdits',
       settingSources: ['project'],
+      sandbox: { enabled: true, autoAllowBashIfSandboxed: true, failIfUnavailable: true },
+      settings: { permissions: { ask: ['Bash(dangerouslyDisableSandbox:true)'] } },
       allowedTools: [SUBMIT_TOOL],
       maxBudgetUsd: 2.5,
     });
@@ -206,12 +217,26 @@ describe('ClaudeAdapter sessions', () => {
     const events: AgentEvent[] = [];
     new ClaudeAdapter({
       env: () => ({}),
+      platform: 'darwin', // on Linux without bubblewrap the sandbox preflight would answer first
       loadSdk: async () => {
         throw new Error('Claude Code executable not found');
       },
     }).startSession(start, (e) => events.push(e));
     await flush();
     expect(events).toEqual([{ type: 'error', message: 'Claude Code executable not found' }]);
+  });
+
+  it('uses the real platform when none is given', async () => {
+    const events: AgentEvent[] = [];
+    new ClaudeAdapter({
+      env: () => ({}),
+      hasCommand: () => true, // so the Linux preflight passes on any runner
+      loadSdk: async () => {
+        throw new Error('no SDK here');
+      },
+    }).startSession(start, (e) => events.push(e));
+    await flush();
+    expect(events).toEqual([{ type: 'error', message: 'no SDK here' }]);
   });
 
   it('stops reporting once closed', async () => {
@@ -458,5 +483,47 @@ describe('messages and the full stop (#34)', () => {
     session.send('one more thing', 'next');
     await flush();
     expect(sent(fake)).toEqual([['one more thing', 'next', undefined]]);
+  });
+});
+
+describe('hero settings in sessions (#35)', () => {
+  it('reports a missing sandbox dependency instead of starting', async () => {
+    const fake = fakeSdk(async function* () {
+      yield* [];
+    });
+    const events: AgentEvent[] = [];
+    adapter(fake.sdk, { platform: 'linux', hasCommand: (name) => name !== 'socat' }).startSession(
+      start,
+      (e) => events.push(e),
+    );
+    await flush();
+    expect(fake.calls).toEqual([]);
+    expect(events).toEqual([{ type: 'error', message: expect.stringContaining('needs socat') }]);
+  });
+
+  it('allows test commands next to submit_task on native Windows, with no sandbox', async () => {
+    const fake = fakeSdk(async function* () {
+      yield* [];
+    });
+    adapter(fake.sdk, { platform: 'win32' }).startSession(start, () => {});
+    await flush();
+    const options = fake.calls[0]?.options;
+    expect(options?.sandbox).toBeUndefined();
+    expect(options?.allowedTools?.[0]).toBe(SUBMIT_TOOL);
+    expect(options?.allowedTools).toContain('Bash(pnpm test *)');
+  });
+
+  it('loads the setting sources the user chose', async () => {
+    const fake = fakeSdk(async function* () {
+      yield* [];
+    });
+    new ClaudeAdapter({
+      env: () => ({}),
+      loadSdk: async () => fake.sdk,
+      platform: 'darwin',
+      settingSources: () => ['project', 'user'],
+    }).startSession(start, () => {});
+    await flush();
+    expect(fake.calls[0]?.options.settingSources).toEqual(['project', 'user']);
   });
 });
