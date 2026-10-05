@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, realpathSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join } from 'node:path';
 import type { Activity } from './activity.types';
 
 /** Bash commands that count as running tests (spec §5.4), on top of the worktree's own `test*` scripts. */
@@ -58,9 +58,12 @@ export function classify({
   const path = (name: string) => {
     const value = field(name);
     if (value === undefined) return undefined;
-    // Tools may report the resolved path (on macOS /var is a symlink to /private/var).
-    const root = [cwd, realpath(cwd)].find((dir) => value.startsWith(`${dir}/`));
-    return shorten(root ? relative(root, value) : value);
+    // Tools may report the resolved path (on macOS /var is a symlink to /private/var), and on Windows
+    // either separator; the detail always uses `/`.
+    const root = [cwd, realpath(cwd)].find(
+      (dir) => value.startsWith(`${dir}/`) || value.startsWith(`${dir}\\`),
+    );
+    return shorten(root ? value.slice(root.length + 1).replaceAll('\\', '/') : value);
   };
   const withDetail = (kind: Activity['kind'], detail: string | undefined): Activity =>
     detail === undefined ? { kind } : { kind, detail };

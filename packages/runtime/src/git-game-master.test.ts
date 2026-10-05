@@ -104,7 +104,8 @@ describe('createWorktree', () => {
 
   it('fails with the output when the setup command fails', async () => {
     const dir = repo();
-    const event = await gm(dir, 'echo installing; echo no lockfile >&2; exit 3').createWorktree({
+    // Runs under sh, or cmd.exe on Windows: this command means the same in both.
+    const event = await gm(dir, 'echo no lockfile 1>&2 && exit 3').createWorktree({
       islandId: 'i2',
       branch: 'b',
       baseRef: 'main',

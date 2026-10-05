@@ -38,7 +38,9 @@ export class ReplayExport {
     const bases: [string, string][] = [];
     if (worktreePath) {
       bases.push([worktreePath, '.']);
-      bases.push([this.options.repoDir, relative(worktreePath, this.options.repoDir) || '.']);
+      // `/` whatever the OS, so a fixture reads the same wherever it was recorded.
+      const repo = relative(worktreePath, this.options.repoDir).replaceAll('\\', '/');
+      bases.push([this.options.repoDir, repo || '.']);
     }
     bases.push([this.options.homeDir, '~']);
     const rules = bases
