@@ -266,7 +266,7 @@ export class WorldScene extends Phaser.Scene {
     this.empty.setVisible(snapshot.campaign === null);
     this.hud.setText(
       snapshot.campaign
-        ? `${snapshot.campaign.title.toUpperCase()}   GOLD ${gold(snapshot.campaign.gold)}`
+        ? `${snapshot.campaign.title.toUpperCase()}   GOLD ${gold(snapshot.campaign.gold)}${snapshot.campaign.autoApprove ? '   AUTO' : ''}`
         : '',
     );
 

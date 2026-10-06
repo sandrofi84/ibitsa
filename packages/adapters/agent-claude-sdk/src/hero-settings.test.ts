@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { commandExists, heroSettings, offeredRules, sandboxProblem } from './hero-settings';
+import {
+  boundaryOf,
+  commandExists,
+  heroSettings,
+  offeredRules,
+  sandboxProblem,
+} from './hero-settings';
 
 describe('heroSettings (spec §11.6)', () => {
   it('confines macOS and Linux heroes: acceptEdits, the sandbox, and asking before escaping it', () => {
@@ -168,5 +174,34 @@ describe('offeredRules (#62)', () => {
         offeredRules({ toolName: 'Edit', input: { file_path }, cwd, suggestions: [lint] }).rules,
       ).toEqual(['Bash(npm run lint:*)']);
     }
+  });
+});
+
+describe('boundaryOf (#63)', () => {
+  const cwd = '/wt';
+  it('names the hard limit a request crosses', () => {
+    expect(
+      boundaryOf({
+        toolName: 'Bash',
+        input: { command: 'x', dangerouslyDisableSandbox: true },
+        cwd,
+      }),
+    ).toBe('sandboxEscape');
+    expect(
+      boundaryOf({ toolName: 'Bash', input: { command: 'x' }, cwd, blockedPath: '/etc' }),
+    ).toBe('outsideWorktree');
+    expect(
+      boundaryOf({
+        toolName: 'Read',
+        input: {},
+        cwd,
+        suggestions: [{ type: 'addDirectories', directories: ['/x'], destination: 'session' }],
+      }),
+    ).toBe('outsideWorktree');
+    expect(boundaryOf({ toolName: 'Write', input: { file_path: '/x/a' }, cwd })).toBe(
+      'outsideWorktree',
+    );
+    expect(boundaryOf({ toolName: 'Write', input: { file_path: '/wt/a' }, cwd })).toBeNull();
+    expect(boundaryOf({ toolName: 'Bash', input: { command: 'npm install' }, cwd })).toBeNull();
   });
 });

@@ -199,6 +199,48 @@ describe('always allow (#62)', () => {
   });
 });
 
+describe('auto mode (#63)', () => {
+  const ask = (h: Harness, boundary?: 'sandboxEscape' | 'outsideWorktree') =>
+    h.agent({
+      type: 'permission',
+      requestId: 'r1',
+      tool: 'Bash',
+      input: { command: 'npm install' },
+      ...(boundary ? { boundary } : {}),
+    });
+
+  it('allows permissions at once while on, without asking you', () => {
+    const h = quest().command({ type: 'setAutoApprove', commandId: 'a', on: true });
+    h.drain();
+    ask(h);
+    expect(h.effects).toContainEqual(
+      expect.objectContaining({ type: 'answerPermission', requestId: 'r1', decision: 'allow' }),
+    );
+    expect(h.items()).toEqual([]);
+    expect(h.hero().state.kind).not.toBe('waitingOnYou');
+    expect(view(h.state).campaign?.autoApprove).toBe(true);
+  });
+
+  it('still asks across a hard limit, and asks again once turned off', () => {
+    const h = quest().command({ type: 'setAutoApprove', commandId: 'a', on: true });
+    ask(h, 'sandboxEscape');
+    expect(h.items().map((i) => i.kind)).toEqual(['permission']);
+    const off = quest().command({ type: 'setAutoApprove', commandId: 'a', on: true });
+    off.command({ type: 'setAutoApprove', commandId: 'b', on: false });
+    ask(off);
+    expect(off.items().map((i) => i.kind)).toEqual(['permission']);
+  });
+
+  it('only while a quest runs', () => {
+    const h = new Harness().command({ type: 'setAutoApprove', commandId: 'a', on: true });
+    expect(h.cues).toContainEqual({
+      type: 'commandRejected',
+      commandId: 'a',
+      reason: 'There is no quest running.',
+    });
+  });
+});
+
 describe('stall detection', () => {
   it('stalls after the same test fails 4 times in a row, pausing the hero', () => {
     const h = quest();

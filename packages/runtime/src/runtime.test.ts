@@ -423,6 +423,48 @@ describe('M1 effects', () => {
   });
 });
 
+describe('auto mode (#63)', () => {
+  it('says whether hero commands run in a sandbox here', () => {
+    const env = setup();
+    env.connection.receive({ type: 'hello', protocolVersion: 1 });
+    const snapshot = env.received.find((m) => m.type === 'snapshot');
+    expect(snapshot?.type === 'snapshot' && snapshot.snapshot.sandboxed).toBe(
+      process.platform !== 'win32',
+    );
+    const windows = new Runtime({
+      storageDir: env.storageDir,
+      adapter: env.adapter,
+      gameMaster: env.gameMaster,
+      clock: env.clock,
+      platform: 'win32',
+    });
+    const got: CoreMessage[] = [];
+    windows.connect({ post: (m) => got.push(m) }).receive({ type: 'hello', protocolVersion: 1 });
+    const winSnapshot = got.find((m) => m.type === 'snapshot');
+    expect(winSnapshot?.type === 'snapshot' && winSnapshot.snapshot.sandboxed).toBe(false);
+  });
+
+  it('answers permissions itself while on, never adding them to Needs you', async () => {
+    const env = await arrived();
+    env.connection.receive({ type: 'setAutoApprove', commandId: 'a', on: true });
+    env.session.emit({
+      type: 'permission',
+      requestId: 'r1',
+      tool: 'Bash',
+      input: { command: 'npm i' },
+    });
+    expect(env.session.calls).toContainEqual([
+      'respondToPermission',
+      { requestId: 'r1', decision: 'allow' },
+    ]);
+    expect(
+      logOf(env.storageDir).records.some(
+        (r) => r.kind === 'command' && r.command.type === 'setAutoApprove',
+      ),
+    ).toBe(true);
+  });
+});
+
 describe('always allow (#62)', () => {
   const ask = (session: { emit: (e: AgentEvent) => void }, alwaysAllow: string[]) =>
     session.emit({

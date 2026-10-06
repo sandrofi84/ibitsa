@@ -40,9 +40,21 @@ export class LiveDevHost implements Host {
   private readonly repo: RepoView | null;
   private diffs = 0;
 
-  constructor({ credentialsReady, repo }: { credentialsReady: boolean; repo: RepoView | null }) {
+  /** False acts like native Windows, where hero commands run without a sandbox (#63). */
+  private readonly sandboxed: boolean;
+
+  constructor({
+    credentialsReady,
+    repo,
+    sandboxed = true,
+  }: {
+    credentialsReady: boolean;
+    repo: RepoView | null;
+    sandboxed?: boolean;
+  }) {
     this.channel = new FakeHostChannel({ credentialsReady });
     this.repo = repo;
+    this.sandboxed = sandboxed;
   }
 
   onMessage(listener: (m: CoreMessage) => void): void {
@@ -222,7 +234,12 @@ export class LiveDevHost implements Host {
     this.emit({
       type: 'snapshot',
       seq: ++this.seq,
-      snapshot: { ...view(this.state), repo: this.repo, projectRules: this.projectRules },
+      snapshot: {
+        ...view(this.state),
+        repo: this.repo,
+        projectRules: this.projectRules,
+        sandboxed: this.sandboxed,
+      },
     });
   }
 

@@ -94,6 +94,7 @@ describe('starting a quest', () => {
       title: 'Fix the login redirect',
       status: 'active',
       gold: { kind: 'unknown' },
+      autoApprove: false,
     });
     expect(snap.islands).toEqual([
       {

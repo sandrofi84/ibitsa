@@ -141,6 +141,7 @@
           "id": "c1",
           "title": "Make the date parser accept ISO week dates",
           "status": "active",
+          "autoApprove": false,
           "gold": {
             "kind": "unknown"
           }
@@ -193,6 +194,7 @@
           "id": "c1",
           "title": "Make the date parser accept ISO week dates",
           "status": "active",
+          "autoApprove": false,
           "gold": {
             "kind": "exact",
             "value": 61000
@@ -257,6 +259,7 @@
           "id": "c1",
           "title": "Make the date parser accept ISO week dates",
           "status": "active",
+          "autoApprove": false,
           "gold": {
             "kind": "exact",
             "value": 301500
@@ -321,6 +324,7 @@
           "id": "c1",
           "title": "Make the date parser accept ISO week dates",
           "status": "active",
+          "autoApprove": false,
           "gold": {
             "kind": "exact",
             "value": 301500
@@ -379,6 +383,7 @@
           "id": "c1",
           "title": "Make the date parser accept ISO week dates",
           "status": "active",
+          "autoApprove": false,
           "gold": {
             "kind": "exact",
             "value": 352000
@@ -434,6 +439,7 @@
       "id": "c1",
       "title": "Make the date parser accept ISO week dates",
       "status": "active",
+      "autoApprove": false,
       "gold": {
         "kind": "exact",
         "value": 352000

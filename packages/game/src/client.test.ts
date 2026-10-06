@@ -22,7 +22,7 @@ class FakeHost implements Host {
 }
 
 const snap = (title: string): Snapshot => ({
-  campaign: { id: 'c1', title, status: 'active', gold: { kind: 'unknown' } },
+  campaign: { id: 'c1', title, status: 'active', gold: { kind: 'unknown' }, autoApprove: false },
   islands: [],
   heroes: [],
   needsYou: [],

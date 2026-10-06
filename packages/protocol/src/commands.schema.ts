@@ -32,6 +32,8 @@ export const CommandSchema = v.variant('type', [
     /** Also allow the request's suggested rules from now on: for this quest, or for the project (#62). */
     always: v.optional(v.picklist(['quest', 'project'])),
   }),
+  /** Auto mode for the running quest (#63): logged, so a replay shows when it changed. */
+  v.strictObject({ type: v.literal('setAutoApprove'), commandId: id, on: v.boolean() }),
   /** Removes an "Always allow in this project" rule. Runtime-only, never logged (#62). */
   v.strictObject({ type: v.literal('forgetProjectRule'), rule: v.pipe(v.string(), v.nonEmpty()) }),
   v.strictObject({

@@ -146,6 +146,7 @@
           "id": "c1",
           "title": "Make slugify strip accents",
           "status": "active",
+          "autoApprove": false,
           "gold": {
             "kind": "unknown"
           }
@@ -204,6 +205,7 @@
           "id": "c1",
           "title": "Make slugify strip accents",
           "status": "active",
+          "autoApprove": false,
           "gold": {
             "kind": "unknown"
           }
@@ -256,6 +258,7 @@
           "id": "c1",
           "title": "Make slugify strip accents",
           "status": "active",
+          "autoApprove": false,
           "gold": {
             "kind": "exact",
             "value": 161964
@@ -311,6 +314,7 @@
       "id": "c1",
       "title": "Make slugify strip accents",
       "status": "finished",
+      "autoApprove": false,
       "gold": {
         "kind": "exact",
         "value": 161964

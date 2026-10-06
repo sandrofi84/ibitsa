@@ -1,5 +1,6 @@
 import type { ActivityKind, JournalEntry, JournalEntryBody } from '@ibitsa/protocol';
 import type { LogRecord } from './event-log.types';
+import { describePermission } from './needs-you';
 import type { CoreState, PendingItem } from './state.types';
 
 /** Journal lines per page when a front end doesn't say. */
@@ -67,6 +68,18 @@ export class Journal {
         }
         case 'message':
           return line(heroId, { kind: 'said', text: e.text });
+        case 'permission': {
+          // No "Needs you" item for it means auto mode answered it (#63).
+          const asked = state.needsYou.some(
+            (i) => i.kind === 'permission' && i.requestId === e.requestId,
+          );
+          if (asked) return [];
+          const { action, target } = describePermission(e.tool, e.input);
+          return line(heroId, {
+            kind: 'answered',
+            text: `Auto-allowed: ${action.toLowerCase()} ${target}`,
+          });
+        }
         case 'taskSubmitted':
           return line(heroId, { kind: 'event', text: `Submitted: ${e.summary}` });
         default:
@@ -113,6 +126,11 @@ export class Journal {
           return line(null, { kind: 'event', text: 'You finished the quest.' });
         case 'abandonQuest':
           return line(null, { kind: 'event', text: 'You abandoned the quest.' });
+        case 'setAutoApprove':
+          return line(null, {
+            kind: 'event',
+            text: c.on ? 'You turned auto mode on.' : 'You turned auto mode off.',
+          });
         default:
           return [];
       }

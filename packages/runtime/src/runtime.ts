@@ -391,7 +391,11 @@ export class Runtime {
   }
 
   private snapshot(): Snapshot {
-    const snapshot = { ...view(this.state), projectRules: this.projectRules.list() };
+    const snapshot = {
+      ...view(this.state),
+      projectRules: this.projectRules.list(),
+      sandboxed: (this.options.platform ?? process.platform) !== 'win32',
+    };
     return this.repo === undefined ? snapshot : { ...snapshot, repo: this.repo };
   }
 

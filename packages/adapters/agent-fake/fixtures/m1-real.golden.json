@@ -67,6 +67,7 @@
       "id": "c1",
       "title": "Make slugify strip accents",
       "status": "finished",
+      "autoApprove": false,
       "gold": {
         "kind": "exact",
         "value": 117863

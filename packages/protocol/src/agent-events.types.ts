@@ -31,6 +31,8 @@ export type AgentEvent =
        * when not offered: never for writing outside the worktree or escaping the sandbox.
        */
       alwaysAllow?: string[];
+      /** Set when the request crosses a hard limit (spec §11.6): auto mode never answers these (#63). */
+      boundary?: 'sandboxEscape' | 'outsideWorktree';
     }
   /** Running totals for the session, never deltas. Omitted fields are unknown, not zero. */
   | { type: 'usage'; contextUsed?: number; contextMax?: number; totalCost?: MicroUsd }
