@@ -423,6 +423,68 @@ describe('M1 effects', () => {
   });
 });
 
+describe('the journal (#58)', () => {
+  const journalMessages = (received: CoreMessage[]) =>
+    received.filter((m) => m.type === 'journal' || m.type === 'journalAppend');
+
+  it('pushes new lines to every front end as inputs are logged', async () => {
+    const { received, session } = await arrived();
+    session.emit({ type: 'message', text: 'Looking around.' });
+    const appends = received.filter((m) => m.type === 'journalAppend');
+    expect(appends.at(-1)).toMatchObject({
+      type: 'journalAppend',
+      entries: [{ kind: 'said', text: 'Looking around.', heroId: 'h4' }],
+    });
+    // The quest's first line starts a new journal.
+    expect(appends[0]).toMatchObject({
+      start: 0,
+      entries: [{ kind: 'event', text: 'Quest started: Fix the login redirect' }],
+    });
+  });
+
+  it('answers requestJournal with a page from the end, or before an index; never logs it', async () => {
+    const { connection, received, session, storageDir } = await arrived();
+    for (let i = 0; i < 5; i++) session.emit({ type: 'message', text: `line ${i}` });
+    const logged = logOf(storageDir).records.length;
+    received.length = 0;
+    connection.receive({ type: 'requestJournal', limit: 2 });
+    connection.receive({ type: 'requestJournal', before: 2, limit: 10 });
+    connection.receive({ type: 'requestJournal', before: 999 });
+    const [last, first, all] = journalMessages(received);
+    expect(last).toMatchObject({ type: 'journal', start: 5, total: 7 });
+    expect(last?.entries.map((e) => ('text' in e ? e.text : ''))).toEqual(['line 3', 'line 4']);
+    expect(first).toMatchObject({ start: 0, total: 7 });
+    expect(first?.entries.map((e) => e.kind)).toEqual(['event', 'event']);
+    expect(all?.entries).toHaveLength(7);
+    expect(logOf(storageDir).records.length).toBe(logged);
+  });
+
+  it('starts a new journal with a new quest, and rebuilds it from the log after a restart', async () => {
+    const first = await arrived();
+    first.session.emit({ type: 'message', text: 'Before the reload.' });
+    first.runtime.dispose();
+
+    const second = setup(first.storageDir);
+    second.connection.receive({ type: 'requestJournal' });
+    const page = journalMessages(second.received).at(-1);
+    expect(page?.entries.map((e) => ('text' in e ? e.text : ''))).toEqual([
+      'Quest started: Fix the login redirect',
+      'Worktree ready on ibitsa/fix-the-login-redirect.',
+      'Before the reload.',
+      'VS Code reloaded; the session stopped.',
+      'Error: The session stopped when VS Code reloaded.',
+    ]);
+
+    second.connection.receive({ type: 'abandonQuest', commandId: 'a' });
+    second.connection.receive({ ...startQuest, commandId: 'q2', description: 'Tidy the README' });
+    const fresh = second.received.filter((m) => m.type === 'journalAppend').at(-1);
+    expect(fresh).toMatchObject({
+      start: 0,
+      entries: [{ kind: 'event', text: 'Quest started: Tidy the README' }],
+    });
+  });
+});
+
 describe('recovery', () => {
   it('rebuilds the campaign from the log without carrying out effects again, then marks the hero not resumed', async () => {
     const first = await arrived();

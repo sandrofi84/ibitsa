@@ -4,6 +4,8 @@ import type { Command } from './commands.schema';
 
 const valid: Command[] = [
   { type: 'hello', protocolVersion: 1 },
+  { type: 'requestJournal' },
+  { type: 'requestJournal', before: 120, limit: 100 },
   {
     type: 'sendMessage',
     commandId: 'c1',
@@ -55,7 +57,7 @@ describe('parseCommand', () => {
   });
 
   it('covers every command type', () => {
-    expect(new Set(valid.map((c) => c.type)).size).toBe(12);
+    expect(new Set(valid.map((c) => c.type)).size).toBe(13);
   });
 
   it.each([
@@ -101,6 +103,8 @@ describe('parseCommand', () => {
       { type: 'answerQuestion', commandId: 'c1', itemId: 'q1', answers: { q: 3 } },
     ],
     ['protocol version 0', { type: 'hello', protocolVersion: 0 }],
+    ['a journal page over 500', { type: 'requestJournal', limit: 501 }],
+    ['a negative journal index', { type: 'requestJournal', before: -1 }],
   ])('rejects %s', (_, input) => {
     const result = parseCommand(input);
     expect(result.ok).toBe(false);

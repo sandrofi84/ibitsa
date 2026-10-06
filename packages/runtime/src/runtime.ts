@@ -5,6 +5,7 @@ import {
   DEFAULT_SETTINGS,
   type Effect,
   initialState,
+  Journal,
   type LogRecord,
   step,
   view,
@@ -33,6 +34,8 @@ export class Runtime {
   /** The latest repo scan; undefined until the first one finishes. */
   private repo: RepoView | null | undefined;
   private log: CampaignLog | null = null;
+  /** The running campaign's journal, built from its log (#58); front ends page through it. */
+  private journal = new Journal();
   private seq = 0;
   private readonly frontEnds = new Set<FrontEnd>();
   private readonly sessions = new Map<string, AgentSession>();
@@ -58,7 +61,10 @@ export class Runtime {
     if (!id) return;
     const { header, records } = this.store.read(id);
     this.log = this.store.open(id, header);
-    for (const { mark: _mark, ...input } of records) this.state = step(this.state, input).state;
+    for (const { mark: _mark, ...input } of records) {
+      this.state = step(this.state, input).state;
+      this.journal.add({ record: input, state: this.state });
+    }
     if (this.state.campaign?.status === 'active') {
       this.input({ kind: 'gm', t: this.t(), event: { type: 'runtimeRestarted' } });
     }
@@ -105,9 +111,15 @@ export class Runtime {
       this.rescanRepo();
       return;
     }
+    if (command.type === 'requestJournal') {
+      const page = this.journal.page({ before: command.before, limit: command.limit });
+      frontEnd.post({ type: 'journal', seq: ++this.seq, ...page });
+      return;
+    }
     if (command.type === 'startQuest' && this.state.campaign?.status !== 'active') {
-      // A new quest is a new campaign with its own log and a fresh core.
+      // A new quest is a new campaign with its own log, a fresh core and a fresh journal.
       this.state = initialState();
+      this.journal = new Journal();
       this.log = this.store.create(this.newId(), new Date(this.options.clock.now()));
       this.input({
         kind: 'gm',
@@ -149,6 +161,13 @@ export class Runtime {
     this.log.append(input as LogRecord);
     const result = step(this.state, input);
     this.state = result.state;
+    const lines = this.journal.add({ record: input as LogRecord, state: this.state });
+    if (lines.length > 0) {
+      const start = this.journal.entries.length - lines.length;
+      for (const frontEnd of this.frontEnds) {
+        frontEnd.post({ type: 'journalAppend', seq: ++this.seq, entries: lines, start });
+      }
+    }
     for (const cue of result.cues) this.broadcastCue(cue);
     this.scheduleSnapshot();
     for (const effect of result.effects) this.perform(effect);

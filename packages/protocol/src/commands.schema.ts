@@ -8,6 +8,12 @@ const positiveInt = v.pipe(v.number(), v.integer(), v.minValue(1));
 
 export const CommandSchema = v.variant('type', [
   v.strictObject({ type: v.literal('hello'), protocolVersion: positiveInt }),
+  /** A page of the journal, answered by the runtime and never logged (#58): `before` an entry index. */
+  v.strictObject({
+    type: v.literal('requestJournal'),
+    before: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
+    limit: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(500))),
+  }),
   v.strictObject({
     type: v.literal('sendMessage'),
     commandId: id,

@@ -49,7 +49,8 @@ function command(ctx: StepContext, command: Command): void {
   const quest = new Quest(ctx);
   switch (command.type) {
     case 'hello':
-      return; // handled by the runtime (welcome + snapshot)
+    case 'requestJournal':
+      return; // handled by the runtime (welcome + snapshot; journal pages), never logged
     case 'startQuest':
       quest.start(command);
       return;

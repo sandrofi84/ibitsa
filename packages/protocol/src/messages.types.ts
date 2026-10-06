@@ -1,10 +1,17 @@
+import type { JournalEntry } from './journal.types';
 import type { ActivityKind, Snapshot } from './snapshot.types';
 
 /** Core → front end. `seq` is monotonic: drop stale snapshots and cues older than the shown snapshot. */
 export type CoreMessage =
   | { type: 'welcome'; seq: number; protocolVersion: number }
   | { type: 'snapshot'; seq: number; snapshot: Snapshot }
-  | { type: 'cue'; seq: number; cue: Cue };
+  | { type: 'cue'; seq: number; cue: Cue }
+  /**
+   * The journal (#58). A page answers `requestJournal`: `entries` start at index `start` of `total`.
+   * Appends go to every front end as entries are written; `start` 0 means a new campaign began.
+   */
+  | { type: 'journal'; seq: number; entries: JournalEntry[]; start: number; total: number }
+  | { type: 'journalAppend'; seq: number; entries: JournalEntry[]; start: number };
 
 /** Fire-and-forget effects (animation, sound, toast). Carry no state: dropping any cue must be harmless. */
 export type Cue =
