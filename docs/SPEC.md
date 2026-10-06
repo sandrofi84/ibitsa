@@ -196,10 +196,10 @@ ask_user({
   - **Planning mode:** what concerns to raise, what to research, how to write acceptance criteria.
   - **Review mode:** how to review a diff against criteria, what counts as blocking vs suggestion, output format.
   - A councillor may be planning-only (e.g. Product).
-- Stored as Claude Code skill files with Ibitsa's own frontmatter fields: `ibitsa-councillor: true`, and optionally `ibitsa-portrait`, `ibitsa-model` and `ibitsa-tools` (read-only by default). The body has a `## Planning` and/or `## Review` section.
-- Built-ins ship in Ibitsa's plugin (`ibitsa:architect`, …); users add their own in `~/.claude/skills/` and projects in `.claude/skills/` (§8.3), found the same way as actions (§6.2). A project councillor with a built-in's name **replaces** it; users can also **extend** (override some fields) or **disable** them.
+- Stored as Claude Code skill files with Ibitsa's own frontmatter fields: `ibitsa-councillor: true`, and optionally `ibitsa-title` (else the name capitalised), `ibitsa-portrait`, `ibitsa-model` and `ibitsa-tools`. Tools are kept to read-only ones (`Read`, `Grep`, `Glob`, `WebFetch`, `WebSearch`); without any, `Read`, `Grep`, `Glob`. The body has a `## Planning` and/or `## Review` section; a body with neither is all planning advice. A councillor's id is its skill name without a plugin prefix (#98).
+- Built-ins ship in Ibitsa's plugin (`ibitsa:architect`, …); users add their own in `~/.claude/skills/` and projects in `.claude/skills/` (§8.3), found the same way as actions (§6.2). A councillor with the same id **replaces** an earlier one: project over user over built-in. `ibitsa.council.disabled` lists ids the council never seats. **Extend** (override some fields) waits for the Guild Hall (M8).
 - Default roster (v1): Elder, Architect, Tester, Accessibility, Security, Designer, by role title, each with a one-line manner of speaking. Names and personas wait for the commissioned art (§9.5, phase 2).
-- Councillor skills must not be auto-invoked by the model in normal Claude Code use (`disable-model-invocation: true`). Running one by hand from the `/` menu (`/security`) is useful. **[OPEN]** confirm that `disable-model-invocation` doesn't also stop a skill being preloaded into a subagent.
+- Councillor skills must not be auto-invoked by the model in normal Claude Code use (`disable-model-invocation: true`), and carry `ibitsa-target: council` so the hero's `/` menu leaves them out. `disable-model-invocation` doesn't stop a skill being preloaded into a subagent: Claude Code 0.3.289 skips a preloaded skill only when it's missing, not prompt-based, disabled by policy, or account-synced with sync off (read from the bundled CLI, #98).
 
 ### 4.8 Talking to the council mid-campaign
 - `@council` messages go to the sitting's lead session (the round table's session, or the elder's in separate chambers; resumed). It does **not** stop heroes.
@@ -838,7 +838,7 @@ Settled in M3 planning.
 2. Rogue = Haiku confirmed? Default class roster and names.
 3. ~~Character sprite size: 16×16 vs 32×32.~~ Settled: 16×16 on the map; 32×32 council sheets in the council hut (§9.2).
 4. ~~Game engine: Phaser vs PixiJS.~~ Settled: Phaser 4 (§9.1).
-5. ~~Councillor skill location so they don't clutter the normal `/` menu.~~ Settled in M3 planning: the usual skill locations; running a councillor from `/` is useful (§4.7). Still to confirm: `disable-model-invocation` and subagent preloading.
+5. ~~Councillor skill location so they don't clutter the normal `/` menu.~~ Settled in M3 planning and #98: the usual skill locations, `ibitsa-target: council` keeps them out of the hero's menu, and `disable-model-invocation` doesn't block subagent preloading (§4.7).
 6. ~~Whether Claude Code tolerates extra frontmatter fields (for action `target`), else sidecar.~~ Settled in M2 planning: a skill with an extra flat field loads and is listed by `supportedCommands()`; Ibitsa uses `ibitsa-target` and reads it from the file.
 7. ~~Confirm SDK invocation of custom skills via `/name` prompts.~~ Settled (#84): a real session sent `/greet Wren` ran the project skill with its argument (opt-in smoke test).
 8. ACP capability coverage per agent.

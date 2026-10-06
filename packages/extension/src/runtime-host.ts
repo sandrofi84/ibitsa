@@ -67,6 +67,7 @@ export class RuntimeHost {
       clock: systemClock,
       settings: o.settings,
       repoDir: o.workspaceDir,
+      ...(o.disabledCouncillors ? { disabledCouncillors: o.disabledCouncillors } : {}),
     });
     this.connection = runtime.connect(this.watcher(runtime));
     runtime.start();

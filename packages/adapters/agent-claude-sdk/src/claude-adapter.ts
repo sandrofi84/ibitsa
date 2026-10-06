@@ -1,7 +1,7 @@
 import { homedir } from 'node:os';
 import { dirname } from 'node:path';
 import type { SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
-import type { ActionInfo, AgentEvent } from '@ibitsa/protocol';
+import type { ActionInfo, AgentEvent, CouncillorInfo } from '@ibitsa/protocol';
 import type {
   AgentAdapter,
   AgentSession,
@@ -12,6 +12,7 @@ import type {
 } from '@ibitsa/runtime';
 import type { ClaudeAdapterOptions } from './claude-adapter.types';
 import { ClaudeSession, loadSdk, plugins } from './claude-session';
+import { CouncillorSkills } from './councillor-skills';
 import { expandSkill } from './skill-expansion';
 import type { Expansion } from './skill-expansion.types';
 import { SkillFiles } from './skill-files';
@@ -105,6 +106,15 @@ export class ClaudeAdapter implements AgentAdapter {
       args,
       variables: { CLAUDE_PROJECT_DIR: cwd, CLAUDE_SKILL_DIR: dirname(file.path) },
     });
+  }
+
+  /** The councillors a folder can seat (§4.7, #98), read from the skill files; no session needed. */
+  async listCouncillors({ cwd }: { cwd: string }): Promise<CouncillorInfo[]> {
+    return new CouncillorSkills({
+      cwd,
+      home: this.options.home ?? homedir(),
+      pluginDirs: this.options.pluginDirs?.() ?? [],
+    }).list();
   }
 
   /** Writes a new action as a skill (#86): in the user's home, or the workspace repo for the project. */

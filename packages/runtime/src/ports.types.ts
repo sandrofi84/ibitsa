@@ -1,5 +1,12 @@
 import type { GameMasterEvent } from '@ibitsa/core';
-import type { ActionDraft, ActionInfo, AgentEvent, CoreMessage, RepoView } from '@ibitsa/protocol';
+import type {
+  ActionDraft,
+  ActionInfo,
+  AgentEvent,
+  CoreMessage,
+  CouncillorInfo,
+  RepoView,
+} from '@ibitsa/protocol';
 
 /** Starting one hero's agent session (spec §11.3). The adapter reports everything through `onEvent`. */
 export interface SessionStart {
@@ -57,6 +64,8 @@ export interface AgentAdapter {
     name: string;
     args: string;
   }): Promise<{ text: string; notes: string[] } | null>;
+  /** The councillors a folder can seat (§4.7, #98); adapters without skills leave it out. */
+  listCouncillors?(request: { cwd: string }): Promise<CouncillorInfo[]>;
   /** Writes a new action (#86); adapters without skills leave it out. */
   createAction?(request: CreateActionRequest): Promise<CreateActionResult>;
 }

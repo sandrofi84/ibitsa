@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readUserSettings } from './settings';
+import { readDisabledCouncillors, readUserSettings } from './settings';
 
 const config = (values: Record<string, unknown>) => ({
   get: <T>(key: string) => values[key] as T | undefined,
@@ -22,5 +22,15 @@ describe('readUserSettings', () => {
       fileEdits: 12,
       noProgressTurns: 6,
     });
+  });
+});
+
+describe('readDisabledCouncillors (#98)', () => {
+  it('reads the ids, ignoring anything that is not one', () => {
+    expect(
+      readDisabledCouncillors(config({ 'council.disabled': ['designer', 3, 'tester'] })),
+    ).toEqual(['designer', 'tester']);
+    expect(readDisabledCouncillors(config({ 'council.disabled': 'designer' }))).toEqual([]);
+    expect(readDisabledCouncillors(config({}))).toEqual([]);
   });
 });

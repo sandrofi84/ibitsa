@@ -15,16 +15,18 @@ import {
   type ActionInfo,
   type Command,
   type CoreMessage,
+  type CouncillorInfo,
   type Cue,
   PROTOCOL_VERSION,
   parseCommand,
   type RepoView,
   type Snapshot,
 } from '@ibitsa/protocol';
-import { ActionCatalog, watchFolder } from './action-catalog';
+import { seatable } from './council';
 import type { AgentSession, FrontEnd } from './ports.types';
 import { ProjectRules } from './project-rules';
 import type { Connection, RuntimeOptions } from './runtime.types';
+import { SkillCatalog, watchFolder } from './skill-catalog';
 import { type CampaignLog, CampaignStore } from './storage';
 
 /** Snapshots go out at most this often (spec §11.2.1: throttled, ~10/s). */
@@ -50,7 +52,8 @@ export class Runtime {
   private snapshotDirty = false;
   private readonly store: CampaignStore;
   private readonly projectRules: ProjectRules;
-  private readonly actions: ActionCatalog | null;
+  private readonly actions: SkillCatalog<ActionInfo> | null;
+  private readonly councillors: SkillCatalog<CouncillorInfo> | null;
   private readonly newId: () => string;
 
   constructor(private readonly options: RuntimeOptions) {
@@ -58,7 +61,7 @@ export class Runtime {
     this.projectRules = new ProjectRules(options.storageDir);
     const list = options.adapter.listActions?.bind(options.adapter);
     this.actions = list
-      ? new ActionCatalog({
+      ? new SkillCatalog<ActionInfo>({
           list,
           home: options.home ?? homedir(),
           watch: options.watchFolder ?? watchFolder,
@@ -66,6 +69,16 @@ export class Runtime {
           onChange: () => {
             for (const frontEnd of this.frontEnds) this.postActions(frontEnd);
           },
+        })
+      : null;
+    const listCouncillors = options.adapter.listCouncillors?.bind(options.adapter);
+    this.councillors = listCouncillors
+      ? new SkillCatalog<CouncillorInfo>({
+          list: listCouncillors,
+          home: options.home ?? homedir(),
+          watch: options.watchFolder ?? watchFolder,
+          // Nothing shows the roster until convening (#103), which asks for it fresh.
+          onChange: () => {},
         })
       : null;
     this.newId = options.newId ?? randomUUID;
@@ -109,6 +122,7 @@ export class Runtime {
     for (const session of this.sessions.values()) session.close();
     this.sessions.clear();
     this.actions?.dispose();
+    this.councillors?.dispose();
     this.frontEnds.clear();
   }
 
@@ -511,6 +525,20 @@ export class Runtime {
     if (!cwd || !this.actions || this.state.campaign?.status !== 'active')
       return Promise.resolve([]);
     return this.actions.list(cwd).catch(() => []);
+  }
+
+  /**
+   * The councillors the workspace repository can seat (§4.7, #98), without the ones turned off; none
+   * without a repository or on failure.
+   */
+  currentCouncillors(): Promise<CouncillorInfo[]> {
+    const cwd = this.options.repoDir;
+    if (!cwd || !this.councillors) return Promise.resolve([]);
+    const disabled = this.options.disabledCouncillors?.() ?? [];
+    return this.councillors
+      .list(cwd)
+      .then((all) => seatable(all, disabled))
+      .catch(() => []);
   }
 
   /** A session's allow rules: the quest's from core plus the project's kept here (#62). */

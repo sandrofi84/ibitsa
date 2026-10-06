@@ -2,7 +2,14 @@ import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'no
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { type GameMasterEvent, parseLog, SILENCE_MS, view } from '@ibitsa/core';
-import type { AgentEvent, Command, CoreMessage, RepoView, Snapshot } from '@ibitsa/protocol';
+import type {
+  AgentEvent,
+  Command,
+  CoreMessage,
+  CouncillorInfo,
+  RepoView,
+  Snapshot,
+} from '@ibitsa/protocol';
 import { afterEach, describe, expect, it } from 'vitest';
 import type {
   AgentAdapter,
@@ -1030,5 +1037,86 @@ describe('when the outside world fails', () => {
     resumed?.emit({ type: 'message', text: 'Anyone there?' });
     second.clock.advance(SNAPSHOT_INTERVAL_MS);
     expect(second.received.length).toBe(before);
+  });
+});
+
+describe('the councillors (#98)', () => {
+  const councillor = (id: string): CouncillorInfo => ({
+    id,
+    skill: id,
+    title: id,
+    description: '',
+    source: 'builtin',
+    portrait: null,
+    model: null,
+    tools: ['Read'],
+    modes: { planning: true, review: false },
+    hash: 'aaa',
+  });
+
+  function withCouncillors(options: {
+    list: (cwd: string) => Promise<CouncillorInfo[]>;
+    repoDir?: string;
+    disabled?: string[];
+  }) {
+    const storageDir = mkdtempSync(join(tmpdir(), 'ibitsa-runtime-'));
+    const home = mkdtempSync(join(tmpdir(), 'ibitsa-home-'));
+    dirs.push(storageDir, home);
+    mkdirSync(join(home, '.claude'));
+    const fire: (() => void)[] = [];
+    const adapter = Object.assign(new FakeAdapter(), {
+      listCouncillors: ({ cwd }: { cwd: string }) => options.list(cwd),
+    });
+    const disabled = options.disabled ?? [];
+    const runtime = new Runtime({
+      storageDir,
+      adapter,
+      gameMaster: new FakeGameMaster(),
+      clock: new ManualClock(),
+      home,
+      ...(options.repoDir ? { repoDir: options.repoDir } : {}),
+      disabledCouncillors: () => disabled,
+      watchFolder: ({ onChange }) => {
+        fire.push(onChange);
+        return { close: () => {} };
+      },
+    });
+    return { runtime, fire, disabled };
+  }
+
+  it("lists the workspace repository's councillors once, without the ones turned off, until a skill changes", async () => {
+    const cwds: string[] = [];
+    let calls = 0;
+    const { runtime, fire, disabled } = withCouncillors({
+      repoDir: '/repo',
+      disabled: ['designer'],
+      list: async (cwd) => {
+        cwds.push(cwd);
+        calls++;
+        return [councillor('designer'), councillor(`tester${calls}`)];
+      },
+    });
+    expect((await runtime.currentCouncillors()).map((c) => c.id)).toEqual(['tester1']);
+    disabled.length = 0;
+    // Turning one back on needs no new listing: the setting is read each time.
+    expect((await runtime.currentCouncillors()).map((c) => c.id)).toEqual(['designer', 'tester1']);
+    expect(cwds).toEqual(['/repo']);
+    for (const f of fire) f();
+    expect((await runtime.currentCouncillors()).map((c) => c.id)).toEqual(['designer', 'tester2']);
+    runtime.dispose();
+  });
+
+  it('lists none without a repository, without councillor support, or when listing fails', async () => {
+    const noRepo = withCouncillors({ list: async () => [councillor('tester')] });
+    expect(await noRepo.runtime.currentCouncillors()).toEqual([]);
+    const failing = withCouncillors({
+      repoDir: '/repo',
+      list: async () => {
+        throw new Error('unreadable');
+      },
+    });
+    expect(await failing.runtime.currentCouncillors()).toEqual([]);
+    const { runtime } = setup();
+    expect(await runtime.currentCouncillors()).toEqual([]);
   });
 });
