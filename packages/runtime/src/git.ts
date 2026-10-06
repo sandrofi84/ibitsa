@@ -22,7 +22,10 @@ export function shell({
   timeoutMs: number;
 }): Promise<CommandResult> {
   return new Promise((resolve) => {
-    const child = spawn(command, { cwd, shell: true });
+    // Its own process group (not on Windows), so a timeout stops everything the command started:
+    // killing only the shell would leave its children running and holding the output open (#93).
+    const group = process.platform !== 'win32';
+    const child = spawn(command, { cwd, shell: true, detached: group });
     let output = '';
     const collect = (chunk: Buffer) => {
       output += chunk.toString();
@@ -30,7 +33,12 @@ export function shell({
     child.stdout.on('data', collect);
     child.stderr.on('data', collect);
     const timer = setTimeout(() => {
-      child.kill();
+      try {
+        if (group && child.pid) process.kill(-child.pid, 'SIGKILL');
+        else child.kill();
+      } catch {
+        child.kill();
+      }
       output += `\n(stopped after ${Math.round(timeoutMs / 1000)} s)`;
     }, timeoutMs);
     child.on('close', (code) => {
