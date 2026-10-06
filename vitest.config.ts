@@ -46,7 +46,7 @@ export default defineConfig({
       // One fixed floor for every package (no ratchet): coverage should sit well above it, and new
       // behaviour still needs real tests. Each package is checked on its own, so none can quietly rot.
       thresholds: Object.fromEntries(
-        PACKAGES.map((p) => [p, { lines: 85, statements: 85, functions: 85, branches: 80 }]),
+        PACKAGES.map((p) => [p, { lines: 90, statements: 90, functions: 90, branches: 80 }]),
       ),
     },
   },
