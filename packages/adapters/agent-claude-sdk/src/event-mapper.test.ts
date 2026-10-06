@@ -7,6 +7,7 @@ import type {
 import { describe, expect, it } from 'vitest';
 import { TestDetector } from './activity';
 import { EventMapper } from './event-mapper';
+import { Worktree } from './worktree';
 
 // Minimal SDK messages, shaped by @anthropic-ai/claude-agent-sdk 0.3.289's sdk.d.ts.
 const sdk = (m: Record<string, unknown>) => m as unknown as SDKMessage;
@@ -47,7 +48,8 @@ const result = (fields: Record<string, unknown> = {}) =>
     queued_turn_count: 0,
     ...fields,
   });
-const mapper = () => new EventMapper({ cwd: '/wt', tests: new TestDetector('/nowhere') });
+const mapper = () =>
+  new EventMapper({ worktree: new Worktree({ dir: '/wt' }), tests: new TestDetector('/nowhere') });
 
 describe('EventMapper.message', () => {
   it('starts the session on init', () => {

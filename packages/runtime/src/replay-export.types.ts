@@ -5,4 +5,6 @@ export interface ReplayExportOptions {
   homeDir: string;
   /** Replace what the user and the hero said with a placeholder; the quest keeps its title line. */
   blankMessages: boolean;
+  /** Defaults to the real one; on Windows paths match regardless of case (#56). */
+  platform?: NodeJS.Platform;
 }

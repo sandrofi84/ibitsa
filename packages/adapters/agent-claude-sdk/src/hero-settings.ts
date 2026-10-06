@@ -1,5 +1,4 @@
 import { execFileSync } from 'node:child_process';
-import { realpathSync } from 'node:fs';
 import type {
   HeroSettings,
   HeroSettingsInput,
@@ -110,14 +109,14 @@ const FILE_TOOLS = new Set(['Edit', 'MultiEdit', 'Write', 'NotebookEdit']);
 export function boundaryOf({
   toolName,
   input,
-  cwd,
+  worktree,
   suggestions = [],
   blockedPath,
 }: PermissionRequest): 'sandboxEscape' | 'outsideWorktree' | null {
   if (input.dangerouslyDisableSandbox === true) return 'sandboxEscape';
   if (blockedPath || suggestions.some((s) => s.type === 'addDirectories')) return 'outsideWorktree';
   const file = input.file_path ?? input.notebook_path;
-  if (FILE_TOOLS.has(toolName) && (typeof file !== 'string' || !inside({ path: file, dir: cwd }))) {
+  if (FILE_TOOLS.has(toolName) && (typeof file !== 'string' || !worktree.contains(file))) {
     return 'outsideWorktree';
   }
   return null;
@@ -142,19 +141,4 @@ export function offeredRules(request: PermissionRequest): OfferedRules {
       : [],
   );
   return rules.length > 0 ? { rules, updates } : none;
-}
-
-/** Is `path` the worktree or inside it, as given or through symlinks (macOS /var → /private/var)? */
-function inside({ path, dir }: { path: string; dir: string }): boolean {
-  return [dir, resolved(dir)].some(
-    (d) => path === d || path.startsWith(`${d}/`) || path.startsWith(`${d}\\`),
-  );
-}
-
-function resolved(dir: string): string {
-  try {
-    return realpathSync(dir);
-  } catch {
-    return dir;
-  }
 }

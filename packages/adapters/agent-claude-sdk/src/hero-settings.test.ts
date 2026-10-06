@@ -6,6 +6,7 @@ import {
   offeredRules,
   sandboxProblem,
 } from './hero-settings';
+import { Worktree } from './worktree';
 
 describe('heroSettings (spec §11.6)', () => {
   it('confines macOS and Linux heroes: acceptEdits, the sandbox, and asking before escaping it', () => {
@@ -96,7 +97,7 @@ describe('always allow rules (#62)', () => {
 });
 
 describe('offeredRules (#62)', () => {
-  const cwd = '/wt';
+  const worktree = new Worktree({ dir: '/wt', platform: 'linux' });
   const lint = {
     type: 'addRules' as const,
     rules: [{ toolName: 'Bash', ruleContent: 'npm run lint:*' }],
@@ -109,7 +110,7 @@ describe('offeredRules (#62)', () => {
       offeredRules({
         toolName: 'Bash',
         input: { command: 'npm run lint' },
-        cwd,
+        worktree,
         suggestions: [lint, { type: 'setMode', mode: 'bypassPermissions', destination: 'session' }],
       }),
     ).toEqual({
@@ -120,7 +121,7 @@ describe('offeredRules (#62)', () => {
       offeredRules({
         toolName: 'WebFetch',
         input: { url: 'https://example.com' },
-        cwd,
+        worktree,
         suggestions: [{ ...lint, rules: [{ toolName: 'WebFetch' }] }],
       }).rules,
     ).toEqual(['WebFetch']);
@@ -128,12 +129,12 @@ describe('offeredRules (#62)', () => {
 
   it('offers nothing for the hard limits, or without suggestions', () => {
     const none = { rules: [], updates: [] };
-    expect(offeredRules({ toolName: 'Bash', input: { command: 'x' }, cwd })).toEqual(none);
+    expect(offeredRules({ toolName: 'Bash', input: { command: 'x' }, worktree })).toEqual(none);
     expect(
       offeredRules({
         toolName: 'Bash',
         input: { command: 'curl x', dangerouslyDisableSandbox: true },
-        cwd,
+        worktree,
         suggestions: [lint],
       }),
     ).toEqual(none);
@@ -141,7 +142,7 @@ describe('offeredRules (#62)', () => {
       offeredRules({
         toolName: 'Bash',
         input: { command: 'cat ~/x' },
-        cwd,
+        worktree,
         suggestions: [lint],
         blockedPath: '/etc',
       }),
@@ -150,7 +151,7 @@ describe('offeredRules (#62)', () => {
       offeredRules({
         toolName: 'Read',
         input: { file_path: '/elsewhere/a' },
-        cwd,
+        worktree,
         suggestions: [
           lint,
           { type: 'addDirectories', directories: ['/elsewhere'], destination: 'session' },
@@ -161,47 +162,52 @@ describe('offeredRules (#62)', () => {
       offeredRules({
         toolName: 'Write',
         input: { file_path: '/elsewhere/a.md' },
-        cwd,
+        worktree,
         suggestions: [lint],
       }),
     ).toEqual(none);
-    expect(offeredRules({ toolName: 'Edit', input: {}, cwd, suggestions: [lint] })).toEqual(none);
+    expect(offeredRules({ toolName: 'Edit', input: {}, worktree, suggestions: [lint] })).toEqual(
+      none,
+    );
   });
 
   it('offers rules for a file tool inside the worktree, either separator', () => {
     for (const file_path of ['/wt/src/a.ts', '/wt\\src\\a.ts']) {
       expect(
-        offeredRules({ toolName: 'Edit', input: { file_path }, cwd, suggestions: [lint] }).rules,
+        offeredRules({ toolName: 'Edit', input: { file_path }, worktree, suggestions: [lint] })
+          .rules,
       ).toEqual(['Bash(npm run lint:*)']);
     }
   });
 });
 
 describe('boundaryOf (#63)', () => {
-  const cwd = '/wt';
+  const worktree = new Worktree({ dir: '/wt', platform: 'linux' });
   it('names the hard limit a request crosses', () => {
     expect(
       boundaryOf({
         toolName: 'Bash',
         input: { command: 'x', dangerouslyDisableSandbox: true },
-        cwd,
+        worktree,
       }),
     ).toBe('sandboxEscape');
     expect(
-      boundaryOf({ toolName: 'Bash', input: { command: 'x' }, cwd, blockedPath: '/etc' }),
+      boundaryOf({ toolName: 'Bash', input: { command: 'x' }, worktree, blockedPath: '/etc' }),
     ).toBe('outsideWorktree');
     expect(
       boundaryOf({
         toolName: 'Read',
         input: {},
-        cwd,
+        worktree,
         suggestions: [{ type: 'addDirectories', directories: ['/x'], destination: 'session' }],
       }),
     ).toBe('outsideWorktree');
-    expect(boundaryOf({ toolName: 'Write', input: { file_path: '/x/a' }, cwd })).toBe(
+    expect(boundaryOf({ toolName: 'Write', input: { file_path: '/x/a' }, worktree })).toBe(
       'outsideWorktree',
     );
-    expect(boundaryOf({ toolName: 'Write', input: { file_path: '/wt/a' }, cwd })).toBeNull();
-    expect(boundaryOf({ toolName: 'Bash', input: { command: 'npm install' }, cwd })).toBeNull();
+    expect(boundaryOf({ toolName: 'Write', input: { file_path: '/wt/a' }, worktree })).toBeNull();
+    expect(
+      boundaryOf({ toolName: 'Bash', input: { command: 'npm install' }, worktree }),
+    ).toBeNull();
   });
 });

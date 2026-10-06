@@ -210,4 +210,47 @@ describe('ReplayExport', () => {
     };
     expect(parseLog(exportOf(viaPrivate)).records[3]).toMatchObject({ event: { detail: 'b.ts' } });
   });
+
+  it('on Windows: either separator and any case, and the rest of the path with / (#56)', () => {
+    const wt = 'C:\\Users\\Ada\\shop.ibitsa\\fix';
+    const log = scripted(wt);
+    const record = log.records[3] as Extract<LogRecord, { kind: 'agent' }>;
+    record.event = {
+      type: 'activityStarted',
+      toolUseId: 'u1',
+      kind: 'run',
+      detail:
+        'type c:\\users\\ada\\SHOP.IBITSA\\FIX\\src\\a.ts && type C:/Users/Ada/shop.ibitsa/fix/b.ts',
+    };
+    const out = new ReplayExport({
+      repoDir: 'C:\\Users\\Ada\\shop',
+      homeDir: 'C:\\Users\\Ada',
+      blankMessages: false,
+      platform: 'win32',
+    }).apply(log);
+    expect(parseLog(out).records[3]).toMatchObject({
+      event: { detail: 'type src/a.ts && type b.ts' },
+    });
+    expect(parseLog(out).records[1]).toMatchObject({ event: { path: '.' } });
+  });
+
+  it('elsewhere, case matters and other paths keep their separators', () => {
+    const log = scripted();
+    const record = log.records[3] as Extract<LogRecord, { kind: 'agent' }>;
+    record.event = {
+      type: 'activityStarted',
+      toolUseId: 'u1',
+      kind: 'read',
+      detail: `${WT.toUpperCase()}/a.ts ${WT}/src/b.ts`,
+    };
+    const out = new ReplayExport({
+      repoDir: REPO,
+      homeDir: HOME,
+      blankMessages: false,
+      platform: 'linux',
+    }).apply(log);
+    expect(parseLog(out).records[3]).toMatchObject({
+      event: { detail: `${WT.toUpperCase()}/a.ts src/b.ts` },
+    });
+  });
 });

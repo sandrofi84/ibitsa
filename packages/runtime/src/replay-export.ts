@@ -43,29 +43,41 @@ export class ReplayExport {
       bases.push([this.options.repoDir, repo || '.']);
     }
     bases.push([this.options.homeDir, '~']);
+    // Windows paths match whatever their case: C:\Wt and c:\wt are the same folder (#56).
+    const flags = (this.options.platform ?? process.platform) === 'win32' ? 'gi' : 'g';
     const rules = bases
       .flatMap(([base, to]) => spellings(base).map((spelling) => ({ spelling, to })))
       .sort((a, b) => b.spelling.length - a.spelling.length)
       .map(({ spelling, to }) => {
         const p = escapeRegExp(spelling);
         return {
-          // `base/x` → `to/x` (or plain `x` for the worktree itself); a bare `base` → `to`.
-          inside: new RegExp(`${p}[\\\\/]`, 'g'),
-          bare: new RegExp(`${p}(?![\\w.-])`, 'g'),
+          // `base/rest` → `to/rest` (plain `rest` for the worktree itself), the rest written with `/`
+          // (#56); a bare `base` → `to`.
+          inside: new RegExp(`${p}[\\\\/]([^\\s"'\`<>|]*)`, flags),
+          bare: new RegExp(`${p}(?![\\w.-])`, flags),
           to,
         };
       });
     return (text) =>
       rules.reduce(
-        (s, r) => s.replace(r.inside, r.to === '.' ? '' : `${r.to}/`).replace(r.bare, r.to),
+        (s, r) =>
+          s
+            .replace(r.inside, (_match, rest: string) => {
+              const tail = rest.replaceAll('\\', '/');
+              return r.to === '.' ? tail : `${r.to}/${tail}`;
+            })
+            .replace(r.bare, r.to),
         text,
       );
   }
 }
 
-/** A path as the agent may have written it: as given, resolved through symlinks, macOS's /private. */
+/**
+ * A path as the agent may have written it: as given, resolved through symlinks, macOS's /private, and
+ * on Windows with either separator.
+ */
 function spellings(path: string): string[] {
-  const all = new Set([path]);
+  const all = new Set([path, path.replaceAll('\\', '/')]);
   try {
     all.add(realpathSync(path));
   } catch {
