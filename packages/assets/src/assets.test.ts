@@ -86,6 +86,57 @@ describe('validatePack', () => {
     );
   });
 
+  it('gives the default councillors a 32×32 council sheet and the heroes none (§9.2)', () => {
+    const { manifest } = buildDefaultPack();
+    const elder = manifest.characters['councillor.elder']?.council;
+    expect(elder?.frame).toEqual({ width: 32, height: 32 });
+    expect(Object.keys(elder?.animations ?? {})).toEqual([
+      'idle',
+      'talk',
+      'think',
+      'raiseHand',
+      'write',
+    ]);
+    expect(manifest.characters['hero.ranger']?.council).toBeUndefined();
+  });
+
+  it('accepts a pack without council sheets: the hut scales the map sheet up', () => {
+    const dir = copyPack();
+    editManifest(dir, (m) => {
+      for (const c of Object.values(m.characters)) delete c.council;
+    });
+    expect(validatePack(dir)).toMatchObject({ ok: true });
+  });
+
+  it('rejects a council sheet with the wrong frame size or a missing animation', () => {
+    const dir = copyPack();
+    editManifest(dir, (m) => {
+      const council = m.characters['councillor.default']?.council;
+      if (!council) throw new Error('no council sheet');
+      council.frame = { width: 16, height: 16 };
+      delete council.animations.raiseHand;
+    });
+    const result = validatePack(dir);
+    expect(result.ok ? [] : result.errors).toEqual([
+      'character councillor.default council sheet: frame is 16×16, expected 32×32',
+      'character councillor.default council sheet: missing required animation "raiseHand"',
+    ]);
+  });
+
+  it('rejects a council sheet image too small for its animations', () => {
+    const dir = copyPack();
+    cpSync(
+      join(dir, 'characters', 'councillor-default.png'),
+      join(dir, 'characters', 'councillor-default-council.png'),
+    );
+    expect(validatePack(dir)).toEqual({
+      ok: false,
+      errors: [
+        'character councillor.default council sheet: characters/councillor-default-council.png is 64×48, too small or not a whole number of 32×32 frames for its animations',
+      ],
+    });
+  });
+
   it('rejects images whose size does not match the manifest', () => {
     const dir = copyPack();
     cpSync(join(dir, 'map', 'hut.png'), join(dir, 'map', 'island.png'));

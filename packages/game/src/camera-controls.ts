@@ -7,7 +7,7 @@ import { CAMERA_EVENTS } from './world-scene';
  * Zoom out, zoom in and the auto-focus switch (#59), as buttons near the map's top-left corner. They
  * work like the wheel and the + / - / 0 keys, and are reachable by keyboard.
  */
-export function mountCameraControls(events: Phaser.Events.EventEmitter): void {
+export function mountCameraControls(events: Phaser.Events.EventEmitter): HTMLElement {
   const bar = el('div', { className: 'camera-controls' });
   bar.setAttribute('role', 'toolbar');
   bar.setAttribute('aria-label', 'Map view');
@@ -29,4 +29,5 @@ export function mountCameraControls(events: Phaser.Events.EventEmitter): void {
     auto.setAttribute('aria-pressed', String(state.auto));
     out.disabled = state.aim.zoom <= 1;
   });
+  return bar;
 }

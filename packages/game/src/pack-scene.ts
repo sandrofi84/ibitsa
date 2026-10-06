@@ -1,5 +1,7 @@
 import type { Manifest } from '@ibitsa/assets';
 import * as Phaser from 'phaser';
+import { councilTexture } from './council-look';
+import { HUT_FEED } from './hut-view';
 
 export const PACK_KEY = 'pack';
 
@@ -24,6 +26,11 @@ export class PackScene extends Phaser.Scene {
         frameWidth: c.frame.width,
         frameHeight: c.frame.height,
       });
+      if (c.council)
+        this.load.spritesheet(councilTexture(key), this.url(c.council.sheet), {
+          frameWidth: c.council.frame.width,
+          frameHeight: c.council.frame.height,
+        });
     }
     const t = manifest.tiles;
     this.load.spritesheet('tiles', this.url(t.image), {
@@ -46,25 +53,45 @@ export class PackScene extends Phaser.Scene {
 
     this.load.once(Phaser.Loader.Events.COMPLETE, () => {
       this.defineFrames(manifest);
-      this.scene.start('world');
+      // The hut when one was asked for before the pack loaded (`Started.showHut`), else the map.
+      this.scene.start(this.registry.has(HUT_FEED) ? 'hut' : 'world');
     });
     this.load.start();
   }
 
+  /** One looping animation per row of a sheet, keyed `<texture>:<animation>`. */
+  private defineAnimations({
+    texture,
+    frameWidth,
+    animations,
+  }: {
+    texture: string;
+    frameWidth: number;
+    animations: Record<string, { row: number; frames: number; fps: number }>;
+  }): void {
+    const columns = this.textures.get(texture).getSourceImage().width / frameWidth;
+    for (const [name, a] of Object.entries(animations)) {
+      this.anims.create({
+        key: `${texture}:${name}`,
+        frames: this.anims.generateFrameNumbers(texture, {
+          start: a.row * columns,
+          end: a.row * columns + a.frames - 1,
+        }),
+        frameRate: a.fps,
+        repeat: -1,
+      });
+    }
+  }
+
   private defineFrames(manifest: Manifest): void {
     for (const [key, c] of Object.entries(manifest.characters)) {
-      const columns = this.textures.get(key).getSourceImage().width / c.frame.width;
-      for (const [name, a] of Object.entries(c.animations)) {
-        this.anims.create({
-          key: `${key}:${name}`,
-          frames: this.anims.generateFrameNumbers(key, {
-            start: a.row * columns,
-            end: a.row * columns + a.frames - 1,
-          }),
-          frameRate: a.fps,
-          repeat: -1,
+      this.defineAnimations({ texture: key, frameWidth: c.frame.width, animations: c.animations });
+      if (c.council)
+        this.defineAnimations({
+          texture: councilTexture(key),
+          frameWidth: c.council.frame.width,
+          animations: c.council.animations,
         });
-      }
     }
     const i = manifest.island;
     const island = this.textures.get('island');

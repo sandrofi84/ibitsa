@@ -5,6 +5,7 @@ import {
   activityIcons,
   CHARACTERS,
   characterSheet,
+  councilSheet,
   dialogueFrame,
   engineTextures,
   FRAMES,
@@ -16,7 +17,31 @@ import {
   tiles,
 } from './art.ts';
 import type { Manifest } from './manifest.schema.ts';
-import { ACTIVITY_KINDS, SPEC, TASK_POINT_STATES } from './manifest.ts';
+import { ACTIVITY_KINDS, COUNCIL_ANIMATIONS, SPEC, TASK_POINT_STATES } from './manifest.ts';
+
+/** A councillor's 32×32 council sheet (§9.2): writes the image and returns its manifest entry. */
+function councilEntry({
+  name,
+  files,
+  art,
+}: {
+  name: string;
+  files: Record<string, Buffer>;
+  art: (typeof CHARACTERS)[number];
+}): NonNullable<Manifest['characters'][string]['council']> {
+  const sheet = `characters/${name}-council.png`;
+  files[sheet] = councilSheet(art).png();
+  return {
+    sheet,
+    frame: { width: SPEC.councilFrame, height: SPEC.councilFrame },
+    animations: Object.fromEntries(
+      COUNCIL_ANIMATIONS.map((animation, row) => [
+        animation,
+        { row, frames: FRAMES, fps: animation === 'idle' || animation === 'think' ? 3 : 6 },
+      ]),
+    ),
+  };
+}
 
 /** The default pack: manifest plus every image, keyed by path inside the pack. */
 export function buildDefaultPack(): { manifest: Manifest; files: Record<string, Buffer> } {
@@ -39,6 +64,7 @@ export function buildDefaultPack(): { manifest: Manifest; files: Record<string, 
         ]),
       ),
       portrait: face,
+      ...(art.role === 'councillor' ? { council: councilEntry({ name, files, art }) } : {}),
     };
   }
   files['map/tiles.png'] = tiles().png();
