@@ -76,4 +76,12 @@ describe('DevHost', () => {
       again.some((m) => m.type === 'journalAppend' && m.start === 0 && m.entries.length === 0),
     ).toBe(true);
   });
+
+  it('ignores forgetting a project rule: the replay keeps none (#62)', async () => {
+    const host = new DevHost(parseLog(m0Walk), {});
+    const messages = await collect(host);
+    host.send({ type: 'forgetProjectRule', rule: 'Bash(x)' });
+    await flush();
+    expect(messages).toEqual([]);
+  });
 });

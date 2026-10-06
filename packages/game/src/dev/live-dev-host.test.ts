@@ -98,4 +98,53 @@ describe('LiveDevHost', () => {
       text: 'Quest started: Fix the login redirect',
     });
   });
+
+  it('asks permission to commit, offering always allow; keeps and forgets project rules (#62)', async () => {
+    const { host, snapshot, settle } = setup();
+    host.send({ type: 'hello', protocolVersion: 1 });
+    host.send({
+      type: 'startQuest',
+      commandId: 'c1',
+      description: 'Fix the login redirect',
+      heroName: 'Ranger Ilse',
+      classId: 'ranger',
+      baseRef: 'main',
+    });
+    await settle();
+    const heroId = snapshot()?.heroes[0]?.id ?? '';
+    host.send({ type: 'sendMessage', commandId: 'c2', heroId, text: 'commit it', priority: 'now' });
+    await settle();
+    const item = snapshot()?.needsYou.find((i) => i.kind === 'permission');
+    expect(item).toMatchObject({ alwaysAllow: ['Bash(git commit:*)'] });
+    host.send({
+      type: 'answerPermission',
+      commandId: 'c3',
+      itemId: item?.id ?? '',
+      decision: 'allow',
+      always: 'project',
+    });
+    await settle();
+    expect(snapshot()?.projectRules).toEqual(['Bash(git commit:*)']);
+    expect(snapshot()?.heroes[0]?.state.kind).toBe('idle');
+
+    host.send({
+      type: 'sendMessage',
+      commandId: 'c4',
+      heroId,
+      text: 'commit again',
+      priority: 'now',
+    });
+    await settle();
+    const second = snapshot()?.needsYou.find((i) => i.kind === 'permission');
+    host.send({
+      type: 'answerPermission',
+      commandId: 'c5',
+      itemId: second?.id ?? '',
+      decision: 'deny',
+    });
+    await settle();
+    host.send({ type: 'forgetProjectRule', rule: 'Bash(git commit:*)' });
+    await settle();
+    expect(snapshot()?.projectRules).toEqual([]);
+  });
 });

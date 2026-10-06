@@ -268,3 +268,36 @@ test('the journal lists what happened, newest last, and stays open across collap
   await tab.click();
   await expect(journal).toBeVisible();
 });
+
+test('always allow: for this quest, or in this project with a way to take it back (#62)', async ({
+  page,
+}) => {
+  await page.goto('/?fixture=live');
+  await page.getByRole('button', { name: 'New quest' }).click();
+  await page.getByLabel('Task').fill('Tidy the README');
+  await page.getByRole('button', { name: 'Start quest' }).click();
+  await expect.poll(() => heroState(page)).toBe('idle');
+  const pane = page.getByRole('region', { name: 'Hero' });
+  const needsYou = page.locator('.needs-you .item.permission');
+
+  await pane.getByLabel('Message to the hero').fill('Please commit');
+  await pane.getByRole('button', { name: 'Send now' }).click();
+  await expect(needsYou).toContainText('Always allow adds: Bash(git commit:*)');
+  await page.screenshot({ path: 'test-results/ui-always-allow.png' });
+  await needsYou.getByRole('button', { name: 'Always allow in this project' }).click();
+  await expect(needsYou).toHaveCount(0);
+
+  const rules = pane.getByRole('region', { name: 'Project rules' });
+  await expect(rules).toContainText('Bash(git commit:*)');
+  await page.screenshot({ path: 'test-results/ui-project-rules.png' });
+  await rules.getByRole('button', { name: 'Remove Bash(git commit:*)' }).click();
+  await expect(rules).toBeHidden();
+
+  // For this quest only: the rule never shows up among the project's.
+  await expect.poll(() => heroState(page)).toBe('idle');
+  await pane.getByLabel('Message to the hero').fill('commit again');
+  await pane.getByRole('button', { name: 'Send now' }).click();
+  await needsYou.getByRole('button', { name: 'Always allow for this quest' }).click();
+  await expect(needsYou).toHaveCount(0);
+  await expect(rules).toBeHidden();
+});

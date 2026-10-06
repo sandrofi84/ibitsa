@@ -81,6 +81,8 @@ export class DevHost implements Host {
   }
 
   send(command: Command): void {
+    // The standalone build keeps no project rules (#62).
+    if (command.type === 'forgetProjectRule') return;
     if (command.type === 'requestJournal') {
       const page = this.journal.page({ before: command.before, limit: command.limit });
       this.emit({ type: 'journal', seq: ++this.seq, ...page });

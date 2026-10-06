@@ -54,6 +54,11 @@ export class GameClient {
     this.journalListeners.push(listener);
   }
 
+  /** Removes an "Always allow in this project" rule (#62). Runtime-only: no command id, never logged. */
+  forgetProjectRule(rule: string): void {
+    this.host.send({ type: 'forgetProjectRule', rule });
+  }
+
   /** Asks for the page before the earliest line held. */
   loadEarlierJournal(): void {
     if (this.journalStart > 0)

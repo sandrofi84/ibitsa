@@ -32,6 +32,8 @@ export class LiveDevHost implements Host {
   readonly channel: FakeHostChannel;
   private state: CoreState = initialState();
   private readonly journal = new Journal();
+  /** "Always allow in this project" rules, kept for the page's lifetime (#62). */
+  private projectRules: string[] = [];
   private seq = 0;
   private readonly started = Date.now();
   private readonly listeners: ((m: CoreMessage) => void)[] = [];
@@ -56,6 +58,11 @@ export class LiveDevHost implements Host {
   }
 
   send(command: Command): void {
+    if (command.type === 'forgetProjectRule') {
+      this.projectRules = this.projectRules.filter((r) => r !== command.rule);
+      this.emitSnapshot();
+      return;
+    }
     if (command.type === 'requestJournal') {
       const page = this.journal.page({ before: command.before, limit: command.limit });
       this.emit({ type: 'journal', seq: ++this.seq, ...page });
@@ -147,11 +154,34 @@ export class LiveDevHost implements Host {
         ]);
         return;
       case 'sendMessage':
-        // Asking it to submit hands the task in, so the Finish flow can be played too.
+        // Asking it to submit hands the task in, so the Finish flow can be played too; asking it to
+        // commit asks your permission first, offering "Always allow" (#62).
+        if (/commit/i.test(effect.text)) {
+          this.agent(effect.heroId, [
+            { type: 'turnStarted' },
+            {
+              type: 'permission',
+              requestId: `p${++this.diffs}`,
+              tool: 'Bash',
+              input: { command: 'git commit -m "demo"' },
+              alwaysAllow: ['Bash(git commit:*)'],
+            },
+          ]);
+          return;
+        }
         this.agent(effect.heroId, [
           { type: 'turnStarted' },
           ...(/submit/i.test(effect.text) ? this.submission() : this.turn(`Done: ${effect.text}`)),
         ]);
+        return;
+      case 'answerPermission':
+        if (effect.always === 'project' && effect.rules) {
+          this.projectRules = [...new Set([...this.projectRules, ...effect.rules])];
+        }
+        this.agent(
+          effect.heroId,
+          this.turn(effect.decision === 'allow' ? 'Committed.' : 'Skipped.'),
+        );
         return;
       case 'interrupt':
         this.agent(effect.heroId, [{ type: 'turnEnded', queuedTurns: 0 }]);
@@ -192,7 +222,7 @@ export class LiveDevHost implements Host {
     this.emit({
       type: 'snapshot',
       seq: ++this.seq,
-      snapshot: { ...view(this.state), repo: this.repo },
+      snapshot: { ...view(this.state), repo: this.repo, projectRules: this.projectRules },
     });
   }
 
