@@ -73,6 +73,8 @@ export interface HeroRecord {
   queuedMessages: number;
   /** From `sessionStarted`; used to resume. */
   sessionId: string | null;
+  /** "Always allow for this quest" rules (#62), passed again when the session resumes. */
+  allowRules: string[];
   /** False after a restart until the session is resumed. */
   sessionLive: boolean;
   stalled: string | null;
@@ -99,6 +101,8 @@ export type PendingItem =
       action: string;
       target: string;
       cwd: string;
+      /** The rules "Always allow" would add (#62); empty when it isn't offered. */
+      alwaysAllow: string[];
     }
   | {
       kind: 'question';

@@ -9,6 +9,8 @@ export type Effect =
       classId: string;
       prompt: string;
       maxBudgetMicroUsd?: number;
+      /** "Always allow for this quest" rules (#62); the runtime adds the project's. */
+      allowRules?: string[];
     }
   /** Resume a session by id; `prompt` restarts work that was interrupted. */
   | {
@@ -19,6 +21,7 @@ export type Effect =
       classId: string;
       prompt?: string;
       maxBudgetMicroUsd?: number;
+      allowRules?: string[];
     }
   /** Report the worktree's diff hash; the result comes back as `diffObserved`. */
   | { type: 'observeDiff'; heroId: string; worktreePath: string }
@@ -33,6 +36,9 @@ export type Effect =
       requestId: string;
       decision: 'allow' | 'deny';
       note?: string;
+      /** Allow the request's rules from now on (#62); for 'project' the runtime keeps them. */
+      always?: 'quest' | 'project';
+      rules?: string[];
     }
   | {
       type: 'answerQuestion';

@@ -309,7 +309,8 @@
             "heroId": "h4",
             "action": "Run command",
             "target": "git commit -am \"fix: clear return URL on logout\"",
-            "cwd": "../demo.ibitsa/ibitsa/fix-the-login-redirect"
+            "cwd": "../demo.ibitsa/ibitsa/fix-the-login-redirect",
+            "alwaysAllow": []
           }
         ]
       }

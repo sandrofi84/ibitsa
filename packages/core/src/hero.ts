@@ -33,6 +33,7 @@ export class Hero {
       inTurn: false,
       runningTools: [],
       lastMessage: null,
+      allowRules: [],
       resting: false,
       pendingSubmit: null,
       submitted: null,
@@ -305,6 +306,7 @@ export class Hero {
           requestId: event.requestId,
           ...describePermission(event.tool, event.input),
           cwd: this.worktreePath() ?? '(unknown)',
+          alwaysAllow: event.alwaysAllow ?? [],
         });
         break;
       case 'question':
@@ -501,6 +503,17 @@ export class Hero {
   }
 
   /** For adapters with a native cap: what is left, so a restart can't reset the budget. */
+  /** "Always allow for this quest": the rules join the hero's, for this session and any resume. */
+  allowForQuest(rules: string[]): void {
+    const r = this.record;
+    r.allowRules = [...r.allowRules, ...rules.filter((rule) => !r.allowRules.includes(rule))];
+  }
+
+  /** The quest's allow rules, for starting or resuming a session. */
+  private rules(): { allowRules?: string[] } {
+    return this.record.allowRules.length > 0 ? { allowRules: [...this.record.allowRules] } : {};
+  }
+
   private remainder(): { maxBudgetMicroUsd?: number } {
     const cap = this.record.cap;
     if (cap?.enforcement !== 'native') return {};
@@ -532,6 +545,7 @@ export class Hero {
         classId: r.classId,
         ...(prompt === undefined ? {} : { prompt }),
         ...this.remainder(),
+        ...this.rules(),
       });
     } else {
       this.ctx.outbox.effect({
@@ -541,6 +555,7 @@ export class Hero {
         classId: r.classId,
         prompt: this.task()?.description ?? '',
         ...this.remainder(),
+        ...this.rules(),
       });
     }
     this.watchSilence();

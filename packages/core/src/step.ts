@@ -50,7 +50,8 @@ function command(ctx: StepContext, command: Command): void {
   switch (command.type) {
     case 'hello':
     case 'requestJournal':
-      return; // handled by the runtime (welcome + snapshot; journal pages), never logged
+    case 'forgetProjectRule':
+      return; // handled by the runtime (welcome + snapshot; journal pages; project rules), never logged
     case 'startQuest':
       quest.start(command);
       return;
@@ -65,8 +66,11 @@ function command(ctx: StepContext, command: Command): void {
       return;
     case 'answerPermission':
     case 'answerQuestion': {
-      const heroId = ctx.needsYou.answer(command);
-      if (heroId) hero(ctx, heroId)?.watchSilence();
+      const answered = ctx.needsYou.answer(command);
+      if (!answered) return;
+      const target = hero(ctx, answered.heroId);
+      if (answered.questRules.length > 0) target?.allowForQuest(answered.questRules);
+      target?.watchSilence();
       return;
     }
   }

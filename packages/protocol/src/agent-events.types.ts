@@ -26,6 +26,11 @@ export type AgentEvent =
       input: unknown;
       title?: string;
       description?: string;
+      /**
+       * Rules the agent suggests for "Always allow" (#62), e.g. `Bash(npm run lint:*)`. Absent or empty
+       * when not offered: never for writing outside the worktree or escaping the sandbox.
+       */
+      alwaysAllow?: string[];
     }
   /** Running totals for the session, never deltas. Omitted fields are unknown, not zero. */
   | { type: 'usage'; contextUsed?: number; contextMax?: number; totalCost?: MicroUsd }
