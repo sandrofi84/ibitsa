@@ -26,6 +26,8 @@ export interface RuntimeHostOptions {
   /** Resolved each time the runtime starts, so a window reload picks up a changed Node setup (#67). */
   environment: () => Promise<Record<string, string | undefined>>;
   settings: () => UserSettings;
+  /** Councillor ids turned off in `ibitsa.council.disabled` (#98). */
+  disabledCouncillors?: () => string[];
   notify: Notifier;
   /** Is the game tab on screen? Notifications only appear when it isn't. */
   gameVisible: () => boolean;

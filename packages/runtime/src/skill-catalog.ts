@@ -1,19 +1,19 @@
 import { existsSync, watch as watchFs } from 'node:fs';
 import { join } from 'node:path';
-import type { ActionInfo } from '@ibitsa/protocol';
-import type { ActionCatalogOptions, FolderWatcher } from './action-catalog.types';
+import type { FolderWatcher, SkillCatalogOptions } from './skill-catalog.types';
 
 /**
- * The `/` menu's actions per folder (#84), listed by the adapter once and kept until a skill changes:
- * the project's and the user's `.claude` folders are watched, and a change drops the cached list.
+ * Something read from skills per folder, listed by the adapter once and kept until a skill changes: the
+ * `/` menu's actions (#84) and the councillors (#98). The project's and the user's `.claude` folders are
+ * watched, and a change drops the cached list.
  */
-export class ActionCatalog {
-  private readonly cache = new Map<string, Promise<ActionInfo[]>>();
+export class SkillCatalog<T> {
+  private readonly cache = new Map<string, Promise<T[]>>();
   private readonly watchers = new Map<string, { close(): void }[]>();
 
-  constructor(private readonly options: ActionCatalogOptions) {}
+  constructor(private readonly options: SkillCatalogOptions<T>) {}
 
-  list(cwd: string): Promise<ActionInfo[]> {
+  list(cwd: string): Promise<T[]> {
     const cached = this.cache.get(cwd);
     if (cached) return cached;
     const listing = this.options.list({ cwd });

@@ -12,3 +12,9 @@ export function readUserSettings(config: ConfigReader): UserSettings {
     stall: DEFAULT_STALL,
   };
 }
+
+/** `ibitsa.council.disabled`: councillor ids the council never seats (§4.7, #98). */
+export function readDisabledCouncillors(config: ConfigReader): string[] {
+  const ids = config.get<unknown>('council.disabled');
+  return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : [];
+}

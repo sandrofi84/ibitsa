@@ -89,6 +89,15 @@
           "uniqueItems": true,
           "markdownDescription": "Which Claude Code settings hero sessions load. `project`: the repo's `CLAUDE.md`, skills and rules. Adding `user` also loads your personal `~/.claude` skills and `CLAUDE.md` **and your personal permission rules and hooks**, which can let a hero do more without asking."
         },
+        "ibitsa.council.disabled": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "uniqueItems": true,
+          "markdownDescription": "Councillors the council never seats, by id (a councillor skill's name, e.g. `designer`). Ibitsa's built-ins are `architect`, `tester`, `accessibility`, `security` and `designer`."
+        },
         "ibitsa.claudeCodePath": {
           "type": "string",
           "default": "",

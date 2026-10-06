@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ActionInfo } from '@ibitsa/protocol';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ActionCatalog, watchFolder } from './action-catalog';
+import { SkillCatalog, watchFolder } from './skill-catalog';
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -24,14 +24,14 @@ const action = (name: string): ActionInfo => ({
   target: 'any',
 });
 
-describe('ActionCatalog (#84)', () => {
+describe('SkillCatalog (#84)', () => {
   it('lists once per folder, and again after a watched folder changes', async () => {
     const cwd = temp(true);
     const home = temp(true);
     let calls = 0;
     const watchers: { dir: string; fire: () => void; closed: boolean }[] = [];
     const changed: string[] = [];
-    const catalog = new ActionCatalog({
+    const catalog = new SkillCatalog<ActionInfo>({
       list: async () => [action(`v${++calls}`)],
       home,
       watch: ({ dir, onChange }) => {
@@ -56,7 +56,7 @@ describe('ActionCatalog (#84)', () => {
     const cwd = temp(false);
     let fail = true;
     const watched: string[] = [];
-    const catalog = new ActionCatalog({
+    const catalog = new SkillCatalog<ActionInfo>({
       list: async () => {
         if (fail) throw new Error('no CLI');
         return [action('ok')];

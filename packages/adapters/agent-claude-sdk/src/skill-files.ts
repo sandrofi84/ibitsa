@@ -13,7 +13,7 @@ export class SkillFiles {
 
   find(name: string): SkillFile | null {
     for (const path of this.candidates(name)) {
-      if (existsSync(path)) return read(path);
+      if (existsSync(path)) return readSkillFile(path);
     }
     return null;
   }
@@ -37,7 +37,7 @@ export class SkillFiles {
 }
 
 /** A plugin's name from its manifest, else its folder name. */
-function pluginName(dir: string): string {
+export function pluginName(dir: string): string {
   try {
     const manifest = JSON.parse(
       readFileSync(join(dir, '.claude-plugin', 'plugin.json'), 'utf8'),
@@ -51,7 +51,8 @@ function pluginName(dir: string): string {
   return dir.split(/[\\/]/).filter(Boolean).at(-1) ?? '';
 }
 
-function read(path: string): SkillFile {
+/** A skill file's flat frontmatter fields and its prompt text. */
+export function readSkillFile(path: string): SkillFile {
   const text = readFileSync(path, 'utf8').replaceAll('\r\n', '\n');
   const match = text.match(/^---\n([\s\S]*?)\n---\n?/);
   if (!match) return { path, fields: {}, body: text };

@@ -1,0 +1,151 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, describe, expect, it } from 'vitest';
+import { ClaudeAdapter } from './claude-adapter';
+import { CouncillorSkills } from './councillor-skills';
+
+const dirs: string[] = [];
+afterEach(() => {
+  for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });
+});
+function temp(): string {
+  const dir = mkdtempSync(join(tmpdir(), 'ibitsa-councillors-'));
+  dirs.push(dir);
+  return dir;
+}
+function write(path: string, text: string): void {
+  mkdirSync(join(path, '..'), { recursive: true });
+  writeFileSync(path, text);
+}
+const skill = (fields: string, body = '## Planning\nLook.\n') => `---\n${fields}\n---\n${body}`;
+
+function folders() {
+  const cwd = temp();
+  const home = temp();
+  const plugin = temp();
+  write(join(plugin, '.claude-plugin', 'plugin.json'), JSON.stringify({ name: 'ibitsa' }));
+  return { cwd, home, plugin };
+}
+
+describe('CouncillorSkills (#98)', () => {
+  it('lists marked skills from built-ins, the user and the project, and nothing else', () => {
+    const { cwd, home, plugin } = folders();
+    write(
+      join(plugin, 'skills', 'security', 'SKILL.md'),
+      skill(
+        'name: security\ndescription: Trust boundaries\nibitsa-councillor: true',
+        '## Planning\nA.\n## Review\nB.\n',
+      ),
+    );
+    write(join(plugin, 'skills', 'test', 'SKILL.md'), skill('name: test'));
+    write(
+      join(home, '.claude', 'skills', 'perf', 'SKILL.md'),
+      skill(
+        'name: perf\nibitsa-councillor: true\nibitsa-title: Performance\nibitsa-portrait: councillor.elder\nibitsa-model: haiku',
+        '## Review\nOnly reviews.\n',
+      ),
+    );
+    write(join(cwd, '.claude', 'skills', 'notes.md'), 'a stray file, not a skill folder');
+    write(join(cwd, '.claude', 'skills', 'empty', 'README.md'), 'no SKILL.md here');
+
+    expect(new CouncillorSkills({ cwd, home, pluginDirs: [plugin] }).list()).toEqual([
+      {
+        id: 'perf',
+        skill: 'perf',
+        title: 'Performance',
+        description: '',
+        source: 'user',
+        portrait: 'councillor.elder',
+        model: 'haiku',
+        tools: ['Read', 'Grep', 'Glob'],
+        modes: { planning: false, review: true },
+        hash: expect.stringMatching(/^[0-9a-f]{12}$/),
+      },
+      {
+        id: 'security',
+        skill: 'ibitsa:security',
+        title: 'Security',
+        description: 'Trust boundaries',
+        source: 'builtin',
+        portrait: null,
+        model: null,
+        tools: ['Read', 'Grep', 'Glob'],
+        modes: { planning: true, review: true },
+        hash: expect.stringMatching(/^[0-9a-f]{12}$/),
+      },
+    ]);
+  });
+
+  it('lets the project replace the user, and the user replace a built-in, by id', () => {
+    const { cwd, home, plugin } = folders();
+    for (const [root, source] of [
+      [join(plugin, 'skills'), 'builtin'],
+      [join(home, '.claude', 'skills'), 'user'],
+      [join(cwd, '.claude', 'skills'), 'project'],
+    ] as const) {
+      write(
+        join(root, 'tester', 'SKILL.md'),
+        skill(`name: tester\ndescription: ${source}\nibitsa-councillor: true`),
+      );
+    }
+    const list = () => new CouncillorSkills({ cwd, home, pluginDirs: [plugin] }).list();
+    expect(list().map((c) => [c.skill, c.source, c.description])).toEqual([
+      ['tester', 'project', 'project'],
+    ]);
+    rmSync(join(cwd, '.claude'), { recursive: true });
+    expect(list().map((c) => c.source)).toEqual(['user']);
+    rmSync(join(home, '.claude'), { recursive: true });
+    expect(list().map((c) => c.source)).toEqual(['builtin']);
+  });
+
+  it('keeps only read-only tools, falling back to the defaults', () => {
+    const { cwd, home } = folders();
+    const tools = (field: string) => {
+      write(
+        join(cwd, '.claude', 'skills', 'a', 'SKILL.md'),
+        skill(`name: a\nibitsa-councillor: true\nibitsa-tools: ${field}`),
+      );
+      return new CouncillorSkills({ cwd, home, pluginDirs: [] }).list()[0]?.tools;
+    };
+    expect(tools('[Read, "WebSearch", Read]')).toEqual(['Read', 'WebSearch']);
+    expect(tools('Grep, Bash, Edit')).toEqual(['Grep']);
+    expect(tools('[Write, Bash]')).toEqual(['Read', 'Grep', 'Glob']);
+  });
+
+  it('names a councillor after its folder without a name, titles it, and treats a plain body as planning', () => {
+    const { cwd, home } = folders();
+    write(
+      join(cwd, '.claude', 'skills', 'api-design', 'SKILL.md'),
+      skill('ibitsa-councillor: true', 'Think about the API.\n'),
+    );
+    expect(new CouncillorSkills({ cwd, home, pluginDirs: [] }).list()[0]).toMatchObject({
+      id: 'api-design',
+      title: 'Api design',
+      modes: { planning: true, review: false },
+    });
+  });
+
+  it('gives a changed skill file a new hash', () => {
+    const { cwd, home } = folders();
+    const path = join(cwd, '.claude', 'skills', 'a', 'SKILL.md');
+    const hash = () => new CouncillorSkills({ cwd, home, pluginDirs: [] }).list()[0]?.hash;
+    write(path, skill('name: a\nibitsa-councillor: true'));
+    const before = hash();
+    expect(hash()).toBe(before);
+    write(path, skill('name: a\nibitsa-councillor: true', '## Planning\nLook harder.\n'));
+    expect(hash()).not.toBe(before);
+  });
+
+  it('is what the adapter lists, with the plugin folders it was given', async () => {
+    const { cwd, home, plugin } = folders();
+    write(
+      join(plugin, 'skills', 'security', 'SKILL.md'),
+      skill('name: security\nibitsa-councillor: true'),
+    );
+    const adapter = new ClaudeAdapter({ env: () => ({}), home, pluginDirs: () => [plugin] });
+    expect((await adapter.listCouncillors({ cwd })).map((c) => c.skill)).toEqual([
+      'ibitsa:security',
+    ]);
+  });
+});

@@ -11,6 +11,7 @@ export {
   type SittingMode,
 } from './commands.schema';
 export type { ParseCommandResult } from './commands.types';
+export type { CouncillorInfo } from './councillors.types';
 export { parseHostRequest } from './host-channel';
 export { type HostRequest, HostRequestSchema } from './host-channel.schema';
 export type { HostEvent } from './host-channel.types';

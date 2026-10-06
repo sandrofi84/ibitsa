@@ -1,5 +1,5 @@
-import type { FolderWatcher } from './action-catalog.types';
 import type { AgentAdapter, Clock, GameMaster, UserSettings } from './ports.types';
+import type { FolderWatcher } from './skill-catalog.types';
 
 export interface RuntimeOptions {
   storageDir: string;
@@ -16,6 +16,8 @@ export interface RuntimeOptions {
   home?: string;
   /** The workspace repository, where project-scope actions are saved (#86). */
   repoDir?: string;
+  /** Councillor ids the user turned off (§4.7, #98); read each time the roster is asked for. */
+  disabledCouncillors?: () => string[];
   /** How skill folders are watched; injectable for tests. */
   watchFolder?: FolderWatcher;
 }
