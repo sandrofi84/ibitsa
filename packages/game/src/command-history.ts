@@ -35,13 +35,15 @@ export class CommandHistory {
     if (this.cursor === 0) return null;
     if (this.cursor === this.entries.length) this.draft = current;
     this.cursor -= 1;
-    return this.entries[this.cursor] ?? null;
+    // In range: the cursor was above 0.
+    return this.entries[this.cursor] as string;
   }
 
   /** The message after the one shown, then the draft. Null when already on the draft. */
   next(): string | null {
     if (this.cursor >= this.entries.length) return null;
     this.cursor += 1;
-    return this.cursor === this.entries.length ? this.draft : (this.entries[this.cursor] ?? null);
+    // In range: the cursor was below the length.
+    return this.cursor === this.entries.length ? this.draft : (this.entries[this.cursor] as string);
   }
 }
