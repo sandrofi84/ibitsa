@@ -248,7 +248,8 @@ Built so round table and separate chambers, and later changes to either, can be 
 ## 5. Parties and heroes
 
 ### 5.1 Composition
-- One party per worktree/branch.
+- One party per worktree/branch. The plan groups its tasks into **islands** (one worktree each) and picks the **branching** strategy (§5.3, M4 planning).
+- **Parallel parties:** at most `ibitsa.parties.maxParallel` (default 2) work at once; further islands wait for a free slot and start by themselves. A hero whose task depends on a task on another island is **blocked** (padlock, no spend) until that island is cleared, then starts by itself when a slot is free.
 - **One lead hero writes to a worktree.** Parallel help inside a task uses the lead's own subagents, or the plan splits it into another worktree/party.
 - Councillors who "join the party" are the ones who will review that party's work. The same councillor class may join several parties (each review is its own instance).
 
@@ -266,11 +267,14 @@ Built so round table and separate chambers, and later changes to either, can be 
 
 ### 5.3 Branching strategies
 - **Separate:** each island is an independent branch off `main`. Islands are spread around the map. There is no merge step: each task/branch gets its own PR.
-- **Stacked:** islands are **in a line, connected by bridges**. Each branch is based on the previous one. A bridge is a raised, locked drawbridge until the island before it is cleared. Each PR targets the previous branch.
+- **Stacked:** islands are **in a line, connected by bridges**. Each branch is based on the previous one. Each PR targets the previous branch. In party assembly you choose how they start (M4 planning):
+  - **Each island when the one before is cleared** (default): a raised, locked drawbridge until then; the next branch starts from the previous branch's head at that moment. Until reviews exist (M5), cleared = every task submitted.
+  - **All at once:** later branches start from the earlier branch's current head. Between a later hero's turns the game master rebases it onto the earlier branch; on a conflict it aborts and tells the hero (queued message) to rebase and resolve. The bridge shows "behind" until it catches up.
+  - Either way, if an earlier branch moves on after a later one started, M4 doesn't restack beyond that; the island shows it's behind.
 - The council proposes the strategy in the plan; the user approves it.
 - Worktrees are created by the game master (`git worktree add`), default location: a sibling folder `../<repo>.ibitsa/<branch>` (configurable).
 - **Base:** chosen when the work starts, defaulting to the repo's default branch (`origin/HEAD`, else `main`/`master`). If the workspace has uncommitted changes, warn that they won't be in the worktree.
-- **Branch name:** `ibitsa/<slug of task title>`, suffixed `-2`, `-3`… if taken.
+- **Branch name:** `ibitsa/<slug of island title>` (a quick quest: of the task title), suffixed `-2`, `-3`… if taken. Separate islands start from the chosen base; stacked island 1 from the base, island N from island N−1's branch.
 - **Repo scan:** the git game master reports the default branch, local branches and the workspace's uncommitted changes. The runtime adds it to snapshots as `repo` (it is not core state: it's needed before any quest exists), rescanning on start, on each `hello` and when a quest ends.
 - **Setup:** an optional project setting `worktree.setup` (e.g. `"pnpm install --frozen-lockfile"`, empty by default) that the game master runs right after `git worktree add`, while the hero is still traveling. A failure puts the hero in `error` with the command output. No lockfile guessing.
 
@@ -399,7 +403,7 @@ Shown in the same hover menu, visually distinct:
 1. **Elder's recommendation:** the **elder panel**, docked where the hero pane goes while the campaign plans: research progress and gold, then the brief's summary (task, quick-quest verdict, files, findings, recommended councillors) with **Quick quest** and **Convene council** (the recommended one in bold), or the error and what to do. Convening (§4.2: round table or separate chambers, councillor checkboxes with reasons, effort) follows from it.
 2. **Council hut (interior):** side-on room (Alex Kidd shop style), councillors as **32×32** characters behind a long table (§9.2), active speaker highlighted, "!" for who wants to speak, RPG dialogue box with portrait, options, "Why?", free text. Step tracker: Goal › Research › Questions › Plan › Dispatch. Book of Decisions on the table. In separate chambers, councillors first **study** at the table (think animation, a small book, a progress mark above each) and look up when their report is in; then the dialogue starts. A round table skips the study stage.
 3. **Plan review:** in the hut (#104): plan, tasks in order with criteria, Book of Decisions; Approve / Ask for changes / Dismiss.
-4. **Party assembly:** per worktree: hero class, reviewing councillors (recommended pre-checked), estimated cost.
+4. **Party assembly** (M4): one row per island: hero class and name (from the plan's suggested class), the reviewing councillors (whoever wrote criteria for its tasks; used from M5) and the hero's gold cap; for stacked plans, how islands start (§5.3). No cost forecast yet. Then **Start the campaign**.
 5. **World map (overworld):** see §7.2.
 6. **Party panel:** compact lineup usable as a bottom panel next to the terminal (a `WebviewView`, from M4).
 
@@ -410,7 +414,7 @@ Shown in the same hover menu, visually distinct:
 ### 7.2 World map rules (Super Mario World overworld)
 - **Home Village** island with the **council hut**; it represents `main` and the campaign start.
 - Each worktree/branch is an **island**; tasks are **task points** connected by dotted paths, colored by state (locked, active, done, under review).
-- Separate strategy: islands scattered, each reached from the village. Stacked: islands in a line with **bridges**; locked drawbridges.
+- Separate strategy: islands in a ring around the village, each with its own dotted path from it; up to six fit at the whole-map zoom, beyond that the world widens and the camera pans. Stacked: islands in a row from the village joined by **bridges** (raised and locked, or lowered; a "behind" mark when a later branch must catch up), wrapping onto a second row. Task points run along a path on each island (M4 planning).
 - Heroes are **round tokens** with HP bars; councillors are **square tokens** with a parchment border and name plate, no HP bar.
 - Councillors walk from the hut to a task point when a review starts and return when done.
 - PR badges float above task points (or islands, for stacked).
@@ -832,7 +836,7 @@ Settled in [#9](https://github.com/sandrofi84/ibitsa/issues/9); see [ADR 0001](a
 | M1.5 | Playability | From playing M1 (#64): speech bubbles; a focus camera that zooms in on the working hero (16×16 art stays) and a large activity icon; hero pane docked right and collapsible; a hero journal; "Always allow" and auto mode (§11.6). |
 | M2 | Command bar & actions | `@` targets and files, `/` actions as skills, preview, controls, Command Palette entries. |
 | M3 | Elder & council | Research brief with field slices, convening (round table or separate chambers, per-councillor effort), `report` and `ask_user` with voices and "Why?", plan + decision records saved, approval loop, quick-quest path, tallies and "convene the other way", council hut with 32×32 sheets (§14.2). |
-| M4 | Parties & map | Multiple worktrees, separate and stacked layouts, bridges, party assembly, blocked states. |
+| M4 | Parties & map | Plans with islands and branching, multiple worktrees and parallel parties, separate and stacked layouts (both stacked start modes), bridges, party assembly, blocked states, several heroes in the UI, a campaign cap (§14.3). |
 | M5 | Review loop | Deterministic checks, concurrent reviewers, verdicts, loop limit, escalation, councillors walking on the map. |
 | M6 | PRs | Git-host adapter, PR per task, stacked bases, badges with polling. |
 | M7 | Campaign lifecycle | Campaign record, keep/compact/empty, mid-campaign council and amendments, resume after restart. |
@@ -859,6 +863,15 @@ Settled in M3 planning.
 - An approved plan is carried out by **one hero working its tasks in order on one branch**, until M4 brings parties and islands (#104). The island's task points are the plan's tasks, each after the tasks it depends on, otherwise as listed; the first is active, the rest locked. The hero's first message is task 1 with its place in the plan, files, criteria and the decisions it keeps to. Each accepted `submit_task` marks the task done and sends the next one as a message on the same session; after the last, the hero is submitted. (The submit check still asks only for a commit beyond the base, so a later task passes on an earlier one's commits; per-task review is M5.)
 - Effort Light/Standard/Deep maps to Haiku/Sonnet/Opus (§4.2).
 
+### 14.3 M4: parties and the map
+Settled in M4 planning.
+- **Islands in the plan:** `islands` (each with its tasks in order, optionally based on another island) and `branching` (`separate` | `stacked`); core checks every task is on exactly one island. A quick quest stays one island.
+- **Parallel parties:** `ibitsa.parties.maxParallel`, default 2 (§5.1); blocked heroes start by themselves.
+- **Stacked start:** your choice in party assembly (§5.3).
+- **Several heroes in the UI:** the hero pane shows the selected hero (click its token, island or tab); the collapsed tab lists every hero with a state dot; `@<hero name>` targets one, `@all` every hero.
+- **Ending:** **Finish** once every island is submitted; **Abandon** ends everything; parties can be stopped one by one; worktrees are removed per island.
+- **Campaign cap:** `ibitsa.campaign.budgetUsd` (empty by default): when every hero plus the elder and council together reach it, every hero stops and asks.
+
 ## 15. Open questions
 1. Name registration: domains (ibitsa.com, ibitsa.dev, questforibitsa.com), GitHub org, npm scope, Marketplace/Open VSX publisher; trademark search (EUIPO TMview, USPTO). Initial checks found no conflicting software use.
 2. Rogue = Haiku confirmed? Default class roster and names.
@@ -869,6 +882,6 @@ Settled in M3 planning.
 7. ~~Confirm SDK invocation of custom skills via `/name` prompts.~~ Settled (#84): a real session sent `/greet Wren` ran the project skill with its argument (opt-in smoke test).
 8. ACP capability coverage per agent.
 9. Subscription (claude.ai) sign-in for the published extension: possible only with Anthropic's approval; not requested yet (§11.6).
-10. Default max parallel parties.
+10. ~~Default max parallel parties.~~ Settled in M4 planning: 2, `ibitsa.parties.maxParallel` (§5.1).
 11. ~~Specialist dives (planning subagents): add later or not.~~ Settled in M3 planning: separate chambers (§4.3), measured against the round table (§4.10).
 12. Optional `@ibitsa` VS Code chat participant. Not in M2 (#88).
