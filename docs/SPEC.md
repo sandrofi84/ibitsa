@@ -315,7 +315,7 @@ Request review from: $ARGUMENTS
 - Scope chosen at creation: personal (`~/.claude/skills/`) or project (`.claude/skills/`).
 - Game-only metadata (e.g. `target: party | council | any`) lives in frontmatter if Claude Code tolerates extra fields, otherwise in a sidecar `actions.json` keyed by skill name. **[OPEN]** verify.
 - Name collisions with existing skills are detected and the user chooses rename/overwrite.
-- Verify the SDK delivers `/name args` prompts to custom skills/commands. **[OPEN]** verify.
+- The SDK delivers `/name args` prompts to custom skills (checked live, #84).
 
 ### 6.3 Controls (not prompts)
 Shown in the same hover menu, visually distinct:
@@ -787,7 +787,7 @@ Settled in [#11](https://github.com/sandrofi84/ibitsa/issues/11).
 4. ~~Game engine: Phaser vs PixiJS.~~ Settled: Phaser 4 (§9.1).
 5. Councillor skill location so they don't clutter the normal `/` menu.
 6. ~~Whether Claude Code tolerates extra frontmatter fields (for action `target`), else sidecar.~~ Settled in M2 planning: a skill with an extra flat field loads and is listed by `supportedCommands()`; Ibitsa uses `ibitsa-target` and reads it from the file.
-7. Confirm SDK invocation of custom skills via `/name` prompts.
+7. ~~Confirm SDK invocation of custom skills via `/name` prompts.~~ Settled (#84): a real session sent `/greet Wren` ran the project skill with its argument (opt-in smoke test).
 8. ACP capability coverage per agent.
 9. Subscription (claude.ai) sign-in for the published extension: possible only with Anthropic's approval; not requested yet (§11.6).
 10. Default max parallel parties.
