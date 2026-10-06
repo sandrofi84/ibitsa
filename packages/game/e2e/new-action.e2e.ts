@@ -17,6 +17,7 @@ async function questRunning(page: Page): Promise<void> {
   await page.goto('/?fixture=live');
   await page.getByRole('button', { name: 'New quest' }).click();
   await page.getByLabel('Task').fill('Tidy the README');
+  await page.getByRole('button', { name: 'Skip the elder' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   await expect.poll(() => probe(page, (p) => p.snapshot()?.heroes[0]?.state.kind)).toBe('idle');
 }

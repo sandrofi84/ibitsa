@@ -12,6 +12,7 @@ import {
   type AgentEvent,
   type Command,
   type CoreMessage,
+  type ElderEvent,
   type HostEvent,
   type HostRequest,
   PROTOCOL_VERSION,
@@ -126,6 +127,15 @@ export class LiveDevHost implements Host {
     for (const effect of result.effects) this.perform(effect);
   }
 
+  private elder(elderId: string, events: ElderEvent[]): void {
+    events.forEach((event, i) => {
+      setTimeout(
+        () => this.input({ kind: 'elder', t: this.t(), elderId, event }),
+        STEP_MS * (i + 1),
+      );
+    });
+  }
+
   private agent(heroId: string, events: AgentEvent[]): void {
     events.forEach((event, i) => {
       setTimeout(
@@ -178,6 +188,9 @@ export class LiveDevHost implements Host {
             }),
           STEP_MS,
         );
+        return;
+      case 'startElder':
+        this.elder(effect.elderId, elderScript(effect.task));
         return;
       case 'startSession':
       case 'resumeSession':
@@ -279,4 +292,43 @@ export class LiveDevHost implements Host {
       for (const l of this.listeners) l(message);
     });
   }
+}
+
+/**
+ * A scripted elder (#101): a moment of reading, then a brief recommending a quick quest. A task that
+ * mentions "fail" runs out of gold instead, so the failure path can be played too.
+ */
+function elderScript(task: string): ElderEvent[] {
+  const reading: ElderEvent[] = [
+    { type: 'sessionStarted', sessionId: 'live-elder' },
+    { type: 'activity', text: 'Reading README.md' },
+    { type: 'activity', text: 'Searching for login' },
+    { type: 'usage', totalCost: 31_000 },
+  ];
+  if (/fail/i.test(task)) {
+    return [
+      ...reading,
+      { type: 'error', message: 'The elder ran out of gold before finishing the brief.' },
+    ];
+  }
+  return [
+    ...reading,
+    {
+      type: 'briefSubmitted',
+      brief: {
+        task: task.split('\n')[0] ?? task,
+        files: [
+          { path: 'README.md', note: 'what the project says about itself' },
+          { path: 'src/app.ts', lines: '1-40', note: 'where the change goes' },
+        ],
+        findings: ['Tests run with Vitest.', 'Nothing else depends on this code.'],
+        slices: [{ councillorId: 'tester', summary: 'One behaviour to cover', pointers: [] }],
+        councillors: [{ councillorId: 'tester', reason: 'The change needs a test.' }],
+        effort: { level: 'light', reason: 'A small change.' },
+        councillorEfforts: [{ councillorId: 'tester', level: 'light', reason: 'One case.' }],
+        quickQuest: { recommended: true, reason: 'One small, clear change.' },
+      },
+    },
+    { type: 'usage', totalCost: 42_000 },
+  ];
 }

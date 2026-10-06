@@ -1,4 +1,4 @@
-import type { CouncilAnswer, Effort, SittingMode } from '@ibitsa/protocol';
+import type { CouncilAnswer, Effort, ResearchBrief, SittingMode } from '@ibitsa/protocol';
 
 /** Requests core makes of the runtime. Core never performs them itself (ADR 0001). */
 export type Effect =
@@ -61,6 +61,11 @@ export type Effect =
       reason?: string;
     }
   | { type: 'closeSession'; heroId: string }
+  /** Start the elder's research session (spec §4.1); its output comes back as `elder` inputs. */
+  | { type: 'startElder'; elderId: string; task: string }
+  | { type: 'closeElder'; elderId: string }
+  /** Write the brief to the campaign folder (`brief.json`, `brief.md`); Ibitsa never commits it. */
+  | { type: 'saveBrief'; elderId: string; brief: ResearchBrief }
   /** Start a sitting's lead session (spec §4.3); its output comes back as `council` inputs. */
   | {
       type: 'startSitting';

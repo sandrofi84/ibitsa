@@ -11,6 +11,7 @@ export function initialState(): CoreState {
     nextId: 1,
     settings: DEFAULT_SETTINGS,
     campaign: null,
+    elder: null,
     sitting: null,
     islands: [],
     heroes: [],

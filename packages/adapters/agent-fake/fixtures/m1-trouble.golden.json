@@ -146,6 +146,7 @@
             "kind": "unknown"
           }
         },
+        "elder": null,
         "sitting": null,
         "islands": [
           {
@@ -201,6 +202,7 @@
             "value": 61000
           }
         },
+        "elder": null,
         "sitting": null,
         "islands": [
           {
@@ -267,6 +269,7 @@
             "value": 301500
           }
         },
+        "elder": null,
         "sitting": null,
         "islands": [
           {
@@ -333,6 +336,7 @@
             "value": 301500
           }
         },
+        "elder": null,
         "sitting": null,
         "islands": [
           {
@@ -393,6 +397,7 @@
             "value": 352000
           }
         },
+        "elder": null,
         "sitting": null,
         "islands": [
           {
@@ -450,6 +455,7 @@
         "value": 352000
       }
     },
+    "elder": null,
     "sitting": null,
     "islands": [
       {

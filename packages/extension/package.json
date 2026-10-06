@@ -89,6 +89,23 @@
           "uniqueItems": true,
           "markdownDescription": "Which Claude Code settings hero sessions load. `project`: the repo's `CLAUDE.md`, skills and rules. Adding `user` also loads your personal `~/.claude` skills and `CLAUDE.md` **and your personal permission rules and hooks**, which can let a hero do more without asking."
         },
+        "ibitsa.elder.model": {
+          "type": "string",
+          "enum": [
+            "haiku",
+            "sonnet",
+            "opus",
+            "fable"
+          ],
+          "default": "haiku",
+          "markdownDescription": "The model the elder researches a new quest with, before the council or a quick quest."
+        },
+        "ibitsa.elder.budgetUsd": {
+          "type": "number",
+          "default": 0.25,
+          "minimum": 0.01,
+          "markdownDescription": "The most the elder's research may cost, in US dollars. It stops when the cap is reached."
+        },
         "ibitsa.council.disabled": {
           "type": "array",
           "items": {

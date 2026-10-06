@@ -12,6 +12,14 @@ export {
 } from './commands.schema';
 export type { ParseCommandResult } from './commands.types';
 export type { CouncillorInfo } from './councillors.types';
+export { checkBrief } from './elder';
+export {
+  type CodePointer,
+  CodePointerSchema,
+  type ResearchBrief,
+  ResearchBriefSchema,
+} from './elder.schema';
+export type { ElderEvent, ElderStatus, ElderView } from './elder.types';
 export { parseHostRequest } from './host-channel';
 export { type HostRequest, HostRequestSchema } from './host-channel.schema';
 export type { HostEvent } from './host-channel.types';

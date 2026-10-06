@@ -1,4 +1,5 @@
 import type { NeedsYouItem, Snapshot } from '@ibitsa/protocol';
+import { Elder } from './elder';
 import { Hero } from './hero';
 import { NeedsYou } from './needs-you';
 import { Outbox } from './outbox';
@@ -11,7 +12,14 @@ export function view(state: CoreState): Snapshot {
   const outbox = new Outbox();
   const ctx = { state, outbox, needsYou: new NeedsYou({ state, outbox }), t: 0 };
   return {
-    campaign: state.campaign && { ...state.campaign, gold: Quest.totalGold(state.heroes) },
+    campaign: state.campaign && {
+      ...state.campaign,
+      gold: Quest.totalGold([
+        ...(state.elder && state.elder.gold.kind !== 'unknown' ? [state.elder] : []),
+        ...state.heroes,
+      ]),
+    },
+    elder: state.elder && Elder.view(state.elder),
     sitting: state.sitting && Sitting.view(state.sitting),
     islands: state.islands.map((i) => ({
       id: i.id,

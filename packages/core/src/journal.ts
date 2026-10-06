@@ -89,6 +89,8 @@ export class Journal {
     if (record.kind === 'command') {
       const c = record.command;
       switch (c.type) {
+        case 'consultElder':
+          return line(null, { kind: 'event', text: `You asked the elder: ${title(c.task)}` });
         case 'startQuest':
           return line(null, { kind: 'event', text: `Quest started: ${title(c.description)}` });
         case 'sendMessage':
@@ -136,6 +138,16 @@ export class Journal {
         default:
           return [];
       }
+    }
+    if (record.kind === 'elder') {
+      const e = record.event;
+      if (e.type === 'briefSubmitted') {
+        return line(null, { kind: 'event', text: "The elder's brief is ready." });
+      }
+      if (e.type === 'error') {
+        return line(null, { kind: 'event', text: `The elder couldn't finish: ${e.message}` });
+      }
+      return [];
     }
     if (record.kind === 'gm') {
       const e = record.event;

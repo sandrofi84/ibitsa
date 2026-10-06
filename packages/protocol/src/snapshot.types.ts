@@ -1,9 +1,12 @@
+import type { ElderView } from './elder.types';
 import type { SittingView } from './sitting.types';
 import type { MicroUsd, Reading } from './values.types';
 
 /** The whole world as front ends see it: glossary terms, no layout (spec §11.2.1). */
 export interface Snapshot {
   campaign: CampaignView | null;
+  /** The elder's research for this campaign (spec §4.1); null before asking it. */
+  elder: ElderView | null;
   /** The council's current or last sitting (spec §4.3); null before the first. */
   sitting: SittingView | null;
   islands: IslandView[];
@@ -29,7 +32,8 @@ export interface RepoView {
 export interface CampaignView {
   id: string;
   title: string;
-  status: 'active' | 'finished' | 'abandoned';
+  /** `planning` while the elder (and later the council) works, before any hero; `active` once one does. */
+  status: 'planning' | 'active' | 'finished' | 'abandoned';
   /** Computed by core; front ends never sum hero gold themselves. */
   gold: Reading<MicroUsd>;
   /** Auto mode (#63): permissions inside the worktree and the sandbox are allowed without asking. */

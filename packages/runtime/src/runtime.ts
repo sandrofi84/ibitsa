@@ -17,11 +17,13 @@ import {
   type CoreMessage,
   type CouncillorInfo,
   type Cue,
+  type ElderEvent,
   PROTOCOL_VERSION,
   parseCommand,
   type RepoView,
   type Snapshot,
 } from '@ibitsa/protocol';
+import { CampaignDocuments } from './campaign-documents';
 import { seatable } from './council';
 import type { AgentSession, FrontEnd } from './ports.types';
 import { ProjectRules } from './project-rules';
@@ -30,6 +32,9 @@ import { SkillCatalog, watchFolder } from './skill-catalog';
 import { type CampaignLog, CampaignStore } from './storage';
 
 /** Snapshots go out at most this often (spec §11.2.1: throttled, ~10/s). */
+/** The elder's defaults (spec §4.1): the smallest model, a quarter of a dollar. */
+const DEFAULT_ELDER = { model: 'haiku', budgetMicroUsd: 250_000 };
+
 export const SNAPSHOT_INTERVAL_MS = 100;
 
 /**
@@ -46,6 +51,7 @@ export class Runtime {
   private seq = 0;
   private readonly frontEnds = new Set<FrontEnd>();
   private readonly sessions = new Map<string, AgentSession>();
+  private elderSession: { close(): void } | null = null;
   private readonly timers = new Map<string, unknown>();
   private snapshotTimer: unknown = null;
   private lastSnapshotAt = Number.NEGATIVE_INFINITY;
@@ -98,7 +104,7 @@ export class Runtime {
       this.state = step(this.state, input).state;
       this.journal.add({ record: input, state: this.state });
     }
-    if (this.state.campaign?.status === 'active') {
+    if (this.live()) {
       this.input({ kind: 'gm', t: this.t(), event: { type: 'runtimeRestarted' } });
     }
   }
@@ -122,6 +128,7 @@ export class Runtime {
     for (const session of this.sessions.values()) session.close();
     this.sessions.clear();
     this.actions?.dispose();
+    this.elderSession?.close();
     this.councillors?.dispose();
     this.frontEnds.clear();
   }
@@ -171,8 +178,9 @@ export class Runtime {
       frontEnd.post({ type: 'journal', seq: ++this.seq, ...page });
       return;
     }
-    if (command.type === 'startQuest' && this.state.campaign?.status !== 'active') {
-      // A new quest is a new campaign with its own log, a fresh core and a fresh journal.
+    if ((command.type === 'startQuest' || command.type === 'consultElder') && !this.live()) {
+      // A new quest, or asking the elder, is a new campaign with its own log, a fresh core and journal.
+      // A quick quest after the elder's brief continues the planning campaign instead (#101).
       this.state = initialState();
       this.journal = new Journal();
       this.log = this.store.create(this.newId(), new Date(this.options.clock.now()));
@@ -226,7 +234,7 @@ export class Runtime {
     for (const cue of result.cues) this.broadcastCue(cue);
     this.scheduleSnapshot();
     for (const effect of result.effects) this.perform(effect);
-    if (this.state.campaign && this.state.campaign.status !== 'active') {
+    if (this.state.campaign && !this.live()) {
       this.store.clearActive();
       this.rescanRepo();
     }
@@ -382,6 +390,27 @@ export class Runtime {
         session?.close();
         this.sessions.delete(effect.heroId);
         return;
+      case 'startElder':
+        void this.startElder(effect);
+        return;
+      case 'closeElder':
+        this.elderSession?.close();
+        this.elderSession = null;
+        return;
+      case 'saveBrief': {
+        const campaignId = this.log?.header.campaignId;
+        if (this.options.repoDir && campaignId) {
+          try {
+            new CampaignDocuments(this.options.repoDir).saveBrief({
+              campaignId,
+              brief: effect.brief,
+            });
+          } catch {
+            // The brief is still in the log and the game; only the files are missing.
+          }
+        }
+        return;
+      }
       case 'setTimer':
         this.arm(effect.timerId, effect.at);
         return;
@@ -391,6 +420,40 @@ export class Runtime {
         this.timers.delete(effect.timerId);
         return;
       }
+    }
+  }
+
+  /** A campaign is live while it plans or a quest runs: its log stays active and survives a reload. */
+  private live(): boolean {
+    const status = this.state.campaign?.status;
+    return status === 'active' || status === 'planning';
+  }
+
+  /** The elder researches the workspace repository, knowing which councillors exist (#101). */
+  private async startElder({ elderId, task }: { elderId: string; task: string }): Promise<void> {
+    const report = (event: ElderEvent) =>
+      this.input({ kind: 'elder', t: this.t(), elderId, event });
+    const start = this.options.adapter.startElder?.bind(this.options.adapter);
+    const cwd = this.options.repoDir;
+    if (!start || !cwd) {
+      report({
+        type: 'error',
+        message: 'The elder needs a workspace folder and an agent that can research.',
+      });
+      return;
+    }
+    const councillors = await this.currentCouncillors();
+    // Closed or replaced while the roster was read: don't start a session nobody will close.
+    if (this.state.elder?.id !== elderId || this.state.elder.status !== 'researching') return;
+    const { model, budgetMicroUsd } = this.options.elder?.() ?? DEFAULT_ELDER;
+    try {
+      this.elderSession?.close();
+      this.elderSession = start(
+        { cwd, task, councillors, model, maxBudgetMicroUsd: budgetMicroUsd },
+        report,
+      );
+    } catch (e) {
+      report({ type: 'error', message: String(e) });
     }
   }
 

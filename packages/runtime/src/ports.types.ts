@@ -5,6 +5,7 @@ import type {
   AgentEvent,
   CoreMessage,
   CouncillorInfo,
+  ElderEvent,
   RepoView,
 } from '@ibitsa/protocol';
 
@@ -64,10 +65,24 @@ export interface AgentAdapter {
     name: string;
     args: string;
   }): Promise<{ text: string; notes: string[] } | null>;
+  /** The elder's research session (spec §4.1, #101); adapters that can't run it leave it out. */
+  startElder?(start: ElderStart, onEvent: (event: ElderEvent) => void): { close(): void };
   /** The councillors a folder can seat (§4.7, #98); adapters without skills leave it out. */
   listCouncillors?(request: { cwd: string }): Promise<CouncillorInfo[]>;
   /** Writes a new action (#86); adapters without skills leave it out. */
   createAction?(request: CreateActionRequest): Promise<CreateActionResult>;
+}
+
+/** Starting the elder's research (spec §4.1): read-only, capped, ending with `submit_brief`. */
+export interface ElderStart {
+  /** The workspace repository it researches. */
+  cwd: string;
+  task: string;
+  /** Who it may recommend; the brief may name no one else. */
+  councillors: readonly CouncillorInfo[];
+  /** A model alias or id; Haiku by default. */
+  model: string;
+  maxBudgetMicroUsd: number;
 }
 
 /** A new action to write, and where each scope keeps its skills. */
