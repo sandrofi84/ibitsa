@@ -21,6 +21,9 @@ const WHEEL_GAP_MS = 250;
 const DRAG_START = 3;
 const AUTO_KEY = 'cameraAuto';
 
+/** Registry key: how many page pixels the hero pane covers on the right (0 collapsed or hidden). */
+export const RIGHT_INSET = 'rightInset';
+
 /** Game events between the camera and its on-screen controls (#59). */
 export const CAMERA_EVENTS = {
   zoomIn: 'camera:zoomIn',
@@ -194,6 +197,19 @@ export class WorldScene extends Phaser.Scene {
       else if (e.key === '-' || e.key === '_') this.aimCamera(this.director.zoomOut());
       else if (e.key === '0') this.aimCamera(this.director.overview());
     });
+  }
+
+  /**
+   * While following, the hero sits in the middle of the map you can see: left of the open hero pane,
+   * not under it. The offset is in map pixels, so it tracks the zoom as it eases.
+   */
+  override update(): void {
+    const cam = this.cameras.main;
+    // Page pixels the hero pane covers on the right, kept current by boot; a registry value rather
+    // than an event, because the pane can appear before this scene starts.
+    const inset = ((this.registry.get(RIGHT_INSET) as number | undefined) ?? 0) / this.scale.zoom;
+    // Phaser centres on target − offset: a negative x puts the hero left of the middle.
+    cam.setFollowOffset(-inset / 2 / cam.zoom, 0);
   }
 
   /** Moves the main camera to the director's aim: zoom, follow the hero, or ease back to the map. */

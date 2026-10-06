@@ -10,7 +10,7 @@ import { mountNewQuestForm } from './new-quest-form';
 import { PackScene } from './pack-scene';
 import { ViewState } from './view-state';
 import { fitViewport } from './viewport';
-import { HEIGHT, HERO_SELECTED, WIDTH, WorldScene } from './world-scene';
+import { HEIGHT, HERO_SELECTED, RIGHT_INSET, WIDTH, WorldScene } from './world-scene';
 
 function hasWebGL(root: HTMLElement): boolean {
   if (root.dataset.forceNoWebgl === 'true') return false;
@@ -78,6 +78,12 @@ export function startGame(root: HTMLElement, host: Host): Started {
   game.registry.set('client', client);
   game.registry.set('view', view);
   mountCameraControls(game.events);
+  // The camera keeps the followed hero left of the open hero pane.
+  new ResizeObserver(() => {
+    const rect = heroPane.element.getBoundingClientRect();
+    const covered = rect.width > 0 ? Math.max(0, window.innerWidth - rect.left) : 0;
+    game.registry.set(RIGHT_INSET, covered);
+  }).observe(heroPane.element);
   game.events.on(HERO_SELECTED, () => heroPane.open());
 
   const report = () => {
