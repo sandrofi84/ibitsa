@@ -78,20 +78,28 @@ test('lets you answer the permission yourself in interactive mode', async ({ pag
   expect(errors).toEqual([]);
 });
 
-test('re-scales to the largest integer zoom as the viewport grows and shrinks', async ({
+test('fills the panel at the largest whole zoom where the map fits, as it grows and shrinks', async ({
   page,
 }) => {
   await page.goto('/');
-  await expect.poll(() => probe(page, (p) => p.zoom())).toBe(2); // 1000×620
+  const canvas = page.locator('#game canvas');
+  const fills = async ({ w, h, zoom }: { w: number; h: number; zoom: number }) => {
+    await expect.poll(() => probe(page, (p) => p.zoom())).toBe(zoom);
+    await expect
+      .poll(async () => {
+        const box = await canvas.boundingBox();
+        // Within one zoom step of the panel on each side: no black bands (#59).
+        return box !== null && box.width > w - zoom && box.height > h - zoom;
+      })
+      .toBe(true);
+  };
+  await fills({ w: 1000, h: 620, zoom: 2 });
   await page.setViewportSize({ width: 1500, height: 900 });
-  await expect.poll(() => probe(page, (p) => p.zoom())).toBe(3);
+  await fills({ w: 1500, h: 900, zoom: 3 });
+  await page.setViewportSize({ width: 1439, height: 900 });
+  await fills({ w: 1439, h: 900, zoom: 2 });
   await page.setViewportSize({ width: 700, height: 500 });
-  await expect.poll(() => probe(page, (p) => p.zoom())).toBe(1);
-  const box = await page.locator('#game canvas').boundingBox();
-  expect(box && { w: Math.round(box.width), h: Math.round(box.height) }).toEqual({
-    w: 480,
-    h: 270,
-  });
+  await fills({ w: 700, h: 500, zoom: 1 });
 });
 
 test('shows what the hero is doing as an icon beside it (#60)', async ({ page }) => {

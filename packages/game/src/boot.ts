@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import type { Started } from './boot.types';
+import { mountCameraControls } from './camera-controls';
 import { GameClient } from './client';
 import { mountHeroPane } from './hero-pane';
 import { reportDiagnostics } from './host';
@@ -8,6 +9,7 @@ import { mountNeedsYouPanel } from './needs-you-panel';
 import { mountNewQuestForm } from './new-quest-form';
 import { PackScene } from './pack-scene';
 import { ViewState } from './view-state';
+import { fitViewport } from './viewport';
 import { HEIGHT, HERO_SELECTED, WIDTH, WorldScene } from './world-scene';
 
 function hasWebGL(root: HTMLElement): boolean {
@@ -42,23 +44,26 @@ export function startGame(root: HTMLElement, host: Host): Started {
       '<p class="notice">Ibitsa needs WebGL, and it isn’t available here, so the game can’t start. ' +
       'Your agents are not affected.</p>';
     reportDiagnostics(diagnostics);
-    return { client, zoom: () => 0, hero: NO_HERO };
+    return { client, zoom: () => 0, hero: NO_HERO, camera: () => null };
   }
 
   mountNeedsYouPanel(client);
   mountNewQuestForm({ client, host });
-  const heroPane = mountHeroPane({ client, host, view: new ViewState(host.viewStorage) });
+  const view = new ViewState(host.viewStorage);
+  const heroPane = mountHeroPane({ client, host, view });
+  const panel = () => ({ width: root.clientWidth || WIDTH, height: root.clientHeight || HEIGHT });
+  const initial = fitViewport({ panel: panel(), world: { width: WIDTH, height: HEIGHT } });
   const game = new Phaser.Game({
     type: Phaser.WEBGL,
     parent: root,
-    width: WIDTH,
-    height: HEIGHT,
+    width: initial.width,
+    height: initial.height,
     pixelArt: true,
     backgroundColor: '#000000',
     banner: false,
     scale: {
       mode: Phaser.Scale.NONE,
-      zoom: Phaser.Scale.MAX_ZOOM,
+      zoom: initial.zoom,
       autoCenter: Phaser.Scale.CENTER_BOTH,
     },
     images: {
@@ -71,6 +76,8 @@ export function startGame(root: HTMLElement, host: Host): Started {
   });
   game.registry.set('assetBase', assetBase);
   game.registry.set('client', client);
+  game.registry.set('view', view);
+  mountCameraControls(game.events);
   game.events.on(HERO_SELECTED, () => heroPane.open());
 
   const report = () => {
@@ -88,24 +95,30 @@ export function startGame(root: HTMLElement, host: Host): Started {
   };
   game.events.once(Phaser.Core.Events.READY, () => {
     report();
-    // Scale.NONE does not recompute MAX_ZOOM by itself when the panel changes size.
+    // Fill the panel at a whole-number zoom whenever it changes size (#59).
     new ResizeObserver(() => {
-      game.scale.setMaxZoom();
+      const v = fitViewport({ panel: panel(), world: { width: WIDTH, height: HEIGHT } });
+      // Resize first: setZoom recomputes the on-screen size from the current game size.
+      game.scale.resize(v.width, v.height);
+      game.scale.setZoom(v.zoom);
       report();
     }).observe(root);
     client.start();
   });
-  const token = () => (game.scene.getScene('world') as WorldScene | null)?.firstHero() ?? null;
+  const world = () => game.scene.getScene('world') as WorldScene | null;
+  const token = () => world()?.firstHero() ?? null;
   const hero: Started['hero'] = {
     onPage: () => {
       const t = token();
-      if (!t) return null;
-      const at = t.position();
+      const scene = world();
+      if (!t || !scene) return null;
+      const at = scene.toCanvas(t.position());
       const rect = game.canvas.getBoundingClientRect();
       return { x: rect.left + at.x * game.scale.zoom, y: rect.top + at.y * game.scale.zoom };
     },
     speech: () => token()?.speaking() ?? null,
     icon: () => token()?.showingIcon() ?? null,
   };
-  return { client, zoom: () => diagnostics.zoom, hero };
+  const camera = () => (world()?.sys.isActive() ? (world()?.cameraState() ?? null) : null);
+  return { client, zoom: () => diagnostics.zoom, hero, camera };
 }

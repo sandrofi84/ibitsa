@@ -1,15 +1,34 @@
 import type { Manifest } from '@ibitsa/assets';
 import type { Cue, HeroView, Reading, Snapshot, TaskPointState } from '@ibitsa/protocol';
 import * as Phaser from 'phaser';
+import { CameraDirector, OVERVIEW_ZOOM } from './camera-director';
+import type { CameraState } from './camera-director.types';
 import type { GameClient } from './client';
 import { speechExcerpt } from './heroes';
 import { heroSpot, layoutWorld, pathTo } from './layout';
 import type { Point, WorldLayout } from './layout.types';
 import { PACK_KEY } from './pack-scene';
+import type { ViewState } from './view-state';
 
 export const WIDTH = 480;
 export const HEIGHT = 270;
 const TRAVEL_MS = 3_000;
+/** How long the camera takes to zoom or ease back to the whole map. */
+const CAMERA_MS = 400;
+/** One zoom step per wheel gesture: a trackpad sends many events for one swipe. */
+const WHEEL_GAP_MS = 250;
+/** How far the pointer moves before a press becomes a drag, in game pixels. */
+const DRAG_START = 3;
+const AUTO_KEY = 'cameraAuto';
+
+/** Game events between the camera and its on-screen controls (#59). */
+export const CAMERA_EVENTS = {
+  zoomIn: 'camera:zoomIn',
+  zoomOut: 'camera:zoomOut',
+  overview: 'camera:overview',
+  toggleAuto: 'camera:toggleAuto',
+  changed: 'camera:changed',
+} as const;
 const CATCH_UP_MS = 1_000;
 
 const TASK_FRAME: Record<TaskPointState, number> = {
@@ -31,6 +50,13 @@ export class WorldScene extends Phaser.Scene {
   private manifest!: Manifest;
   private layout: WorldLayout = layoutWorld(null);
   private water!: Phaser.GameObjects.TileSprite;
+  /** Everything on the map, which the main camera zooms; the HUD is drawn by a fixed UI camera. */
+  private world!: Phaser.GameObjects.Container;
+  private ui!: Phaser.Cameras.Scene2D.Camera;
+  private director!: CameraDirector;
+  private view!: ViewState;
+  private lastWheel = 0;
+  private dragging = false;
   private questLayer!: Phaser.GameObjects.Container;
   private hud!: Phaser.GameObjects.Text;
   private empty!: Phaser.GameObjects.Text;
@@ -46,10 +72,37 @@ export class WorldScene extends Phaser.Scene {
     return this.heroes.values().next().value ?? null;
   }
 
+  /** The camera as the controls and tests see it. */
+  cameraState(): CameraState {
+    const cam = this.cameras.main;
+    const v = cam.worldView;
+    return {
+      zoom: cam.zoom,
+      aim: this.director.current,
+      auto: this.director.autoFocus,
+      view: { x: v.x, y: v.y, width: v.width, height: v.height },
+    };
+  }
+
+  /** A point on the map in canvas pixels, through the camera's scroll and zoom. */
+  toCanvas(point: { x: number; y: number }): { x: number; y: number } {
+    const cam = this.cameras.main;
+    return {
+      x: (point.x - cam.worldView.x) * cam.zoom,
+      y: (point.y - cam.worldView.y) * cam.zoom,
+    };
+  }
+
   create(): void {
     this.manifest = this.cache.json.get(PACK_KEY) as Manifest;
     const waterIndex = this.manifest.tiles.tiles.water?.index ?? 0;
-    this.water = this.add.tileSprite(0, 0, WIDTH, HEIGHT, 'tiles', waterIndex).setOrigin(0);
+    this.world = this.add.container(0, 0);
+    // The sea reaches past the map on every side, so a panel wider or taller than the world shows
+    // more sea, never black (#59). A filled panel is under twice the world in each direction.
+    this.water = this.add
+      .tileSprite(-WIDTH, -HEIGHT, WIDTH * 3, HEIGHT * 3, 'tiles', waterIndex)
+      .setOrigin(0);
+    this.world.add(this.water);
     let waterFrame = 0;
     this.time.addEvent({
       delay: 250,
@@ -61,20 +114,105 @@ export class WorldScene extends Phaser.Scene {
     });
 
     const v = this.layout.village;
-    this.drawIsland(this.add.container(0, 0), v);
-    this.add.image(v.hut.x, v.hut.y, 'building:hut').setOrigin(0);
-    this.add.text(v.x + 22, v.y + 70, 'HOME VILLAGE', textStyle());
-
+    const village = this.add.container(0, 0);
+    this.drawIsland(village, v);
     this.questLayer = this.add.container(0, 0);
-    this.hud = this.add.text(6, 4, '', textStyle()).setDepth(10);
-    this.empty = this.add
-      .text(330, 120, 'No quest yet', textStyle('#d8ecff'))
-      .setOrigin(0.5)
-      .setDepth(10);
+    this.empty = this.add.text(330, 120, 'No quest yet', textStyle('#d8ecff')).setOrigin(0.5);
+    this.world.add([
+      village,
+      this.add.image(v.hut.x, v.hut.y, 'building:hut').setOrigin(0),
+      this.add.text(v.x + 22, v.y + 70, 'HOME VILLAGE', textStyle()),
+      this.questLayer,
+      this.empty,
+    ]);
+    this.hud = this.add.text(6, 4, '', textStyle());
+
+    this.setUpCamera();
 
     const client = this.registry.get('client') as GameClient;
     client.onSnapshot((s) => this.render(s));
     client.onCue((c) => this.cue(c));
+  }
+
+  private setUpCamera(): void {
+    this.view = this.registry.get('view') as ViewState;
+    this.director = new CameraDirector({ auto: this.view.get(AUTO_KEY, true) });
+    const cam = this.cameras.main;
+    cam.setBounds(-WIDTH, -HEIGHT, WIDTH * 3, HEIGHT * 3).centerOn(WIDTH / 2, HEIGHT / 2);
+    this.ui = this.cameras.add(0, 0, this.scale.width, this.scale.height, false, 'ui');
+    this.ui.ignore(this.world);
+    cam.ignore(this.hud);
+    this.scale.on(Phaser.Scale.Events.RESIZE, (size: Phaser.Structs.Size) => {
+      cam.setSize(size.width, size.height);
+      this.ui.setSize(size.width, size.height);
+      if (!this.director.current.follow && this.director.current.zoom === OVERVIEW_ZOOM)
+        cam.centerOn(WIDTH / 2, HEIGHT / 2);
+    });
+
+    const events = this.game.events;
+    events.on(CAMERA_EVENTS.zoomIn, () => this.aimCamera(this.director.zoomIn()));
+    events.on(CAMERA_EVENTS.zoomOut, () => this.aimCamera(this.director.zoomOut()));
+    events.on(CAMERA_EVENTS.overview, () => this.aimCamera(this.director.overview()));
+    events.on(CAMERA_EVENTS.toggleAuto, () => {
+      this.director.setAuto(!this.director.autoFocus);
+      this.view.set(AUTO_KEY, this.director.autoFocus);
+      this.announceCamera();
+    });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      for (const name of Object.values(CAMERA_EVENTS)) events.off(name);
+    });
+    // The controls show the right state from the start, not only after the first move.
+    this.announceCamera();
+
+    this.input.on('wheel', (p: Phaser.Input.Pointer) => {
+      const dy = p.deltaY;
+      const now = this.time.now;
+      if (dy === 0 || now - this.lastWheel < WHEEL_GAP_MS) return;
+      this.lastWheel = now;
+      this.aimCamera(dy > 0 ? this.director.zoomOut() : this.director.zoomIn());
+    });
+    this.input.on('pointerup', () => {
+      this.dragging = false;
+    });
+    this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
+      if (!p.isDown) return;
+      if (!this.dragging && p.getDistance() < DRAG_START) return;
+      if (!this.dragging) {
+        this.dragging = true;
+        cam.stopFollow();
+        this.director.pan();
+        this.announceCamera();
+      }
+      cam.scrollX -= (p.x - p.prevPosition.x) / cam.zoom;
+      cam.scrollY -= (p.y - p.prevPosition.y) / cam.zoom;
+    });
+    // Phaser listens on the window; typing in the hero pane or a form must not zoom.
+    this.input.keyboard?.on('keydown', (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      if (e.key === '+' || e.key === '=') this.aimCamera(this.director.zoomIn());
+      else if (e.key === '-' || e.key === '_') this.aimCamera(this.director.zoomOut());
+      else if (e.key === '0') this.aimCamera(this.director.overview());
+    });
+  }
+
+  /** Moves the main camera to the director's aim: zoom, follow the hero, or ease back to the map. */
+  private aimCamera(aim: { zoom: number; follow: boolean }): void {
+    const cam = this.cameras.main;
+    cam.zoomTo(aim.zoom, CAMERA_MS, 'Sine.easeInOut', true);
+    const hero = this.firstHero();
+    if (aim.follow && hero) {
+      cam.startFollow(hero.target(), true, 0.15, 0.15);
+    } else {
+      cam.stopFollow();
+      if (aim.zoom === OVERVIEW_ZOOM)
+        cam.pan(WIDTH / 2, HEIGHT / 2, CAMERA_MS, 'Sine.easeInOut', true);
+    }
+    this.announceCamera();
+  }
+
+  private announceCamera(): void {
+    this.game.events.emit(CAMERA_EVENTS.changed, this.cameraState());
   }
 
   private drawIsland(
@@ -155,6 +293,7 @@ export class WorldScene extends Phaser.Scene {
       if (!token) {
         token = new HeroToken({
           scene: this,
+          layer: this.world,
           hero,
           iconKinds: this.manifest.activityIcons.kinds,
           character: this.characterKey(hero.classId),
@@ -174,6 +313,7 @@ export class WorldScene extends Phaser.Scene {
         this.heroes.delete(id);
       }
     }
+    if (this.director.observe(snapshot)) this.aimCamera(this.director.current);
   }
 
   private characterKey(classId: string): string {
@@ -224,22 +364,27 @@ export class HeroToken {
   private state: HeroView['state']['kind'] = 'traveling';
 
   private readonly scene: Phaser.Scene;
+  private readonly layer: Phaser.GameObjects.Container;
   private readonly character: string;
 
   constructor({
     scene,
+    layer,
     hero,
     iconKinds,
     character,
     layout,
   }: {
     scene: Phaser.Scene;
+    /** The map layer the token lives in, so the camera zooms it. */
+    layer: Phaser.GameObjects.Container;
     hero: HeroView;
     iconKinds: readonly string[];
     character: string;
     layout: WorldLayout;
   }) {
     this.scene = scene;
+    this.layer = layer;
     this.iconKinds = iconKinds;
     this.character = character;
     const start =
@@ -272,10 +417,15 @@ export class HeroToken {
       this.bubble,
       this.speech,
     ]);
-    this.container.setDepth(5);
+    layer.add(this.container);
   }
 
-  /** The middle of the sprite, in canvas pixels. */
+  /** What the camera follows. */
+  target(): Phaser.GameObjects.Container {
+    return this.container;
+  }
+
+  /** The middle of the sprite, on the map. */
   position(): { x: number; y: number } {
     return { x: this.container.x, y: this.container.y - this.sprite.height / 2 };
   }
@@ -491,9 +641,14 @@ export class HeroToken {
       });
       return;
     }
-    const spark = this.scene.add
-      .rectangle(this.container.x + 6, this.container.y - 14, 2, 2, 0xf2c230)
-      .setDepth(6);
+    const spark = this.scene.add.rectangle(
+      this.container.x + 6,
+      this.container.y - 14,
+      2,
+      2,
+      0xf2c230,
+    );
+    this.layer.add(spark);
     this.scene.tweens.add({
       targets: spark,
       y: spark.y - 8,

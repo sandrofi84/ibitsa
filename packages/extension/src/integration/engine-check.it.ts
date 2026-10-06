@@ -1,13 +1,23 @@
 import * as assert from 'node:assert/strict';
 import * as vscode from 'vscode';
+import type { GameDiagnostics } from '../game-panel.types';
 import { openGameAndWait, waitForDiagnostics } from './helpers';
+
+/** The canvas fills the panel at its whole-number zoom, holding at least the 480×270 world (#59). */
+function assertFills(d: GameDiagnostics): void {
+  assert.ok(d.canvas, 'the canvas exists');
+  assert.ok(
+    d.canvas.width >= 480 * d.zoom && d.canvas.height >= 270 * d.zoom,
+    `canvas ${d.canvas.width}×${d.canvas.height} at zoom ${d.zoom}`,
+  );
+}
 
 suite('engine check (#13)', () => {
   test('the game panel renders with WebGL, integer zoom and no CSP violations', async () => {
     const d = await openGameAndWait((d) => d.ready);
     assert.equal(d.renderer, 'webgl');
     assert.ok(Number.isInteger(d.zoom) && d.zoom >= 1, `zoom ${d.zoom}`);
-    assert.deepEqual(d.canvas, { width: 480 * d.zoom, height: 270 * d.zoom });
+    assertFills(d);
     // give late resource loads a moment to trip the CSP
     await new Promise((r) => setTimeout(r, 1500));
     assert.deepEqual(d.cspViolations, []);
@@ -28,7 +38,7 @@ suite('engine check (#13)', () => {
       await vscode.commands.executeCommand(command);
     }
     const big = await waitForDiagnostics((d) => d.ready && d.zoom >= 2);
-    assert.deepEqual(big.canvas, { width: 480 * big.zoom, height: 270 * big.zoom });
+    assertFills(big);
     assert.deepEqual(big.cspViolations, []);
   });
 });
