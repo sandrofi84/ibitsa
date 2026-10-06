@@ -328,7 +328,8 @@ function hp(reading: Reading<{ used: number; max: number }>): string {
   return reading.kind === 'estimated' ? `~${left}%` : `${left}%`;
 }
 
-function gold(reading: Reading<number>): string {
+/** Gold as dollars, `~` when estimated. */
+export function gold(reading: Reading<number>): string {
   if (reading.kind === 'unknown') return 'unknown';
   const dollars = `$${(reading.value / 1_000_000).toFixed(2)}`;
   return reading.kind === 'estimated' ? `~${dollars}` : dollars;

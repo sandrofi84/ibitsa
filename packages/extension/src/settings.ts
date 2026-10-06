@@ -18,3 +18,16 @@ export function readDisabledCouncillors(config: ConfigReader): string[] {
   const ids = config.get<unknown>('council.disabled');
   return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : [];
 }
+
+const ELDER_MODELS = ['haiku', 'sonnet', 'opus', 'fable'];
+
+/** `ibitsa.elder.*`: the elder's model and cap (spec §4.1, #101); Haiku and $0.25 unless set. */
+export function readElderSettings(config: ConfigReader): { model: string; budgetMicroUsd: number } {
+  const model = config.get<unknown>('elder.model');
+  const budgetUsd = config.get<unknown>('elder.budgetUsd');
+  return {
+    model: typeof model === 'string' && ELDER_MODELS.includes(model) ? model : 'haiku',
+    budgetMicroUsd:
+      typeof budgetUsd === 'number' && budgetUsd > 0 ? Math.round(budgetUsd * 1_000_000) : 250_000,
+  };
+}

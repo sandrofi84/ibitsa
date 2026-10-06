@@ -29,6 +29,12 @@ export const CommandSchema = v.variant('type', [
     before: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
     limit: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(500))),
   }),
+  /** Ask the elder to research a task (spec §4.1): starts a campaign in planning. */
+  v.strictObject({
+    type: v.literal('consultElder'),
+    commandId: id,
+    task: v.pipe(v.string(), v.trim(), v.nonEmpty()),
+  }),
   v.strictObject({
     type: v.literal('sendMessage'),
     commandId: id,

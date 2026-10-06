@@ -6,6 +6,7 @@
       "t": 0,
       "snapshot": {
         "campaign": null,
+        "elder": null,
         "sitting": {
           "id": "s1",
           "task": "Add email sign-in\nUsers should be able to sign in with email and password.",
@@ -55,6 +56,7 @@
       "t": 6500,
       "snapshot": {
         "campaign": null,
+        "elder": null,
         "sitting": {
           "id": "s1",
           "task": "Add email sign-in\nUsers should be able to sign in with email and password.",
@@ -150,6 +152,7 @@
       "t": 9000,
       "snapshot": {
         "campaign": null,
+        "elder": null,
         "sitting": {
           "id": "s1",
           "task": "Add email sign-in\nUsers should be able to sign in with email and password.",
@@ -320,6 +323,7 @@
       "t": 20000,
       "snapshot": {
         "campaign": null,
+        "elder": null,
         "sitting": {
           "id": "s1",
           "task": "Add email sign-in\nUsers should be able to sign in with email and password.",
@@ -450,6 +454,7 @@
       "t": 26000,
       "snapshot": {
         "campaign": null,
+        "elder": null,
         "sitting": {
           "id": "s1",
           "task": "Add email sign-in\nUsers should be able to sign in with email and password.",
@@ -581,6 +586,7 @@
       "t": 40000,
       "snapshot": {
         "campaign": null,
+        "elder": null,
         "sitting": {
           "id": "s1",
           "task": "Add email sign-in\nUsers should be able to sign in with email and password.",
@@ -745,6 +751,7 @@
   ],
   "final": {
     "campaign": null,
+    "elder": null,
     "sitting": {
       "id": "s1",
       "task": "Add email sign-in\nUsers should be able to sign in with email and password.",

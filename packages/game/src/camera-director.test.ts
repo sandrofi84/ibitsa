@@ -13,6 +13,7 @@ function snapshot({
 } = {}): Snapshot {
   return {
     campaign: status ? { id: 'c1', title: 'Q', status, gold: { kind: 'unknown' } } : null,
+    elder: null,
     sitting: null,
     islands: [],
     heroes: state

@@ -951,3 +951,66 @@ body.in-hut:has(.council-dialogue:not([hidden])) .needs-you {
   outline: 2px solid #1a1420;
   outline-offset: 1px;
 }
+
+/* The elder's recommendation (#101): docked where the hero pane goes, while the campaign plans. */
+.elder-panel {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  width: min(300px, calc(100vw - 32px));
+  max-height: calc(100vh - 24px - var(--command-bar-height, 0px));
+  overflow: auto;
+  box-sizing: border-box;
+  background: rgba(239, 224, 184, 0.96);
+  border: 2px solid #8a6a3a;
+  border-radius: 4px;
+  padding: 10px;
+  color: #1a1420;
+  font:
+    13px / 1.4 system-ui,
+    sans-serif;
+}
+
+.elder-panel h2 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.elder-panel h3 {
+  margin: 8px 0 2px;
+  font-size: 13px;
+}
+
+.elder-panel ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.elder-panel code {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.elder-panel .progress,
+.elder-panel .gold {
+  color: #4a3a2a;
+}
+
+.elder-panel .verdict {
+  font-weight: 600;
+}
+
+.elder-panel .error {
+  color: #8a1a1a;
+}
+
+.elder-panel .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.elder-panel button.recommended {
+  font-weight: 700;
+}

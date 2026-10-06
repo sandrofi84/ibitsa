@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readDisabledCouncillors, readUserSettings } from './settings';
+import { readDisabledCouncillors, readElderSettings, readUserSettings } from './settings';
 
 const config = (values: Record<string, unknown>) => ({
   get: <T>(key: string) => values[key] as T | undefined,
@@ -32,5 +32,27 @@ describe('readDisabledCouncillors (#98)', () => {
     ).toEqual(['designer', 'tester']);
     expect(readDisabledCouncillors(config({ 'council.disabled': 'designer' }))).toEqual([]);
     expect(readDisabledCouncillors(config({}))).toEqual([]);
+  });
+});
+
+describe('readElderSettings (#101)', () => {
+  it('reads the model and the cap in micro-dollars', () => {
+    expect(readElderSettings(config({ 'elder.model': 'sonnet', 'elder.budgetUsd': 0.5 }))).toEqual({
+      model: 'sonnet',
+      budgetMicroUsd: 500_000,
+    });
+  });
+
+  it('falls back to Haiku and $0.25 for anything else', () => {
+    for (const values of [
+      {},
+      { 'elder.model': 'gpt', 'elder.budgetUsd': 0 },
+      { 'elder.budgetUsd': '1' },
+    ]) {
+      expect(readElderSettings(config(values))).toEqual({
+        model: 'haiku',
+        budgetMicroUsd: 250_000,
+      });
+    }
   });
 });

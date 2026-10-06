@@ -1,7 +1,7 @@
 import type { Command, MicroUsd, Reading } from '@ibitsa/protocol';
+import { Elder } from './elder';
 import { Hero } from './hero';
 import { newId } from './state';
-import type { HeroRecord } from './state.types';
 import type { StepContext } from './step.types';
 
 const TITLE_MAX = 60;
@@ -14,11 +14,14 @@ export class Quest {
     this.ctx = ctx;
   }
 
-  /** Totals are computed in core, never by front ends: one unknown makes the total unknown. */
-  static totalGold(heroes: HeroRecord[]): Reading<MicroUsd> {
+  /**
+   * Totals are computed in core, never by front ends: one unknown makes the total unknown. The campaign's
+   * total is its heroes' gold plus the elder's research once its cost is known (#101).
+   */
+  static totalGold(spenders: readonly { gold: Reading<MicroUsd> }[]): Reading<MicroUsd> {
     let total = 0;
     const bases: string[] = [];
-    for (const { gold } of heroes) {
+    for (const { gold } of spenders) {
       if (gold.kind === 'unknown') return { kind: 'unknown' };
       total += gold.value;
       if (gold.kind === 'estimated') bases.push(gold.basis);
@@ -28,16 +31,32 @@ export class Quest {
       : { kind: 'exact', value: total };
   }
 
+  /** A quest's title: the task's first line, shortened. */
+  static title(task: string): string {
+    const firstLine = task.split('\n')[0]?.trim() ?? '';
+    return firstLine.length > TITLE_MAX ? `${firstLine.slice(0, TITLE_MAX - 1)}…` : firstLine;
+  }
+
+  /**
+   * A quick quest: one island, one hero. After the elder's brief it continues the planning campaign and
+   * the hero is told what the elder found (spec §4.1); without the elder it starts a campaign of its own.
+   */
   start(command: Extract<Command, { type: 'startQuest' }>): void {
     const state = this.ctx.state;
-    if (state.campaign?.status === 'active') {
-      this.ctx.outbox.reject(command.commandId, 'Finish or abandon the current quest first.');
+    const problem =
+      state.campaign?.status === 'active'
+        ? 'Finish or abandon the current quest first.'
+        : state.campaign?.status === 'planning' && state.elder?.status === 'researching'
+          ? 'The elder is still researching.'
+          : undefined;
+    if (problem) {
+      this.ctx.outbox.reject(command.commandId, problem);
       return;
     }
-    const firstLine = command.description.split('\n')[0]?.trim() ?? '';
-    const title =
-      firstLine.length > TITLE_MAX ? `${firstLine.slice(0, TITLE_MAX - 1)}…` : firstLine;
-    const campaignId = newId(state, 'c');
+    const title = Quest.title(command.description);
+    const planning = state.campaign?.status === 'planning' ? state.campaign : null;
+    const brief = planning && state.elder?.status === 'briefed' ? state.elder.brief : null;
+    const campaignId = planning?.id ?? newId(state, 'c');
     const islandId = newId(state, 'i');
     const taskPointId = newId(state, 't');
     const heroId = newId(state, 'h');
@@ -51,7 +70,15 @@ export class Quest {
         baseRef: command.baseRef,
         worktreePath: null,
         worktreeRemoved: false,
-        taskPoints: [{ id: taskPointId, title, description: command.description, state: 'active' }],
+        taskPoints: [
+          {
+            id: taskPointId,
+            title,
+            description: command.description,
+            ...(brief ? { briefing: Elder.briefing(brief) } : {}),
+            state: 'active',
+          },
+        ],
       },
     ];
     state.heroes = [
@@ -93,7 +120,8 @@ export class Quest {
   }
 
   abandon(commandId: string): void {
-    if (this.ctx.state.campaign?.status !== 'active') {
+    const status = this.ctx.state.campaign?.status;
+    if (status !== 'active' && status !== 'planning') {
       this.ctx.outbox.reject(commandId, 'No active quest.');
       return;
     }
@@ -143,6 +171,7 @@ export class Quest {
   private end(status: 'finished' | 'abandoned'): void {
     const state = this.ctx.state;
     if (state.campaign) state.campaign.status = status;
+    new Elder(this.ctx).stop();
     for (const hero of state.heroes) {
       this.ctx.outbox.effect({ type: 'closeSession', heroId: hero.id });
       this.ctx.outbox.effect({ type: 'cancelTimer', timerId: Hero.silenceTimer(hero.id) });

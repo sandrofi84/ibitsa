@@ -19,6 +19,7 @@ test('preview an action, edit it, and send the edited text', async ({ page }) =>
   await page.goto('/?fixture=live');
   await page.getByRole('button', { name: 'New quest' }).click();
   await page.getByLabel('Task').fill('Tidy the README');
+  await page.getByRole('button', { name: 'Skip the elder' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   await expect.poll(() => heroState(page)).toBe('idle');
 
@@ -50,6 +51,7 @@ test('an action sent unedited goes as /name args; unknown ones show no preview',
   await page.goto('/?fixture=live');
   await page.getByRole('button', { name: 'New quest' }).click();
   await page.getByLabel('Task').fill('Tidy the README');
+  await page.getByRole('button', { name: 'Skip the elder' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   await expect.poll(() => heroState(page)).toBe('idle');
   const bar = page.getByRole('combobox', { name: 'Command bar' });

@@ -1,6 +1,7 @@
 // Carries out core effects (git, adapters, timers), writes the event log, rebuilds state on start
 // (spec §11.2, §12; ADR 0001). Node, no vscode imports.
 
+export { briefMarkdown, CampaignDocuments } from './campaign-documents';
 export { councilVersion } from './council';
 export type { CouncilVersionInput } from './council.types';
 export { GitGameMaster } from './git-game-master';
@@ -11,6 +12,7 @@ export type {
   Clock,
   CreateActionRequest,
   CreateActionResult,
+  ElderStart,
   FrontEnd,
   GameMaster,
   SessionResume,

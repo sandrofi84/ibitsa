@@ -7,7 +7,9 @@ import type {
   Command,
   CoreMessage,
   CouncillorInfo,
+  ElderEvent,
   RepoView,
+  ResearchBrief,
   Snapshot,
 } from '@ibitsa/protocol';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -17,6 +19,7 @@ import type {
   Clock,
   CreateActionRequest,
   CreateActionResult,
+  ElderStart,
   GameMaster,
   SessionResume,
   SessionStart,
@@ -1118,5 +1121,170 @@ describe('the councillors (#98)', () => {
     expect(await failing.runtime.currentCouncillors()).toEqual([]);
     const { runtime } = setup();
     expect(await runtime.currentCouncillors()).toEqual([]);
+  });
+});
+
+describe('the elder (#101)', () => {
+  const BRIEF: ResearchBrief = {
+    task: 'Fix the login redirect',
+    files: [{ path: 'src/auth.ts', lines: '10-40', note: 'the redirect' }],
+    findings: ['Tests use Vitest.'],
+    slices: [],
+    councillors: [],
+    effort: { level: 'light', reason: 'Small' },
+    councillorEfforts: [],
+    quickQuest: { recommended: true, reason: 'One function' },
+  };
+  const tester: CouncillorInfo = {
+    id: 'tester',
+    skill: 'ibitsa:tester',
+    title: 'Tester',
+    description: 'Tests',
+    source: 'builtin',
+    portrait: null,
+    model: null,
+    tools: ['Read'],
+    modes: { planning: true, review: true },
+    hash: 'aaa',
+  };
+
+  function withElder(options: { repoDir?: string | null; elder?: boolean } = {}) {
+    const storageDir = mkdtempSync(join(tmpdir(), 'ibitsa-runtime-'));
+    const repoDir =
+      options.repoDir === undefined ? mkdtempSync(join(tmpdir(), 'ibitsa-repo-')) : options.repoDir;
+    dirs.push(storageDir, ...(repoDir ? [repoDir] : []));
+    const starts: { start: ElderStart; emit: (e: ElderEvent) => void; closed: boolean }[] = [];
+    const adapter = new FakeAdapter();
+    if (options.elder !== false) {
+      Object.assign(adapter, {
+        listCouncillors: async () => [tester],
+        startElder: (start: ElderStart, emit: (e: ElderEvent) => void) => {
+          const s = { start, emit, closed: false };
+          starts.push(s);
+          return { close: () => (s.closed = true) };
+        },
+      });
+    }
+    const gameMaster = new FakeGameMaster();
+    const clock = new ManualClock();
+    let n = 0;
+    const make = () =>
+      new Runtime({
+        storageDir,
+        adapter,
+        gameMaster,
+        clock,
+        newId: () => `camp-${++n}`,
+        ...(repoDir ? { repoDir } : {}),
+      });
+    const runtime = make();
+    runtime.start();
+    const received: CoreMessage[] = [];
+    const connection = runtime.connect({ post: (m) => received.push(m) });
+    const elder = () => {
+      const snapshots = received.flatMap((m) => (m.type === 'snapshot' ? [m.snapshot] : []));
+      return snapshots.at(-1)?.elder ?? null;
+    };
+    const settle = async () => {
+      await flush();
+      clock.advance(SNAPSHOT_INTERVAL_MS);
+    };
+    return {
+      storageDir,
+      repoDir,
+      adapter,
+      runtime,
+      connection,
+      received,
+      starts,
+      elder,
+      make,
+      settle,
+    };
+  }
+  const consult = {
+    type: 'consultElder',
+    commandId: 'e1',
+    task: 'Fix the login redirect',
+  } as const;
+
+  it('starts a planning campaign and an elder in the repository with the roster and the default cap', async () => {
+    const env = withElder();
+    env.connection.receive(consult);
+    await flush();
+    expect(logOf(env.storageDir).records.map((r) => r.kind)).toEqual(['gm', 'command']);
+    expect(env.starts.map((s) => s.start)).toEqual([
+      {
+        cwd: env.repoDir,
+        task: 'Fix the login redirect',
+        councillors: [tester],
+        model: 'haiku',
+        maxBudgetMicroUsd: 250_000,
+      },
+    ]);
+  });
+
+  it('logs its events, writes the brief to the campaign folder and closes the session', async () => {
+    const env = withElder();
+    env.connection.receive(consult);
+    await flush();
+    const session = env.starts[0];
+    session?.emit({ type: 'activity', text: 'Reading src/auth.ts' });
+    await env.settle();
+    expect(env.elder()).toMatchObject({ status: 'researching', progress: 'Reading src/auth.ts' });
+    session?.emit({ type: 'briefSubmitted', brief: BRIEF });
+    await env.settle();
+    expect(env.elder()).toMatchObject({ status: 'briefed', brief: BRIEF });
+    expect(session?.closed).toBe(true);
+    const dir = join(env.repoDir ?? '', '.ibitsa', 'campaigns', 'camp-1');
+    expect(JSON.parse(readFileSync(join(dir, 'brief.json'), 'utf8'))).toEqual(BRIEF);
+    expect(readFileSync(join(dir, 'brief.md'), 'utf8')).toContain(
+      '`src/auth.ts:10-40`: the redirect',
+    );
+    expect(logOf(env.storageDir).records.filter((r) => r.kind === 'elder')).toHaveLength(2);
+  });
+
+  it('continues the planning campaign with a quick quest, in the same log', async () => {
+    const env = withElder();
+    env.connection.receive(consult);
+    await flush();
+    env.starts[0]?.emit({ type: 'briefSubmitted', brief: BRIEF });
+    env.connection.receive(startQuest);
+    await flush();
+    expect(logOf(env.storageDir).records.filter((r) => r.kind === 'command')).toHaveLength(2);
+    expect(env.adapter.sessions[0]?.start.prompt).toContain('- src/auth.ts:10-40: the redirect');
+  });
+
+  it('keeps a planning campaign across a reload, marking the cut-short research as failed', async () => {
+    const env = withElder();
+    env.connection.receive(consult);
+    await flush();
+    env.runtime.dispose();
+    const again = env.make();
+    again.start();
+    const received: CoreMessage[] = [];
+    again.connect({ post: (m) => received.push(m) }).receive({ type: 'hello', protocolVersion: 1 });
+    const snapshot = received.flatMap((m) => (m.type === 'snapshot' ? [m.snapshot] : [])).at(-1);
+    expect(snapshot?.campaign?.status).toBe('planning');
+    expect(snapshot?.elder).toMatchObject({ status: 'failed' });
+  });
+
+  it('fails the research without a repository or an agent that can research', async () => {
+    for (const env of [withElder({ repoDir: null }), withElder({ elder: false })]) {
+      env.connection.receive(consult);
+      await env.settle();
+      expect(env.elder()).toMatchObject({
+        status: 'failed',
+        error: 'The elder needs a workspace folder and an agent that can research.',
+      });
+    }
+  });
+
+  it("doesn't start a session for research abandoned while the roster was read", async () => {
+    const env = withElder();
+    env.connection.receive(consult);
+    env.connection.receive({ type: 'abandonQuest', commandId: 'a1' });
+    await flush();
+    expect(env.starts).toEqual([]);
   });
 });

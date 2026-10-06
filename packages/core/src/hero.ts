@@ -218,7 +218,7 @@ export class Hero {
       heroId: this.id,
       cwd: path,
       classId: this.record.classId,
-      prompt: this.task()?.description ?? '',
+      prompt: this.prompt(),
       ...this.remainder(),
     });
     this.watchSilence();
@@ -581,7 +581,7 @@ export class Hero {
         heroId: r.id,
         cwd: island.worktreePath,
         classId: r.classId,
-        prompt: this.task()?.description ?? '',
+        prompt: this.prompt(),
         ...this.remainder(),
         ...this.rules(),
       });
@@ -607,5 +607,12 @@ export class Hero {
 
   private task() {
     return this.island()?.taskPoints.find((tp) => tp.id === this.record.taskPointId);
+  }
+
+  /** What the hero starts with: the task, then the elder's briefing when there was one. */
+  private prompt(): string {
+    const task = this.task();
+    if (!task) return '';
+    return task.briefing ? `${task.description}\n\n${task.briefing}` : task.description;
   }
 }

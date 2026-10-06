@@ -1,4 +1,5 @@
 import type { Command } from '@ibitsa/protocol';
+import { Elder } from './elder';
 import { Hero } from './hero';
 import type { CoreInput, GameMasterEvent } from './inputs.types';
 import { NeedsYou } from './needs-you';
@@ -24,6 +25,9 @@ export function step(state: CoreState, input: CoreInput): StepResult {
       break;
     case 'agent':
       hero(ctx, input.heroId)?.handle(input.event);
+      break;
+    case 'elder':
+      new Elder(ctx).handle(input);
       break;
     case 'council':
       new Sitting(ctx).handle(input);
@@ -60,6 +64,9 @@ function command(ctx: StepContext, command: Command): void {
     case 'requestPreview':
     case 'createAction':
       return; // handled by the runtime (welcome + snapshot; journal pages; project rules; actions), never logged
+    case 'consultElder':
+      new Elder(ctx).consult(command);
+      return;
     case 'startQuest':
       quest.start(command);
       return;
@@ -165,6 +172,7 @@ function gameMaster(ctx: StepContext, event: GameMasterEvent): void {
       ctx.outbox.reject(event.commandId, event.reason);
       return;
     case 'runtimeRestarted':
+      if (ctx.state.campaign?.status === 'planning') new Elder(ctx).restarted();
       if (ctx.state.campaign?.status !== 'active') return;
       ctx.needsYou.dropRequests();
       for (const h of heroes(ctx)) h.restarted();

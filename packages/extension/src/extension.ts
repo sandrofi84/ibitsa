@@ -15,7 +15,7 @@ import { missingCredentialsAdapter } from './placeholders';
 import { runAction } from './run-action';
 import { RuntimeHost } from './runtime-host';
 import type { DependencyFactory, Notifier } from './runtime-host.types';
-import { readDisabledCouncillors, readUserSettings } from './settings';
+import { readDisabledCouncillors, readElderSettings, readUserSettings } from './settings';
 
 export function activate(context: vscode.ExtensionContext): IbitsaApi {
   const testing = process.env.IBITSA_TESTING === '1';
@@ -59,6 +59,7 @@ export function activate(context: vscode.ExtensionContext): IbitsaApi {
           environment: async () =>
             (await loginShellEnv({ shell: process.env.SHELL })) ?? process.env,
           settings: () => readUserSettings(vscode.workspace.getConfiguration('ibitsa')),
+          elder: () => readElderSettings(vscode.workspace.getConfiguration('ibitsa')),
           disabledCouncillors: () =>
             readDisabledCouncillors(vscode.workspace.getConfiguration('ibitsa')),
           notify: (message) => notify(message),

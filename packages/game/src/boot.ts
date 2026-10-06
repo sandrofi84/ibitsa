@@ -7,6 +7,8 @@ import { GameClient } from './client';
 import { mountCommandBar } from './command-bar';
 import { CommandHistory } from './command-history';
 import { mountCouncilDialogue } from './council-dialogue-box';
+
+import { mountElderPanel } from './elder-panel';
 import { mountHeroPane } from './hero-pane';
 import { reportDiagnostics } from './host';
 import type { Diagnostics, Host } from './host.types';
@@ -101,6 +103,7 @@ export function startGame(root: HTMLElement, host: Host): Started {
   });
   mountNeedsYouPanel({ client, openCouncil: () => councilDialogue.focus() });
   const newQuest = mountNewQuestForm({ client, host });
+  mountElderPanel({ client, options: { quickQuest: (task) => newQuest.quickQuest(task) } });
   const newActionForm = mountNewActionForm({ client });
   const newAction = () => newActionForm.open();
   const view = new ViewState(host.viewStorage);

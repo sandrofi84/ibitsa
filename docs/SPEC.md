@@ -95,8 +95,10 @@ Every character is backed by a real agent session. The game layer makes multi-ag
 ## 4. The council
 
 ### 4.1 Elder and research pass
-- A new quest's description goes to the elder first (M3 puts the elder in front of the New Quest form, §14.1).
-- The elder runs a **separate, short research session** on a cheap/fast model (configurable; default Haiku), read-only tools, capped at **$0.25** (configurable). It ends by calling a custom `submit_brief` tool; Ibitsa validates the brief against a schema and renders `brief.md` and `brief.json`.
+- A new quest's description goes to the elder first (#101). The New Quest form opens on the task alone: **Ask the elder**, or **Skip the elder** for a quick quest straight away (the hero's fields appear). Asking the elder starts the campaign in a **planning** phase: it is logged and survives a reload like a quest, but has no hero yet. Research cut short by a reload is marked failed and can be asked again; **Abandon** ends the planning campaign.
+- The elder runs a **separate, short research session** on a cheap/fast model (`ibitsa.elder.model`, default Haiku), with only `Read`, `Grep` and `Glob` (every other tool is denied), at most 40 turns, capped at **$0.25** (`ibitsa.elder.budgetUsd`). It is told the task and the councillors it may recommend. It ends by calling a custom `submit_brief` tool; the adapter checks the brief against the schema and that it names only councillors who exist, and hands any problems back to the elder to fix. Ending any other way (out of gold, out of turns, no brief) is an error shown in the elder panel, with **Ask again**, **Quick quest anyway** and **Abandon**.
+- The brief is written to `.ibitsa/campaigns/<id>/brief.json` and `brief.md` (`<id>` is the campaign's log id).
+- **Quick quest** from the brief continues the same campaign; the hero's first message is the task followed by the brief's files and findings, so it needn't explore (§10 rule 2).
 - The **research brief** has a fixed structure:
   - Task restatement
   - File map: relevant files and areas (paths + one line each)
@@ -382,7 +384,7 @@ Shown in the same hover menu, visually distinct:
 ## 7. Screens and visuals
 
 ### 7.1 Screens
-1. **Elder's recommendation:** task input, research progress, brief summary, quick-quest offer or convening (§4.2): round table or separate chambers, councillor checkboxes with reasons, effort.
+1. **Elder's recommendation:** the **elder panel**, docked where the hero pane goes while the campaign plans: research progress and gold, then the brief's summary (task, quick-quest verdict, files, findings, recommended councillors) with **Quick quest** and **Convene council** (the recommended one in bold), or the error and what to do. Convening (§4.2: round table or separate chambers, councillor checkboxes with reasons, effort) follows from it.
 2. **Council hut (interior):** side-on room (Alex Kidd shop style), councillors as **32×32** characters behind a long table (§9.2), active speaker highlighted, "!" for who wants to speak, RPG dialogue box with portrait, options, "Why?", free text. Step tracker: Goal › Research › Questions › Plan › Dispatch. Book of Decisions on the table. In separate chambers, councillors first **study** at the table (think animation, a small book, a progress mark above each) and look up when their report is in; then the dialogue starts. A round table skips the study stage.
 3. **Plan review:** plan, decisions, criteria; Approve / Change.
 4. **Party assembly:** per worktree: hero class, reviewing councillors (recommended pre-checked), estimated cost.
@@ -441,7 +443,7 @@ Any item can be **extended**, **replaced** or **disabled**. The UI shows where e
 | What | Where |
 |---|---|
 | Councillor and action skills | `~/.claude/skills/…` (user), `.claude/skills/…` (project) |
-| User settings | VS Code settings + `~/.ibitsa/settings.json` |
+| User settings | VS Code settings (`ibitsa.elder.*`, `ibitsa.council.*`, …) + `~/.ibitsa/settings.json` |
 | Project settings | `.ibitsa/settings.json` |
 | Campaign documents | `.ibitsa/campaigns/<id>/{brief.md, plan.md, plan.json, record.md}` |
 | Runtime state, session ids, event logs | VS Code workspace storage (not committed) |

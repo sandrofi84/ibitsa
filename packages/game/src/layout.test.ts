@@ -6,6 +6,7 @@ const withTasks = (n: number): Snapshot => ({
   campaign: null,
   heroes: [],
   needsYou: [],
+  elder: null,
   sitting: null,
   islands: [
     {

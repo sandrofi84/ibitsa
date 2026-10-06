@@ -6,10 +6,12 @@ import type {
   CouncilReport,
   DialogueLine,
   Effort,
+  ElderStatus,
   MicroUsd,
   PlanOutcome,
   PlanProposal,
   Reading,
+  ResearchBrief,
   SittingMode,
   SittingStatus,
   TaskPointState,
@@ -30,6 +32,8 @@ export interface CoreState {
   nextId: number;
   settings: QuestSettings;
   campaign: Campaign | null;
+  /** The elder's research for this campaign (spec §4.1). */
+  elder: ElderRecord | null;
   /** The council's current or last sitting (spec §4.3). */
   sitting: SittingRecord | null;
   islands: Island[];
@@ -40,7 +44,8 @@ export interface CoreState {
 export interface Campaign {
   id: string;
   title: string;
-  status: 'active' | 'finished' | 'abandoned';
+  /** `planning` while the elder (and later the council) works, before any hero exists. */
+  status: 'planning' | 'active' | 'finished' | 'abandoned';
   /** Auto mode (#63): permissions inside the hard limits are allowed without asking. */
   autoApprove: boolean;
 }
@@ -53,8 +58,14 @@ export interface Island {
   worktreePath: string | null;
   /** Set once "Remove worktree" succeeds; `worktreePath` is null both before creation and after. */
   worktreeRemoved: boolean;
-  /** `description` is the task text the hero is started with. */
-  taskPoints: { id: string; title: string; description: string; state: TaskPointState }[];
+  /** `description` is the task text the hero is started with; `briefing` follows it, from the elder's brief. */
+  taskPoints: {
+    id: string;
+    title: string;
+    description: string;
+    briefing?: string;
+    state: TaskPointState;
+  }[];
 }
 
 export interface RunningTool {
@@ -167,3 +178,17 @@ export type PendingItem =
       capEnforcement: 'native' | 'turnEnd';
     }
   | { kind: 'error'; id: string; heroId: string; message: string };
+
+/** Raw facts about the elder's research; the `Elder` class gives them behaviour (ADR 0002). */
+export interface ElderRecord {
+  id: string;
+  task: string;
+  status: ElderStatus;
+  progress: string | null;
+  brief: ResearchBrief | null;
+  gold: Reading<MicroUsd>;
+  error: string | null;
+  sessionId: string | null;
+  startedAt: number;
+  endedAt: number | null;
+}

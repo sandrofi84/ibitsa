@@ -6,8 +6,12 @@ import type { Host } from './host.types';
 import type { NewQuestForm } from './new-quest-form.types';
 
 /**
- * The New Quest form (spec §14.1) and the first-run API-key card (§11.6). Plain DOM in a native
+ * The New Quest form (spec §14.1, §4.1) and the first-run API-key card (§11.6). Plain DOM in a native
  * <dialog>, so it is keyboard-accessible. Credentials go over the host channel, never the protocol.
+ *
+ * It opens on the task alone: **Ask the elder** researches it first (#101); **Skip the elder** shows the
+ * hero's fields for a quick quest straight away. After the elder's brief it opens again with the hero's
+ * fields for the quick quest.
  */
 export function mountNewQuestForm({
   client,
@@ -29,10 +33,12 @@ export function mountNewQuestForm({
   let pendingStart: (() => void) | null = null;
   let renderOnboarding: ((error?: string) => void) | null = null;
 
+  let mode: 'ask' | 'quest' = 'ask';
   const active = () => snapshot?.campaign?.status === 'active';
+  const planning = () => snapshot?.campaign?.status === 'planning';
   client.onSnapshot((s) => {
     snapshot = s;
-    opener.hidden = active();
+    opener.hidden = active() || planning();
     if (active() && dialog.open) dialog.close();
     if (dialog.open && !renderOnboarding) refreshBranches();
   });
@@ -100,20 +106,46 @@ export function mountNewQuestForm({
     wrapper.append(el('span', { text: label }), control);
     return wrapper;
   };
-  const start = el('button', { text: 'Start quest' });
+  const start = el('button', { text: 'Ask the elder' });
   start.type = 'submit';
-  form.append(
-    el('h2', { text: 'New quest' }),
-    field('Task', description),
+  const skip = button({ label: 'Skip the elder', onClick: () => setMode('quest') });
+  const heroFields = el('div', { className: 'hero-fields' });
+  heroFields.append(
     field('Hero class', classSelect),
     field('Hero name', heroName),
     nameSuggestions,
     field('Start from branch', baseSelect),
     repoNote,
+  );
+  const askNote = el('p', {
+    className: 'note',
+    text: 'The elder reads the code and writes a short brief first, for a few cents. Then you choose a quick quest or the council.',
+  });
+  form.append(
+    el('h2', { text: 'New quest' }),
+    field('Task', description),
+    askNote,
+    heroFields,
     error,
     el('div', { className: 'actions' }),
   );
-  form.lastElementChild?.append(start, button({ label: 'Cancel', onClick: () => dialog.close() }));
+  form.lastElementChild?.append(
+    start,
+    skip,
+    button({ label: 'Cancel', onClick: () => dialog.close() }),
+  );
+
+  function setMode(next: 'ask' | 'quest'): void {
+    mode = next;
+    const quest = mode === 'quest';
+    heroFields.hidden = !quest;
+    askNote.hidden = quest;
+    skip.hidden = quest;
+    start.textContent = quest ? 'Start quest' : 'Ask the elder';
+    heroName.required = quest;
+    refreshBranches();
+    if (quest) classSelect.focus();
+  }
 
   form.onsubmit = (e) => {
     e.preventDefault();
@@ -122,14 +154,19 @@ export function mountNewQuestForm({
       error.textContent = 'Finish or abandon the current quest first.';
       return;
     }
-    const intent = {
-      type: 'startQuest' as const,
-      description: description.value.trim(),
-      heroName: heroName.value.trim(),
-      classId: classSelect.value,
-      baseRef: baseSelect.value,
-    };
-    if (!intent.description || !intent.heroName || !intent.baseRef) return;
+    const task = description.value.trim();
+    if (!task) return;
+    const intent =
+      mode === 'ask'
+        ? { type: 'consultElder' as const, task }
+        : {
+            type: 'startQuest' as const,
+            description: task,
+            heroName: heroName.value.trim(),
+            classId: classSelect.value,
+            baseRef: baseSelect.value,
+          };
+    if (intent.type === 'startQuest' && (!intent.heroName || !intent.baseRef)) return;
     // Ask the extension first: without credentials the onboarding card comes before the quest.
     pendingStart = () => {
       client.send(intent);
@@ -149,7 +186,8 @@ export function mountNewQuestForm({
     const current = baseSelect.value;
     baseSelect.replaceChildren(...(repo?.branches ?? []).map((b) => new Option(b, b)));
     baseSelect.value = repo?.branches.includes(current) ? current : (repo?.defaultBranch ?? '');
-    start.disabled = repo === null;
+    // Only the quest needs git: the elder just reads the folder.
+    start.disabled = mode === 'quest' && repo === null;
     if (repo === null) {
       repoNote.textContent =
         "This folder isn't a git repository: a quest needs one for the hero's worktree.";
@@ -214,19 +252,25 @@ export function mountNewQuestForm({
     key.focus();
   }
 
-  return { open: (prefill) => open(prefill) };
+  return { open, quickQuest: (task) => show({ mode: 'quest', task }) };
 
-  /** Opens the form, with the task already written when it comes from the command bar (#81). */
+  /** Opens it on the task alone; not while the elder's campaign plans (its panel offers the quest). */
   function open(prefill?: { description: string }): void {
+    if (planning()) return;
+    show({ mode: 'ask', ...(prefill ? { task: prefill.description } : {}) });
+  }
+
+  /** Opens the form, with the task already written when it comes from the command bar (#81) or the elder. */
+  function show({ mode: next, task }: { mode: 'ask' | 'quest'; task?: string }): void {
     if (active() || dialog.open) return;
     renderOnboarding = null;
     pendingStart = null;
     error.textContent = '';
     dialog.replaceChildren(form);
     fillSuggestions();
-    refreshBranches();
     dialog.showModal();
-    if (prefill) description.value = prefill.description;
-    description.focus();
+    if (task !== undefined) description.value = task;
+    setMode(next);
+    if (next === 'ask') description.focus();
   }
 }

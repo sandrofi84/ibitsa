@@ -40,8 +40,9 @@ test('start a quest, message the hero, stop, and finish', async ({ page }) => {
   await page.goto('/?fixture=live');
   await page.getByRole('button', { name: 'New quest' }).click();
   const form = page.getByRole('dialog', { name: 'New quest' });
-  await expect(form.getByText('2 uncommitted changes')).toBeVisible();
   await form.getByLabel('Task').fill('Fix the login redirect\nIt loops forever.');
+  await page.getByRole('button', { name: 'Skip the elder' }).click();
+  await expect(form.getByText('2 uncommitted changes')).toBeVisible();
   await form.getByLabel('Hero class').selectOption('rogue');
   await expect(form.getByLabel('Hero name')).toHaveValue('Rogue Vex');
   await form.getByLabel('Start from branch').selectOption('feature/x');
@@ -84,8 +85,12 @@ test('the form and the pane work from the keyboard alone', async ({ page }) => {
   await page.keyboard.press('Enter');
   await expect(page.getByLabel('Task')).toBeFocused();
   await page.keyboard.type('Tidy the README');
-  // Task → class → name → branch → Start.
-  for (let i = 0; i < 4; i++) await page.keyboard.press('Tab');
+  // Task → Ask the elder → Skip the elder, which moves on to the hero's class; then name → branch → Start.
+  for (let i = 0; i < 2; i++) await page.keyboard.press('Tab');
+  await expect(page.getByRole('button', { name: 'Skip the elder' })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.getByLabel('Hero class')).toBeFocused();
+  for (let i = 0; i < 3; i++) await page.keyboard.press('Tab');
   await expect(page.getByRole('button', { name: 'Start quest' })).toBeFocused();
   await page.keyboard.press('Enter');
 
@@ -116,6 +121,7 @@ test('without credentials the onboarding card comes first; a rejected key says w
   await page.getByRole('button', { name: 'New quest' }).click();
   const dialog = page.getByRole('dialog', { name: 'New quest' });
   await dialog.getByLabel('Task').fill('Fix the login redirect');
+  await page.getByRole('button', { name: 'Skip the elder' }).click();
   await dialog.getByRole('button', { name: 'Start quest' }).click();
 
   await expect(
@@ -147,6 +153,7 @@ test('the hero pane docks right, collapses to a tab, and opens when you click th
   await page.goto('/?fixture=live');
   await page.getByRole('button', { name: 'New quest' }).click();
   await page.getByLabel('Task').fill('Tidy the README');
+  await page.getByRole('button', { name: 'Skip the elder' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   await expect.poll(() => heroState(page)).toBe('idle');
 
@@ -184,6 +191,7 @@ test('nothing overlaps at a larger panel size', async ({ page }) => {
   await page.goto('/?fixture=live');
   await page.getByRole('button', { name: 'New quest' }).click();
   await page.getByLabel('Task').fill('Tidy the README');
+  await page.getByRole('button', { name: 'Skip the elder' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   await expect.poll(() => heroState(page)).toBe('idle');
   await page.screenshot({ path: 'test-results/ui-pane-1400.png' });
@@ -197,6 +205,7 @@ test('speech bubbles: a message excerpt that fades, then "Ready for review!" unt
   await page.goto('/?fixture=live');
   await page.getByRole('button', { name: 'New quest' }).click();
   await page.getByLabel('Task').fill('Tidy the README');
+  await page.getByRole('button', { name: 'Skip the elder' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   const speech = () => probe(page, (p) => p.hero.speech());
 
@@ -234,6 +243,7 @@ test('the journal lists what happened, newest last, and stays open across collap
   await page.goto('/?fixture=live');
   await page.getByRole('button', { name: 'New quest' }).click();
   await page.getByLabel('Task').fill('Tidy the README');
+  await page.getByRole('button', { name: 'Skip the elder' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   await expect.poll(() => heroState(page)).toBe('idle');
 
@@ -275,6 +285,7 @@ test('always allow: for this quest, or in this project with a way to take it bac
   await page.goto('/?fixture=live');
   await page.getByRole('button', { name: 'New quest' }).click();
   await page.getByLabel('Task').fill('Tidy the README');
+  await page.getByRole('button', { name: 'Skip the elder' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   await expect.poll(() => heroState(page)).toBe('idle');
   const pane = page.getByRole('region', { name: 'Hero' });
@@ -308,6 +319,7 @@ test('auto mode allows the hero without asking, says so, and asks again once off
   await page.goto('/?fixture=live');
   await page.getByRole('button', { name: 'New quest' }).click();
   await page.getByLabel('Task').fill('Tidy the README');
+  await page.getByRole('button', { name: 'Skip the elder' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   await expect.poll(() => heroState(page)).toBe('idle');
   const pane = page.getByRole('region', { name: 'Hero' });
@@ -338,6 +350,7 @@ test('without a sandbox, turning auto mode on asks once more (#63)', async ({ pa
   await page.goto('/?fixture=live&sandbox=none');
   await page.getByRole('button', { name: 'New quest' }).click();
   await page.getByLabel('Task').fill('Tidy the README');
+  await page.getByRole('button', { name: 'Skip the elder' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   await expect.poll(() => heroState(page)).toBe('idle');
   const pane = page.getByRole('region', { name: 'Hero' });
@@ -356,6 +369,7 @@ test('rest compacts the session: the hero rests, then waits for orders again (#8
   await page.goto('/?fixture=live');
   await page.getByRole('button', { name: 'New quest' }).click();
   await page.getByLabel('Task').fill('Tidy the README');
+  await page.getByRole('button', { name: 'Skip the elder' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   await expect.poll(() => heroState(page)).toBe('idle');
   const pane = page.getByRole('region', { name: 'Hero' });
@@ -364,4 +378,54 @@ test('rest compacts the session: the hero rests, then waits for orders again (#8
   await expect.poll(() => heroState(page)).toBe('idle');
   await pane.getByRole('button', { name: 'Journal' }).click();
   await expect(pane.getByRole('list', { name: 'Journal' })).toContainText('You let the hero rest.');
+});
+
+test('the elder researches first, then its brief starts a quick quest (#101)', async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto('/?fixture=live');
+  await page.getByRole('button', { name: 'New quest' }).click();
+  const form = page.getByRole('dialog', { name: 'New quest' });
+  await expect(form.getByLabel('Hero class')).toBeHidden();
+  await form.getByLabel('Task').fill('Fix the login redirect\nIt loops forever.');
+  await form.getByRole('button', { name: 'Ask the elder' }).click();
+  await expect(form).toBeHidden();
+
+  const elder = page.getByRole('region', { name: 'Elder' });
+  await expect(elder).toContainText('Researching your task…');
+  await expect(page.getByRole('button', { name: 'New quest' })).toBeHidden();
+  await expect(elder.getByRole('heading', { name: 'Files' })).toBeVisible();
+  await expect(elder).toContainText('A quick quest will do. One small, clear change.');
+  await expect(elder).toContainText('src/app.ts:1-40 where the change goes');
+  await expect(elder).toContainText('tester The change needs a test.');
+  await expect(elder).toContainText('Gold spent: $0.04');
+  await expect(elder.getByRole('button', { name: 'Convene council' })).toBeDisabled();
+  await page.screenshot({ path: 'test-results/elder-brief.png' });
+
+  await elder.getByRole('button', { name: 'Quick quest' }).click();
+  await expect(form.getByLabel('Task')).toHaveValue('Fix the login redirect\nIt loops forever.');
+  await expect(form.getByLabel('Hero class')).toBeFocused();
+  await form.getByRole('button', { name: 'Start quest' }).click();
+  await expect(elder).toBeHidden();
+  await expect.poll(() => heroState(page)).toBe('idle');
+  expect(await probe(page, (p) => p.snapshot()?.campaign?.status)).toBe('active');
+  expect(errors).toEqual([]);
+});
+
+test('a failed brief offers asking again, a quick quest anyway, or abandoning (#101)', async ({
+  page,
+}) => {
+  await page.goto('/?fixture=live');
+  await page.getByRole('button', { name: 'New quest' }).click();
+  await page.getByLabel('Task').fill('Make it fail');
+  await page.getByRole('button', { name: 'Ask the elder' }).click();
+  const elder = page.getByRole('region', { name: 'Elder' });
+  await expect(elder.getByRole('alert')).toHaveText(
+    'The elder ran out of gold before finishing the brief.',
+  );
+  await elder.getByRole('button', { name: 'Ask again' }).click();
+  await expect(elder).toContainText('Researching your task…');
+  await expect(elder.getByRole('alert')).toBeVisible();
+  await elder.getByRole('button', { name: 'Abandon' }).click();
+  await expect(elder).toBeHidden();
+  await expect(page.getByRole('button', { name: 'New quest' })).toBeVisible();
 });

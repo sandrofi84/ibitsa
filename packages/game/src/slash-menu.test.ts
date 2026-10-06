@@ -78,6 +78,7 @@ describe('slashMenu (#84)', () => {
     const c = new GameClient(host);
     const snapshot = {
       campaign: { id: 'c1', title: 'Q', status, gold: { kind: 'unknown' }, autoApprove: false },
+      elder: null,
       sitting: null,
       islands: [],
       heroes: [
