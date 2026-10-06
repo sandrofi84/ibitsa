@@ -1,3 +1,4 @@
+import type { Command } from '@ibitsa/protocol';
 import type { AgentAdapter, GameMaster, UserSettings } from '@ibitsa/runtime';
 import type { Credentials } from './credentials.types';
 
@@ -32,3 +33,10 @@ export interface RuntimeHostOptions {
   /** The number of items waiting, for the tab title. */
   onWaitingChanged: (count: number) => void;
 }
+
+/** A command without its id; the host numbers it (#87). */
+export type CommandIntent = Command extends infer C
+  ? C extends { commandId: string }
+    ? Omit<C, 'commandId'>
+    : never
+  : never;

@@ -5,4 +5,8 @@ export type HostEvent =
   | { channel: 'host'; type: 'apiKeyAccepted' }
   | { channel: 'host'; type: 'apiKeyRejected'; reason: string }
   /** "Ibitsa: New Quest" from the Command Palette. */
-  | { channel: 'host'; type: 'openNewQuest' };
+  | { channel: 'host'; type: 'openNewQuest' }
+  /** "Ibitsa: Message Hero…" from the Command Palette (#87). */
+  | { channel: 'host'; type: 'focusCommandBar' }
+  /** "Ibitsa: Run Action…": the chosen action, ready in the bar with its preview (#87). */
+  | { channel: 'host'; type: 'fillCommandBar'; text: string };

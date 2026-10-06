@@ -500,14 +500,17 @@ export class Runtime {
   }
 
   private postActions(frontEnd: FrontEnd): void {
+    void this.currentActions().then((actions) =>
+      frontEnd.post({ type: 'actions', seq: ++this.seq, actions }),
+    );
+  }
+
+  /** The `/` menu's actions for the running quest's worktree; none without one or on failure (#84, #87). */
+  currentActions(): Promise<ActionInfo[]> {
     const cwd = this.state.islands.find((i) => i.worktreePath)?.worktreePath;
-    const send = (actions: ActionInfo[]) =>
-      frontEnd.post({ type: 'actions', seq: ++this.seq, actions });
-    if (!cwd || !this.actions || this.state.campaign?.status !== 'active') {
-      send([]);
-      return;
-    }
-    this.actions.list(cwd).then(send, () => send([]));
+    if (!cwd || !this.actions || this.state.campaign?.status !== 'active')
+      return Promise.resolve([]);
+    return this.actions.list(cwd).catch(() => []);
   }
 
   /** A session's allow rules: the quest's from core plus the project's kept here (#62). */

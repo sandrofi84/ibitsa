@@ -14,4 +14,6 @@ export interface CommandBarOptions {
 export interface CommandBar {
   /** Puts the keyboard in the bar, e.g. from the Command Palette (#87). */
   focus(): void;
+  /** Writes `text` into the bar (its preview follows) and focuses it, e.g. "Run Action…" (#87). */
+  fill(text: string): void;
 }

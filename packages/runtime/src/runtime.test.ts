@@ -474,9 +474,10 @@ describe('the / menu (#84)', () => {
     return { connection, received, fire };
   }
 
-  it('lists none without a quest', () => {
+  it('lists none without a quest', async () => {
     const env = setup();
     env.connection.receive({ type: 'requestActions' });
+    await flush();
     expect(actionsOf(env.received)).toEqual([[]]);
   });
 
@@ -495,6 +496,11 @@ describe('the / menu (#84)', () => {
     for (const f of fire) f();
     await flush();
     expect(actionsOf(received).at(-1)).toEqual([action('v2')]);
+  });
+
+  it('gives the current actions to the host too (#87)', async () => {
+    const { runtime } = setup();
+    expect(await runtime.currentActions()).toEqual([]);
   });
 
   it('lists none when listing fails', async () => {
