@@ -147,4 +147,28 @@ describe('LiveDevHost', () => {
     await settle();
     expect(snapshot()?.projectRules).toEqual([]);
   });
+
+  it('rests: the session compacts and the hero goes back to waiting for orders (#82)', async () => {
+    const { host, snapshot, settle } = setup();
+    host.send({ type: 'hello', protocolVersion: 1 });
+    host.send({
+      type: 'startQuest',
+      commandId: 'c1',
+      description: 'Fix the login redirect',
+      heroName: 'Ranger Ilse',
+      classId: 'ranger',
+      baseRef: 'main',
+    });
+    await settle();
+    const heroId = snapshot()?.heroes[0]?.id ?? '';
+    host.send({ type: 'restHero', commandId: 'r', heroId });
+    await vi.advanceTimersByTimeAsync(250);
+    expect(snapshot()?.heroes[0]?.state.kind).toBe('resting');
+    await settle();
+    expect(snapshot()?.heroes[0]?.state.kind).toBe('idle');
+    expect(snapshot()?.heroes[0]?.hp).toEqual({
+      kind: 'exact',
+      value: { used: 6_000, max: 200_000 },
+    });
+  });
 });

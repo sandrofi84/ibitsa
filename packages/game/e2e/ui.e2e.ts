@@ -349,3 +349,19 @@ test('without a sandbox, turning auto mode on asks once more (#63)', async ({ pa
     pane.getByRole('status').filter({ hasText: 'There is no sandbox here' }),
   ).toBeVisible();
 });
+
+test('rest compacts the session: the hero rests, then waits for orders again (#82)', async ({
+  page,
+}) => {
+  await page.goto('/?fixture=live');
+  await page.getByRole('button', { name: 'New quest' }).click();
+  await page.getByLabel('Task').fill('Tidy the README');
+  await page.getByRole('button', { name: 'Start quest' }).click();
+  await expect.poll(() => heroState(page)).toBe('idle');
+  const pane = page.getByRole('region', { name: 'Hero' });
+  await pane.getByRole('button', { name: 'Rest' }).click();
+  await expect.poll(() => heroState(page), { intervals: [50] }).toBe('resting');
+  await expect.poll(() => heroState(page)).toBe('idle');
+  await pane.getByRole('button', { name: 'Journal' }).click();
+  await expect(pane.getByRole('list', { name: 'Journal' })).toContainText('You let the hero rest.');
+});

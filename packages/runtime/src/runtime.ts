@@ -306,6 +306,9 @@ export class Runtime {
       case 'interrupt':
         session?.interrupt();
         return;
+      case 'compactSession':
+        session?.compact();
+        return;
       case 'answerPermission':
         if (effect.always === 'project' && effect.rules && this.projectRules.add(effect.rules)) {
           this.scheduleSnapshot();

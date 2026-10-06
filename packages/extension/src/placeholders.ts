@@ -6,6 +6,7 @@ import type { AgentAdapter, AgentSession } from '@ibitsa/runtime';
 const noSession: AgentSession = {
   send: () => {},
   interrupt: () => {},
+  compact: () => {},
   respondToPermission: () => {},
   answerQuestion: () => {},
   completeSubmit: () => {},

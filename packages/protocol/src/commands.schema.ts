@@ -23,6 +23,8 @@ export const CommandSchema = v.variant('type', [
   }),
   /** Interrupt and clear the adapter's queue. */
   v.strictObject({ type: v.literal('stopHero'), commandId: id, heroId: id }),
+  /** Rest: compact the hero's session to free context (§6.3, #82). */
+  v.strictObject({ type: v.literal('restHero'), commandId: id, heroId: id }),
   v.strictObject({
     type: v.literal('answerPermission'),
     commandId: id,

@@ -162,4 +162,37 @@ describe.skipIf(process.env.IBITSA_SMOKE !== '1')('live Claude session (smoke)',
     expect(asks[0]?.type === 'permission' && asks[0].alwaysAllow?.length).toBeGreaterThan(0);
     expect(fetches.length).toBeGreaterThanOrEqual(2);
   }, 240_000);
+
+  it('rest: a real session compacts on /compact and reports it (#82)', async () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'ibitsa-smoke-'));
+    const events: AgentEvent[] = [];
+    let turns = 0;
+    const done = new Promise<void>((resolve) => {
+      const session = new ClaudeAdapter({ env: () => ({ ...process.env }) }).startSession(
+        {
+          heroId: 'h1',
+          sessionId: crypto.randomUUID(),
+          cwd,
+          classId: 'rogue',
+          prompt: 'Reply with the single word: ready.',
+        },
+        (event) => {
+          events.push(event);
+          if (event.type === 'turnEnded' || event.type === 'error') {
+            turns++;
+            // After the first turn, rest; after the compaction's turn, stop.
+            if (turns === 1 && event.type === 'turnEnded') session.compact();
+            else {
+              session.close();
+              resolve();
+            }
+          }
+        },
+      );
+    });
+    await done;
+    rmSync(cwd, { recursive: true, force: true });
+    console.log(JSON.stringify(events, null, 2));
+    expect(events.some((e) => e.type === 'compacted')).toBe(true);
+  }, 240_000);
 });

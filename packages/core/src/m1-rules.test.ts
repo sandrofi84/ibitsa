@@ -241,6 +241,41 @@ describe('auto mode (#63)', () => {
   });
 });
 
+describe('rest (#82)', () => {
+  it('compacts the live session', () => {
+    const h = quest();
+    h.drain();
+    h.command({ type: 'restHero', commandId: 'r', heroId: 'h4' });
+    expect(h.effects).toContainEqual({ type: 'compactSession', heroId: 'h4' });
+  });
+
+  it('refuses while the hero is already resting, has no session, or no quest runs', () => {
+    const resting = quest().agent({ type: 'resting' });
+    resting.command({ type: 'restHero', commandId: 'a', heroId: 'h4' });
+    expect(resting.cues).toContainEqual({
+      type: 'commandRejected',
+      commandId: 'a',
+      reason: 'The hero is already resting.',
+    });
+
+    const restarted = quest().gm({ type: 'runtimeRestarted' });
+    restarted.command({ type: 'restHero', commandId: 'b', heroId: 'h4' });
+    expect(restarted.cues).toContainEqual({
+      type: 'commandRejected',
+      commandId: 'b',
+      reason: 'The hero has no session to rest.',
+    });
+
+    const ended = quest().command({ type: 'abandonQuest', commandId: 'x' });
+    ended.command({ type: 'restHero', commandId: 'c', heroId: 'h4' });
+    expect(ended.cues).toContainEqual({
+      type: 'commandRejected',
+      commandId: 'c',
+      reason: 'There is no quest running.',
+    });
+  });
+});
+
 describe('stall detection', () => {
   it('stalls after the same test fails 4 times in a row, pausing the hero', () => {
     const h = quest();

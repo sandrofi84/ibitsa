@@ -198,6 +198,16 @@ export class LiveDevHost implements Host {
       case 'interrupt':
         this.agent(effect.heroId, [{ type: 'turnEnded', queuedTurns: 0 }]);
         return;
+      case 'compactSession':
+        // Rest (#82): the session compacts, freeing most of its context.
+        this.agent(effect.heroId, [
+          { type: 'turnStarted' },
+          { type: 'resting' },
+          { type: 'compacted', trigger: 'manual', preTokens: 40_000, postTokens: 6_000 },
+          { type: 'usage', contextUsed: 6_000, contextMax: 200_000 },
+          { type: 'turnEnded', queuedTurns: 0 },
+        ]);
+        return;
       case 'observeDiff':
         this.input({
           kind: 'gm',

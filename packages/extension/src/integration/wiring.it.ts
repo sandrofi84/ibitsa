@@ -19,6 +19,9 @@ class FakeSession implements AgentSession {
   interrupt() {
     this.calls.push(['interrupt']);
   }
+  compact() {
+    this.calls.push(['compact']);
+  }
   respondToPermission(answer: unknown) {
     this.calls.push(['respondToPermission', answer]);
   }
