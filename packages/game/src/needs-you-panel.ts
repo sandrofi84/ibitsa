@@ -2,12 +2,14 @@ import type { NeedsYouItem, Snapshot } from '@ibitsa/protocol';
 import type { GameClient } from './client';
 import type { CommandIntent } from './client.types';
 import { button, el } from './dom';
+import type { NeedsYouPanelOptions } from './needs-you-panel.types';
+import { councillorTitle, isSitting } from './sitting-hut';
 
 /**
  * The "Needs you" queue (spec §6.4) as plain DOM below the map: keyboard-accessible, readable text,
  * and every permission shown exactly as the core rendered it.
  */
-export function mountNeedsYouPanel(client: GameClient): void {
+export function mountNeedsYouPanel({ client, openCouncil }: NeedsYouPanelOptions): void {
   const panel = document.createElement('section');
   panel.className = 'needs-you';
   panel.setAttribute('aria-label', 'Needs you');
@@ -19,13 +21,15 @@ export function mountNeedsYouPanel(client: GameClient): void {
 
   let shown = '';
   client.onSnapshot((snapshot) => {
-    const key = JSON.stringify(snapshot.needsYou);
+    const council = councilItem({ snapshot, openCouncil });
+    const key = JSON.stringify([snapshot.needsYou, council?.dataset.batch]);
     if (key === shown) return;
     shown = key;
     panel.replaceChildren(
+      ...(council ? [council] : []),
       ...snapshot.needsYou.map((item) => renderItem({ item, snapshot, client })),
     );
-    panel.hidden = snapshot.needsYou.length === 0;
+    panel.hidden = snapshot.needsYou.length === 0 && !council;
   });
   panel.hidden = true;
 
@@ -37,6 +41,32 @@ export function mountNeedsYouPanel(client: GameClient): void {
     clearTimeout(timer);
     timer = setTimeout(() => toast.classList.remove('visible'), 4_000);
   });
+}
+
+/** The council's waiting questions (§6.4, #102): one item that opens the dialogue box. */
+function councilItem({
+  snapshot,
+  openCouncil,
+}: {
+  snapshot: Snapshot;
+  openCouncil: () => void;
+}): HTMLElement | null {
+  const sitting = snapshot.sitting;
+  const batch = isSitting(sitting) ? sitting.questions : null;
+  if (!batch) return null;
+  const box = el('article', { className: 'item council' });
+  box.dataset.batch = batch.batchId;
+  const askers = [...new Set(batch.items.map((q) => councillorTitle(q.councillorId)))];
+  const count = batch.items.length;
+  box.append(
+    el('p', {
+      text: `The council asks you ${count === 1 ? 'a question' : `${count} questions`} (${askers.join(', ')}).`,
+    }),
+  );
+  const actions = el('div', { className: 'actions' });
+  actions.append(button({ label: 'Answer', onClick: openCouncil }));
+  box.append(actions);
+  return box;
 }
 
 function intentButton({

@@ -23,6 +23,7 @@ export type {
   CouncilEvent,
   CouncilQuestion,
   CouncilReport,
+  DialogueLine,
   PlanOutcome,
   PlanProposal,
   SittingStatus,

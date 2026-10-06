@@ -3,6 +3,7 @@ import type {
   CouncilAnswer,
   CouncilEvent,
   CouncilQuestion,
+  DialogueLine,
   SittingStatus,
   SittingView,
 } from '@ibitsa/protocol';
@@ -48,6 +49,7 @@ export class Sitting {
       plans: record.plans,
       revision: record.revision,
       reconsultations: record.reconsultations,
+      dialogue: record.dialogue,
       gold: record.gold,
       error: record.error,
     };
@@ -81,6 +83,7 @@ export class Sitting {
       plans: [],
       revision: 0,
       reconsultations: [],
+      dialogue: [],
       gold: { kind: 'unknown' },
       error: null,
       startedAt: this.ctx.t,
@@ -149,6 +152,35 @@ export class Sitting {
     });
   }
 
+  /** "Why?" on a waiting question (§4.4): asks its councillor to explain, through the lead session. */
+  why(command: Extract<Command, { type: 'askCouncilWhy' }>): void {
+    const record = this.current(command.commandId);
+    if (!record) return;
+    const batch = pendingBatch(record);
+    const item =
+      batch?.id === command.batchId
+        ? batch.items.find((q) => q.id === command.questionId)
+        : undefined;
+    if (!item) {
+      this.ctx.outbox.reject(command.commandId, 'That question is no longer open.');
+      return;
+    }
+    addLine({
+      record,
+      line: { speaker: YOU, text: command.text ?? 'Why?', questionId: item.id },
+    });
+    this.message({
+      record,
+      message: {
+        kind: 'why',
+        questionId: item.id,
+        councillorId: item.councillorId,
+        question: item.question,
+        ...(command.text !== undefined && { text: command.text }),
+      },
+    });
+  }
+
   approve(command: Extract<Command, { type: 'approvePlan' }>): void {
     const plan = this.waitingPlan(command);
     if (!plan) return;
@@ -206,6 +238,18 @@ export class Sitting {
         return;
       case 'planProposed':
         this.propose({ record, event });
+        return;
+      case 'said':
+        // Only those at the table speak; anything else is dropped (there's no tool call to refuse).
+        if (event.councillorId !== ELDER && !onRoster(record, event.councillorId)) return;
+        addLine({
+          record,
+          line: {
+            speaker: event.councillorId,
+            text: event.text,
+            ...(event.questionId !== undefined && { questionId: event.questionId }),
+          },
+        });
         return;
     }
   }
@@ -356,6 +400,21 @@ export class Sitting {
       ...(reason !== undefined && { reason }),
     });
   }
+}
+
+/** The elder chairs every sitting without being on the roster. */
+const ELDER = 'elder';
+/** The user's lines in the dialogue. */
+const YOU = 'you';
+
+function addLine({
+  record,
+  line,
+}: {
+  record: SittingRecord;
+  line: Omit<DialogueLine, 'id'>;
+}): void {
+  record.dialogue.push({ id: `d${record.dialogue.length + 1}`, ...line });
 }
 
 function onRoster(record: SittingRecord, councillorId: string): boolean {

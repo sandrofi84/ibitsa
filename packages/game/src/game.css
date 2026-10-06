@@ -786,3 +786,168 @@ dialog.new-action {
   width: auto;
   margin: 3px 0 0;
 }
+
+/* ---------- Council dialogue (#102) ---------- */
+
+/* The command bar and New quest have nothing to do in the hut; the dialogue box takes their place. */
+body.in-hut .command-bar,
+body.in-hut .new-quest-button {
+  display: none;
+}
+
+body.in-hut .needs-you {
+  bottom: 12px;
+}
+
+.council-dialogue {
+  position: fixed;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  width: min(680px, calc(100vw - 32px));
+  /* Low enough to leave the councillors behind the table in view. */
+  max-height: 42vh;
+  overflow: auto;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  background: rgba(239, 224, 184, 0.97);
+  border: 3px solid #5a3e1c;
+  border-radius: 4px;
+  box-shadow: 0 0 0 2px #1a1420;
+  font:
+    13px / 1.45 system-ui,
+    sans-serif;
+  color: #1a1420;
+}
+
+/* While the box is open, Needs you stays clear of it. */
+body.in-hut:has(.council-dialogue:not([hidden])) .needs-you {
+  display: none;
+}
+
+.council-dialogue header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.council-dialogue .portrait {
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+  border: 2px solid #5a3e1c;
+  background: #3a2a1a;
+}
+
+.council-dialogue .who,
+.council-dialogue .question {
+  margin: 0;
+}
+
+.council-dialogue .question {
+  margin: 4px 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.council-dialogue .discussion {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.45);
+  border-radius: 3px;
+}
+
+.council-dialogue .discussion li + li {
+  margin-top: 4px;
+}
+
+.council-dialogue .discussion .you {
+  color: #4a3a6a;
+}
+
+.council-dialogue .options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.council-dialogue .option {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0 8px;
+  text-align: left;
+  padding: 6px 8px;
+  background: #f7eccd;
+  border: 2px solid #b08a50;
+  border-radius: 3px;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.council-dialogue .option[aria-checked="true"] {
+  background: #fff6dc;
+  border-color: #1a1420;
+}
+
+.council-dialogue .option .key {
+  grid-row: span 3;
+  align-self: start;
+  min-width: 1.4em;
+  text-align: center;
+  border: 1px solid #8a6a3a;
+  border-radius: 2px;
+  font-size: 11px;
+}
+
+.council-dialogue .option .tradeoff,
+.council-dialogue .option .recommended {
+  grid-column: 2;
+  font-size: 12px;
+}
+
+.council-dialogue .option .recommended {
+  color: #2f6a2f;
+  font-weight: 600;
+}
+
+.council-dialogue textarea,
+.council-dialogue input[type="text"] {
+  box-sizing: border-box;
+  width: 100%;
+  font: inherit;
+  padding: 4px 6px;
+  border: 1px solid #8a6a3a;
+  border-radius: 3px;
+  background: #fffaf0;
+}
+
+.council-dialogue textarea {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.council-dialogue .footer {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.council-dialogue .why {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px;
+}
+
+.council-dialogue .nav {
+  display: flex;
+  gap: 6px;
+}
+
+.council-dialogue button:focus-visible {
+  outline: 2px solid #1a1420;
+  outline-offset: 1px;
+}

@@ -93,4 +93,6 @@ export type Effect =
 
 export type SittingMessage =
   | { kind: 'changeRequested'; version: number; text: string }
-  | { kind: 'councillorAdded'; councillorId: string; effort: Effort };
+  | { kind: 'councillorAdded'; councillorId: string; effort: Effort }
+  /** "Why?" (§4.4): the councillor who asked `question` explains; `text` is the user's follow-up. */
+  | { kind: 'why'; questionId: string; councillorId: string; question: string; text?: string };

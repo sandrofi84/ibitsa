@@ -39,6 +39,7 @@
           "plans": [],
           "revision": 0,
           "reconsultations": [],
+          "dialogue": [],
           "gold": {
             "kind": "unknown"
           },
@@ -133,6 +134,7 @@
           "plans": [],
           "revision": 0,
           "reconsultations": [],
+          "dialogue": [],
           "gold": {
             "kind": "unknown"
           },
@@ -302,6 +304,7 @@
           "plans": [],
           "revision": 0,
           "reconsultations": [],
+          "dialogue": [],
           "gold": {
             "kind": "unknown"
           },
@@ -431,6 +434,7 @@
           ],
           "revision": 0,
           "reconsultations": [],
+          "dialogue": [],
           "gold": {
             "kind": "unknown"
           },
@@ -561,6 +565,7 @@
           ],
           "revision": 1,
           "reconsultations": [],
+          "dialogue": [],
           "gold": {
             "kind": "unknown"
           },
@@ -725,6 +730,7 @@
               "reportId": "r9"
             }
           ],
+          "dialogue": [],
           "gold": {
             "kind": "exact",
             "value": 412000
@@ -888,6 +894,7 @@
           "reportId": "r9"
         }
       ],
+      "dialogue": [],
       "gold": {
         "kind": "exact",
         "value": 412000

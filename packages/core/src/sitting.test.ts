@@ -512,3 +512,85 @@ describe('after the sitting', () => {
     expect(c.sitting().gold).toEqual({ kind: 'exact', value: 120_000 });
   });
 });
+
+describe('"Why?" (§4.4, #102)', () => {
+  const asked = () =>
+    deliberating().event({
+      type: 'questionsAsked',
+      toolUseId: 'ask1',
+      questions: [question(), question({ councillorId: 'security', question: 'Session length?' })],
+    });
+
+  it('asks the councillor who asked to explain, and records the user asking', () => {
+    const c = asked().do({ type: 'askCouncilWhy', batchId: 'b4', questionId: 'q6' });
+    expect(c.rejections()).toEqual([]);
+    expect(c.effects.at(-1)).toEqual({
+      type: 'sittingMessage',
+      sittingId: 's1',
+      message: {
+        kind: 'why',
+        questionId: 'q6',
+        councillorId: 'security',
+        question: 'Session length?',
+      },
+    });
+    expect(c.sitting().dialogue).toEqual([
+      { id: 'd1', speaker: 'you', text: 'Why?', questionId: 'q6' },
+    ]);
+    // Asking doesn't touch the batch: the question stays open with the same ids.
+    expect(c.sitting().questions?.items.map((q) => q.id)).toEqual(['q5', 'q6']);
+  });
+
+  it('passes on a follow-up in the user’s words', () => {
+    const c = asked().do({
+      type: 'askCouncilWhy',
+      batchId: 'b4',
+      questionId: 'q5',
+      text: 'Why not Google?',
+    });
+    expect(c.effects.at(-1)).toMatchObject({
+      message: { kind: 'why', councillorId: 'architect', text: 'Why not Google?' },
+    });
+    expect(c.sitting().dialogue.at(-1)).toMatchObject({ speaker: 'you', text: 'Why not Google?' });
+  });
+
+  it('refuses a question that is not open, or with no sitting', () => {
+    const c = asked();
+    c.do({ type: 'askCouncilWhy', batchId: 'b4', questionId: 'q9' });
+    c.do({ type: 'askCouncilWhy', batchId: 'b0', questionId: 'q5' });
+    c.do({
+      type: 'answerCouncil',
+      batchId: 'b4',
+      answers: { q5: { optionId: 'email' }, q6: { text: 'A week' } },
+    });
+    c.do({ type: 'askCouncilWhy', batchId: 'b4', questionId: 'q5' });
+    expect(c.rejections()).toEqual([
+      'That question is no longer open.',
+      'That question is no longer open.',
+      'That question is no longer open.',
+    ]);
+    const none = new Council().do({ type: 'askCouncilWhy', batchId: 'b1', questionId: 'q1' });
+    expect(none.rejections()).toEqual(['The council is not sitting.']);
+    expect(c.sitting().dialogue).toEqual([]);
+  });
+
+  it('records what councillors and the elder say, and drops speakers not at the table', () => {
+    const c = asked()
+      .do({ type: 'askCouncilWhy', batchId: 'b4', questionId: 'q6' })
+      .event({
+        type: 'said',
+        councillorId: 'security',
+        text: 'A long session is a stolen session.',
+        questionId: 'q6',
+      })
+      .event({ type: 'said', councillorId: 'architect', text: 'Refresh tokens help.' })
+      .event({ type: 'said', councillorId: 'elder', text: 'Let us decide.' })
+      .event({ type: 'said', councillorId: 'stranger', text: 'Psst.' });
+    expect(c.sitting().dialogue.map((l) => [l.id, l.speaker, l.questionId])).toEqual([
+      ['d1', 'you', 'q6'],
+      ['d2', 'security', 'q6'],
+      ['d3', 'architect', undefined],
+      ['d4', 'elder', undefined],
+    ]);
+  });
+});

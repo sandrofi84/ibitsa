@@ -79,8 +79,11 @@ export class RuntimeHost {
   private watcher(runtime: Runtime): FrontEnd {
     return {
       post: (message) => {
-        if (message.type === 'snapshot')
-          this.options.onWaitingChanged(message.snapshot.needsYou.length);
+        if (message.type === 'snapshot') {
+          // The council's open questions count as one more thing waiting (#102).
+          const council = message.snapshot.sitting?.questions ? 1 : 0;
+          this.options.onWaitingChanged(message.snapshot.needsYou.length + council);
+        }
         if (message.type !== 'cue' || message.cue.type !== 'needsYouAdded') return;
         if (this.options.gameVisible()) return;
         const { itemId } = message.cue;
