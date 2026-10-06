@@ -212,3 +212,96 @@ describe('LiveDevHost', () => {
     expect(messages.some((m) => m.type === 'actionCreated' && m.name === 'pr-summary')).toBe(true);
   });
 });
+
+describe('LiveDevHost: the elder and the council (#101, #103–#105)', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  async function briefed() {
+    const env = setup();
+    env.host.send({ type: 'hello', protocolVersion: 1 });
+    env.host.send({ type: 'consultElder', commandId: 'e1', task: 'Fix the login redirect' });
+    await env.settle();
+    return env;
+  }
+
+  it('lists the built-in councillors and asks how the council sits', async () => {
+    const { snapshot } = await briefed();
+    expect(snapshot()?.councillors?.map((c) => c.id)).toEqual(['architect', 'tester', 'security']);
+    expect(snapshot()?.councilMode).toBe('ask');
+  });
+
+  it('researches, then briefs a quick quest; a task mentioning fail runs out of gold', async () => {
+    const { snapshot } = await briefed();
+    expect(snapshot()?.elder).toMatchObject({
+      status: 'briefed',
+      brief: { quickQuest: { recommended: true } },
+    });
+    const failing = setup();
+    failing.host.send({ type: 'consultElder', commandId: 'e1', task: 'Make it fail' });
+    await failing.settle();
+    expect(failing.snapshot()?.elder).toMatchObject({ status: 'failed' });
+  });
+
+  it('holds a round table: reports, a question, "Why?", a plan, a revision, then a planned quest', async () => {
+    const { host, snapshot, settle } = await briefed();
+    host.send({
+      type: 'conveneCouncil',
+      commandId: 'k1',
+      task: 'Fix the login redirect',
+      mode: 'roundTable',
+      roster: ['tester', 'security'],
+      effort: 'light',
+    });
+    await settle();
+    const questions = snapshot()?.sitting?.questions;
+    const item = questions?.items[0];
+    expect(item).toMatchObject({ councillorId: 'tester' });
+    host.send({
+      type: 'askCouncilWhy',
+      commandId: 'w1',
+      batchId: questions?.batchId ?? '',
+      questionId: item?.id ?? '',
+    });
+    await settle();
+    expect(snapshot()?.sitting?.dialogue.at(-1)).toMatchObject({ speaker: 'tester' });
+    host.send({
+      type: 'answerCouncil',
+      commandId: 'a1',
+      batchId: questions?.batchId ?? '',
+      answers: { [item?.id ?? '']: { optionId: 'yes' } },
+    });
+    await settle();
+    expect(snapshot()?.sitting).toMatchObject({ status: 'awaitingApproval' });
+    host.send({ type: 'requestPlanChange', commandId: 'r1', version: 1, text: 'Smaller' });
+    await settle();
+    expect(snapshot()?.sitting?.plans.at(-1)?.plan.summary).toBe('Revised: Smaller');
+    host.send({ type: 'approvePlan', commandId: 'p1', version: 2 });
+    host.send({
+      type: 'startPlannedQuest',
+      commandId: 'q1',
+      heroName: 'Ilse',
+      classId: 'ranger',
+      baseRef: 'main',
+    });
+    await settle();
+    expect(snapshot()?.islands[0]?.taskPoints.map((t) => t.state)).toEqual(['active', 'locked']);
+  });
+
+  it('holds separate chambers too, its reports arriving one by one', async () => {
+    const { host, snapshot, settle } = await briefed();
+    host.send({
+      type: 'conveneCouncil',
+      commandId: 'k1',
+      task: 'Fix the login redirect',
+      mode: 'chambers',
+      roster: ['tester', 'security'],
+      effort: 'light',
+      councillorEfforts: { tester: 'light', security: 'standard' },
+    });
+    await settle();
+    await settle();
+    expect(snapshot()?.sitting?.roster.every((c) => c.reported)).toBe(true);
+    expect(snapshot()?.sitting?.questions).not.toBeNull();
+  });
+});
