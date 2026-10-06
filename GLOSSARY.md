@@ -29,12 +29,29 @@ The council's first and permanent member: researches the task, recommends counci
 A domain persona (Architect, Tester, Security, …) with a planning mode, a review mode, or both.
 _Avoid_: Advisor, reviewer (as a noun for the persona)
 
-**Council session**:
-The single agent session in which planning happens; councillors are perspectives inside it, not separate agents.
+**Sitting**:
+One meeting of the council to plan a campaign.
+_Avoid_: Council session, meeting
+
+**Round table**:
+A sitting in which one advisor speaks for every councillor.
+
+**Separate chambers**:
+A sitting in which each councillor studies the task alone, from the elder's briefing, and reports back.
+
+**Report**:
+A councillor's written contribution to a sitting: concerns, questions for the user, recommendations, and what it didn't check.
+
+**Effort**:
+How much thought, and so how much gold, a councillor or a sitting may spend: Light, Standard or Deep.
+
+**Tally**:
+What a sitting cost and produced, with the user's rating; used to compare sittings.
+_Avoid_: Council record (too close to campaign record)
 
 **Research brief**:
-The elder's short written handoff from research into planning.
-_Avoid_: Research notes, transcript
+The elder's short written handoff from research into planning, with a slice for each councillor's field.
+_Avoid_: Research notes, transcript, dossier
 
 **Plan**:
 The approved, versioned document describing a campaign's tasks, islands, branching strategy, acceptance criteria and decision records.
