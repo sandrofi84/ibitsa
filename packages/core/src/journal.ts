@@ -93,6 +93,10 @@ export class Journal {
           return line(null, { kind: 'event', text: `You asked the elder: ${title(c.task)}` });
         case 'startQuest':
           return line(null, { kind: 'event', text: `Quest started: ${title(c.description)}` });
+        case 'startPlannedQuest':
+          return line(null, { kind: 'event', text: "The council's plan begins." });
+        case 'approvePlan':
+          return line(null, { kind: 'event', text: `You approved plan v${c.version}.` });
         case 'sendMessage':
           return line(c.heroId, { kind: 'you', text: c.text, priority: c.priority });
         case 'stopHero':

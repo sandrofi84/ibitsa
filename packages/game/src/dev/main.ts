@@ -46,7 +46,7 @@ if (name === 'live') {
         ? null
         : { defaultBranch: 'main', branches: ['main', 'feature/x'], uncommittedChanges: 2 },
   });
-  const { client, zoom, hero, camera } = startGame(root, host);
+  const { client, zoom, hero, camera, hut } = startGame(root, host);
   w.__ibitsa = {
     snapshot: () => client.snapshot,
     hostRequests: () => host.channel.requests,
@@ -54,6 +54,7 @@ if (name === 'live') {
     zoom,
     hero,
     camera,
+    hut,
   };
 } else if (params.get('scene') === 'hut') {
   // The council hut from a scripted sitting (#99): every animation, without a replay. The real sitting

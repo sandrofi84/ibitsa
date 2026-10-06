@@ -411,6 +411,21 @@ export class Runtime {
         this.elderSession?.close();
         this.elderSession = null;
         return;
+      case 'savePlan': {
+        const campaignId = this.log?.header.campaignId;
+        if (this.options.repoDir && campaignId) {
+          try {
+            new CampaignDocuments(this.options.repoDir).savePlan({
+              campaignId,
+              version: effect.version,
+              plan: effect.plan,
+            });
+          } catch {
+            // The plan is still in the log and the game; only the files are missing.
+          }
+        }
+        return;
+      }
       case 'saveBrief': {
         const campaignId = this.log?.header.campaignId;
         if (this.options.repoDir && campaignId) {

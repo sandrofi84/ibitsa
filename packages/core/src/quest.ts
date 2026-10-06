@@ -1,4 +1,5 @@
-import type { Command, MicroUsd, Reading } from '@ibitsa/protocol';
+import type { Command, MicroUsd, Plan, PlanTask, Reading } from '@ibitsa/protocol';
+import { taskOrder } from '@ibitsa/protocol';
 import { Elder } from './elder';
 import { Hero } from './hero';
 import { Sitting } from './sitting';
@@ -57,11 +58,97 @@ export class Quest {
       return;
     }
     const title = Quest.title(command.description);
+    const brief =
+      state.campaign?.status === 'planning' && state.elder?.status === 'briefed'
+        ? state.elder.brief
+        : null;
+    this.launch({
+      title,
+      tasks: [
+        {
+          title,
+          description: command.description,
+          ...(brief ? { briefing: Elder.briefing(brief) } : {}),
+        },
+      ],
+      command,
+    });
+  }
+
+  /**
+   * Carries out the council's approved plan (spec §14.2, #104): one island whose task points are the
+   * plan's tasks in order, and one hero who works them one after another on the same branch.
+   */
+  startPlanned(command: Extract<Command, { type: 'startPlannedQuest' }>): void {
+    const state = this.ctx.state;
+    const plan =
+      state.campaign?.status === 'planning' && state.sitting?.status === 'approved'
+        ? state.sitting.plans.find((p) => p.outcome.kind === 'approved')?.plan
+        : undefined;
+    const order = plan && taskOrder(plan.tasks);
+    if (!plan || !order) {
+      this.ctx.outbox.reject(command.commandId, 'There is no approved plan to carry out.');
+      return;
+    }
+    this.launch({
+      title: state.campaign?.title ?? Quest.title(plan.summary),
+      tasks: order.map((task, index) => ({
+        title: task.title,
+        description: task.description,
+        briefing: Quest.briefing({ plan, task, index, total: order.length }),
+      })),
+      command,
+    });
+  }
+
+  /** What a planned task's hero is told besides the task: where it sits in the plan and what to meet. */
+  static briefing({
+    plan,
+    task,
+    index,
+    total,
+  }: {
+    plan: Plan;
+    task: PlanTask;
+    index: number;
+    total: number;
+  }): string {
+    const lines = [`This is task ${index + 1} of ${total} in the council's plan: ${plan.goal}`];
+    if (task.files.length > 0) {
+      lines.push('', 'Files likely touched:', ...task.files.map((f) => `- ${f}`));
+    }
+    const criteria = task.criteria.flatMap((c) =>
+      c.items.map((item) => `- ${item} (${c.councillorId})`),
+    );
+    if (criteria.length > 0) lines.push('', 'It is done when:', ...criteria);
+    const decisions = plan.decisions.filter((d) => task.decisions.includes(d.id));
+    if (decisions.length > 0) {
+      lines.push('', 'Decisions already taken (keep to them):');
+      for (const d of decisions) lines.push(`- ${d.id} ${d.title}: ${d.chosen}. ${d.why}`);
+    }
+    lines.push('', 'Commit this task, then call submit_task; the next task follows as a message.');
+    return lines.join('\n');
+  }
+
+  /** One island with the given task points, the first one active, and one hero on it. */
+  private launch({
+    title,
+    tasks,
+    command,
+  }: {
+    title: string;
+    tasks: { title: string; description: string; briefing?: string }[];
+    command: { heroName: string; classId: string; baseRef: string };
+  }): void {
+    const state = this.ctx.state;
     const planning = state.campaign?.status === 'planning' ? state.campaign : null;
-    const brief = planning && state.elder?.status === 'briefed' ? state.elder.brief : null;
     const campaignId = planning?.id ?? newId(state, 'c');
     const islandId = newId(state, 'i');
-    const taskPointId = newId(state, 't');
+    const taskPoints = tasks.map((task, i) => ({
+      id: newId(state, 't'),
+      ...task,
+      state: i === 0 ? ('active' as const) : ('locked' as const),
+    }));
     const heroId = newId(state, 'h');
     const branch = `ibitsa/${slug(title) || 'quest'}`;
     state.campaign = { id: campaignId, title, status: 'active', autoApprove: false };
@@ -73,15 +160,7 @@ export class Quest {
         baseRef: command.baseRef,
         worktreePath: null,
         worktreeRemoved: false,
-        taskPoints: [
-          {
-            id: taskPointId,
-            title,
-            description: command.description,
-            ...(brief ? { briefing: Elder.briefing(brief) } : {}),
-            state: 'active',
-          },
-        ],
+        taskPoints,
       },
     ];
     state.heroes = [
@@ -91,7 +170,7 @@ export class Quest {
           name: command.heroName,
           classId: command.classId,
           islandId,
-          taskPointId,
+          taskPointId: taskPoints[0]?.id ?? '',
         },
         settings: state.settings,
       }),

@@ -356,7 +356,35 @@ describe('blanking the elder and the council (#103)', () => {
       event: {
         type: 'planProposed',
         toolUseId: 'u3',
-        plan: { summary: 'Contoso plan', detail: 'x' },
+        plan: {
+          summary: 'Contoso plan',
+          goal: 'Contoso sign-in',
+          scope: 'Contoso only',
+          tasks: [
+            {
+              id: 'T1',
+              title: 'Contoso auth',
+              description: 'Build Contoso auth',
+              files: ['src/auth.ts'],
+              dependsOn: [],
+              criteria: [{ councillorId: 'security', items: ['Contoso tokens rotate'] }],
+              decisions: ['D1'],
+            },
+          ],
+          decisions: [
+            {
+              id: 'D1',
+              title: 'Contoso length',
+              raisedBy: 'security',
+              chosen: 'Contoso week',
+              alternatives: [{ option: 'Contoso day', rejectedBecause: 'Contoso hates it' }],
+              tradeoffs: 'Contoso risk',
+              why: 'Contoso said',
+              discussion: 'Contoso chat',
+              affects: ['T1'],
+            },
+          ],
+        },
       },
     },
     {

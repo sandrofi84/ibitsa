@@ -1291,6 +1291,24 @@ describe('the elder (#101)', () => {
   });
 });
 
+/** The smallest plan core accepts (#104). */
+const SMALL_PLAN = {
+  summary: 'Plan',
+  goal: 'Add sign-in',
+  tasks: [
+    {
+      id: 'T1',
+      title: 'Do it',
+      description: 'Do it.',
+      files: [],
+      dependsOn: [],
+      criteria: [],
+      decisions: [],
+    },
+  ],
+  decisions: [],
+};
+
 describe('the round table (#103)', () => {
   type Call = {
     start: SittingStart;
@@ -1427,7 +1445,7 @@ describe('the round table (#103)', () => {
       'message',
       'answer',
     ]);
-    call?.emit({ type: 'planProposed', toolUseId: 'u3', plan: { summary: 'Plan' } });
+    call?.emit({ type: 'planProposed', toolUseId: 'u3', plan: SMALL_PLAN });
     env.connection.receive({ type: 'dismissCouncil', commandId: 'd' });
     expect(call?.closed).toBe(true);
     expect(logOf(env.storageDir).records.filter((r) => r.kind === 'council').length).toBe(4);
@@ -1449,5 +1467,58 @@ describe('the round table (#103)', () => {
         error: 'The council needs a workspace folder and an agent that can plan.',
       });
     }
+  });
+});
+
+describe('the approved plan (#104)', () => {
+  it('writes plan.json, plan-v1.json and plan.md to the campaign folder', async () => {
+    const storageDir = mkdtempSync(join(tmpdir(), 'ibitsa-runtime-'));
+    const repoDir = mkdtempSync(join(tmpdir(), 'ibitsa-repo-'));
+    dirs.push(storageDir, repoDir);
+    let emit: (e: CouncilEvent) => void = () => {};
+    const adapter = Object.assign(new FakeAdapter(), {
+      startSitting: (_start: SittingStart, onEvent: (e: CouncilEvent) => void) => {
+        emit = onEvent;
+        return { message: () => {}, completeTool: () => {}, answer: () => {}, close: () => {} };
+      },
+    });
+    const runtime = new Runtime({
+      storageDir,
+      adapter,
+      gameMaster: new FakeGameMaster(),
+      clock: new ManualClock(),
+      newId: () => 'camp-1',
+      repoDir,
+      watchFolder: () => ({ close: () => {} }),
+    });
+    runtime.start();
+    const connection = runtime.connect({ post: () => {} });
+    connection.receive({
+      type: 'conveneCouncil',
+      commandId: 'k',
+      task: 'Add sign-in',
+      mode: 'roundTable',
+      roster: ['security'],
+      effort: 'light',
+    });
+    await flush();
+    emit({
+      type: 'reportFiled',
+      toolUseId: 'r',
+      councillorId: 'security',
+      report: { concerns: [], questions: [], recommendations: [], notChecked: [] },
+    });
+    emit({ type: 'planProposed', toolUseId: 'p', plan: SMALL_PLAN });
+    connection.receive({ type: 'approvePlan', commandId: 'a', version: 1 });
+    const dir = join(repoDir, '.ibitsa', 'campaigns', 'camp-1');
+    expect(JSON.parse(readFileSync(join(dir, 'plan.json'), 'utf8'))).toEqual({
+      version: 1,
+      ...SMALL_PLAN,
+    });
+    expect(readFileSync(join(dir, 'plan-v1.json'), 'utf8')).toBe(
+      readFileSync(join(dir, 'plan.json'), 'utf8'),
+    );
+    expect(readFileSync(join(dir, 'plan.md'), 'utf8')).toContain('### T1 · Do it');
+    runtime.dispose();
   });
 });

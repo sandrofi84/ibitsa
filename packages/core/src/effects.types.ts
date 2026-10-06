@@ -1,6 +1,7 @@
 import type {
   CouncilAnswer,
   Effort,
+  Plan,
   ResearchBrief,
   SittingMessage,
   SittingMode,
@@ -72,6 +73,8 @@ export type Effect =
   | { type: 'closeElder'; elderId: string }
   /** Write the brief to the campaign folder (`brief.json`, `brief.md`); Ibitsa never commits it. */
   | { type: 'saveBrief'; elderId: string; brief: ResearchBrief }
+  /** Write the approved plan to the campaign folder (`plan.json`, `plan.md`); Ibitsa never commits it. */
+  | { type: 'savePlan'; sittingId: string; version: number; plan: Plan }
   /** Start a sitting's lead session (spec §4.3); its output comes back as `council` inputs. */
   | {
       type: 'startSitting';

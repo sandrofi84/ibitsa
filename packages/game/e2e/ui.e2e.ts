@@ -7,7 +7,9 @@ interface Probe {
   snapshot(): {
     campaign: { status: string } | null;
     heroes: { state: { kind: string }; queuedMessages: number }[];
+    islands: { taskPoints: { state: string }[] }[];
   } | null;
+  hut(): { decisions: number } | null;
   hostRequests(): { type: string; key?: string }[];
   hero: {
     onPage(): { x: number; y: number } | null;
@@ -430,7 +432,7 @@ test('a failed brief offers asking again, a quick quest anyway, or abandoning (#
   await expect(page.getByRole('button', { name: 'New quest' })).toBeVisible();
 });
 
-test('the brief convenes a round table that asks, answers "Why?" and proposes a plan (#103)', async ({
+test('the brief convenes a round table; its approved plan becomes a quest, task by task (#103, #104)', async ({
   page,
 }) => {
   const errors = watchErrors(page);
@@ -469,7 +471,14 @@ test('the brief convenes a round table that asks, answers "Why?" and proposes a 
   await box.getByRole('button', { name: 'Send answers' }).click();
 
   const plan = page.getByRole('region', { name: "The council's plan" });
-  await expect(plan).toContainText('One task: make the change, with a test.');
+  await expect(plan).toContainText('Two tasks: make the change, then cover it with a test.');
+  // The plan review (#104): tasks in order with their criteria, and the Book of Decisions.
+  await expect(plan.getByRole('list', { name: 'Tasks' }).getByRole('listitem')).toHaveCount(2);
+  await expect(plan).toContainText('Signing in lands on the page you asked for.');
+  await expect(plan.getByRole('list', { name: 'Book of Decisions' })).toContainText(
+    'D1 Test the fix Yes.',
+  );
+  await expect.poll(() => probe(page, (p) => p.hut()?.decisions)).toBe(1);
   await page.screenshot({ path: 'test-results/round-table-plan.png' });
   await plan.getByRole('button', { name: 'Ask for changes' }).click();
   await plan.getByLabel('What should change?').fill('Two tasks');
@@ -477,7 +486,25 @@ test('the brief convenes a round table that asks, answers "Why?" and proposes a 
   await expect(plan).toContainText('Revised: Two tasks');
   await plan.getByRole('button', { name: 'Approve' }).click();
   await expect(plan).toBeHidden();
-  await expect(elder).toBeVisible();
-  expect(await probe(page, (p) => p.snapshot()?.campaign?.status)).toBe('planning');
+
+  // The approved plan waits in the elder panel; Start the quest carries it out (#104).
+  await expect(elder.getByRole('heading', { name: "The council's plan" })).toBeVisible();
+  await expect(elder).toContainText('Approved. Revised: Two tasks');
+  await elder.getByRole('button', { name: 'Start the quest' }).click();
+  const form = page.getByRole('dialog', { name: 'New quest' });
+  await expect(form.getByLabel('Task')).toHaveJSProperty('readOnly', true);
+  await form.getByRole('button', { name: 'Start quest' }).click();
+  await expect.poll(() => heroState(page)).toBe('idle');
+  expect(
+    await probe(page, (p) => p.snapshot()?.islands[0]?.taskPoints.map((t) => t.state)),
+  ).toEqual(['active', 'locked']);
+  // Asked to submit, the hero hands in task 1, gets task 2 as a message, and hands that in too.
+  const pane = page.getByRole('region', { name: 'Hero' });
+  await pane.getByLabel('Message to the hero').fill('Submit it');
+  await pane.getByRole('button', { name: 'Send now' }).click();
+  await expect.poll(() => heroState(page), { timeout: 10_000 }).toBe('submitted');
+  expect(
+    await probe(page, (p) => p.snapshot()?.islands[0]?.taskPoints.map((t) => t.state)),
+  ).toEqual(['doneUnreviewed', 'doneUnreviewed']);
   expect(errors).toEqual([]);
 });

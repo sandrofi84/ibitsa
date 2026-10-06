@@ -1,4 +1,4 @@
-import type { HostEvent, Snapshot } from '@ibitsa/protocol';
+import { type HostEvent, type Snapshot, taskOrder } from '@ibitsa/protocol';
 import type { GameClient } from './client';
 import { button, el } from './dom';
 import { DEFAULT_CLASS, defaultHeroName, HERO_CLASSES } from './heroes';
@@ -33,7 +33,7 @@ export function mountNewQuestForm({
   let pendingStart: (() => void) | null = null;
   let renderOnboarding: ((error?: string) => void) | null = null;
 
-  let mode: 'ask' | 'quest' = 'ask';
+  let mode: 'ask' | 'quest' | 'planned' = 'ask';
   const active = () => snapshot?.campaign?.status === 'active';
   const planning = () => snapshot?.campaign?.status === 'planning';
   client.onSnapshot((s) => {
@@ -135,9 +135,11 @@ export function mountNewQuestForm({
     button({ label: 'Cancel', onClick: () => dialog.close() }),
   );
 
-  function setMode(next: 'ask' | 'quest'): void {
+  function setMode(next: 'ask' | 'quest' | 'planned'): void {
     mode = next;
-    const quest = mode === 'quest';
+    const quest = mode !== 'ask';
+    // A planned quest's tasks come from the plan: its summary shows, read-only.
+    description.readOnly = mode === 'planned';
     heroFields.hidden = !quest;
     askNote.hidden = quest;
     skip.hidden = quest;
@@ -156,17 +158,18 @@ export function mountNewQuestForm({
     }
     const task = description.value.trim();
     if (!task) return;
+    const hero = {
+      heroName: heroName.value.trim(),
+      classId: classSelect.value,
+      baseRef: baseSelect.value,
+    };
     const intent =
       mode === 'ask'
         ? { type: 'consultElder' as const, task }
-        : {
-            type: 'startQuest' as const,
-            description: task,
-            heroName: heroName.value.trim(),
-            classId: classSelect.value,
-            baseRef: baseSelect.value,
-          };
-    if (intent.type === 'startQuest' && (!intent.heroName || !intent.baseRef)) return;
+        : mode === 'planned'
+          ? { type: 'startPlannedQuest' as const, ...hero }
+          : { type: 'startQuest' as const, description: task, ...hero };
+    if (intent.type !== 'consultElder' && (!hero.heroName || !hero.baseRef)) return;
     // Ask the extension first: without credentials the onboarding card comes before the quest.
     pendingStart = () => {
       client.send(intent);
@@ -187,7 +190,7 @@ export function mountNewQuestForm({
     baseSelect.replaceChildren(...(repo?.branches ?? []).map((b) => new Option(b, b)));
     baseSelect.value = repo?.branches.includes(current) ? current : (repo?.defaultBranch ?? '');
     // Only the quest needs git: the elder just reads the folder.
-    start.disabled = mode === 'quest' && repo === null;
+    start.disabled = mode !== 'ask' && repo === null;
     if (repo === null) {
       repoNote.textContent =
         "This folder isn't a git repository: a quest needs one for the hero's worktree.";
@@ -252,7 +255,18 @@ export function mountNewQuestForm({
     key.focus();
   }
 
-  return { open, quickQuest: (task) => show({ mode: 'quest', task }) };
+  return {
+    open,
+    quickQuest: (task) => show({ mode: 'quest', task }),
+    plannedQuest: (plan) => {
+      const first = taskOrder(plan.tasks)?.[0];
+      if (first?.heroClass) {
+        classSelect.value = first.heroClass;
+        if (!nameEdited) heroName.value = defaultHeroName(first.heroClass);
+      }
+      show({ mode: 'planned', task: plan.summary });
+    },
+  };
 
   /** Opens it on the task alone; not while the elder's campaign plans (its panel offers the quest). */
   function open(prefill?: { description: string }): void {
@@ -261,7 +275,7 @@ export function mountNewQuestForm({
   }
 
   /** Opens the form, with the task already written when it comes from the command bar (#81) or the elder. */
-  function show({ mode: next, task }: { mode: 'ask' | 'quest'; task?: string }): void {
+  function show({ mode: next, task }: { mode: 'ask' | 'quest' | 'planned'; task?: string }): void {
     if (active() || dialog.open) return;
     renderOnboarding = null;
     pendingStart = null;

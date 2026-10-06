@@ -1,4 +1,5 @@
 import type { Effort, SittingMode } from './commands.schema';
+import type { Plan } from './plan.schema';
 import type { MicroUsd, Reading } from './values.types';
 
 /** A concern in a councillor's report (spec §4.3). */
@@ -34,14 +35,8 @@ export interface CouncilQuestion {
   allowFreeText: boolean;
 }
 
-/**
- * Placeholder for the plan `propose_plan` submits. Its real schema (tasks, criteria, Book of Decisions)
- * arrives with #104; until then core keeps `detail` as given and only reads `summary`.
- */
-export interface PlanProposal {
-  summary: string;
-  detail?: unknown;
-}
+/** The plan `propose_plan` submits (spec §4.5, #104): checked by core before the user sees it. */
+export type PlanProposal = Plan;
 
 /**
  * Normalized output of a sitting's lead session (round table, or the elder in separate chambers).

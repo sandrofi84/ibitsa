@@ -19,7 +19,7 @@ import { mountNeedsYouPanel } from './needs-you-panel';
 import { mountNewActionForm } from './new-action-form';
 import { mountNewQuestForm } from './new-quest-form';
 import { PACK_KEY, PackScene } from './pack-scene';
-import { mountPlanBox } from './plan-box';
+import { mountPlanReview } from './plan-review';
 import { isSitting, rememberCouncillors, SittingFeed } from './sitting-hut';
 import { ViewState } from './view-state';
 import { fitViewport } from './viewport';
@@ -110,10 +110,14 @@ export function startGame(root: HTMLElement, host: Host): Started {
   const newAction = () => newActionForm.open();
   const view = new ViewState(host.viewStorage);
   const conveneForm = mountConveneForm({ client, view });
-  mountPlanBox({ client });
+  mountPlanReview({ client });
   mountElderPanel({
     client,
-    options: { quickQuest: (task) => newQuest.quickQuest(task), convene: () => conveneForm.open() },
+    options: {
+      quickQuest: (task) => newQuest.quickQuest(task),
+      startPlan: (plan) => newQuest.plannedQuest(plan),
+      convene: () => conveneForm.open(),
+    },
   });
   // One ↑/↓ history for the bar and the pane's box, kept in view state (#81).
   const history = new CommandHistory({ entries: savedHistory(view) });

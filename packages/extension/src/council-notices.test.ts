@@ -1,4 +1,4 @@
-import type { SittingView } from '@ibitsa/protocol';
+import type { Plan, SittingView } from '@ibitsa/protocol';
 import { describe, expect, it } from 'vitest';
 import { councilNews } from './council-notices';
 
@@ -29,7 +29,11 @@ describe('councilNews (#103)', () => {
 
   it('tells each plan waiting for approval once', () => {
     const plans = [
-      { version: 1, plan: { summary: 'Email only' }, outcome: { kind: 'proposed' as const } },
+      {
+        version: 1,
+        plan: { summary: 'Email only' } as Plan,
+        outcome: { kind: 'proposed' as const },
+      },
     ];
     const first = councilNews({
       sitting: sitting({ status: 'awaitingApproval', plans }),

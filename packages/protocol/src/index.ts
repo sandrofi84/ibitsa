@@ -26,6 +26,15 @@ export type { HostEvent } from './host-channel.types';
 export type { JournalEntry, JournalEntryBody } from './journal.types';
 export { PROTOCOL_VERSION } from './messages';
 export type { CoreMessage, Cue } from './messages.types';
+export { checkPlan, taskOrder } from './plan';
+export {
+  type Decision,
+  DecisionSchema,
+  type Plan,
+  PlanSchema,
+  type PlanTask,
+  PlanTaskSchema,
+} from './plan.schema';
 export type {
   Concern,
   CouncilEvent,

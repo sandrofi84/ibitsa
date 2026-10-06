@@ -1072,8 +1072,8 @@ body.in-hut:has(.council-dialogue:not([hidden])) .needs-you {
   margin-top: 10px;
 }
 
-/* The council's plan in the hut (#103), where the dialogue box sits. */
-.plan-box {
+/* The plan review in the hut (#103, #104), where the dialogue box sits. */
+.plan-review {
   position: fixed;
   left: 50%;
   bottom: 12px;
@@ -1090,17 +1090,39 @@ body.in-hut:has(.council-dialogue:not([hidden])) .needs-you {
     sans-serif;
 }
 
-.plan-box h2 {
+.plan-review {
+  max-height: 60vh;
+  overflow: auto;
+}
+
+.plan-review h3 {
+  margin: 8px 0 2px;
+  font-size: 13px;
+}
+
+.plan-review ol,
+.plan-review ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.plan-review .note,
+.plan-review .criteria {
+  color: #4a3a2a;
+  font-size: 12px;
+}
+
+.plan-review h2 {
   margin: 0 0 4px;
   font-size: 14px;
 }
 
-.plan-box textarea {
+.plan-review textarea {
   width: 100%;
   box-sizing: border-box;
 }
 
-.plan-box .actions {
+.plan-review .actions {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;

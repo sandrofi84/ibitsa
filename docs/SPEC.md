@@ -169,7 +169,8 @@ ask_user({
 - **In the game (#102):** the hut shows by itself while the council sits and the map returns when the sitting ends. The command bar and New quest are hidden in the hut, where the dialogue box takes their place. The box steps through a batch one question at a time (Back, Next), number keys pick an option, and all answers go back in one `answerCouncil`. The asking councillor has the floor; others with questions in the batch raise their hands. **Later** puts the box away, and the questions wait in "Needs you" (one item, counted in the tab title) until **Answer** reopens it.
 
 ### 4.5 Plan document and decision records
-- The elder proposes the plan by calling a custom `propose_plan` tool. Ibitsa validates it against a schema (and the every-councillor-reported rule, §4.3), then renders `.ibitsa/campaigns/<campaignId>/plan.json` (the game reads it) and `plan.md` (for people). Ibitsa writes campaign documents but never commits them; the user decides whether they belong in the repo.
+- The plan is proposed with a custom `propose_plan` tool. **Core** checks it (`checkPlan`, #104), whatever session proposed it: the schema (`PlanSchema`: summary, goal, scope, tasks `T1…` with description, files likely touched, dependencies, suggested hero class, criteria per reviewing councillor and the decisions they depend on; decisions `D1…`), unique ids, dependencies and decisions that exist without a cycle, criteria only from councillors on the roster, decisions raised by someone at the table. Problems go back to the council as the tool's result, one per line. The every-councillor-reported rule (§4.3) comes first.
+- On approval Ibitsa writes `.ibitsa/campaigns/<id>/plan.json` (the game reads it), `plan-v<n>.json` (each approved version kept) and `plan.md` (for people, decisions in the record format below). Ibitsa writes campaign documents but never commits them; the user decides whether they belong in the repo.
 - Plan contents:
   - Goal and scope
   - Tasks (id, title, description, files likely touched, dependencies, suggested hero class, estimated effort, optional source ticket). A **ticket** is an item in an outside ticket system; it is not part of the game world. See `GLOSSARY.md`.
@@ -197,10 +198,10 @@ ask_user({
   - Changes **supersede**, never overwrite ("D7 supersedes D3", old record kept).
 
 ### 4.6 Plan approval
-- **Approve**, **Change** with free-text context, or **Dismiss the council**. Until the plan review (#104), a **plan box** in the hut shows the proposed plan's summary with these three.
+- **Approve**, **Change** with free-text context, or **Dismiss the council**, in the **plan review** in the hut (#104): the summary and goal, the tasks in the order the hero will work them (files, dependencies, criteria per councillor, decisions kept to) and the Book of Decisions. The hut's Book of Decisions shows how many decisions the plan records.
 - A change goes to the elder, who revises. In separate chambers the elder consults again only the councillors the change affects; each consultation is recorded and costed, and the every-councillor-reported rule still holds. No cap on revisions; each shows what it cost.
 - Each approved version is saved; amendments later in the campaign create new versions with a visible diff.
-- **Until parties exist (M4)**, an approved plan is carried out by one hero who works its tasks in order on one branch (§14.2).
+- **Until parties exist (M4)**, an approved plan is carried out by one hero who works its tasks in order on one branch (§14.2): the elder panel shows the approved plan with **Start the quest**, which opens the New Quest form (the plan's summary read-only, the first task's suggested class) and sends `startPlannedQuest`.
 
 ### 4.7 Councillor definitions
 - Each councillor is **one class with two modes**:
@@ -393,7 +394,7 @@ Shown in the same hover menu, visually distinct:
 ### 7.1 Screens
 1. **Elder's recommendation:** the **elder panel**, docked where the hero pane goes while the campaign plans: research progress and gold, then the brief's summary (task, quick-quest verdict, files, findings, recommended councillors) with **Quick quest** and **Convene council** (the recommended one in bold), or the error and what to do. Convening (§4.2: round table or separate chambers, councillor checkboxes with reasons, effort) follows from it.
 2. **Council hut (interior):** side-on room (Alex Kidd shop style), councillors as **32×32** characters behind a long table (§9.2), active speaker highlighted, "!" for who wants to speak, RPG dialogue box with portrait, options, "Why?", free text. Step tracker: Goal › Research › Questions › Plan › Dispatch. Book of Decisions on the table. In separate chambers, councillors first **study** at the table (think animation, a small book, a progress mark above each) and look up when their report is in; then the dialogue starts. A round table skips the study stage.
-3. **Plan review:** plan, decisions, criteria; Approve / Change.
+3. **Plan review:** in the hut (#104): plan, tasks in order with criteria, Book of Decisions; Approve / Ask for changes / Dismiss.
 4. **Party assembly:** per worktree: hero class, reviewing councillors (recommended pre-checked), estimated cost.
 5. **World map (overworld):** see §7.2.
 6. **Party panel:** compact lineup usable as a bottom panel next to the terminal (a `WebviewView`, from M4).
@@ -851,7 +852,7 @@ Settled in [#11](https://github.com/sandrofi84/ibitsa/issues/11).
 Settled in M3 planning.
 - The New Quest description goes to the elder; its brief offers **Quick quest** (one hero, as in M1) or **Convene council** (§4.1–4.2).
 - Both kinds of sitting are built on one shared council (§4.3), in this order: round table first (the baseline), then separate chambers, then tallies and the comparison (§4.10).
-- An approved plan is carried out by **one hero working its tasks in order on one branch**, until M4 brings parties and islands.
+- An approved plan is carried out by **one hero working its tasks in order on one branch**, until M4 brings parties and islands (#104). The island's task points are the plan's tasks, each after the tasks it depends on, otherwise as listed; the first is active, the rest locked. The hero's first message is task 1 with its place in the plan, files, criteria and the decisions it keeps to. Each accepted `submit_task` marks the task done and sends the next one as a message on the same session; after the last, the hero is submitted. (The submit check still asks only for a commit beyond the base, so a later task passes on an earlier one's commits; per-task review is M5.)
 - Effort Light/Standard/Deep maps to Haiku/Sonnet/Opus (§4.2).
 
 ## 15. Open questions
