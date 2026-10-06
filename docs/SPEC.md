@@ -576,6 +576,7 @@ type MicroUsd = number;                              // integer
 
 interface Snapshot {                                 // seq lives on the CoreMessage
   campaign: CampaignView | null;                     // { id, title, status: 'active' | 'finished' | 'abandoned', gold: Reading<MicroUsd> }
+  sitting: SittingView | null;                       // §4.3: mode, status, roster (effort, reported), reports, open question batch, plans, revision, re-consultations, gold
   islands: IslandView[];                             // { id, name, branch, taskPoints: TaskPointView[] }
   heroes: HeroView[];
   needsYou: NeedsYouItem[];                          // oldest first
@@ -621,7 +622,16 @@ type Command =                                       // Valibot strict objects, 
   | { type: 'markDone'; commandId; heroId }          // user marks the task submitted
   | { type: 'startQuest'; commandId; description; heroName; classId; baseRef }  // M1 quick quest (§14.1)
   | { type: 'finishQuest'; commandId } | { type: 'abandonQuest'; commandId }
-  | { type: 'removeWorktree'; commandId; islandId }; // refused unless the worktree is clean
+  | { type: 'removeWorktree'; commandId; islandId }  // refused unless the worktree is clean
+  // M3, the sitting (§4.2–4.6, #100):
+  | { type: 'conveneCouncil'; commandId; task; mode: 'roundTable' | 'chambers'; roster: string[]; effort: Effort; councillorEfforts?: Record<string, Effort> }
+  | { type: 'addCouncillor'; commandId; councillorId; effort: Effort }
+  | { type: 'answerCouncil'; commandId; batchId; answers: Record<questionId, { optionId } | { text }> }
+  | { type: 'approvePlan'; commandId; version } | { type: 'requestPlanChange'; commandId; version; text }
+  | { type: 'dismissCouncil'; commandId };
+// The sitting's lead session reports to core as `council` inputs (CouncilEvent: sessionStarted, reportFiled,
+// questionsAsked, planProposed, usage, error); core answers each tool call with an effect that accepts it or
+// rejects it with a reason (`completeSittingTool`, `answerSittingQuestions`).
 
 type CoreMessage =
   | { type: 'welcome'; seq: number; protocolVersion: number }

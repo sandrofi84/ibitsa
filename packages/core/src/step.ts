@@ -4,10 +4,11 @@ import type { CoreInput, GameMasterEvent } from './inputs.types';
 import { NeedsYou } from './needs-you';
 import { Outbox } from './outbox';
 import { Quest } from './quest';
+import { Sitting } from './sitting';
 import type { CoreState } from './state.types';
 import type { StepContext, StepResult } from './step.types';
 
-/** The whole game master: pure, deterministic, no I/O (ADR 0001). Domain rules live in Quest, Hero and NeedsYou (ADR 0002). */
+/** The whole game master: pure, deterministic, no I/O (ADR 0001). Domain rules live in Quest, Hero, NeedsYou and Sitting (ADR 0002). */
 export function step(state: CoreState, input: CoreInput): StepResult {
   const draft = JSON.parse(JSON.stringify(state)) as CoreState;
   const outbox = new Outbox();
@@ -23,6 +24,9 @@ export function step(state: CoreState, input: CoreInput): StepResult {
       break;
     case 'agent':
       hero(ctx, input.heroId)?.handle(input.event);
+      break;
+    case 'council':
+      new Sitting(ctx).handle(input);
       break;
     case 'gm':
       gameMaster(ctx, input.event);
@@ -70,6 +74,24 @@ function command(ctx: StepContext, command: Command): void {
       return;
     case 'setAutoApprove':
       quest.setAutoApprove(command);
+      return;
+    case 'conveneCouncil':
+      new Sitting(ctx).convene(command);
+      return;
+    case 'addCouncillor':
+      new Sitting(ctx).addCouncillor(command);
+      return;
+    case 'answerCouncil':
+      new Sitting(ctx).answer(command);
+      return;
+    case 'approvePlan':
+      new Sitting(ctx).approve(command);
+      return;
+    case 'requestPlanChange':
+      new Sitting(ctx).requestChange(command);
+      return;
+    case 'dismissCouncil':
+      new Sitting(ctx).dismiss(command.commandId);
       return;
     case 'answerPermission':
     case 'answerQuestion': {

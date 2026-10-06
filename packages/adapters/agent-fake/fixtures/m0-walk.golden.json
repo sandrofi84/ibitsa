@@ -102,6 +102,7 @@
             "kind": "unknown"
           }
         },
+        "sitting": null,
         "islands": [
           {
             "id": "i2",
@@ -153,6 +154,7 @@
             "kind": "unknown"
           }
         },
+        "sitting": null,
         "islands": [
           {
             "id": "i2",
@@ -207,6 +209,7 @@
             "value": 42000
           }
         },
+        "sitting": null,
         "islands": [
           {
             "id": "i2",
@@ -266,6 +269,7 @@
             "value": 97000
           }
         },
+        "sitting": null,
         "islands": [
           {
             "id": "i2",
@@ -333,6 +337,7 @@
             "value": 108000
           }
         },
+        "sitting": null,
         "islands": [
           {
             "id": "i2",
@@ -389,6 +394,7 @@
         "value": 108000
       }
     },
+    "sitting": null,
     "islands": [
       {
         "id": "i2",

@@ -3,7 +3,13 @@
 export type { ActionDraft, ActionInfo, ActionPreview } from './actions.types';
 export type { AgentEvent } from './agent-events.types';
 export { parseCommand } from './commands';
-export { type Command, CommandSchema } from './commands.schema';
+export {
+  type Command,
+  CommandSchema,
+  type CouncilAnswer,
+  type Effort,
+  type SittingMode,
+} from './commands.schema';
 export type { ParseCommandResult } from './commands.types';
 export { parseHostRequest } from './host-channel';
 export { type HostRequest, HostRequestSchema } from './host-channel.schema';
@@ -11,6 +17,16 @@ export type { HostEvent } from './host-channel.types';
 export type { JournalEntry, JournalEntryBody } from './journal.types';
 export { PROTOCOL_VERSION } from './messages';
 export type { CoreMessage, Cue } from './messages.types';
+export type {
+  Concern,
+  CouncilEvent,
+  CouncilQuestion,
+  CouncilReport,
+  PlanOutcome,
+  PlanProposal,
+  SittingStatus,
+  SittingView,
+} from './sitting.types';
 export type {
   ActivityKind,
   AskUserQuestion,

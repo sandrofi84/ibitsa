@@ -1,0 +1,901 @@
+{
+  "cues": [],
+  "marks": [
+    {
+      "mark": "convened",
+      "t": 0,
+      "snapshot": {
+        "campaign": null,
+        "sitting": {
+          "id": "s1",
+          "task": "Add email sign-in\nUsers should be able to sign in with email and password.",
+          "mode": "roundTable",
+          "status": "convening",
+          "effort": "standard",
+          "roster": [
+            {
+              "councillorId": "architect",
+              "effort": "standard",
+              "reported": false
+            },
+            {
+              "councillorId": "tester",
+              "effort": "standard",
+              "reported": false
+            },
+            {
+              "councillorId": "security",
+              "effort": "standard",
+              "reported": false
+            },
+            {
+              "councillorId": "accessibility",
+              "effort": "standard",
+              "reported": false
+            }
+          ],
+          "reports": [],
+          "questions": null,
+          "plans": [],
+          "revision": 0,
+          "reconsultations": [],
+          "gold": {
+            "kind": "unknown"
+          },
+          "error": null
+        },
+        "islands": [],
+        "heroes": [],
+        "needsYou": []
+      }
+    },
+    {
+      "mark": "rejected-early",
+      "t": 6500,
+      "snapshot": {
+        "campaign": null,
+        "sitting": {
+          "id": "s1",
+          "task": "Add email sign-in\nUsers should be able to sign in with email and password.",
+          "mode": "roundTable",
+          "status": "deliberating",
+          "effort": "standard",
+          "roster": [
+            {
+              "councillorId": "architect",
+              "effort": "standard",
+              "reported": true
+            },
+            {
+              "councillorId": "tester",
+              "effort": "standard",
+              "reported": false
+            },
+            {
+              "councillorId": "security",
+              "effort": "standard",
+              "reported": true
+            },
+            {
+              "councillorId": "accessibility",
+              "effort": "standard",
+              "reported": false
+            }
+          ],
+          "reports": [
+            {
+              "id": "r2",
+              "councillorId": "architect",
+              "revision": 0,
+              "report": {
+                "concerns": [
+                  {
+                    "summary": "No session layer yet",
+                    "severity": "medium",
+                    "reason": "src/api has no middleware for auth"
+                  }
+                ],
+                "questions": [
+                  "Email only, or Google too?"
+                ],
+                "recommendations": [
+                  "Add an auth module beside src/api/users.ts"
+                ],
+                "notChecked": []
+              }
+            },
+            {
+              "id": "r3",
+              "councillorId": "security",
+              "revision": 0,
+              "report": {
+                "concerns": [
+                  {
+                    "summary": "Where tokens live",
+                    "severity": "serious",
+                    "reason": "localStorage is readable by any injected script"
+                  }
+                ],
+                "questions": [
+                  "How long should a session last?"
+                ],
+                "recommendations": [
+                  "httpOnly, SameSite cookies",
+                  "Hash passwords with argon2id"
+                ],
+                "notChecked": [
+                  "Rate limiting on the existing API"
+                ]
+              }
+            }
+          ],
+          "questions": null,
+          "plans": [],
+          "revision": 0,
+          "reconsultations": [],
+          "gold": {
+            "kind": "unknown"
+          },
+          "error": null
+        },
+        "islands": [],
+        "heroes": [],
+        "needsYou": []
+      }
+    },
+    {
+      "mark": "asking",
+      "t": 9000,
+      "snapshot": {
+        "campaign": null,
+        "sitting": {
+          "id": "s1",
+          "task": "Add email sign-in\nUsers should be able to sign in with email and password.",
+          "mode": "roundTable",
+          "status": "deliberating",
+          "effort": "standard",
+          "roster": [
+            {
+              "councillorId": "architect",
+              "effort": "standard",
+              "reported": true
+            },
+            {
+              "councillorId": "tester",
+              "effort": "standard",
+              "reported": true
+            },
+            {
+              "councillorId": "security",
+              "effort": "standard",
+              "reported": true
+            },
+            {
+              "councillorId": "accessibility",
+              "effort": "standard",
+              "reported": true
+            }
+          ],
+          "reports": [
+            {
+              "id": "r2",
+              "councillorId": "architect",
+              "revision": 0,
+              "report": {
+                "concerns": [
+                  {
+                    "summary": "No session layer yet",
+                    "severity": "medium",
+                    "reason": "src/api has no middleware for auth"
+                  }
+                ],
+                "questions": [
+                  "Email only, or Google too?"
+                ],
+                "recommendations": [
+                  "Add an auth module beside src/api/users.ts"
+                ],
+                "notChecked": []
+              }
+            },
+            {
+              "id": "r3",
+              "councillorId": "security",
+              "revision": 0,
+              "report": {
+                "concerns": [
+                  {
+                    "summary": "Where tokens live",
+                    "severity": "serious",
+                    "reason": "localStorage is readable by any injected script"
+                  }
+                ],
+                "questions": [
+                  "How long should a session last?"
+                ],
+                "recommendations": [
+                  "httpOnly, SameSite cookies",
+                  "Hash passwords with argon2id"
+                ],
+                "notChecked": [
+                  "Rate limiting on the existing API"
+                ]
+              }
+            },
+            {
+              "id": "r4",
+              "councillorId": "tester",
+              "revision": 0,
+              "report": {
+                "concerns": [],
+                "questions": [],
+                "recommendations": [
+                  "Integration tests for sign-in, sign-out and a wrong password"
+                ],
+                "notChecked": []
+              }
+            },
+            {
+              "id": "r5",
+              "councillorId": "accessibility",
+              "revision": 0,
+              "report": {
+                "concerns": [],
+                "questions": [],
+                "recommendations": [],
+                "notChecked": [],
+                "bowOut": "Nothing in my field beyond labelled form fields, which the existing form kit already does."
+              }
+            }
+          ],
+          "questions": {
+            "batchId": "b6",
+            "items": [
+              {
+                "councillorId": "architect",
+                "reportId": "r2",
+                "question": "Which sign-in methods?",
+                "options": [
+                  {
+                    "id": "email",
+                    "label": "Email and password",
+                    "tradeoff": "Smallest change; no third party"
+                  },
+                  {
+                    "id": "google",
+                    "label": "Email + Google",
+                    "tradeoff": "OAuth setup and a dependency"
+                  }
+                ],
+                "recommendation": {
+                  "optionId": "email",
+                  "reason": "Ship the core first"
+                },
+                "allowFreeText": true,
+                "id": "q7"
+              },
+              {
+                "councillorId": "security",
+                "reportId": "r3",
+                "question": "How long should a session last?",
+                "options": [
+                  {
+                    "id": "day",
+                    "label": "One day",
+                    "tradeoff": "Safer; users sign in daily"
+                  },
+                  {
+                    "id": "month",
+                    "label": "30 days",
+                    "tradeoff": "Convenient; a stolen cookie lasts longer"
+                  }
+                ],
+                "recommendation": {
+                  "optionId": "day",
+                  "reason": "No refresh tokens yet"
+                },
+                "allowFreeText": true,
+                "id": "q8"
+              }
+            ]
+          },
+          "plans": [],
+          "revision": 0,
+          "reconsultations": [],
+          "gold": {
+            "kind": "unknown"
+          },
+          "error": null
+        },
+        "islands": [],
+        "heroes": [],
+        "needsYou": []
+      }
+    },
+    {
+      "mark": "proposed",
+      "t": 20000,
+      "snapshot": {
+        "campaign": null,
+        "sitting": {
+          "id": "s1",
+          "task": "Add email sign-in\nUsers should be able to sign in with email and password.",
+          "mode": "roundTable",
+          "status": "awaitingApproval",
+          "effort": "standard",
+          "roster": [
+            {
+              "councillorId": "architect",
+              "effort": "standard",
+              "reported": true
+            },
+            {
+              "councillorId": "tester",
+              "effort": "standard",
+              "reported": true
+            },
+            {
+              "councillorId": "security",
+              "effort": "standard",
+              "reported": true
+            },
+            {
+              "councillorId": "accessibility",
+              "effort": "standard",
+              "reported": true
+            }
+          ],
+          "reports": [
+            {
+              "id": "r2",
+              "councillorId": "architect",
+              "revision": 0,
+              "report": {
+                "concerns": [
+                  {
+                    "summary": "No session layer yet",
+                    "severity": "medium",
+                    "reason": "src/api has no middleware for auth"
+                  }
+                ],
+                "questions": [
+                  "Email only, or Google too?"
+                ],
+                "recommendations": [
+                  "Add an auth module beside src/api/users.ts"
+                ],
+                "notChecked": []
+              }
+            },
+            {
+              "id": "r3",
+              "councillorId": "security",
+              "revision": 0,
+              "report": {
+                "concerns": [
+                  {
+                    "summary": "Where tokens live",
+                    "severity": "serious",
+                    "reason": "localStorage is readable by any injected script"
+                  }
+                ],
+                "questions": [
+                  "How long should a session last?"
+                ],
+                "recommendations": [
+                  "httpOnly, SameSite cookies",
+                  "Hash passwords with argon2id"
+                ],
+                "notChecked": [
+                  "Rate limiting on the existing API"
+                ]
+              }
+            },
+            {
+              "id": "r4",
+              "councillorId": "tester",
+              "revision": 0,
+              "report": {
+                "concerns": [],
+                "questions": [],
+                "recommendations": [
+                  "Integration tests for sign-in, sign-out and a wrong password"
+                ],
+                "notChecked": []
+              }
+            },
+            {
+              "id": "r5",
+              "councillorId": "accessibility",
+              "revision": 0,
+              "report": {
+                "concerns": [],
+                "questions": [],
+                "recommendations": [],
+                "notChecked": [],
+                "bowOut": "Nothing in my field beyond labelled form fields, which the existing form kit already does."
+              }
+            }
+          ],
+          "questions": null,
+          "plans": [
+            {
+              "version": 1,
+              "plan": {
+                "summary": "Email sign-in in three tasks: auth module, cookie sessions, form and tests."
+              },
+              "outcome": {
+                "kind": "proposed"
+              }
+            }
+          ],
+          "revision": 0,
+          "reconsultations": [],
+          "gold": {
+            "kind": "unknown"
+          },
+          "error": null
+        },
+        "islands": [],
+        "heroes": [],
+        "needsYou": []
+      }
+    },
+    {
+      "mark": "change-requested",
+      "t": 26000,
+      "snapshot": {
+        "campaign": null,
+        "sitting": {
+          "id": "s1",
+          "task": "Add email sign-in\nUsers should be able to sign in with email and password.",
+          "mode": "roundTable",
+          "status": "deliberating",
+          "effort": "standard",
+          "roster": [
+            {
+              "councillorId": "architect",
+              "effort": "standard",
+              "reported": true
+            },
+            {
+              "councillorId": "tester",
+              "effort": "standard",
+              "reported": true
+            },
+            {
+              "councillorId": "security",
+              "effort": "standard",
+              "reported": true
+            },
+            {
+              "councillorId": "accessibility",
+              "effort": "standard",
+              "reported": true
+            }
+          ],
+          "reports": [
+            {
+              "id": "r2",
+              "councillorId": "architect",
+              "revision": 0,
+              "report": {
+                "concerns": [
+                  {
+                    "summary": "No session layer yet",
+                    "severity": "medium",
+                    "reason": "src/api has no middleware for auth"
+                  }
+                ],
+                "questions": [
+                  "Email only, or Google too?"
+                ],
+                "recommendations": [
+                  "Add an auth module beside src/api/users.ts"
+                ],
+                "notChecked": []
+              }
+            },
+            {
+              "id": "r3",
+              "councillorId": "security",
+              "revision": 0,
+              "report": {
+                "concerns": [
+                  {
+                    "summary": "Where tokens live",
+                    "severity": "serious",
+                    "reason": "localStorage is readable by any injected script"
+                  }
+                ],
+                "questions": [
+                  "How long should a session last?"
+                ],
+                "recommendations": [
+                  "httpOnly, SameSite cookies",
+                  "Hash passwords with argon2id"
+                ],
+                "notChecked": [
+                  "Rate limiting on the existing API"
+                ]
+              }
+            },
+            {
+              "id": "r4",
+              "councillorId": "tester",
+              "revision": 0,
+              "report": {
+                "concerns": [],
+                "questions": [],
+                "recommendations": [
+                  "Integration tests for sign-in, sign-out and a wrong password"
+                ],
+                "notChecked": []
+              }
+            },
+            {
+              "id": "r5",
+              "councillorId": "accessibility",
+              "revision": 0,
+              "report": {
+                "concerns": [],
+                "questions": [],
+                "recommendations": [],
+                "notChecked": [],
+                "bowOut": "Nothing in my field beyond labelled form fields, which the existing form kit already does."
+              }
+            }
+          ],
+          "questions": null,
+          "plans": [
+            {
+              "version": 1,
+              "plan": {
+                "summary": "Email sign-in in three tasks: auth module, cookie sessions, form and tests."
+              },
+              "outcome": {
+                "kind": "changeRequested",
+                "text": "Add a task for sign out everywhere."
+              }
+            }
+          ],
+          "revision": 1,
+          "reconsultations": [],
+          "gold": {
+            "kind": "unknown"
+          },
+          "error": null
+        },
+        "islands": [],
+        "heroes": [],
+        "needsYou": []
+      }
+    },
+    {
+      "mark": "approved",
+      "t": 40000,
+      "snapshot": {
+        "campaign": null,
+        "sitting": {
+          "id": "s1",
+          "task": "Add email sign-in\nUsers should be able to sign in with email and password.",
+          "mode": "roundTable",
+          "status": "approved",
+          "effort": "standard",
+          "roster": [
+            {
+              "councillorId": "architect",
+              "effort": "standard",
+              "reported": true
+            },
+            {
+              "councillorId": "tester",
+              "effort": "standard",
+              "reported": true
+            },
+            {
+              "councillorId": "security",
+              "effort": "standard",
+              "reported": true
+            },
+            {
+              "councillorId": "accessibility",
+              "effort": "standard",
+              "reported": true
+            }
+          ],
+          "reports": [
+            {
+              "id": "r2",
+              "councillorId": "architect",
+              "revision": 0,
+              "report": {
+                "concerns": [
+                  {
+                    "summary": "No session layer yet",
+                    "severity": "medium",
+                    "reason": "src/api has no middleware for auth"
+                  }
+                ],
+                "questions": [
+                  "Email only, or Google too?"
+                ],
+                "recommendations": [
+                  "Add an auth module beside src/api/users.ts"
+                ],
+                "notChecked": []
+              }
+            },
+            {
+              "id": "r3",
+              "councillorId": "security",
+              "revision": 0,
+              "report": {
+                "concerns": [
+                  {
+                    "summary": "Where tokens live",
+                    "severity": "serious",
+                    "reason": "localStorage is readable by any injected script"
+                  }
+                ],
+                "questions": [
+                  "How long should a session last?"
+                ],
+                "recommendations": [
+                  "httpOnly, SameSite cookies",
+                  "Hash passwords with argon2id"
+                ],
+                "notChecked": [
+                  "Rate limiting on the existing API"
+                ]
+              }
+            },
+            {
+              "id": "r4",
+              "councillorId": "tester",
+              "revision": 0,
+              "report": {
+                "concerns": [],
+                "questions": [],
+                "recommendations": [
+                  "Integration tests for sign-in, sign-out and a wrong password"
+                ],
+                "notChecked": []
+              }
+            },
+            {
+              "id": "r5",
+              "councillorId": "accessibility",
+              "revision": 0,
+              "report": {
+                "concerns": [],
+                "questions": [],
+                "recommendations": [],
+                "notChecked": [],
+                "bowOut": "Nothing in my field beyond labelled form fields, which the existing form kit already does."
+              }
+            },
+            {
+              "id": "r9",
+              "councillorId": "security",
+              "revision": 1,
+              "report": {
+                "concerns": [
+                  {
+                    "summary": "Sign out everywhere needs a session list",
+                    "severity": "medium",
+                    "reason": "Cookies alone can't be revoked"
+                  }
+                ],
+                "questions": [],
+                "recommendations": [
+                  "Store sessions server-side with a revoke-all"
+                ],
+                "notChecked": []
+              }
+            }
+          ],
+          "questions": null,
+          "plans": [
+            {
+              "version": 1,
+              "plan": {
+                "summary": "Email sign-in in three tasks: auth module, cookie sessions, form and tests."
+              },
+              "outcome": {
+                "kind": "changeRequested",
+                "text": "Add a task for sign out everywhere."
+              }
+            },
+            {
+              "version": 2,
+              "plan": {
+                "summary": "Email sign-in in four tasks: auth module, server-side sessions with revoke-all, form, tests."
+              },
+              "outcome": {
+                "kind": "approved"
+              }
+            }
+          ],
+          "revision": 1,
+          "reconsultations": [
+            {
+              "councillorId": "security",
+              "revision": 1,
+              "reportId": "r9"
+            }
+          ],
+          "gold": {
+            "kind": "exact",
+            "value": 412000
+          },
+          "error": null
+        },
+        "islands": [],
+        "heroes": [],
+        "needsYou": []
+      }
+    }
+  ],
+  "final": {
+    "campaign": null,
+    "sitting": {
+      "id": "s1",
+      "task": "Add email sign-in\nUsers should be able to sign in with email and password.",
+      "mode": "roundTable",
+      "status": "approved",
+      "effort": "standard",
+      "roster": [
+        {
+          "councillorId": "architect",
+          "effort": "standard",
+          "reported": true
+        },
+        {
+          "councillorId": "tester",
+          "effort": "standard",
+          "reported": true
+        },
+        {
+          "councillorId": "security",
+          "effort": "standard",
+          "reported": true
+        },
+        {
+          "councillorId": "accessibility",
+          "effort": "standard",
+          "reported": true
+        }
+      ],
+      "reports": [
+        {
+          "id": "r2",
+          "councillorId": "architect",
+          "revision": 0,
+          "report": {
+            "concerns": [
+              {
+                "summary": "No session layer yet",
+                "severity": "medium",
+                "reason": "src/api has no middleware for auth"
+              }
+            ],
+            "questions": [
+              "Email only, or Google too?"
+            ],
+            "recommendations": [
+              "Add an auth module beside src/api/users.ts"
+            ],
+            "notChecked": []
+          }
+        },
+        {
+          "id": "r3",
+          "councillorId": "security",
+          "revision": 0,
+          "report": {
+            "concerns": [
+              {
+                "summary": "Where tokens live",
+                "severity": "serious",
+                "reason": "localStorage is readable by any injected script"
+              }
+            ],
+            "questions": [
+              "How long should a session last?"
+            ],
+            "recommendations": [
+              "httpOnly, SameSite cookies",
+              "Hash passwords with argon2id"
+            ],
+            "notChecked": [
+              "Rate limiting on the existing API"
+            ]
+          }
+        },
+        {
+          "id": "r4",
+          "councillorId": "tester",
+          "revision": 0,
+          "report": {
+            "concerns": [],
+            "questions": [],
+            "recommendations": [
+              "Integration tests for sign-in, sign-out and a wrong password"
+            ],
+            "notChecked": []
+          }
+        },
+        {
+          "id": "r5",
+          "councillorId": "accessibility",
+          "revision": 0,
+          "report": {
+            "concerns": [],
+            "questions": [],
+            "recommendations": [],
+            "notChecked": [],
+            "bowOut": "Nothing in my field beyond labelled form fields, which the existing form kit already does."
+          }
+        },
+        {
+          "id": "r9",
+          "councillorId": "security",
+          "revision": 1,
+          "report": {
+            "concerns": [
+              {
+                "summary": "Sign out everywhere needs a session list",
+                "severity": "medium",
+                "reason": "Cookies alone can't be revoked"
+              }
+            ],
+            "questions": [],
+            "recommendations": [
+              "Store sessions server-side with a revoke-all"
+            ],
+            "notChecked": []
+          }
+        }
+      ],
+      "questions": null,
+      "plans": [
+        {
+          "version": 1,
+          "plan": {
+            "summary": "Email sign-in in three tasks: auth module, cookie sessions, form and tests."
+          },
+          "outcome": {
+            "kind": "changeRequested",
+            "text": "Add a task for sign out everywhere."
+          }
+        },
+        {
+          "version": 2,
+          "plan": {
+            "summary": "Email sign-in in four tasks: auth module, server-side sessions with revoke-all, form, tests."
+          },
+          "outcome": {
+            "kind": "approved"
+          }
+        }
+      ],
+      "revision": 1,
+      "reconsultations": [
+        {
+          "councillorId": "security",
+          "revision": 1,
+          "reportId": "r9"
+        }
+      ],
+      "gold": {
+        "kind": "exact",
+        "value": 412000
+      },
+      "error": null
+    },
+    "islands": [],
+    "heroes": [],
+    "needsYou": []
+  }
+}

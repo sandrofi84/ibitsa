@@ -9,6 +9,7 @@
     },
     "autoApprove": false
   },
+  "sitting": null,
   "islands": [
     {
       "id": "i2",

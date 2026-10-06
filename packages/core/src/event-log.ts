@@ -6,7 +6,7 @@ export const LOG_VERSION = 1;
 
 export class LogFormatError extends Error {}
 
-const KINDS = new Set(['agent', 'command', 'gm', 'timer']);
+const KINDS = new Set(['agent', 'council', 'command', 'gm', 'timer']);
 
 export function parseLog(text: string): EventLog {
   const lines = text.split('\n');

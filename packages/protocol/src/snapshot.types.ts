@@ -1,8 +1,11 @@
+import type { SittingView } from './sitting.types';
 import type { MicroUsd, Reading } from './values.types';
 
 /** The whole world as front ends see it: glossary terms, no layout (spec §11.2.1). */
 export interface Snapshot {
   campaign: CampaignView | null;
+  /** The council's current or last sitting (spec §4.3); null before the first. */
+  sitting: SittingView | null;
   islands: IslandView[];
   heroes: HeroView[];
   /** Oldest first. */

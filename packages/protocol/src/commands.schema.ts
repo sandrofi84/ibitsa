@@ -6,6 +6,21 @@ import * as v from 'valibot';
 const id = v.pipe(v.string(), v.nonEmpty());
 const positiveInt = v.pipe(v.number(), v.integer(), v.minValue(1));
 
+/** Light, Standard or Deep: models and caps for a councillor or a sitting (spec §4.2). */
+export const EffortSchema = v.picklist(['light', 'standard', 'deep']);
+export type Effort = v.InferOutput<typeof EffortSchema>;
+
+/** Round table: one session voices every councillor. Separate chambers: each councillor apart (§4.3). */
+export const SittingModeSchema = v.picklist(['roundTable', 'chambers']);
+export type SittingMode = v.InferOutput<typeof SittingModeSchema>;
+
+/** The user's answer to one council question: an option, or their own words (§4.4). */
+export const CouncilAnswerSchema = v.union([
+  v.strictObject({ optionId: id }),
+  v.strictObject({ text: v.pipe(v.string(), v.trim(), v.nonEmpty()) }),
+]);
+export type CouncilAnswer = v.InferOutput<typeof CouncilAnswerSchema>;
+
 export const CommandSchema = v.variant('type', [
   v.strictObject({ type: v.literal('hello'), protocolVersion: positiveInt }),
   /** A page of the journal, answered by the runtime and never logged (#58): `before` an entry index. */
@@ -86,6 +101,41 @@ export const CommandSchema = v.variant('type', [
   }),
   v.strictObject({ type: v.literal('finishQuest'), commandId: id }),
   v.strictObject({ type: v.literal('abandonQuest'), commandId: id }),
+  /**
+   * Convene the council (spec §4.2). `effort` is the sitting's; in separate chambers every councillor on
+   * the roster also needs one in `councillorEfforts`.
+   */
+  v.strictObject({
+    type: v.literal('conveneCouncil'),
+    commandId: id,
+    task: v.pipe(v.string(), v.nonEmpty()),
+    mode: SittingModeSchema,
+    roster: v.pipe(v.array(id), v.minLength(1)),
+    effort: EffortSchema,
+    councillorEfforts: v.optional(v.record(id, EffortSchema)),
+  }),
+  /** Add a councillor mid-sitting; it must report before the next plan is accepted. */
+  v.strictObject({
+    type: v.literal('addCouncillor'),
+    commandId: id,
+    councillorId: id,
+    effort: EffortSchema,
+  }),
+  /** Answers the waiting `ask_user` batch, one answer per question id. */
+  v.strictObject({
+    type: v.literal('answerCouncil'),
+    commandId: id,
+    batchId: id,
+    answers: v.record(id, CouncilAnswerSchema),
+  }),
+  v.strictObject({ type: v.literal('approvePlan'), commandId: id, version: positiveInt }),
+  v.strictObject({
+    type: v.literal('requestPlanChange'),
+    commandId: id,
+    version: positiveInt,
+    text: v.pipe(v.string(), v.trim(), v.nonEmpty()),
+  }),
+  v.strictObject({ type: v.literal('dismissCouncil'), commandId: id }),
   /** Refused unless the worktree is clean. */
   v.strictObject({ type: v.literal('removeWorktree'), commandId: id, islandId: id }),
 ]);

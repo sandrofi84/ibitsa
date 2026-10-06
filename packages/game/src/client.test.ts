@@ -23,6 +23,7 @@ class FakeHost implements Host {
 
 const snap = (title: string): Snapshot => ({
   campaign: { id: 'c1', title, status: 'active', gold: { kind: 'unknown' }, autoApprove: false },
+  sitting: null,
   islands: [],
   heroes: [],
   needsYou: [],
@@ -203,6 +204,7 @@ describe('GameClient actionsReady (#84)', () => {
   ];
   const quest = (id: string): Snapshot => ({
     campaign: { id, title: 'Q', status: 'active', gold: { kind: 'unknown' }, autoApprove: false },
+    sitting: null,
     islands: [],
     heroes: [],
     needsYou: [],

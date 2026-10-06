@@ -71,6 +71,25 @@ const valid: Command[] = [
   { type: 'finishQuest', commandId: 'c11' },
   { type: 'abandonQuest', commandId: 'c12' },
   { type: 'removeWorktree', commandId: 'c13', islandId: 'i1' },
+  {
+    type: 'conveneCouncil',
+    commandId: 'c14',
+    task: 'Add sign-in',
+    mode: 'chambers',
+    roster: ['architect', 'security'],
+    effort: 'standard',
+    councillorEfforts: { architect: 'light', security: 'deep' },
+  },
+  { type: 'addCouncillor', commandId: 'c15', councillorId: 'tester', effort: 'light' },
+  {
+    type: 'answerCouncil',
+    commandId: 'c16',
+    batchId: 'b4',
+    answers: { q5: { optionId: 'email' }, q6: { text: 'A week' } },
+  },
+  { type: 'approvePlan', commandId: 'c17', version: 1 },
+  { type: 'requestPlanChange', commandId: 'c18', version: 1, text: 'No Google sign-in' },
+  { type: 'dismissCouncil', commandId: 'c19' },
 ];
 
 describe('parseCommand', () => {
@@ -79,7 +98,7 @@ describe('parseCommand', () => {
   });
 
   it('covers every command type', () => {
-    expect(new Set(valid.map((c) => c.type)).size).toBe(20);
+    expect(new Set(valid.map((c) => c.type)).size).toBe(26);
   });
 
   it.each([
@@ -152,6 +171,35 @@ describe('parseCommand', () => {
     ],
     ['files without an island', { type: 'requestFiles' }],
     ['auto mode without on', { type: 'setAutoApprove', commandId: 'c1' }],
+    [
+      'an empty roster',
+      {
+        type: 'conveneCouncil',
+        commandId: 'c1',
+        task: 'x',
+        mode: 'roundTable',
+        roster: [],
+        effort: 'light',
+      },
+    ],
+    [
+      'an unknown effort',
+      { type: 'addCouncillor', commandId: 'c1', councillorId: 'tester', effort: 'max' },
+    ],
+    [
+      'an answer with both an option and text',
+      {
+        type: 'answerCouncil',
+        commandId: 'c1',
+        batchId: 'b1',
+        answers: { q1: { optionId: 'a', text: 'b' } },
+      },
+    ],
+    [
+      'a blank change request',
+      { type: 'requestPlanChange', commandId: 'c1', version: 1, text: '  ' },
+    ],
+    ['plan version 0', { type: 'approvePlan', commandId: 'c1', version: 0 }],
   ])('rejects %s', (_, input) => {
     const result = parseCommand(input);
     expect(result.ok).toBe(false);
