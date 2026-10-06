@@ -1,5 +1,7 @@
 import type { ExecutionState, HeroView, JournalEntry, Reading, Snapshot } from '@ibitsa/protocol';
 import type { GameClient } from './client';
+import type { CommandHistory } from './command-history';
+import { createCommandInput } from './command-input';
 import { button, el } from './dom';
 import type { HeroPane } from './hero-pane.types';
 import { HERO_CLASSES } from './heroes';
@@ -32,10 +34,15 @@ export function mountHeroPane({
   client,
   host,
   view,
+  history,
+  onHistoryChange,
 }: {
   client: GameClient;
   host: Host;
   view: ViewState;
+  /** Shared with the command bar: the pane's box is the same input, aimed at this hero (#81). */
+  history: CommandHistory;
+  onHistoryChange: () => void;
 }): HeroPane {
   const pane = el('section', { className: 'hero-pane' });
   pane.setAttribute('aria-label', 'Hero');
@@ -68,10 +75,17 @@ export function mountHeroPane({
   // Built once, so typing in the message box survives snapshots.
   const title = el('h2');
   const facts = el('dl');
-  const message = el('textarea');
-  message.rows = 3;
-  message.placeholder = 'Message the hero…';
-  message.setAttribute('aria-label', 'Message to the hero');
+  // The command bar's input, aimed at this hero (#81): same keys, same history.
+  let heroId: string | null = null;
+  const message = createCommandInput({
+    label: 'Message to the hero',
+    placeholder: 'Message the hero…',
+    history,
+    onHistoryChange,
+    onSend: ({ text, priority }) => {
+      if (heroId) client.send({ type: 'sendMessage', heroId, text, priority });
+    },
+  });
   // The hero's own summary once it submits: what the "Ready for review!" bubble leads to (#57).
   const summary = el('p', { className: 'summary' });
   summary.hidden = true;
@@ -103,7 +117,7 @@ export function mountHeroPane({
     renderJournal({ follow: true });
   };
   client.onJournal(() => renderJournal({ follow: false }));
-  body.append(title, facts, summary, autoNote, message, controls, status, rules, journal);
+  body.append(title, facts, summary, autoNote, message.element, controls, status, rules, journal);
 
   let confirmAbandon = false;
   let confirmAuto = false;
@@ -163,18 +177,11 @@ export function mountHeroPane({
 
     const active = campaign.status === 'active';
     const island = snapshot.islands[0];
-    message.hidden = !active;
-    const send = (priority: 'now' | 'next') => {
-      const text = message.value.trim();
-      if (!text) return;
-      client.send({ type: 'sendMessage', heroId: hero.id, text, priority });
-      message.value = '';
-    };
+    message.element.hidden = !active;
+    heroId = hero.id;
     const items: HTMLButtonElement[] = [];
     if (active) {
       items.push(
-        button({ label: 'Send', onClick: () => send('next') }),
-        button({ label: 'Send now', onClick: () => send('now') }),
         button({
           label: 'Stop',
           onClick: () => client.send({ type: 'stopHero', heroId: hero.id }),

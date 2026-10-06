@@ -25,7 +25,8 @@ body {
 .needs-you {
   position: fixed;
   left: 50%;
-  bottom: 12px;
+  /* Above the command bar (#81). */
+  bottom: 76px;
   transform: translateX(-50%);
   width: min(560px, calc(100vw - 32px));
   max-height: 40vh;
@@ -573,4 +574,96 @@ body.hero-pane-open .needs-you {
 
 .camera-controls button:focus-visible {
   outline: 2px solid #1a1420;
+}
+
+/* ---------- Command bar (#81) ---------- */
+
+.command-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  width: min(560px, calc(100vw - 32px));
+  font:
+    13px / 1.45 system-ui,
+    sans-serif;
+  color: #1a1420;
+}
+
+/* With the hero pane open on the right, the bar centres in the space to its left, like Needs you. */
+body.hero-pane-open .command-bar {
+  left: 16px;
+  right: 288px;
+  margin: 0 auto;
+  transform: none;
+  width: min(560px, calc(100vw - 304px));
+}
+
+.command-input {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 6px;
+  align-items: end;
+}
+
+/* In the narrow hero pane, the buttons go under the box. */
+.hero-pane .command-input {
+  grid-template-columns: 1fr;
+  margin-bottom: 8px;
+}
+
+.command-bar .command-input {
+  background: rgba(239, 224, 184, 0.96);
+  border: 2px solid #8a6a3a;
+  border-radius: 4px;
+  padding: 6px;
+}
+
+.command-input textarea {
+  box-sizing: border-box;
+  width: 100%;
+  resize: none;
+  font: inherit;
+  padding: 4px 6px;
+  border: 1px solid #8a6a3a;
+  border-radius: 3px;
+  background: #fff6dc;
+  color: #1a1420;
+}
+
+.command-input textarea:focus-visible {
+  outline: 2px solid #1a1420;
+}
+
+.command-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.command-actions button {
+  font: inherit;
+  padding: 3px 10px;
+  border: 1px solid #5e3b1c;
+  background: #fff6dc;
+  border-radius: 3px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.command-actions button:focus-visible {
+  outline: 2px solid #1a1420;
+}
+
+.command-hint:not([hidden]) {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 12px;
+  color: #5e4a2a;
+}
+
+.command-menu:not([hidden]) {
+  grid-column: 1 / -1;
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }

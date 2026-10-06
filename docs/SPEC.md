@@ -281,7 +281,9 @@ On the map, councillors walk out of the council hut to the task point, show a ma
 ## 6. Interaction
 
 ### 6.1 Command bar
-- A text input in the game panel (and in party/council dialogue boxes). Also expose actions as Command Palette commands.
+- A text input along the bottom of the game panel, focused with `/` or ⌘K (#81); Needs you stacks above it. The hero pane's message box is the same input, aimed at that hero, and they share one ↑/↓ history (view state). Later the same input serves party and council dialogue boxes. Actions are also Command Palette commands.
+- **Keys:** Enter sends after the current step (queued), ⌥Enter sends now, ⇧Enter adds a line, ↑/↓ recall earlier messages, Esc clears and then leaves the input.
+- **No quest running:** Enter offers "Start a quest" with the text as its task, opening the New Quest form filled in.
 - **`@` autocomplete**, two groups:
   - **Targets:** `@council`, each party by name (`@atelier`, `@brann`), `@all`; shown with current status.
   - **Files/folders:** fuzzy search (in the target party's worktree when addressing a party). Sent as paths the model reads itself.
@@ -782,10 +784,10 @@ Settled in [#11](https://github.com/sandrofi84/ibitsa/issues/11).
 3. ~~Character sprite size: 16×16 vs 32×32.~~ Settled: 16×16 (§9.2).
 4. ~~Game engine: Phaser vs PixiJS.~~ Settled: Phaser 4 (§9.1).
 5. Councillor skill location so they don't clutter the normal `/` menu.
-6. Whether Claude Code tolerates extra frontmatter fields (for action `target`), else sidecar.
+6. ~~Whether Claude Code tolerates extra frontmatter fields (for action `target`), else sidecar.~~ Settled in M2 planning: a skill with an extra flat field loads and is listed by `supportedCommands()`; Ibitsa uses `ibitsa-target` and reads it from the file.
 7. Confirm SDK invocation of custom skills via `/name` prompts.
 8. ACP capability coverage per agent.
 9. Subscription (claude.ai) sign-in for the published extension: possible only with Anthropic's approval; not requested yet (§11.6).
 10. Default max parallel parties.
 11. Specialist dives (planning subagents): add later or not.
-12. Optional `@ibitsa` VS Code chat participant.
+12. Optional `@ibitsa` VS Code chat participant. Not in M2 (#88).
