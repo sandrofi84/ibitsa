@@ -49,7 +49,9 @@ export function mountHeroPane({
   dot.setAttribute('aria-hidden', 'true');
   const tabName = el('span', { className: 'name' });
   const badge = el('span', { className: 'badge' });
-  tab.append(dot, tabName, badge);
+  const autoBadge = el('span', { className: 'auto-badge', text: 'AUTO' });
+  autoBadge.title = 'Auto mode is on';
+  tab.append(dot, tabName, autoBadge, badge);
   const body = el('div', { className: 'hero-pane-body' });
   body.id = 'hero-pane-body';
   pane.append(tab, body);
@@ -73,6 +75,9 @@ export function mountHeroPane({
   // The hero's own summary once it submits: what the "Ready for review!" bubble leads to (#57).
   const summary = el('p', { className: 'summary' });
   summary.hidden = true;
+  // Auto mode (#63): a notice while it's on, so it's never on unnoticed.
+  const autoNote = el('p', { className: 'auto-note' });
+  autoNote.setAttribute('role', 'status');
   const controls = el('div', { className: 'controls' });
   // "Always allow in this project" rules (#62), with a way to take one back.
   const rules = el('section', { className: 'project-rules' });
@@ -98,9 +103,10 @@ export function mountHeroPane({
     renderJournal({ follow: true });
   };
   client.onJournal(() => renderJournal({ follow: false }));
-  body.append(title, facts, summary, message, controls, status, rules, journal);
+  body.append(title, facts, summary, autoNote, message, controls, status, rules, journal);
 
   let confirmAbandon = false;
+  let confirmAuto = false;
   client.onSnapshot((snapshot) => render(snapshot));
 
   function render(snapshot: Snapshot): void {
@@ -122,6 +128,14 @@ export function mountHeroPane({
       'aria-label',
       `${hero.name}, ${STATE_LABELS[hero.state.kind]}${waiting > 0 ? `, ${waiting} waiting on you` : ''}. ${open ? 'Collapse' : 'Expand'} the hero pane`,
     );
+    const auto = campaign.autoApprove;
+    autoBadge.hidden = !auto;
+    autoNote.hidden = !auto;
+    autoNote.textContent = auto
+      ? snapshot.sandboxed === false
+        ? 'Auto mode is on. There is no sandbox here: every command runs without asking, except writes outside the worktree.'
+        : 'Auto mode is on: the hero’s requests are allowed without asking, except outside the worktree or the sandbox.'
+      : '';
     const heroClass = HERO_CLASSES.find((c) => c.id === hero.classId);
     title.textContent = hero.name;
     const rows: [string, string][] = [
@@ -193,6 +207,26 @@ export function mountHeroPane({
       // Its label changes when it asks to confirm; focus follows it by this key.
       abandon.dataset.control = 'abandon';
       items.push(abandon);
+      // Turning auto mode on without a sandbox asks once more, saying what that means (#63).
+      const autoToggle = button({
+        label: auto
+          ? 'Turn auto mode off'
+          : confirmAuto
+            ? 'No sandbox here: turn on anyway?'
+            : 'Turn auto mode on',
+        onClick: () => {
+          if (!auto && snapshot.sandboxed === false && !confirmAuto) {
+            confirmAuto = true;
+            render(snapshot);
+            return;
+          }
+          confirmAuto = false;
+          client.send({ type: 'setAutoApprove', on: !auto });
+        },
+      });
+      autoToggle.dataset.control = 'auto';
+      autoToggle.setAttribute('aria-pressed', String(auto));
+      items.push(autoToggle);
     }
     const worktree = island?.worktree ?? 'creating';
     if (worktree === 'ready') {

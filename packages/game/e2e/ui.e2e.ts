@@ -301,3 +301,51 @@ test('always allow: for this quest, or in this project with a way to take it bac
   await expect(needsYou).toHaveCount(0);
   await expect(rules).toBeHidden();
 });
+
+test('auto mode allows the hero without asking, says so, and asks again once off (#63)', async ({
+  page,
+}) => {
+  await page.goto('/?fixture=live');
+  await page.getByRole('button', { name: 'New quest' }).click();
+  await page.getByLabel('Task').fill('Tidy the README');
+  await page.getByRole('button', { name: 'Start quest' }).click();
+  await expect.poll(() => heroState(page)).toBe('idle');
+  const pane = page.getByRole('region', { name: 'Hero' });
+  const needsYou = page.locator('.needs-you .item.permission');
+
+  await pane.getByRole('button', { name: 'Turn auto mode on' }).click();
+  await expect(pane.getByRole('status').filter({ hasText: 'Auto mode is on' })).toBeVisible();
+  await expect(pane.getByRole('button', { name: /hero pane/ })).toContainText('AUTO');
+
+  await pane.getByLabel('Message to the hero').fill('Please commit');
+  await pane.getByRole('button', { name: 'Send now' }).click();
+  await expect.poll(() => probe(page, (p) => p.hero.speech())).toBe('Committed.');
+  await expect(needsYou).toHaveCount(0);
+  await page.screenshot({ path: 'test-results/ui-auto-mode.png' });
+  await pane.getByRole('button', { name: 'Journal' }).click();
+  const journal = pane.getByRole('list', { name: 'Journal' });
+  await expect(journal).toContainText('You turned auto mode on.');
+  await expect(journal).toContainText('Auto-allowed: run command git commit -m "demo"');
+
+  await pane.getByRole('button', { name: 'Turn auto mode off' }).click();
+  await expect.poll(() => heroState(page)).toBe('idle');
+  await pane.getByLabel('Message to the hero').fill('commit again');
+  await pane.getByRole('button', { name: 'Send now' }).click();
+  await expect(needsYou).toHaveCount(1);
+});
+
+test('without a sandbox, turning auto mode on asks once more (#63)', async ({ page }) => {
+  await page.goto('/?fixture=live&sandbox=none');
+  await page.getByRole('button', { name: 'New quest' }).click();
+  await page.getByLabel('Task').fill('Tidy the README');
+  await page.getByRole('button', { name: 'Start quest' }).click();
+  await expect.poll(() => heroState(page)).toBe('idle');
+  const pane = page.getByRole('region', { name: 'Hero' });
+  await pane.getByRole('button', { name: 'Turn auto mode on' }).click();
+  const confirm = pane.getByRole('button', { name: 'No sandbox here: turn on anyway?' });
+  await expect(confirm).toBeFocused();
+  await confirm.click();
+  await expect(
+    pane.getByRole('status').filter({ hasText: 'There is no sandbox here' }),
+  ).toBeVisible();
+});

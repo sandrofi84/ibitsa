@@ -37,6 +37,7 @@ if (name === 'live') {
   // The real core and a scripted fake runtime, for playing the UI end to end (#37).
   const host = new LiveDevHost({
     credentialsReady: params.get('credentials') !== 'none',
+    sandboxed: params.get('sandbox') !== 'none',
     repo:
       params.get('repo') === 'none'
         ? null
