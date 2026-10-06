@@ -1,4 +1,4 @@
-import { appendFileSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { type GameMasterEvent, parseLog, SILENCE_MS, view } from '@ibitsa/core';
@@ -450,11 +450,16 @@ describe('the / menu (#84)', () => {
       listActions: ({ cwd }: { cwd: string }) => list(cwd),
     });
     const fire: (() => void)[] = [];
+    // A home with a .claude folder, so there's something to watch whatever machine runs this (CI has none).
+    const home = mkdtempSync(join(tmpdir(), 'ibitsa-home-'));
+    dirs.push(home);
+    mkdirSync(join(home, '.claude'));
     const runtime = new Runtime({
       storageDir: env.storageDir,
       adapter,
       gameMaster: env.gameMaster,
       clock: env.clock,
+      home,
       watchFolder: ({ onChange }) => {
         fire.push(onChange);
         return { close: () => {} };
