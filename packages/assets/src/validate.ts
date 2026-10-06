@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { extname, join, relative, sep } from 'node:path';
 import * as v from 'valibot';
 import { ManifestSchema } from './manifest.schema.ts';
-import { REQUIRED_ANIMATIONS, SPEC } from './manifest.ts';
+import { ACTIVITY_KINDS, REQUIRED_ANIMATIONS, SPEC } from './manifest.ts';
 import { readPngSize } from './png.ts';
 import type { PackValidation } from './validate.types.ts';
 
@@ -147,6 +147,18 @@ export function validatePack(dir: string): PackValidation {
     file: tp.image,
     label: 'task points',
     check: exactly(tp.size * tp.states.length, tp.size),
+  });
+
+  const ai = manifest.activityIcons;
+  if (ai.size !== SPEC.activityIcon)
+    errors.push(`activity icons: size ${ai.size}, expected ${SPEC.activityIcon}`);
+  for (const kind of ACTIVITY_KINDS) {
+    if (!ai.kinds.includes(kind)) errors.push(`activity icons: missing "${kind}"`);
+  }
+  checkImage({
+    file: ai.image,
+    label: 'activity icons',
+    check: exactly(ai.size * ai.kinds.length, ai.size),
   });
 
   for (const [key, b] of Object.entries(manifest.buildings)) {

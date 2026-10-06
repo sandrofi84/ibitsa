@@ -57,6 +57,22 @@ describe('validatePack', () => {
     });
   });
 
+  it('rejects a pack missing an activity icon, or with icons of the wrong size (#60)', () => {
+    const dir = copyPack();
+    editManifest(dir, (m) => {
+      m.activityIcons.kinds = m.activityIcons.kinds.filter((k) => k !== 'test');
+      m.activityIcons.size = 16;
+    });
+    const result = validatePack(dir);
+    expect(result.ok ? [] : result.errors).toEqual(
+      expect.arrayContaining([
+        'activity icons: size 16, expected 12',
+        'activity icons: missing "test"',
+        'activity icons: ui/activity-icons.png is 84×12, expected 96×16',
+      ]),
+    );
+  });
+
   it('rejects a wrong frame size', () => {
     const dir = copyPack();
     editManifest(dir, (m) => {

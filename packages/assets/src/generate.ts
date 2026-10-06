@@ -2,6 +2,7 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import {
   ANIMATIONS,
+  activityIcons,
   CHARACTERS,
   characterSheet,
   dialogueFrame,
@@ -15,7 +16,7 @@ import {
   tiles,
 } from './art.ts';
 import type { Manifest } from './manifest.schema.ts';
-import { SPEC, TASK_POINT_STATES } from './manifest.ts';
+import { ACTIVITY_KINDS, SPEC, TASK_POINT_STATES } from './manifest.ts';
 
 /** The default pack: manifest plus every image, keyed by path inside the pack. */
 export function buildDefaultPack(): { manifest: Manifest; files: Record<string, Buffer> } {
@@ -44,6 +45,7 @@ export function buildDefaultPack(): { manifest: Manifest; files: Record<string, 
   files['map/island.png'] = island().png();
   files['map/task-points.png'] = taskPoints(TASK_POINT_STATES).png();
   files['map/hut.png'] = hut().png();
+  files['ui/activity-icons.png'] = activityIcons(ACTIVITY_KINDS).png();
   files['ui/dialogue-frame.png'] = dialogueFrame().png();
 
   const manifest: Manifest = {
@@ -66,6 +68,11 @@ export function buildDefaultPack(): { manifest: Manifest; files: Record<string, 
       image: 'map/task-points.png',
       size: SPEC.taskPoint,
       states: [...TASK_POINT_STATES],
+    },
+    activityIcons: {
+      image: 'ui/activity-icons.png',
+      size: SPEC.activityIcon,
+      kinds: [...ACTIVITY_KINDS],
     },
     buildings: { hut: { image: 'map/hut.png', width: SPEC.hut, height: SPEC.hut } },
     ui: { dialogueFrame: { image: 'ui/dialogue-frame.png', size: SPEC.dialogueFrame, inset: 8 } },
