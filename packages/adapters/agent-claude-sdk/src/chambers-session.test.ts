@@ -17,10 +17,19 @@ import { ClaudeAdapter } from './claude-adapter';
 import type { SdkModule } from './claude-adapter.types';
 import type { ToolReply } from './elder-session.types';
 
-type Handler = (input: unknown) => Promise<ToolReply>;
+type Handler = (input: unknown, extra?: unknown) => Promise<ToolReply>;
 /** A tool call, from the elder's own thread or from inside a chamber (`agent`). */
 type Call = (name: string, extra: { input: unknown; agent?: string }) => Promise<ToolReply>;
-type Script = (ctx: { call: Call; next: () => Promise<string> }) => AsyncGenerator<SDKMessage>;
+/** A call whose hook has run; its handler runs when `finish` is called, with Claude Code's metadata. */
+type Begin = (
+  name: string,
+  extra: { input: unknown; agent?: string },
+) => Promise<() => Promise<ToolReply>>;
+type Script = (ctx: {
+  call: Call;
+  begin: Begin;
+  next: () => Promise<string>;
+}) => AsyncGenerator<SDKMessage>;
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -43,6 +52,22 @@ function fakeSdk(script: Script) {
         inputs.push(text);
         return text;
       };
+      const begin: Begin = async (name, { input, agent }) => {
+        const toolUseId = `tu${++n}`;
+        const hookInput = {
+          tool_name: `mcp__ibitsa__${name}`,
+          tool_use_id: toolUseId,
+          ...(agent ? { agent_id: `a-${agent}`, agent_type: agent } : {}),
+        };
+        for (const m of options.hooks?.PreToolUse ?? []) {
+          for (const h of m.hooks as HookCallback[]) {
+            await h(hookInput as never, toolUseId, { signal: new AbortController().signal });
+          }
+        }
+        const handler = handlers.get(name);
+        if (!handler) throw new Error(`no tool ${name}`);
+        return () => handler(input, { _meta: { 'claudecode/toolUseId': toolUseId } });
+      };
       const call: Call = async (name, { input, agent }) => {
         const toolUseId = `tu${++n}`;
         const hookInput = {
@@ -59,7 +84,7 @@ function fakeSdk(script: Script) {
         if (!handler) throw new Error(`no tool ${name}`);
         return handler(input);
       };
-      return Object.assign(script({ call, next }), { close: () => {} }) as unknown as Query;
+      return Object.assign(script({ call, begin, next }), { close: () => {} }) as unknown as Query;
     },
     createSdkMcpServer: ((config: {
       name: string;
@@ -252,6 +277,41 @@ describe('separate chambers (#105)', () => {
       { type: 'reportFiled', toolUseId: 'tu2', councillorId: 'security', report: REPORT },
     ]);
     expect(replies.map((r) => r.isError)).toEqual([undefined, undefined]);
+  });
+
+  it('files reports made at the same time under the right chambers, whatever order their handlers run in', async () => {
+    const replies: ToolReply[] = [];
+    const { events, session } = run(async function* ({ begin, next }) {
+      await next();
+      // Both chambers call report; the CLI runs the hooks, then the handlers in the other order.
+      const tester = await begin('report', {
+        input: { councillorId: 'tester', ...REPORT },
+        agent: 'tester',
+      });
+      const security = await begin('report', {
+        input: { councillorId: 'security', ...REPORT },
+        agent: 'security',
+      });
+      const both = [security(), tester()];
+      replies.push(...(await Promise.all(both)));
+      yield result;
+    });
+    await until(() => events.filter((e) => e.type === 'reportFiled').length === 2);
+    expect(
+      events
+        .filter((e) => e.type === 'reportFiled')
+        .map((e) => e.type === 'reportFiled' && [e.toolUseId, e.councillorId]),
+    ).toEqual([
+      ['tu2', 'security'],
+      ['tu1', 'tester'],
+    ]);
+    session.completeTool({ toolUseId: 'tu1', accepted: true });
+    session.completeTool({ toolUseId: 'tu2', accepted: true });
+    await until(() => replies.length === 2);
+    expect(replies.map((r) => r.content[0]?.text)).toEqual([
+      "Filed security's report.",
+      "Filed tester's report.",
+    ]);
   });
 
   it('turns down a report claiming another councillor, or filed by the elder itself, without telling core', async () => {

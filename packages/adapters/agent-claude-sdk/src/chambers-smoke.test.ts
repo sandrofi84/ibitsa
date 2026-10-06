@@ -56,6 +56,19 @@ describe.skipIf(process.env.IBITSA_SMOKE !== '1')('live separate chambers (smoke
             });
           }
           if (event.type === 'planProposed') {
+            // As core does: no plan until every councillor has reported.
+            const reported = new Set(
+              events.flatMap((e) => (e.type === 'reportFiled' ? [e.councillorId] : [])),
+            );
+            const missing = ['architect', 'tester'].filter((id) => !reported.has(id));
+            if (missing.length > 0) {
+              session.completeTool({
+                toolUseId: event.toolUseId,
+                accepted: false,
+                reason: `Every councillor must report before a plan is proposed. Waiting for: ${missing.join(', ')}.`,
+              });
+              return;
+            }
             session.completeTool({ toolUseId: event.toolUseId, accepted: true });
             finish();
           }

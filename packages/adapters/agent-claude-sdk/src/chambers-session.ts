@@ -87,12 +87,15 @@ export class ChambersSession extends RoundTableSession {
 
   protected override async report(
     input: { councillorId: string; bowOut?: string | undefined } & Omit<CouncilReport, 'bowOut'>,
+    callId?: string,
   ): Promise<ToolReply> {
-    const toolUseId = this.toolUseIds.get(REPORT)?.[0];
+    // The call's own id (from Claude Code's metadata) says which chamber made it, even when several
+    // chambers report at once; without one, the oldest call the hook saw.
+    const toolUseId = callId ?? this.toolUseIds.get(REPORT)?.[0];
     const caller = toolUseId === undefined ? undefined : this.callers.get(toolUseId);
     const councillorId = caller?.endsWith(SUFFIX) ? caller.slice(0, -SUFFIX.length) : caller;
     const refuse = (text: string): ToolReply => {
-      this.toolUseIds.get(REPORT)?.shift();
+      this.claim({ tool: 'report', callId: toolUseId });
       return { ...reply(`Not accepted: ${text}`), isError: true };
     };
     if (!councillorId) {
@@ -103,7 +106,7 @@ export class ChambersSession extends RoundTableSession {
     if (input.councillorId !== councillorId) {
       return refuse(`this is ${councillorId}'s chamber; file the report as ${councillorId}.`);
     }
-    return super.report(input);
+    return super.report(input, toolUseId);
   }
 
   protected override noteToolUse(input: PreToolUseHookInput): void {
