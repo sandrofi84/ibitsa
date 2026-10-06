@@ -84,6 +84,9 @@ function command(ctx: StepContext, command: Command): void {
     case 'answerCouncil':
       new Sitting(ctx).answer(command);
       return;
+    case 'askCouncilWhy':
+      new Sitting(ctx).why(command);
+      return;
     case 'approvePlan':
       new Sitting(ctx).approve(command);
       return;

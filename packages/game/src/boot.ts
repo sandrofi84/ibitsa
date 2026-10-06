@@ -1,9 +1,12 @@
+import type { Manifest } from '@ibitsa/assets';
+import type { SittingView } from '@ibitsa/protocol';
 import * as Phaser from 'phaser';
 import type { Started } from './boot.types';
 import { mountCameraControls } from './camera-controls';
 import { GameClient } from './client';
 import { mountCommandBar } from './command-bar';
 import { CommandHistory } from './command-history';
+import { mountCouncilDialogue } from './council-dialogue-box';
 import { mountHeroPane } from './hero-pane';
 import { reportDiagnostics } from './host';
 import type { Diagnostics, Host } from './host.types';
@@ -13,7 +16,8 @@ import type { HutFeed } from './hut-view.types';
 import { mountNeedsYouPanel } from './needs-you-panel';
 import { mountNewActionForm } from './new-action-form';
 import { mountNewQuestForm } from './new-quest-form';
-import { PackScene } from './pack-scene';
+import { PACK_KEY, PackScene } from './pack-scene';
+import { isSitting, SittingFeed } from './sitting-hut';
 import { ViewState } from './view-state';
 import { fitViewport } from './viewport';
 import { HEIGHT, HERO_SELECTED, RIGHT_INSET, WIDTH, WorldScene } from './world-scene';
@@ -77,7 +81,25 @@ export function startGame(root: HTMLElement, host: Host): Started {
     };
   }
 
-  mountNeedsYouPanel(client);
+  // The council's questions (#102): the box tells the hut whose question is up, so they take the floor.
+  const sittingFeed = new SittingFeed();
+  let focus: string | null = null;
+  let sitting: SittingView | null = null;
+  const portraits: { url: (appearance: string) => string | null } = { url: () => null };
+  const councilDialogue = mountCouncilDialogue({
+    client,
+    portrait: (appearance) => portraits.url(appearance),
+    onFocus: (questionId) => {
+      focus = questionId;
+      if (sitting) sittingFeed.update({ sitting, focus });
+    },
+    // Put away, nobody has the floor until it's opened again.
+    onAway: () => {
+      focus = null;
+      if (sitting) sittingFeed.update({ sitting, focus });
+    },
+  });
+  mountNeedsYouPanel({ client, openCouncil: () => councilDialogue.focus() });
   const newQuest = mountNewQuestForm({ client, host });
   const newActionForm = mountNewActionForm({ client });
   const newAction = () => newActionForm.open();
@@ -181,16 +203,49 @@ export function startGame(root: HTMLElement, host: Host): Started {
     icon: () => token()?.showingIcon() ?? null,
   };
   const camera = () => (world()?.sys.isActive() ? (world()?.cameraState() ?? null) : null);
+  portraits.url = (appearance) => {
+    const manifest = game.cache.json.get(PACK_KEY) as Manifest | undefined;
+    const path = manifest?.characters[appearance]?.portrait;
+    return path ? `${assetBase}pack/${path}` : null;
+  };
   const showHut = (feed: HutFeed) => {
     game.registry.set(HUT_FEED, feed);
-    // The map's camera buttons have nothing to do in the hut.
+    // The map's camera buttons, the command bar and New quest have nothing to do in the hut.
     cameraControls.style.display = 'none';
+    document.body.classList.add('in-hut');
     const scenes = game.scene;
     // Before the pack has loaded, the pack scene starts the hut itself.
     const loaded = scenes.isActive('world') || scenes.isSleeping('world') || scenes.isActive('hut');
     if (scenes.isActive('world')) scenes.sleep('world');
     if (loaded) scenes.start('hut');
   };
+  /** Back to the map once the sitting is over. */
+  const hideHut = () => {
+    game.registry.remove(HUT_FEED);
+    cameraControls.style.display = '';
+    document.body.classList.remove('in-hut');
+    const scenes = game.scene;
+    const wasShowing = scenes.isActive('hut');
+    if (wasShowing) scenes.stop('hut');
+    if (scenes.isSleeping('world')) scenes.wake('world');
+    // A hut shown before the pack loaded started instead of the map.
+    else if (wasShowing && !scenes.isActive('world')) scenes.start('world');
+  };
+  // The hut shows while the council sits (§7.1 screen 2), and the map comes back after.
+  let sittingHut = false;
+  client.onSnapshot((snapshot) => {
+    sitting = isSitting(snapshot.sitting) ? snapshot.sitting : null;
+    if (sitting) {
+      sittingFeed.update({ sitting, focus });
+      if (!sittingHut) {
+        sittingHut = true;
+        showHut(sittingFeed);
+      }
+    } else if (sittingHut) {
+      sittingHut = false;
+      hideHut();
+    }
+  });
   const hutScene = () => game.scene.getScene('hut') as HutScene | null;
   const hut = () => (hutScene()?.sys.isActive() ? (hutScene()?.rendered() ?? null) : null);
   return { client, zoom: () => diagnostics.zoom, hero, camera, showHut, hut };

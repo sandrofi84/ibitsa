@@ -5,6 +5,7 @@ import m0Walk from '@ibitsa/agent-fake/fixtures/m0-walk.jsonl?raw';
 import m1Demo from '@ibitsa/agent-fake/fixtures/m1-demo.jsonl?raw';
 import m1Real from '@ibitsa/agent-fake/fixtures/m1-real.jsonl?raw';
 import m1Trouble from '@ibitsa/agent-fake/fixtures/m1-trouble.jsonl?raw';
+import m3RoundTable from '@ibitsa/agent-fake/fixtures/m3-round-table.jsonl?raw';
 import { startGame } from '../boot';
 import { DevHost } from './dev-host';
 import { ScriptedSitting } from './dev-sitting';
@@ -16,6 +17,7 @@ const fixtures: Record<string, string> = {
   'm1-trouble': m1Trouble,
   'm1-real': m1Real,
   'm1-demo': m1Demo,
+  'm3-round-table': m3RoundTable,
 };
 
 const params = new URLSearchParams(location.search);
@@ -54,7 +56,8 @@ if (name === 'live') {
     camera,
   };
 } else if (params.get('scene') === 'hut') {
-  // The council hut from a scripted sitting (#99), until the real sitting lands (#100).
+  // The council hut from a scripted sitting (#99): every animation, without a replay. The real sitting
+  // shows the hut by itself, e.g. `?fixture=m3-round-table` (#102).
   const host = new DevHost(parseLog(text), options);
   const { client, zoom, showHut, hut } = startGame(root, host);
   const sitting = new ScriptedSitting(
@@ -77,7 +80,7 @@ if (name === 'live') {
   }
 } else {
   const host = new DevHost(parseLog(text), options);
-  const { client, zoom, hero, camera } = startGame(root, host);
+  const { client, zoom, hero, camera, hut } = startGame(root, host);
   mountOverlay({ host, fixtures: [...Object.keys(fixtures), 'live'], current: name });
   w.__ibitsa = {
     snapshot: () => client.snapshot,
@@ -85,6 +88,7 @@ if (name === 'live') {
     zoom,
     hero,
     camera,
+    hut,
   };
   client.onSnapshot(() => {
     if (

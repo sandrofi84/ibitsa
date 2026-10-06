@@ -4,6 +4,7 @@ import type {
   CouncilAnswer,
   CouncilQuestion,
   CouncilReport,
+  DialogueLine,
   Effort,
   MicroUsd,
   PlanOutcome,
@@ -120,6 +121,8 @@ export interface SittingRecord {
   /** Change requests so far. */
   revision: number;
   reconsultations: { councillorId: string; revision: number; reportId: string }[];
+  /** "Why?" and the answers to it (§4.4). Ids count lines, so asking doesn't shift other ids. */
+  dialogue: DialogueLine[];
   gold: Reading<MicroUsd>;
   error: string | null;
   /** Core's clock (`t`) when convened and when it ended: the tally's time taken (#106). */

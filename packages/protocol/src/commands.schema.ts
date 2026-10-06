@@ -128,6 +128,17 @@ export const CommandSchema = v.variant('type', [
     batchId: id,
     answers: v.record(id, CouncilAnswerSchema),
   }),
+  /**
+   * "Why?" on a waiting question (spec §4.4): the councillor who asked explains, through the sitting's
+   * lead session. `text` is the user's own follow-up; without it the councillor is just asked why.
+   */
+  v.strictObject({
+    type: v.literal('askCouncilWhy'),
+    commandId: id,
+    batchId: id,
+    questionId: id,
+    text: v.optional(v.pipe(v.string(), v.trim(), v.nonEmpty())),
+  }),
   v.strictObject({ type: v.literal('approvePlan'), commandId: id, version: positiveInt }),
   v.strictObject({
     type: v.literal('requestPlanChange'),
