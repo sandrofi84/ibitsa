@@ -4,7 +4,7 @@ import { button, el } from './dom';
 import { CAMERA_EVENTS } from './world-scene';
 
 /**
- * Zoom out, zoom in and the auto-focus switch (#59), as buttons at the middle of the map's left edge. They
+ * Zoom out, zoom in and the auto-focus switch (#59), as buttons near the map's top-left corner. They
  * work like the wheel and the + / - / 0 keys, and are reachable by keyboard.
  */
 export function mountCameraControls(events: Phaser.Events.EventEmitter): void {

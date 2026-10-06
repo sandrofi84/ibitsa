@@ -131,6 +131,10 @@ export class Runtime {
       this.rescanRepo();
       return;
     }
+    if (command.type === 'requestPreview') {
+      this.postPreview({ frontEnd, name: command.name, args: command.args });
+      return;
+    }
     if (command.type === 'requestActions') {
       this.postActions(frontEnd);
       return;
@@ -425,6 +429,31 @@ export class Runtime {
       return;
     }
     void this.options.gameMaster.listFiles({ worktreePath: path }).then(post, () => post([]));
+  }
+
+  /** An action's expanded prompt (#85); no text without a quest, a reader, or a readable file. */
+  private postPreview({
+    frontEnd,
+    name,
+    args,
+  }: {
+    frontEnd: FrontEnd;
+    name: string;
+    args: string;
+  }): void {
+    const cwd = this.state.islands.find((i) => i.worktreePath)?.worktreePath;
+    const send = (found: { text: string; notes: string[] } | null) =>
+      frontEnd.post({
+        type: 'preview',
+        seq: ++this.seq,
+        preview: { name, args, text: found?.text ?? null, notes: found?.notes ?? [] },
+      });
+    const preview = this.options.adapter.previewAction;
+    if (!cwd || !preview || this.state.campaign?.status !== 'active') {
+      send(null);
+      return;
+    }
+    preview.call(this.options.adapter, { cwd, name, args }).then(send, () => send(null));
   }
 
   /** The `/` menu's actions for the hero's worktree; none without a quest or if listing fails (#84). */

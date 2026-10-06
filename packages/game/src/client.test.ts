@@ -229,3 +229,36 @@ describe('GameClient actionsReady (#84)', () => {
     expect(host.sent).toHaveLength(2);
   });
 });
+
+describe('GameClient preview (#85)', () => {
+  it('asks once for the same action and arguments, and answers each waiter', async () => {
+    const host = new FakeHost();
+    const client = new GameClient(host);
+    const a = client.preview({ name: 'pr', args: 'x' });
+    const b = client.preview({ name: 'pr', args: 'x' });
+    const other = client.preview({ name: 'pr', args: 'y' });
+    expect(host.sent).toEqual([
+      { type: 'requestPreview', name: 'pr', args: 'x' },
+      { type: 'requestPreview', name: 'pr', args: 'y' },
+    ]);
+    host.deliver({
+      type: 'preview',
+      seq: 1,
+      preview: { name: 'pr', args: 'x', text: 'X', notes: [] },
+    });
+    host.deliver({
+      type: 'preview',
+      seq: 2,
+      preview: { name: 'pr', args: 'y', text: null, notes: [] },
+    });
+    expect((await a).text).toBe('X');
+    expect((await b).text).toBe('X');
+    expect((await other).text).toBeNull();
+    // An answer nobody waits for is ignored.
+    host.deliver({
+      type: 'preview',
+      seq: 3,
+      preview: { name: 'z', args: '', text: 'Z', notes: [] },
+    });
+  });
+});

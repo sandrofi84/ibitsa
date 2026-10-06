@@ -1,4 +1,5 @@
 import type { HeroView, JournalEntry, Reading, Snapshot } from '@ibitsa/protocol';
+import { attachActionPreview } from './action-preview';
 import { atMenu } from './at-menu';
 import type { GameClient } from './client';
 import type { CommandHistory } from './command-history';
@@ -76,6 +77,8 @@ export function mountHeroPane({
       if (heroId) client.send({ type: 'sendMessage', heroId, text, priority });
     },
   });
+  // The pane's box speaks to its hero, so a message here never starts with a recipient.
+  attachActionPreview({ client, input: message, recipients: () => [] });
   // The hero's own summary once it submits: what the "Ready for review!" bubble leads to (#57).
   const summary = el('p', { className: 'summary' });
   summary.hidden = true;

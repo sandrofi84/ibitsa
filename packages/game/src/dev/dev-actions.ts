@@ -1,4 +1,4 @@
-import type { ActionInfo } from '@ibitsa/protocol';
+import type { ActionInfo, ActionPreview } from '@ibitsa/protocol';
 
 /** What the standalone build's `/` menu offers (#84): Ibitsa's built-ins and one project skill. */
 export const DEV_ACTIONS: ActionInfo[] = [
@@ -35,3 +35,21 @@ export const DEV_ACTIONS: ActionInfo[] = [
     target: 'any',
   },
 ];
+
+const DEV_PROMPTS: Record<string, string> = {
+  'ibitsa:test': "Run this project's tests. Only these tests if given: $ARGUMENTS",
+  'ibitsa:tidy': "Run this project's linter and formatter, then fix what they report.",
+  'ibitsa:explain': 'Explain the changes on the current branch. Focus on, if given: $ARGUMENTS',
+  pr: 'Open a pull request for the current task. Request review from: $ARGUMENTS',
+};
+
+/** The standalone build's previews: the prompts above with their arguments filled in (#85). */
+export function devPreview({ name, args }: { name: string; args: string }): ActionPreview {
+  const prompt = DEV_PROMPTS[name];
+  return {
+    name,
+    args,
+    text: prompt === undefined ? null : prompt.replaceAll('$ARGUMENTS', args.trim()),
+    notes: [],
+  };
+}

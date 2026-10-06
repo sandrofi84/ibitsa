@@ -1,5 +1,6 @@
 import {
   type ActionInfo,
+  type ActionPreview,
   type Command,
   type CoreMessage,
   type Cue,
@@ -31,6 +32,7 @@ export class GameClient {
   private actionsFor: string | null = null;
   private actionsWaiting: Promise<ActionInfo[]> | null = null;
   private actionResolvers: ((actions: ActionInfo[]) => void)[] = [];
+  private readonly previewWaiters = new Map<string, ((preview: ActionPreview) => void)[]>();
 
   constructor(private readonly host: Host) {
     host.onMessage((m) => this.receive(m));
@@ -73,6 +75,20 @@ export class GameClient {
       this.requestActions();
     }
     return this.actionsWaiting;
+  }
+
+  /** An action's expanded prompt for the preview (#85), from the runtime. */
+  preview({ name, args }: { name: string; args: string }): Promise<ActionPreview> {
+    const key = `${name}\u0000${args}`;
+    return new Promise((resolve) => {
+      const waiting = this.previewWaiters.get(key);
+      if (waiting) {
+        waiting.push(resolve);
+        return;
+      }
+      this.previewWaiters.set(key, [resolve]);
+      this.host.send({ type: 'requestPreview', name, args });
+    });
   }
 
   onActions(listener: (actions: ActionInfo[]) => void): void {
@@ -140,6 +156,12 @@ export class GameClient {
         for (const resolve of this.actionResolvers.splice(0)) resolve(message.actions);
         for (const l of this.actionListeners) l(message.actions);
         return;
+      case 'preview': {
+        const key = `${message.preview.name}\u0000${message.preview.args}`;
+        for (const resolve of this.previewWaiters.get(key) ?? []) resolve(message.preview);
+        this.previewWaiters.delete(key);
+        return;
+      }
       case 'journalAppend':
         if (message.start === 0) {
           this.setJournal({ entries: message.entries, start: 0 });

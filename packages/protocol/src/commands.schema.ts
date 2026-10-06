@@ -38,6 +38,12 @@ export const CommandSchema = v.variant('type', [
   v.strictObject({ type: v.literal('setAutoApprove'), commandId: id, on: v.boolean() }),
   /** The files in an island's worktree, for @ file references (#83). Runtime-only, never logged. */
   v.strictObject({ type: v.literal('requestFiles'), islandId: id }),
+  /** An action's expanded prompt, for the preview (#85). Runtime-only, never logged. */
+  v.strictObject({
+    type: v.literal('requestPreview'),
+    name: v.pipe(v.string(), v.nonEmpty()),
+    args: v.string(),
+  }),
   /** The `/` menu's actions (#84). Runtime-only, never logged. */
   v.strictObject({ type: v.literal('requestActions') }),
   /** Removes an "Always allow in this project" rule. Runtime-only, never logged (#62). */

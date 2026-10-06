@@ -109,4 +109,15 @@ describe('DevHost', () => {
       'ibitsa:test',
     );
   });
+
+  it('previews the built-ins, and has none for unknown actions (#85)', async () => {
+    const host = new DevHost(parseLog(m0Walk), {});
+    const messages = await collect(host);
+    host.send({ type: 'requestPreview', name: 'ibitsa:test', args: 'unit' });
+    host.send({ type: 'requestPreview', name: 'other', args: '' });
+    await flush();
+    const previews = messages.flatMap((m) => (m.type === 'preview' ? [m.preview] : []));
+    expect(previews[0]?.text).toContain('Only these tests if given: unit');
+    expect(previews[1]?.text).toBeNull();
+  });
 });
