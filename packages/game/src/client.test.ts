@@ -189,3 +189,43 @@ describe('GameClient actions (#84)', () => {
     expect(seen).toEqual([['ibitsa:test']]);
   });
 });
+
+describe('GameClient actionsReady (#84)', () => {
+  const list = (name: string) => [
+    {
+      name,
+      description: '',
+      argumentHint: '',
+      aliases: [],
+      source: 'project' as const,
+      target: 'any' as const,
+    },
+  ];
+  const quest = (id: string): Snapshot => ({
+    campaign: { id, title: 'Q', status: 'active', gold: { kind: 'unknown' }, autoApprove: false },
+    islands: [],
+    heroes: [],
+    needsYou: [],
+  });
+
+  it('asks once per quest and resolves with what the runtime sends', async () => {
+    const host = new FakeHost();
+    const client = new GameClient(host);
+    host.deliver({ type: 'snapshot', seq: 1, snapshot: quest('c1') });
+    const first = client.actionsReady();
+    const again = client.actionsReady();
+    expect(host.sent).toEqual([{ type: 'requestActions' }]);
+    host.deliver({ type: 'actions', seq: 2, actions: list('a') });
+    expect((await first).map((a) => a.name)).toEqual(['a']);
+    expect((await again).map((a) => a.name)).toEqual(['a']);
+    expect((await client.actionsReady()).map((a) => a.name)).toEqual(['a']);
+    expect(host.sent).toHaveLength(1);
+
+    // A pushed update replaces the list; a new quest asks again.
+    host.deliver({ type: 'actions', seq: 3, actions: list('b') });
+    expect((await client.actionsReady()).map((a) => a.name)).toEqual(['b']);
+    host.deliver({ type: 'snapshot', seq: 4, snapshot: quest('c2') });
+    void client.actionsReady();
+    expect(host.sent).toHaveLength(2);
+  });
+});
