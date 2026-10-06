@@ -17,6 +17,7 @@ const CORE_MESSAGE_TYPES = new Set([
   'journalAppend',
   'files',
   'actions',
+  'preview',
 ]);
 
 /** The webview side of the extension: commands out via postMessage, core messages in via `message`. */

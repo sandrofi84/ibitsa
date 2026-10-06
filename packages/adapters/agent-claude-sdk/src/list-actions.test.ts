@@ -124,3 +124,24 @@ describe('ClaudeAdapter.listActions (#84)', () => {
     expect(calls).toEqual([true]);
   });
 });
+
+describe('ClaudeAdapter.previewAction (#85)', () => {
+  it("expands the skill's prompt with the arguments and the folder's variables", async () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'ibitsa-preview-'));
+    dirs.push(cwd);
+    mkdirSync(join(cwd, '.claude', 'skills', 'pr'), { recursive: true });
+    writeFileSync(
+      join(cwd, '.claude', 'skills', 'pr', 'SKILL.md'),
+      '---\nname: pr\n---\nOpen a PR in $CWD_MARK. Reviewers: $ARGUMENTS\n'.replace(
+        '$CWD_MARK',
+        '$' + '{CLAUDE_PROJECT_DIR}',
+      ),
+    );
+    const adapter = new ClaudeAdapter({ env: () => ({}), home: cwd });
+    expect(await adapter.previewAction({ cwd, name: 'pr', args: 'alice' })).toEqual({
+      text: `Open a PR in ${cwd}. Reviewers: alice`,
+      notes: [],
+    });
+    expect(await adapter.previewAction({ cwd, name: 'missing', args: '' })).toBeNull();
+  });
+});

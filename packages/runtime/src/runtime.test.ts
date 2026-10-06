@@ -505,6 +505,58 @@ describe('the / menu (#84)', () => {
   });
 });
 
+describe('the action preview (#85)', () => {
+  const previewsOf = (received: CoreMessage[]) =>
+    received.flatMap((m) => (m.type === 'preview' ? [m.preview] : []));
+
+  it("expands an action for the hero's worktree, and has no text without a quest or a reader", async () => {
+    const none = setup();
+    none.connection.receive({ type: 'requestPreview', name: 'pr', args: 'x' });
+    expect(previewsOf(none.received)).toEqual([{ name: 'pr', args: 'x', text: null, notes: [] }]);
+
+    const env = await arrived();
+    env.connection.receive({ type: 'requestPreview', name: 'pr', args: 'x' });
+    expect(previewsOf(env.received).at(-1)).toEqual({
+      name: 'pr',
+      args: 'x',
+      text: null,
+      notes: [],
+    });
+
+    const asked: unknown[] = [];
+    Object.assign(env.adapter, {
+      previewAction: async (r: { cwd: string; name: string; args: string }) => {
+        asked.push(r);
+        return r.name === 'pr' ? { text: `PR for ${r.args}`, notes: ['n'] } : null;
+      },
+    });
+    env.connection.receive({ type: 'requestPreview', name: 'pr', args: 'alice' });
+    env.connection.receive({ type: 'requestPreview', name: 'nope', args: '' });
+    await flush();
+    expect(asked[0]).toEqual({
+      cwd: '/wt/ibitsa/fix-the-login-redirect',
+      name: 'pr',
+      args: 'alice',
+    });
+    expect(previewsOf(env.received).slice(-2)).toEqual([
+      { name: 'pr', args: 'alice', text: 'PR for alice', notes: ['n'] },
+      { name: 'nope', args: '', text: null, notes: [] },
+    ]);
+  });
+
+  it('a failing reader means no text', async () => {
+    const env = await arrived();
+    Object.assign(env.adapter, {
+      previewAction: async () => {
+        throw new Error('unreadable');
+      },
+    });
+    env.connection.receive({ type: 'requestPreview', name: 'pr', args: '' });
+    await flush();
+    expect(previewsOf(env.received).at(-1)?.text).toBeNull();
+  });
+});
+
 describe('auto mode (#63)', () => {
   it('says whether hero commands run in a sandbox here', () => {
     const env = setup();

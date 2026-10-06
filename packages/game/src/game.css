@@ -25,8 +25,8 @@ body {
 .needs-you {
   position: fixed;
   left: 50%;
-  /* Above the command bar (#81). */
-  bottom: 76px;
+  /* Just above the command bar, which reports its height (#81, #85). */
+  bottom: calc(var(--command-bar-height, 52px) + 24px);
   transform: translateX(-50%);
   width: min(560px, calc(100vw - 32px));
   max-height: 40vh;
@@ -540,10 +540,9 @@ body.hero-pane-open .needs-you {
 
 .camera-controls {
   position: fixed;
-  /* The middle of the left edge: the HUD has the top, Needs you the bottom, the hero pane the right. */
+  /* Top left, under the New quest button: Needs you and the command bar grow up from the bottom. */
   left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 48px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -702,4 +701,51 @@ body.hero-pane-open .command-bar {
 .command-menu-option .detail {
   font-size: 11px;
   color: #5e4a2a;
+}
+
+/* ---------- Action preview (#85) ---------- */
+
+.action-preview:not([hidden]) {
+  grid-column: 1 / -1;
+  background: #fff6dc;
+  border: 1px solid #c9b48a;
+  border-radius: 3px;
+  padding: 6px 8px;
+  max-height: 30vh;
+  overflow: auto;
+}
+
+.action-preview .preview-title {
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: #5e4a2a;
+}
+
+.action-preview pre {
+  margin: 0 0 6px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font:
+    12px / 1.45 ui-monospace,
+    monospace;
+}
+
+.action-preview .note {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: #5e4a2a;
+}
+
+.action-preview button {
+  font: inherit;
+  font-size: 12px;
+  padding: 2px 8px;
+  border: 1px solid #5e3b1c;
+  background: #efe0b8;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.action-preview button:focus-visible {
+  outline: 2px solid #1a1420;
 }

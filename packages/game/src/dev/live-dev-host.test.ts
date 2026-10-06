@@ -188,4 +188,12 @@ describe('LiveDevHost', () => {
     const actions = messages.find((m) => m.type === 'actions');
     expect(actions?.type === 'actions' && actions.actions.length).toBeGreaterThan(0);
   });
+
+  it('previews the built-ins (#85)', async () => {
+    const { host, messages, settle } = setup();
+    host.send({ type: 'requestPreview', name: 'pr', args: 'alice' });
+    await settle();
+    const preview = messages.find((m) => m.type === 'preview');
+    expect(preview?.type === 'preview' && preview.preview.text).toContain('alice');
+  });
 });

@@ -1,4 +1,5 @@
 import type { Snapshot } from '@ibitsa/protocol';
+import { attachActionPreview } from './action-preview';
 import { atMenu, handles } from './at-menu';
 import type { CommandBar, CommandBarOptions } from './command-bar.types';
 import { createCommandInput } from './command-input';
@@ -50,6 +51,15 @@ export function mountCommandBar({
     },
   });
   bar.append(input.element);
+  // Needs you sits just above the bar, however tall it grows (a preview, several lines).
+  new ResizeObserver(() => {
+    document.documentElement.style.setProperty('--command-bar-height', `${bar.offsetHeight}px`);
+  }).observe(bar);
+  attachActionPreview({
+    client,
+    input,
+    recipients: () => handles(client.snapshot?.heroes ?? []),
+  });
   document.body.appendChild(bar);
 
   client.onSnapshot((s) => {

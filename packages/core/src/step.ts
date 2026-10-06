@@ -53,6 +53,7 @@ function command(ctx: StepContext, command: Command): void {
     case 'requestFiles':
     case 'forgetProjectRule':
     case 'requestActions':
+    case 'requestPreview':
       return; // handled by the runtime (welcome + snapshot; journal pages; project rules; actions), never logged
     case 'startQuest':
       quest.start(command);

@@ -1,9 +1,12 @@
 import { homedir } from 'node:os';
+import { dirname } from 'node:path';
 import type { SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
 import type { ActionInfo, AgentEvent } from '@ibitsa/protocol';
 import type { AgentAdapter, AgentSession, SessionResume, SessionStart } from '@ibitsa/runtime';
 import type { ClaudeAdapterOptions } from './claude-adapter.types';
 import { ClaudeSession, loadSdk, plugins } from './claude-session';
+import { expandSkill } from './skill-expansion';
+import type { Expansion } from './skill-expansion.types';
 import { SkillFiles } from './skill-files';
 
 /** The native Claude Agent SDK adapter (spec §11.3, §11.4). */
@@ -71,6 +74,29 @@ export class ClaudeAdapter implements AgentAdapter {
     }
     const files = new SkillFiles({ cwd, home: this.options.home ?? homedir(), pluginDirs });
     return commands.filter((c) => !c.builtin).map((c) => toAction({ command: c, files }));
+  }
+
+  /** An action's prompt as Claude Code would expand it, for the preview (#85). */
+  async previewAction({
+    cwd,
+    name,
+    args,
+  }: {
+    cwd: string;
+    name: string;
+    args: string;
+  }): Promise<Expansion | null> {
+    const pluginDirs = this.options.pluginDirs?.() ?? [];
+    const file = new SkillFiles({ cwd, home: this.options.home ?? homedir(), pluginDirs }).find(
+      name,
+    );
+    if (!file) return null;
+    return expandSkill({
+      body: file.body,
+      fields: file.fields,
+      args,
+      variables: { CLAUDE_PROJECT_DIR: cwd, CLAUDE_SKILL_DIR: dirname(file.path) },
+    });
   }
 }
 

@@ -12,3 +12,13 @@ export interface ActionInfo {
   /** `ibitsa-target` from the skill's frontmatter; `any` when absent. */
   target: 'hero' | 'council' | 'any';
 }
+
+/** An action's prompt as it would be sent, for the preview (#85). */
+export interface ActionPreview {
+  name: string;
+  args: string;
+  /** The expanded prompt; null when the skill's file can't be read (e.g. another tool's plugin). */
+  text: string | null;
+  /** e.g. which shell lines Claude Code runs when the action is sent. */
+  notes: string[];
+}
