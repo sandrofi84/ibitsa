@@ -42,23 +42,22 @@ if (name === 'live') {
         ? null
         : { defaultBranch: 'main', branches: ['main', 'feature/x'], uncommittedChanges: 2 },
   });
-  const { client, zoom, heroOnPage, heroSpeech } = startGame(root, host);
+  const { client, zoom, hero } = startGame(root, host);
   w.__ibitsa = {
     snapshot: () => client.snapshot,
     hostRequests: () => host.channel.requests,
     zoom,
-    heroOnPage,
-    heroSpeech,
+    hero,
   };
 } else {
   const host = new DevHost(parseLog(text), options);
-  const { client, zoom, heroSpeech } = startGame(root, host);
+  const { client, zoom, hero } = startGame(root, host);
   mountOverlay({ host, fixtures: [...Object.keys(fixtures), 'live'], current: name });
   w.__ibitsa = {
     snapshot: () => client.snapshot,
     status: () => host.replay.status,
     zoom,
-    heroSpeech,
+    hero,
   };
   client.onSnapshot(() => {
     if (

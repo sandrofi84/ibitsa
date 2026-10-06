@@ -7,7 +7,7 @@ interface Probe {
   } | null;
   status(): { finished: boolean; diverged: boolean; waitingFor: string | null };
   zoom(): number;
-  heroSpeech(): string | null;
+  hero: { speech(): string | null; icon(): string | null };
 }
 
 const probe = <T>(page: Page, read: (p: Probe) => T) =>
@@ -38,7 +38,7 @@ test('replays m0-walk to the submitted state', async ({ page }) => {
   );
   expect(await probe(page, (p) => p.status().finished)).toBe(true);
   // The quest is still active, so the submitted hero says so until you finish it (#57).
-  expect(await probe(page, (p) => p.heroSpeech())).toBe('Ready for review!');
+  expect(await probe(page, (p) => p.hero.speech())).toBe('Ready for review!');
   await page.screenshot({ path: 'test-results/m0-walk-submitted.png' });
   expect(errors).toEqual([]);
 });
@@ -92,4 +92,29 @@ test('re-scales to the largest integer zoom as the viewport grows and shrinks', 
     w: 480,
     h: 270,
   });
+});
+
+test('shows what the hero is doing as an icon beside it (#60)', async ({ page }) => {
+  await page.goto('/?autoplay=1&speed=4');
+  // Sample the icon in the page every 30 ms: some activities last only a moment at this speed.
+  await page.evaluate(() => {
+    const w = window as unknown as {
+      __ibitsa: { hero: { icon(): string | null } };
+      __icons: string[];
+    };
+    w.__icons = [];
+    setInterval(() => {
+      const icon = w.__ibitsa.hero.icon();
+      if (icon && w.__icons.at(-1) !== icon) w.__icons.push(icon);
+    }, 30);
+  });
+  await expect
+    .poll(() => probe(page, (p) => p.hero.icon()), { intervals: [30], timeout: 20_000 })
+    .toBe('edit');
+  await page.screenshot({ path: 'test-results/activity-icon-edit.png' });
+  await expect.poll(() => probe(page, (p) => p.status().finished), { timeout: 30_000 }).toBe(true);
+  const seen = await page.evaluate(() => (window as unknown as { __icons: string[] }).__icons);
+  expect(seen).toEqual(expect.arrayContaining(['read', 'edit', 'test']));
+  // Submitted, not working: no icon.
+  expect(await probe(page, (p) => p.hero.icon())).toBeNull();
 });

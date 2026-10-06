@@ -1,5 +1,10 @@
 import * as v from 'valibot';
-import { OPTIONAL_ANIMATIONS, REQUIRED_ANIMATIONS, TASK_POINT_STATES } from './manifest.ts';
+import {
+  ACTIVITY_KINDS,
+  OPTIONAL_ANIMATIONS,
+  REQUIRED_ANIMATIONS,
+  TASK_POINT_STATES,
+} from './manifest.ts';
 
 const file = v.pipe(
   v.string(),
@@ -47,6 +52,8 @@ export const ManifestSchema = v.strictObject({
     rightCap: size,
   }),
   taskPoints: v.strictObject({ image: file, size, states: v.array(v.picklist(TASK_POINT_STATES)) }),
+  /** One square icon per activity kind, left to right in `kinds` order, shown beside the hero (#60). */
+  activityIcons: v.strictObject({ image: file, size, kinds: v.array(v.picklist(ACTIVITY_KINDS)) }),
   buildings: v.record(v.string(), v.strictObject({ image: file, width: size, height: size })),
   ui: v.strictObject({
     dialogueFrame: v.strictObject({ image: file, size, inset: size }),

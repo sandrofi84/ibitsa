@@ -10,6 +10,7 @@ export const SPEC = {
   taskPoint: 16,
   hut: 64,
   dialogueFrame: 24,
+  activityIcon: 12,
 } as const;
 
 export const REQUIRED_ANIMATIONS = ['idle', 'walk', 'work'] as const;
@@ -24,3 +25,5 @@ export const OPTIONAL_ANIMATIONS = [
   'outOfGold',
 ] as const;
 export const TASK_POINT_STATES = ['locked', 'active', 'done', 'underReview'] as const;
+/** The protocol's `ActivityKind`s (spec §5.4); assets has no dependency on protocol, so they repeat here. */
+export const ACTIVITY_KINDS = ['read', 'search', 'edit', 'test', 'run', 'think', 'other'] as const;

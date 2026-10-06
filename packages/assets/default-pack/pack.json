@@ -198,6 +198,19 @@
       "underReview"
     ]
   },
+  "activityIcons": {
+    "image": "ui/activity-icons.png",
+    "size": 12,
+    "kinds": [
+      "read",
+      "search",
+      "edit",
+      "test",
+      "run",
+      "think",
+      "other"
+    ]
+  },
   "buildings": {
     "hut": {
       "image": "map/hut.png",
