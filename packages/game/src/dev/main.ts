@@ -7,6 +7,7 @@ import m1Real from '@ibitsa/agent-fake/fixtures/m1-real.jsonl?raw';
 import m1Trouble from '@ibitsa/agent-fake/fixtures/m1-trouble.jsonl?raw';
 import { startGame } from '../boot';
 import { DevHost } from './dev-host';
+import { ScriptedSitting } from './dev-sitting';
 import { LiveDevHost } from './live-dev-host';
 import { mountOverlay } from './overlay';
 
@@ -52,6 +53,28 @@ if (name === 'live') {
     hero,
     camera,
   };
+} else if (params.get('scene') === 'hut') {
+  // The council hut from a scripted sitting (#99), until the real sitting lands (#100).
+  const host = new DevHost(parseLog(text), options);
+  const { client, zoom, showHut, hut } = startGame(root, host);
+  const sitting = new ScriptedSitting(
+    params.get('mode') === 'chambers' ? 'chambers' : 'roundTable',
+  );
+  showHut(sitting);
+  w.__ibitsa = {
+    snapshot: () => client.snapshot,
+    zoom,
+    hut,
+    sitting: { advance: () => sitting.advance(), view: () => sitting.view },
+  };
+  if (params.get('autoplay') === '1') {
+    const timer = setInterval(
+      () => {
+        if (!sitting.advance()) clearInterval(timer);
+      },
+      1500 / Number(speedParam ?? 1),
+    );
+  }
 } else {
   const host = new DevHost(parseLog(text), options);
   const { client, zoom, hero, camera } = startGame(root, host);

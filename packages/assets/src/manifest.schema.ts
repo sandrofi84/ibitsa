@@ -1,6 +1,7 @@
 import * as v from 'valibot';
 import {
   ACTIVITY_KINDS,
+  COUNCIL_ANIMATIONS,
   OPTIONAL_ANIMATIONS,
   REQUIRED_ANIMATIONS,
   TASK_POINT_STATES,
@@ -26,6 +27,14 @@ const Character = v.strictObject({
   /** One row per animation, facing right; the game mirrors for left (§9.2). */
   animations: v.record(v.picklist([...REQUIRED_ANIMATIONS, ...OPTIONAL_ANIMATIONS]), Animation),
   portrait: v.optional(file),
+  /** Optional 32×32 sheet for the council hut; without one the hut scales `sheet` up 2× (§9.2). */
+  council: v.optional(
+    v.strictObject({
+      sheet: file,
+      frame: v.strictObject({ width: size, height: size }),
+      animations: v.record(v.picklist(COUNCIL_ANIMATIONS), Animation),
+    }),
+  ),
 });
 
 export const ManifestSchema = v.strictObject({

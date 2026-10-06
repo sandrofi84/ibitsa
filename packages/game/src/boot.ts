@@ -7,6 +7,9 @@ import { CommandHistory } from './command-history';
 import { mountHeroPane } from './hero-pane';
 import { reportDiagnostics } from './host';
 import type { Diagnostics, Host } from './host.types';
+import { HutScene } from './hut-scene';
+import { HUT_FEED } from './hut-view';
+import type { HutFeed } from './hut-view.types';
 import { mountNeedsYouPanel } from './needs-you-panel';
 import { mountNewActionForm } from './new-action-form';
 import { mountNewQuestForm } from './new-quest-form';
@@ -64,7 +67,14 @@ export function startGame(root: HTMLElement, host: Host): Started {
       '<p class="notice">Ibitsa needs WebGL, and it isn’t available here, so the game can’t start. ' +
       'Your agents are not affected.</p>';
     reportDiagnostics(diagnostics);
-    return { client, zoom: () => 0, hero: NO_HERO, camera: () => null };
+    return {
+      client,
+      zoom: () => 0,
+      hero: NO_HERO,
+      camera: () => null,
+      showHut: () => {},
+      hut: () => null,
+    };
   }
 
   mountNeedsYouPanel(client);
@@ -116,12 +126,12 @@ export function startGame(root: HTMLElement, host: Host): Started {
       white: `${assetBase}textures/white.png`,
     },
     loader: { imageLoadType: 'HTMLImageElement' },
-    scene: [PackScene, WorldScene],
+    scene: [PackScene, WorldScene, HutScene],
   });
   game.registry.set('assetBase', assetBase);
   game.registry.set('client', client);
   game.registry.set('view', view);
-  mountCameraControls(game.events);
+  const cameraControls = mountCameraControls(game.events);
   // The camera keeps the followed hero left of the open hero pane.
   new ResizeObserver(() => {
     const rect = heroPane.element.getBoundingClientRect();
@@ -171,5 +181,17 @@ export function startGame(root: HTMLElement, host: Host): Started {
     icon: () => token()?.showingIcon() ?? null,
   };
   const camera = () => (world()?.sys.isActive() ? (world()?.cameraState() ?? null) : null);
-  return { client, zoom: () => diagnostics.zoom, hero, camera };
+  const showHut = (feed: HutFeed) => {
+    game.registry.set(HUT_FEED, feed);
+    // The map's camera buttons have nothing to do in the hut.
+    cameraControls.style.display = 'none';
+    const scenes = game.scene;
+    // Before the pack has loaded, the pack scene starts the hut itself.
+    const loaded = scenes.isActive('world') || scenes.isSleeping('world') || scenes.isActive('hut');
+    if (scenes.isActive('world')) scenes.sleep('world');
+    if (loaded) scenes.start('hut');
+  };
+  const hutScene = () => game.scene.getScene('hut') as HutScene | null;
+  const hut = () => (hutScene()?.sys.isActive() ? (hutScene()?.rendered() ?? null) : null);
+  return { client, zoom: () => diagnostics.zoom, hero, camera, showHut, hut };
 }

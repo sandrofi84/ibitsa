@@ -1,5 +1,7 @@
 import type { CameraState } from './camera-director.types';
 import type { GameClient } from './client';
+import type { HutRendered } from './hut-scene.types';
+import type { HutFeed } from './hut-view.types';
 
 /** Starts the game in `root`, talking to the core through `host`. Shared by the webview and standalone builds. */
 export interface Started {
@@ -19,4 +21,8 @@ export interface Started {
   };
   /** The map camera, for tests; null before the game is ready. */
   camera(): CameraState | null;
+  /** Shows the council hut, drawn from `feed` (§7.1 screen 2); the map sleeps meanwhile. */
+  showHut(feed: HutFeed): void;
+  /** What the hut shows, for tests; null while it isn't showing. */
+  hut(): HutRendered | null;
 }

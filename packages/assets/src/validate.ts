@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { extname, join, relative, sep } from 'node:path';
 import * as v from 'valibot';
 import { ManifestSchema } from './manifest.schema.ts';
-import { ACTIVITY_KINDS, REQUIRED_ANIMATIONS, SPEC } from './manifest.ts';
+import { ACTIVITY_KINDS, COUNCIL_ANIMATIONS, REQUIRED_ANIMATIONS, SPEC } from './manifest.ts';
 import { readPngSize } from './png.ts';
 import type { PackValidation } from './validate.types.ts';
 
@@ -77,31 +77,55 @@ export function validatePack(dir: string): PackValidation {
   const exactly = (w: number, h: number) => (aw: number, ah: number) =>
     aw === w && ah === h ? null : `expected ${w}×${h}`;
 
-  for (const [key, c] of Object.entries(manifest.characters)) {
-    const label = `character ${key}`;
-    if (c.frame.width !== SPEC.characterFrame || c.frame.height !== SPEC.characterFrame) {
+  /** A sheet of square frames, one row per animation: frame size, required animations, image size. */
+  const checkSheet = ({
+    sheet,
+    label,
+    frameSize,
+    required,
+  }: {
+    sheet: { sheet: string; frame: { width: number; height: number }; animations: object };
+    label: string;
+    frameSize: number;
+    required: readonly string[];
+  }) => {
+    const { frame } = sheet;
+    const animations = sheet.animations as Record<string, { row: number; frames: number }>;
+    if (frame.width !== frameSize || frame.height !== frameSize) {
       errors.push(
-        `${label}: frame is ${c.frame.width}×${c.frame.height}, expected ${SPEC.characterFrame}×${SPEC.characterFrame}`,
+        `${label}: frame is ${frame.width}×${frame.height}, expected ${frameSize}×${frameSize}`,
       );
     }
-    for (const animation of REQUIRED_ANIMATIONS) {
-      if (!c.animations[animation])
+    for (const animation of required) {
+      if (!animations[animation])
         errors.push(`${label}: missing required animation "${animation}"`);
     }
-    const anims = Object.values(c.animations);
+    const anims = Object.values(animations);
     const cols = Math.max(0, ...anims.map((a) => a.frames));
     const rows = Math.max(0, ...anims.map((a) => a.row + 1));
     checkImage({
-      file: c.sheet,
+      file: sheet.sheet,
       label,
       check: (w, h) =>
-        w >= cols * c.frame.width &&
-        h >= rows * c.frame.height &&
-        w % c.frame.width === 0 &&
-        h % c.frame.height === 0
+        w >= cols * frame.width &&
+        h >= rows * frame.height &&
+        w % frame.width === 0 &&
+        h % frame.height === 0
           ? null
-          : `too small or not a whole number of ${c.frame.width}×${c.frame.height} frames for its animations`,
+          : `too small or not a whole number of ${frame.width}×${frame.height} frames for its animations`,
     });
+  };
+
+  for (const [key, c] of Object.entries(manifest.characters)) {
+    const label = `character ${key}`;
+    checkSheet({ sheet: c, label, frameSize: SPEC.characterFrame, required: REQUIRED_ANIMATIONS });
+    if (c.council)
+      checkSheet({
+        sheet: c.council,
+        label: `${label} council sheet`,
+        frameSize: SPEC.councilFrame,
+        required: COUNCIL_ANIMATIONS,
+      });
     if (c.portrait)
       checkImage({
         file: c.portrait,
