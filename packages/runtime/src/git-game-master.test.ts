@@ -35,6 +35,29 @@ const gm = (repoDir: string, setupCommand = '') =>
   new GitGameMaster({ repoDir, setupCommand: () => setupCommand });
 const worktree = (dir: string, branch: string) => join(dir, '..', 'demo.ibitsa', branch);
 
+describe('listFiles (#83)', () => {
+  it('lists tracked and untracked files, never ignored ones', async () => {
+    const dir = repo();
+    mkdirSync(join(dir, 'src'));
+    writeFileSync(join(dir, 'src', 'app.ts'), 'x');
+    writeFileSync(join(dir, '.gitignore'), 'dist/\n*.log\n');
+    mkdirSync(join(dir, 'dist'));
+    writeFileSync(join(dir, 'dist', 'out.js'), 'x');
+    writeFileSync(join(dir, 'debug.log'), 'x');
+    expect((await gm(dir).listFiles({ worktreePath: dir })).sort()).toEqual([
+      '.gitignore',
+      'README.md',
+      'src/app.ts',
+    ]);
+  });
+
+  it('returns nothing outside a repository', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'ibitsa-nogit-'));
+    roots.push(root);
+    expect(await gm(root).listFiles({ worktreePath: root })).toEqual([]);
+  });
+});
+
 describe('scanRepo', () => {
   it('reports the default branch first, the other branches and uncommitted changes', async () => {
     const dir = repo();

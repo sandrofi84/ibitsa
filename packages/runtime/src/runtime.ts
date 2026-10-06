@@ -118,6 +118,10 @@ export class Runtime {
       if (this.projectRules.remove(command.rule)) this.scheduleSnapshot();
       return;
     }
+    if (command.type === 'requestFiles') {
+      this.sendFiles({ frontEnd, islandId: command.islandId });
+      return;
+    }
     if (command.type === 'requestJournal') {
       const page = this.journal.page({ before: command.before, limit: command.limit });
       frontEnd.post({ type: 'journal', seq: ++this.seq, ...page });
@@ -387,6 +391,21 @@ export class Runtime {
   }
 
   /** Core's view plus the repo scan, which the New Quest form needs before any quest exists. */
+  /**
+   * Lists an island's worktree for @ file references (#83), fresh on each request: front ends cache it.
+   * No worktree (yet, or any more) means no files.
+   */
+  private sendFiles({ frontEnd, islandId }: { frontEnd: FrontEnd; islandId: string }): void {
+    const path = this.state.islands.find((i) => i.id === islandId)?.worktreePath;
+    const post = (paths: string[]) =>
+      frontEnd.post({ type: 'files', seq: ++this.seq, islandId, paths });
+    if (!path) {
+      post([]);
+      return;
+    }
+    void this.options.gameMaster.listFiles({ worktreePath: path }).then(post, () => post([]));
+  }
+
   /** A session's allow rules: the quest's from core plus the project's kept here (#62). */
   private allowRules(quest: string[] | undefined): { allowRules?: string[] } {
     const all = [...new Set([...(quest ?? []), ...this.projectRules.list()])];

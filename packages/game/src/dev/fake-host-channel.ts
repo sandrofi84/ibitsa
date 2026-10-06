@@ -1,5 +1,15 @@
 import type { HostEvent, HostRequest } from '@ibitsa/protocol';
 
+/** The files the standalone build's worktree pretends to hold, for @ references (#83). */
+export const DEMO_FILES = [
+  'README.md',
+  'package.json',
+  'src/app.ts',
+  'src/auth/login.ts',
+  'src/auth/redirect.ts',
+  'test/auth/redirect.test.ts',
+];
+
 /**
  * The extension's host channel, faked for the standalone build (#37): credentials are ready unless the
  * page says otherwise; a key is accepted if it starts with `sk-ant-` and isn't `sk-ant-bad`.

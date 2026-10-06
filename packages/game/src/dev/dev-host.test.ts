@@ -84,4 +84,18 @@ describe('DevHost', () => {
     await flush();
     expect(messages).toEqual([]);
   });
+
+  it('answers requestFiles with the demo worktree (#83)', async () => {
+    const host = new DevHost(parseLog(m0Walk), {});
+    const messages = await collect(host);
+    host.send({ type: 'requestFiles', islandId: 'i2' });
+    await flush();
+    expect(messages).toEqual([
+      expect.objectContaining({
+        type: 'files',
+        islandId: 'i2',
+        paths: expect.arrayContaining(['README.md']),
+      }),
+    ]);
+  });
 });

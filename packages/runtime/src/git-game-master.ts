@@ -35,6 +35,23 @@ export class GitGameMaster implements GameMaster {
     };
   }
 
+  /** At most this many paths: a file menu, not an index. */
+  static readonly FILE_LIMIT = 20_000;
+
+  async listFiles({ worktreePath }: { worktreePath: string }): Promise<string[]> {
+    const listed = await git(worktreePath, [
+      'ls-files',
+      '--cached',
+      '--others',
+      '--exclude-standard',
+    ]);
+    if (!listed.ok) return [];
+    return [...new Set(listed.output.split('\n').filter(Boolean))].slice(
+      0,
+      GitGameMaster.FILE_LIMIT,
+    );
+  }
+
   async createWorktree({
     islandId,
     branch,

@@ -133,6 +133,10 @@ class FakeGameMaster implements GameMaster {
     this.scans++;
     return this.repo;
   }
+  async listFiles(r: { worktreePath: string }): Promise<string[]> {
+    this.requests.push(['listFiles', r]);
+    return ['README.md', 'src/app.ts'];
+  }
   removeOk = true;
   async removeWorktree(r: {
     worktreePath: string;
@@ -534,6 +538,38 @@ describe('rest (#82)', () => {
     const env = await arrived();
     env.connection.receive({ type: 'restHero', commandId: 'r', heroId: 'h4' });
     expect(env.session.calls).toContainEqual(['compact']);
+  });
+});
+
+describe('file references (#83)', () => {
+  it("answers requestFiles with the island's worktree files, never logging it", async () => {
+    const env = await arrived();
+    const logged = logOf(env.storageDir).records.length;
+    env.received.length = 0;
+    env.connection.receive({ type: 'requestFiles', islandId: 'i2' });
+    await flush();
+    expect(env.received).toEqual([
+      {
+        type: 'files',
+        seq: expect.any(Number),
+        islandId: 'i2',
+        paths: ['README.md', 'src/app.ts'],
+      },
+    ]);
+    expect(env.gameMaster.requests).toContainEqual([
+      'listFiles',
+      { worktreePath: '/wt/ibitsa/fix-the-login-redirect' },
+    ]);
+    expect(logOf(env.storageDir).records.length).toBe(logged);
+  });
+
+  it('answers with no files for an island without a worktree', async () => {
+    const env = setup();
+    env.connection.receive({ type: 'requestFiles', islandId: 'nope' });
+    await flush();
+    expect(env.received.filter((m) => m.type === 'files')).toEqual([
+      { type: 'files', seq: expect.any(Number), islandId: 'nope', paths: [] },
+    ]);
   });
 });
 

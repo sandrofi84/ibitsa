@@ -9,7 +9,14 @@ export function reportDiagnostics(diagnostics: Diagnostics): void {
   if (vscode) vscode.postMessage(diagnostics);
 }
 
-const CORE_MESSAGE_TYPES = new Set(['welcome', 'snapshot', 'cue', 'journal', 'journalAppend']);
+const CORE_MESSAGE_TYPES = new Set([
+  'welcome',
+  'snapshot',
+  'cue',
+  'journal',
+  'journalAppend',
+  'files',
+]);
 
 /** The webview side of the extension: commands out via postMessage, core messages in via `message`. */
 export function webviewHost(): Host {

@@ -1,26 +1,13 @@
-import type { ExecutionState, HeroView, JournalEntry, Reading, Snapshot } from '@ibitsa/protocol';
+import type { HeroView, JournalEntry, Reading, Snapshot } from '@ibitsa/protocol';
+import { atMenu } from './at-menu';
 import type { GameClient } from './client';
 import type { CommandHistory } from './command-history';
 import { createCommandInput } from './command-input';
 import { button, el } from './dom';
 import type { HeroPane } from './hero-pane.types';
-import { HERO_CLASSES } from './heroes';
+import { HERO_CLASSES, STATE_LABELS } from './heroes';
 import type { Host } from './host.types';
 import type { ViewState } from './view-state';
-
-const STATE_LABELS: Record<ExecutionState['kind'], string> = {
-  unknown: 'Unknown',
-  error: 'Error',
-  outOfGold: 'Out of gold',
-  stalled: 'Stalled',
-  waitingOnYou: 'Waiting on you',
-  resting: 'Resting',
-  working: 'Working',
-  blocked: 'Blocked',
-  submitted: 'Submitted',
-  idle: 'Waiting for orders',
-  traveling: 'Traveling',
-};
 
 const OPEN_KEY = 'heroPaneOpen';
 const JOURNAL_KEY = 'journalOpen';
@@ -82,6 +69,8 @@ export function mountHeroPane({
     placeholder: 'Message the hero…',
     history,
     onHistoryChange,
+    // Files only: this box always speaks to its hero (#83).
+    menus: [atMenu({ client, recipients: false })],
     onSend: ({ text, priority }) => {
       if (heroId) client.send({ type: 'sendMessage', heroId, text, priority });
     },

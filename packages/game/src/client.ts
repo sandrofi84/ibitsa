@@ -59,6 +59,25 @@ export class GameClient {
     this.host.send({ type: 'forgetProjectRule', rule });
   }
 
+  /**
+   * The files in an island's worktree, for @ references (#83). Fetched on first use and again once
+   * they're older than `FILES_TTL_MS`, so new files show up; the runtime lists them fresh each time.
+   */
+  files(islandId: string): Promise<string[]> {
+    const held = this.fileLists.get(islandId);
+    if (held && Date.now() - held.at < GameClient.FILES_TTL_MS) return held.paths;
+    const paths = new Promise<string[]>((resolve) => {
+      this.fileWaiters.set(islandId, [...(this.fileWaiters.get(islandId) ?? []), resolve]);
+    });
+    this.fileLists.set(islandId, { at: Date.now(), paths });
+    this.host.send({ type: 'requestFiles', islandId });
+    return paths;
+  }
+
+  static readonly FILES_TTL_MS = 30_000;
+  private readonly fileLists = new Map<string, { at: number; paths: Promise<string[]> }>();
+  private readonly fileWaiters = new Map<string, ((paths: string[]) => void)[]>();
+
   /** Asks for the page before the earliest line held. */
   loadEarlierJournal(): void {
     if (this.journalStart > 0)
@@ -71,6 +90,12 @@ export class GameClient {
         this.versionMismatch = message.protocolVersion !== PROTOCOL_VERSION;
         if (!this.versionMismatch) this.host.send({ type: 'requestJournal' });
         return;
+      case 'files': {
+        const waiters = this.fileWaiters.get(message.islandId) ?? [];
+        this.fileWaiters.delete(message.islandId);
+        for (const resolve of waiters) resolve(message.paths);
+        return;
+      }
       case 'journal':
         // The latest page replaces what is held; an earlier one joins the front.
         if (message.start + message.entries.length === message.total) {

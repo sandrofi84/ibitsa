@@ -36,6 +36,8 @@ export const CommandSchema = v.variant('type', [
   }),
   /** Auto mode for the running quest (#63): logged, so a replay shows when it changed. */
   v.strictObject({ type: v.literal('setAutoApprove'), commandId: id, on: v.boolean() }),
+  /** The files in an island's worktree, for @ file references (#83). Runtime-only, never logged. */
+  v.strictObject({ type: v.literal('requestFiles'), islandId: id }),
   /** Removes an "Always allow in this project" rule. Runtime-only, never logged (#62). */
   v.strictObject({ type: v.literal('forgetProjectRule'), rule: v.pipe(v.string(), v.nonEmpty()) }),
   v.strictObject({

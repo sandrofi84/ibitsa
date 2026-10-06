@@ -171,4 +171,13 @@ describe('LiveDevHost', () => {
       value: { used: 6_000, max: 200_000 },
     });
   });
+
+  it('answers requestFiles with the demo worktree (#83)', async () => {
+    const { host, messages, settle } = setup();
+    host.send({ type: 'requestFiles', islandId: 'i2' });
+    await settle();
+    expect(messages.filter((m) => m.type === 'files')).toEqual([
+      expect.objectContaining({ islandId: 'i2', paths: expect.arrayContaining(['src/app.ts']) }),
+    ]);
+  });
 });

@@ -1,4 +1,5 @@
 import type { CommandHistory } from './command-history';
+import type { MenuProvider } from './command-menu.types';
 
 export interface CommandInputOptions {
   /** The input's accessible name, e.g. "Message to the hero". */
@@ -11,6 +12,8 @@ export interface CommandInputOptions {
   onHistoryChange: () => void;
   /** The send buttons' labels; the default is Send and Send now. */
   buttons?: { next: string; now: string | null };
+  /** Menus that open while a token starting with their trigger is typed (#83: @, #84: /). */
+  menus?: MenuProvider[];
 }
 
 export interface CommandInput {

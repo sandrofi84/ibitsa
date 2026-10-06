@@ -1,3 +1,4 @@
+import type { ExecutionState } from '@ibitsa/protocol';
 import type { HeroClass } from './heroes.types';
 
 /** The default hero classes (spec §5.2). Remapping and new classes come with M8. */
@@ -43,3 +44,18 @@ export function speechExcerpt(text: string): string {
     ? sentence
     : `${sentence.slice(0, SPEECH_MAX - 1).trimEnd()}…`;
 }
+
+/** How a hero's state reads in the pane and the @ menu. */
+export const STATE_LABELS: Record<ExecutionState['kind'], string> = {
+  unknown: 'Unknown',
+  error: 'Error',
+  outOfGold: 'Out of gold',
+  stalled: 'Stalled',
+  waitingOnYou: 'Waiting on you',
+  resting: 'Resting',
+  working: 'Working',
+  blocked: 'Blocked',
+  submitted: 'Submitted',
+  idle: 'Waiting for orders',
+  traveling: 'Traveling',
+};
