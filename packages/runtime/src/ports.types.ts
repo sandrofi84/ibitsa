@@ -1,5 +1,5 @@
 import type { GameMasterEvent } from '@ibitsa/core';
-import type { ActionInfo, AgentEvent, CoreMessage, RepoView } from '@ibitsa/protocol';
+import type { ActionDraft, ActionInfo, AgentEvent, CoreMessage, RepoView } from '@ibitsa/protocol';
 
 /** Starting one hero's agent session (spec §11.3). The adapter reports everything through `onEvent`. */
 export interface SessionStart {
@@ -57,7 +57,20 @@ export interface AgentAdapter {
     name: string;
     args: string;
   }): Promise<{ text: string; notes: string[] } | null>;
+  /** Writes a new action (#86); adapters without skills leave it out. */
+  createAction?(request: CreateActionRequest): Promise<CreateActionResult>;
 }
+
+/** A new action to write, and where each scope keeps its skills. */
+export interface CreateActionRequest {
+  draft: ActionDraft;
+  overwrite: boolean;
+  roots: { personal: string; project: string };
+}
+
+export type CreateActionResult =
+  | { ok: true; path: string }
+  | { ok: false; reason: string; clash: boolean };
 
 /** The game master's own work in the repo (spec §5.3, §5.5); results come back as core inputs. */
 export interface GameMaster {

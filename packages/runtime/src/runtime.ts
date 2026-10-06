@@ -13,6 +13,7 @@ import {
 } from '@ibitsa/core';
 import {
   type ActionInfo,
+  type Command,
   type CoreMessage,
   type Cue,
   PROTOCOL_VERSION,
@@ -133,6 +134,10 @@ export class Runtime {
     }
     if (command.type === 'requestPreview') {
       this.postPreview({ frontEnd, name: command.name, args: command.args });
+      return;
+    }
+    if (command.type === 'createAction') {
+      this.createAction({ frontEnd, command });
       return;
     }
     if (command.type === 'requestActions') {
@@ -457,6 +462,43 @@ export class Runtime {
   }
 
   /** The `/` menu's actions for the hero's worktree; none without a quest or if listing fails (#84). */
+  /** Writes a new action as a skill, then refreshes every front end's `/` menu (#86). */
+  private createAction({
+    frontEnd,
+    command,
+  }: {
+    frontEnd: FrontEnd;
+    command: Extract<Command, { type: 'createAction' }>;
+  }): void {
+    const { type: _type, overwrite = false, ...draft } = command;
+    const reject = (reason: string, clash = false) =>
+      frontEnd.post({ type: 'actionRejected', seq: ++this.seq, name: draft.name, reason, clash });
+    const create = this.options.adapter.createAction?.bind(this.options.adapter);
+    if (!create) {
+      reject('This agent has no actions.');
+      return;
+    }
+    if (draft.scope === 'project' && !this.options.repoDir) {
+      reject('There is no project folder to save it in.');
+      return;
+    }
+    const roots = {
+      personal: this.options.home ?? homedir(),
+      project: this.options.repoDir ?? '',
+    };
+    create({ draft, overwrite, roots }).then(
+      (result) => {
+        if (!result.ok) {
+          reject(result.reason, result.clash);
+          return;
+        }
+        frontEnd.post({ type: 'actionCreated', seq: ++this.seq, name: draft.name });
+        this.actions?.refresh();
+      },
+      (e: unknown) => reject(`Couldn't save the action: ${String(e)}`),
+    );
+  }
+
   private postActions(frontEnd: FrontEnd): void {
     const cwd = this.state.islands.find((i) => i.worktreePath)?.worktreePath;
     const send = (actions: ActionInfo[]) =>

@@ -22,3 +22,17 @@ export interface ActionPreview {
   /** e.g. which shell lines Claude Code runs when the action is sent. */
   notes: string[];
 }
+
+/** A new action as the "New action" form fills it in (§6.2, #86); written as a Claude Code skill. */
+export interface ActionDraft {
+  /** Lowercase letters, digits and dashes: the skill's folder and `/name`. */
+  name: string;
+  description: string;
+  /** e.g. `[reviewers]`; empty for none. */
+  argumentHint: string;
+  /** The prompt the hero gets, with Claude Code's placeholders (`$ARGUMENTS`, …). */
+  prompt: string;
+  target: 'hero' | 'any';
+  /** Personal: `~/.claude/skills`. Project: the workspace repo's `.claude/skills`, to commit and share. */
+  scope: 'personal' | 'project';
+}

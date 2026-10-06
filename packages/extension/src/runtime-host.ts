@@ -51,6 +51,7 @@ export class RuntimeHost {
       gameMaster,
       clock: systemClock,
       settings: o.settings,
+      repoDir: o.workspaceDir,
     });
     runtime.connect(this.watcher(runtime));
     runtime.start();

@@ -14,6 +14,8 @@ export interface RuntimeOptions {
   platform?: NodeJS.Platform;
   /** The user's home, for personal skills in the `/` menu (#84); defaults to the real one. */
   home?: string;
+  /** The workspace repository, where project-scope actions are saved (#86). */
+  repoDir?: string;
   /** How skill folders are watched; injectable for tests. */
   watchFolder?: FolderWatcher;
 }

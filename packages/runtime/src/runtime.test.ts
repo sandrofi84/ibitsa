@@ -8,6 +8,8 @@ import type {
   AgentAdapter,
   AgentSession,
   Clock,
+  CreateActionRequest,
+  CreateActionResult,
   GameMaster,
   SessionResume,
   SessionStart,
@@ -554,6 +556,117 @@ describe('the action preview (#85)', () => {
     env.connection.receive({ type: 'requestPreview', name: 'pr', args: '' });
     await flush();
     expect(previewsOf(env.received).at(-1)?.text).toBeNull();
+  });
+});
+
+describe('new actions (#86)', () => {
+  const draft = {
+    name: 'pr-summary',
+    description: 'Summarize the PR',
+    argumentHint: '[focus]',
+    prompt: 'Summarize. $ARGUMENTS',
+    target: 'hero' as const,
+    scope: 'project' as const,
+  };
+  type Create = (request: CreateActionRequest) => Promise<CreateActionResult>;
+
+  async function withCreate({ create, repoDir }: { create: Create | null; repoDir?: string }) {
+    const env = await arrived();
+    const requests: CreateActionRequest[] = [];
+    let listings = 0;
+    const adapter = Object.assign(env.adapter, {
+      listActions: async () => {
+        listings += 1;
+        return [];
+      },
+      ...(create
+        ? {
+            createAction: (r: CreateActionRequest) => {
+              requests.push(r);
+              return create(r);
+            },
+          }
+        : {}),
+    });
+    const home = mkdtempSync(join(tmpdir(), 'ibitsa-home-'));
+    dirs.push(home);
+    mkdirSync(join(home, '.claude'));
+    const runtime = new Runtime({
+      storageDir: env.storageDir,
+      adapter,
+      gameMaster: env.gameMaster,
+      clock: env.clock,
+      home,
+      ...(repoDir ? { repoDir } : {}),
+      watchFolder: () => ({ close: () => {} }),
+    });
+    env.runtime.dispose();
+    runtime.start();
+    const received: CoreMessage[] = [];
+    const connection = runtime.connect({ post: (m) => received.push(m) });
+    return { connection, received, requests, home, listings: () => listings };
+  }
+  const replies = (received: CoreMessage[]) =>
+    received.filter((m) => m.type === 'actionCreated' || m.type === 'actionRejected');
+
+  it("writes the skill with both scopes' folders, then refreshes the / menu", async () => {
+    const env = await withCreate({
+      create: async () => ({ ok: true, path: '/x' }),
+      repoDir: '/repo',
+    });
+    env.connection.receive({ type: 'requestActions' });
+    await flush();
+    env.connection.receive({ type: 'createAction', ...draft });
+    await flush();
+    await flush();
+    expect(env.requests).toEqual([
+      { draft, overwrite: false, roots: { personal: env.home, project: '/repo' } },
+    ]);
+    expect(replies(env.received)).toEqual([
+      expect.objectContaining({ type: 'actionCreated', name: 'pr-summary' }),
+    ]);
+    expect(env.listings()).toBe(2);
+    expect(env.received.filter((m) => m.type === 'actions')).toHaveLength(2);
+  });
+
+  it('passes a clash back, and an overwrite along', async () => {
+    const env = await withCreate({
+      create: async () => ({ ok: false, reason: 'taken', clash: true }),
+      repoDir: '/repo',
+    });
+    env.connection.receive({ type: 'createAction', ...draft, overwrite: true });
+    await flush();
+    expect(env.requests).toEqual([expect.objectContaining({ overwrite: true })]);
+    expect(replies(env.received)).toEqual([
+      expect.objectContaining({ type: 'actionRejected', reason: 'taken', clash: true }),
+    ]);
+  });
+
+  it('refuses without a project folder, without actions, or when writing throws', async () => {
+    const noRepo = await withCreate({ create: async () => ({ ok: true, path: '/x' }) });
+    noRepo.connection.receive({ type: 'createAction', ...draft });
+    const noActions = await withCreate({ create: null, repoDir: '/repo' });
+    noActions.connection.receive({ type: 'createAction', ...draft });
+    const throws = await withCreate({
+      create: async () => {
+        throw new Error('disk full');
+      },
+      repoDir: '/repo',
+    });
+    throws.connection.receive({ type: 'createAction', ...draft, scope: 'personal' });
+    await flush();
+    expect(replies(noRepo.received)).toEqual([
+      expect.objectContaining({
+        reason: 'There is no project folder to save it in.',
+        clash: false,
+      }),
+    ]);
+    expect(replies(noActions.received)).toEqual([
+      expect.objectContaining({ reason: 'This agent has no actions.' }),
+    ]);
+    expect(replies(throws.received)).toEqual([
+      expect.objectContaining({ reason: expect.stringContaining('disk full') }),
+    ]);
   });
 });
 

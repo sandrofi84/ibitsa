@@ -2,12 +2,20 @@ import { homedir } from 'node:os';
 import { dirname } from 'node:path';
 import type { SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
 import type { ActionInfo, AgentEvent } from '@ibitsa/protocol';
-import type { AgentAdapter, AgentSession, SessionResume, SessionStart } from '@ibitsa/runtime';
+import type {
+  AgentAdapter,
+  AgentSession,
+  CreateActionRequest,
+  CreateActionResult,
+  SessionResume,
+  SessionStart,
+} from '@ibitsa/runtime';
 import type { ClaudeAdapterOptions } from './claude-adapter.types';
 import { ClaudeSession, loadSdk, plugins } from './claude-session';
 import { expandSkill } from './skill-expansion';
 import type { Expansion } from './skill-expansion.types';
 import { SkillFiles } from './skill-files';
+import { SkillWriter } from './skill-writer';
 
 /** The native Claude Agent SDK adapter (spec §11.3, §11.4). */
 export class ClaudeAdapter implements AgentAdapter {
@@ -96,6 +104,14 @@ export class ClaudeAdapter implements AgentAdapter {
       fields: file.fields,
       args,
       variables: { CLAUDE_PROJECT_DIR: cwd, CLAUDE_SKILL_DIR: dirname(file.path) },
+    });
+  }
+
+  /** Writes a new action as a skill (#86): in the user's home, or the workspace repo for the project. */
+  async createAction(request: CreateActionRequest): Promise<CreateActionResult> {
+    return new SkillWriter(request.roots).write({
+      draft: request.draft,
+      overwrite: request.overwrite,
     });
   }
 }

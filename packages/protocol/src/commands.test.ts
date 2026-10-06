@@ -9,6 +9,15 @@ const valid: Command[] = [
   { type: 'forgetProjectRule', rule: 'Bash(npm test:*)' },
   { type: 'requestActions' },
   { type: 'requestPreview', name: 'ibitsa:test', args: 'unit' },
+  {
+    type: 'createAction',
+    name: 'pr-summary',
+    description: 'Summarize the PR',
+    argumentHint: '[focus]',
+    prompt: 'Summarize. $ARGUMENTS',
+    target: 'hero',
+    scope: 'personal',
+  },
   { type: 'setAutoApprove', commandId: 'c10', on: true },
   { type: 'restHero', commandId: 'c11', heroId: 'h1' },
   {
@@ -70,7 +79,7 @@ describe('parseCommand', () => {
   });
 
   it('covers every command type', () => {
-    expect(new Set(valid.map((c) => c.type)).size).toBe(19);
+    expect(new Set(valid.map((c) => c.type)).size).toBe(20);
   });
 
   it.each([
@@ -129,6 +138,18 @@ describe('parseCommand', () => {
       },
     ],
     ['an empty rule to forget', { type: 'forgetProjectRule', rule: '' }],
+    [
+      'an action name with capitals or spaces',
+      {
+        type: 'createAction',
+        name: 'My Action',
+        description: 'x',
+        argumentHint: '',
+        prompt: 'x',
+        target: 'hero',
+        scope: 'personal',
+      },
+    ],
     ['files without an island', { type: 'requestFiles' }],
     ['auto mode without on', { type: 'setAutoApprove', commandId: 'c1' }],
   ])('rejects %s', (_, input) => {

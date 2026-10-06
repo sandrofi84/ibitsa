@@ -18,7 +18,10 @@ export type CoreMessage =
   /** The `/` menu's actions for the hero's folder (#84): answers `requestActions`, and again on change. */
   | { type: 'actions'; seq: number; actions: ActionInfo[] }
   /** Answers `requestPreview` (#85). */
-  | { type: 'preview'; seq: number; preview: ActionPreview };
+  | { type: 'preview'; seq: number; preview: ActionPreview }
+  /** Answers `createAction` (#86): written, or refused (`clash` when the name is taken). */
+  | { type: 'actionCreated'; seq: number; name: string }
+  | { type: 'actionRejected'; seq: number; name: string; reason: string; clash: boolean };
 
 /** Fire-and-forget effects (animation, sound, toast). Carry no state: dropping any cue must be harmless. */
 export type Cue =

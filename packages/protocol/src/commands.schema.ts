@@ -44,6 +44,17 @@ export const CommandSchema = v.variant('type', [
     name: v.pipe(v.string(), v.nonEmpty()),
     args: v.string(),
   }),
+  /** Writes a new action as a Claude Code skill (#86). Runtime-only, never logged. */
+  v.strictObject({
+    type: v.literal('createAction'),
+    name: v.pipe(v.string(), v.regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/), v.maxLength(64)),
+    description: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(300)),
+    argumentHint: v.pipe(v.string(), v.trim(), v.maxLength(100)),
+    prompt: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(20_000)),
+    target: v.picklist(['hero', 'any']),
+    scope: v.picklist(['personal', 'project']),
+    overwrite: v.optional(v.boolean()),
+  }),
   /** The `/` menu's actions (#84). Runtime-only, never logged. */
   v.strictObject({ type: v.literal('requestActions') }),
   /** Removes an "Always allow in this project" rule. Runtime-only, never logged (#62). */
