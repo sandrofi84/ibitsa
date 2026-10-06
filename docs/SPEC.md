@@ -111,7 +111,7 @@ Every character is backed by a real agent session. The game layer makes multi-ag
 - The raw research transcript is **not** carried into planning. The brief is the handoff. It is kept in the campaign folder and reused by reviews (M5).
 
 ### 4.2 Choosing the council
-- UI (#103): the **convene form**, opened from the elder panel's **Convene council**. How the council sits (**Round table** / **Separate chambers**, disabled until #105; asked each time while `ibitsa.council.mode` is `ask`, the default, else stated); list of available councillors with checkboxes, recommended ones pre-checked with the elder's reason; effort (one selector for a round table, one per councillor in separate chambers, each set to the elder's pick with its reason); estimated cost.
+- UI (#103): the **convene form**, opened from the elder panel's **Convene council**. How the council sits (**Round table** / **Separate chambers**; asked each time while `ibitsa.council.mode` is `ask`, the default, else stated); list of available councillors with checkboxes, recommended ones pre-checked with the elder's reason; effort (one selector for a round table, one per councillor in separate chambers, each set to the elder's pick with its reason, and the sitting's effort then sets the chairing elder's model); the most it can cost, as you change them.
 - **Effort levels** (models and caps configurable; starting defaults, tuned from tallies, §4.10):
 
 | Effort | Models | Round table cap | Per councillor in chambers |
@@ -141,12 +141,14 @@ Both kinds of sitting are built, so they can be measured against each other on r
   - `ask_user` returns as soon as core accepts the batch and the session ends its turn: the answers, "Why?", change requests and added councillors all arrive later as messages. A tool call that waited for the user would block the model from answering "Why?".
   - Checked live (#103, opt-in smoke, Haiku): with Architect and Tester on a small task in this repository it filed both reports, asked one question with options and a recommendation, took the answer as a message and proposed a plan, every call accepted first time.
   - Reaching the cap ends the sitting as failed ("ran out of gold"), keeping the reports so far; a softer wrap-up before the cap is left for later (the session only learns its cost at the end of a turn).
-- **Separate chambers:** the elder chairs a session and each councillor runs as an SDK **subagent** (`agents` option) with its own context, instructions (its skill, preloaded), tools, model and cap, from its effort.
-  - A councillor starts from the shared findings, its own field slice and the file map. Ibitsa adds the slice to the subagent's first message itself (a hook on the dispatch), not by trusting the elder to pass it on.
-  - The councillor reads more only when its slice isn't enough, within its cap and a turn limit (`maxTurns`).
-  - Attribution comes from the SDK: every message from a subagent carries the `parent_tool_use_id` of the call that started it, and permission requests carry an `agentID`.
-  - Subagents can't talk to the user mid-run; their questions go into their reports, and the elder asks them.
-  - A concern the elder marks serious can get a deeper pass on a stronger model (Deep effort only).
+- **Separate chambers** (#105): the elder chairs a session (on the sitting effort's model) and each councillor runs as an SDK **subagent** (`agents` option, dispatched with the `Agent` tool) with its own context, model and step budget from its effort: Light Haiku 8 steps, Standard Sonnet 15, Deep Sonnet 25. Every councillor the workspace has gets a chamber, so one added mid-sitting can be dispatched; the elder may dispatch only these (`canUseTool` denies anything else).
+  - A chamber's prompt carries everything it needs: its skill's opening lines and `## Planning` section, its field slice of the brief, the shared findings and the file map. It isn't preloaded from the skill (`AgentDefinition.skills`), because a user skill may not be loaded under `settingSources: ['project']`, and it needs no dispatch hook because the slices are known when the sitting starts.
+  - The councillor reads more only when its slice isn't enough, within its steps.
+  - **Attribution comes from the SDK:** a `report` call is filed under the chamber that made it, as the PreToolUse hook names it (`agent_type`, present inside a subagent), not as the model claims. A report claiming another councillor, or filed by the elder itself, is turned down through the tool result without reaching core.
+  - Subagents can't talk to the user mid-run; their questions go into their reports, and the elder asks them. "Why?" is answered from the councillor's report, or by dispatching it again.
+  - On a change request the elder dispatches again only the councillors the change affects.
+  - At Deep effort a councillor also has a deeper pass, `<id>-deep` (Opus, 12 steps), which the elder may dispatch on a serious concern; its report counts for the same councillor.
+  - **Caps:** the session's `maxBudgetUsd` is every chamber's share (Light $0.10, Standard $0.40, Deep $1.20) plus the elder's $0.30 reserve. The SDK enforces only that total; each chamber is held to its share by its step budget, not by dollars, so one chamber can spend more than its share if the others spend less.
 - **Fallback if separate chambers proves unreliable:** Ibitsa runs each councillor as its own session in code-controlled rounds, which also lets prompts put the brief first so it can be a cache hit for every councillor.
 
 ### 4.4 Questions, "Why?" and voices

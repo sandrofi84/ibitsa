@@ -22,9 +22,9 @@ import type { ToolReply } from './elder-session.types';
 import { InputQueue } from './input-queue';
 import type { AskedBatch, RoundTableInit, Seat, Verdict } from './round-table-session.types';
 
-const TOOL = (name: string) => `mcp__ibitsa__${name}`;
+export const TOOL = (name: string) => `mcp__ibitsa__${name}`;
 export const COUNCIL_TOOLS = ['report', 'ask_user', 'propose_plan', 'say'].map(TOOL);
-const READ_TOOLS = ['Read', 'Grep', 'Glob'];
+export const READ_TOOLS = ['Read', 'Grep', 'Glob'];
 /** A sitting runs long: reports, questions, revisions. The cap usually ends it first. */
 const MAX_TURNS = 120;
 
@@ -109,12 +109,12 @@ const SAY_SHAPE = {
  * messages, so the session stays open between turns.
  */
 export class RoundTableSession implements SittingSession {
-  private readonly init: RoundTableInit;
+  protected readonly init: RoundTableInit;
   /** The streaming prompt: messages the session reads one by one, as the user acts. */
   private readonly input = new InputQueue<SDKUserMessage>();
-  private readonly seats: Seat[];
+  protected readonly seats: Seat[];
   /** Tool-use ids from the PreToolUse hook, per tool, waiting for their handler. */
-  private readonly toolUseIds = new Map<string, string[]>();
+  protected readonly toolUseIds = new Map<string, string[]>();
   private readonly verdicts = new Map<string, (verdict: Verdict) => void>();
   private readonly batches = new Map<string, AskedBatch>();
   private query: Query | null = null;
@@ -133,12 +133,7 @@ export class RoundTableSession implements SittingSession {
   }
 
   message(message: SittingMessage): void {
-    this.input.push(
-      userMessage({
-        text: messageText({ message, seats: this.seats, skills: this.skills() }),
-        priority: 'next',
-      }),
-    );
+    this.input.push(userMessage({ text: this.wording(message), priority: 'next' }));
   }
 
   completeTool({
@@ -173,7 +168,7 @@ export class RoundTableSession implements SittingSession {
 
   // ---------- the tools ----------
 
-  private async report(
+  protected async report(
     input: { councillorId: string; bowOut?: string | undefined } & Omit<CouncilReport, 'bowOut'>,
   ): Promise<ToolReply> {
     const { councillorId, ...rest } = input;
@@ -238,7 +233,7 @@ export class RoundTableSession implements SittingSession {
   }
 
   /** Sends a tool call to core and returns its verdict to the model. */
-  private ruled({
+  protected ruled({
     tool,
     event,
     ok,
@@ -297,12 +292,7 @@ export class RoundTableSession implements SittingSession {
       const query = sdk.query({ prompt: this.input, options: this.options(ibitsa) });
       this.query = query;
       if (this.closed) query.close();
-      this.input.push(
-        userMessage({
-          text: openingText({ start: this.init.start, seats: this.seats }),
-          priority: 'next',
-        }),
-      );
+      this.input.push(userMessage({ text: this.opening(), priority: 'next' }));
       for await (const message of query) this.onSdkMessage(message);
     } catch (error) {
       if (!this.closed)
@@ -313,7 +303,17 @@ export class RoundTableSession implements SittingSession {
     }
   }
 
-  private options(ibitsa: NonNullable<Options['mcpServers']>[string]): Options {
+  /** The first message. Separate chambers words it for the chairing elder. */
+  protected opening(): string {
+    return openingText({ start: this.init.start, seats: this.seats });
+  }
+
+  /** What the user did, worded for the session. */
+  protected wording(message: SittingMessage): string {
+    return messageText({ message, seats: this.seats, skills: this.skills() });
+  }
+
+  protected options(ibitsa: NonNullable<Options['mcpServers']>[string]): Options {
     const { adapter, start } = this.init;
     const claudeCodePath = adapter.claudeCodePath?.()?.trim();
     return {
@@ -331,13 +331,7 @@ export class RoundTableSession implements SittingSession {
           {
             hooks: [
               async (i) => {
-                const { tool_name, tool_use_id } = i as PreToolUseHookInput;
-                if (COUNCIL_TOOLS.includes(tool_name)) {
-                  this.toolUseIds.set(tool_name, [
-                    ...(this.toolUseIds.get(tool_name) ?? []),
-                    tool_use_id,
-                  ]);
-                }
+                this.noteToolUse(i as PreToolUseHookInput);
                 return {};
               },
             ],
@@ -348,6 +342,12 @@ export class RoundTableSession implements SittingSession {
       maxBudgetUsd: start.maxBudgetMicroUsd / 1_000_000,
       ...(claudeCodePath ? { pathToClaudeCodeExecutable: claudeCodePath } : {}),
     };
+  }
+
+  /** Keeps a council tool call's id for its handler, which the SDK doesn't give one. */
+  protected noteToolUse({ tool_name, tool_use_id }: PreToolUseHookInput): void {
+    if (!COUNCIL_TOOLS.includes(tool_name)) return;
+    this.toolUseIds.set(tool_name, [...(this.toolUseIds.get(tool_name) ?? []), tool_use_id]);
   }
 
   private onSdkMessage(m: SDKMessage): void {
@@ -369,7 +369,7 @@ export class RoundTableSession implements SittingSession {
     });
   }
 
-  private skills(): CouncillorSkills {
+  protected skills(): CouncillorSkills {
     return new CouncillorSkills({
       cwd: this.init.start.cwd,
       home: this.init.adapter.home ?? homedir(),
@@ -377,7 +377,7 @@ export class RoundTableSession implements SittingSession {
     });
   }
 
-  private emit(event: CouncilEvent): void {
+  protected emit(event: CouncilEvent): void {
     if (event.type === 'error') {
       if (this.failed) return;
       this.failed = true;
@@ -386,11 +386,17 @@ export class RoundTableSession implements SittingSession {
   }
 }
 
-function reply(text: string): ToolReply {
+export function reply(text: string): ToolReply {
   return { content: [{ type: 'text', text }] };
 }
 
-function seat({ skills, councillorId }: { skills: CouncillorSkills; councillorId: string }): Seat {
+export function seat({
+  skills,
+  councillorId,
+}: {
+  skills: CouncillorSkills;
+  councillorId: string;
+}): Seat {
   const found = skills.planning(councillorId);
   return found
     ? { id: councillorId, title: found.info.title, guidance: found.guidance }

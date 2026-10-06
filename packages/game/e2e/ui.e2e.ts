@@ -18,6 +18,7 @@ interface Probe {
   };
   zoom(): number;
   camera(): { zoom: number } | null;
+  hut(): { mode: string; stage: string } | null;
 }
 
 const probe = <T>(page: Page, read: (p: Probe) => T) =>
@@ -445,12 +446,12 @@ test('the brief convenes a round table; its approved plan becomes a quest, task 
 
   const convene = page.getByRole('dialog', { name: 'Convene the council' });
   await expect(convene.getByRole('radio', { name: /Round table/ })).toBeChecked();
-  await expect(convene.getByRole('radio', { name: /Separate chambers/ })).toBeDisabled();
+  await expect(convene.getByRole('radio', { name: /Separate chambers/ })).not.toBeChecked();
   const tester = convene.getByRole('checkbox', { name: /Tester/ });
   await expect(tester).toBeChecked();
   await expect(convene).toContainText('The elder: The change needs a test.');
   await expect(convene.getByRole('checkbox', { name: /Architect/ })).not.toBeChecked();
-  await expect(convene.getByLabel('Effort')).toHaveValue('light');
+  await expect(convene.getByLabel('Effort', { exact: true })).toHaveValue('light');
   await page.screenshot({ path: 'test-results/convene.png' });
   await tester.uncheck();
   await expect(convene.getByRole('button', { name: 'Convene' })).toBeDisabled();
@@ -506,5 +507,42 @@ test('the brief convenes a round table; its approved plan becomes a quest, task 
   expect(
     await probe(page, (p) => p.snapshot()?.islands[0]?.taskPoints.map((t) => t.state)),
   ).toEqual(['doneUnreviewed', 'doneUnreviewed']);
+  expect(errors).toEqual([]);
+});
+
+test('separate chambers: an effort per councillor, the study stage, then the questions (#105)', async ({
+  page,
+}) => {
+  const errors = watchErrors(page);
+  await page.goto('/?fixture=live');
+  await page.getByRole('button', { name: 'New quest' }).click();
+  await page.getByLabel('Task').fill('Fix the login redirect');
+  await page.getByRole('button', { name: 'Ask the elder' }).click();
+  const elder = page.getByRole('region', { name: 'Elder' });
+  await elder.getByRole('button', { name: 'Convene council' }).click();
+
+  const convene = page.getByRole('dialog', { name: 'Convene the council' });
+  const testerEffort = convene.getByLabel("Tester's effort");
+  await expect(testerEffort).toBeHidden();
+  await expect(convene).toContainText('Costs up to $0.50.');
+  await convene.getByRole('radio', { name: /Separate chambers/ }).check();
+  // The elder's pick for the tester, with its reason; the cap is the shares plus the elder's reserve.
+  await expect(testerEffort).toHaveValue('light');
+  await expect(convene).toContainText('One case.');
+  await expect(convene).toContainText('Costs up to $0.40.');
+  await convene.getByRole('checkbox', { name: /Security/ }).check();
+  await convene.getByLabel("Security's effort").selectOption('deep');
+  await expect(convene).toContainText('Costs up to $1.60.');
+  await expect(convene.getByText('The elder chairs at')).toBeVisible();
+  await page.screenshot({ path: 'test-results/convene-chambers.png' });
+  await convene.getByRole('button', { name: 'Convene' }).click();
+
+  // The councillors study until every report is in, then the questions come.
+  await expect.poll(() => probe(page, (p) => p.hut()?.stage), { timeout: 10_000 }).toBe('study');
+  expect(await probe(page, (p) => p.hut()?.mode)).toBe('chambers');
+  await page.screenshot({ path: 'test-results/chambers-study.png' });
+  const box = page.getByRole('dialog', { name: 'The council asks' });
+  await expect(box).toContainText('Should the change come with a test?', { timeout: 15_000 });
+  expect(await probe(page, (p) => p.hut()?.stage)).toBe('dialogue');
   expect(errors).toEqual([]);
 });

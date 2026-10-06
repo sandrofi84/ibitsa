@@ -1128,3 +1128,12 @@ body.in-hut:has(.council-dialogue:not([hidden])) .needs-you {
   gap: 6px;
   margin-top: 6px;
 }
+
+/* Separate chambers (#105): each councillor's effort, under its name. */
+.convene .seat-effort-row {
+  margin: 0 0 6px 22px;
+}
+
+.convene .cap {
+  font-weight: 600;
+}

@@ -1451,6 +1451,23 @@ describe('the round table (#103)', () => {
     expect(logOf(env.storageDir).records.filter((r) => r.kind === 'council').length).toBe(4);
   });
 
+  it('runs separate chambers with a model per councillor and the summed cap (#105)', async () => {
+    const env = withSitting();
+    env.connection.receive({
+      ...convene,
+      mode: 'chambers',
+      effort: 'light',
+      councillorEfforts: { security: 'deep' },
+    });
+    await flush();
+    expect(env.calls[0]?.start).toMatchObject({
+      mode: 'chambers',
+      model: 'haiku',
+      maxBudgetMicroUsd: 1_500_000,
+      roster: [{ councillorId: 'security', effort: 'deep', model: 'sonnet' }],
+    });
+  });
+
   it('runs a deep sitting on Opus with $6', async () => {
     const env = withSitting();
     env.connection.receive({ ...convene, effort: 'deep' });

@@ -19,6 +19,7 @@ import type {
   SittingSession,
   SittingStart,
 } from '@ibitsa/runtime';
+import { ChambersSession } from './chambers-session';
 import type { ClaudeAdapterOptions } from './claude-adapter.types';
 import { ClaudeSession, loadSdk, plugins } from './claude-session';
 import { CouncillorSkills } from './councillor-skills';
@@ -124,21 +125,10 @@ export class ClaudeAdapter implements AgentAdapter {
     return new ElderSession({ adapter: this.options, start, onEvent });
   }
 
-  /**
-   * A sitting's lead session (spec §4.3): a round table (#103). Separate chambers come with #105; until
-   * then convening that way reports an error.
-   */
+  /** A sitting's lead session (spec §4.3): a round table (#103) or separate chambers (#105). */
   startSitting(start: SittingStart, onEvent: (event: CouncilEvent) => void): SittingSession {
-    if (start.mode === 'chambers') {
-      queueMicrotask(() =>
-        onEvent({
-          type: 'error',
-          message: "Separate chambers aren't available yet: convene a round table.",
-        }),
-      );
-      return { message: () => {}, completeTool: () => {}, answer: () => {}, close: () => {} };
-    }
-    return new RoundTableSession({ adapter: this.options, start, onEvent });
+    const init = { adapter: this.options, start, onEvent };
+    return start.mode === 'chambers' ? new ChambersSession(init) : new RoundTableSession(init);
   }
 
   /** The councillors a folder can seat (§4.7, #98), read from the skill files; no session needed. */
