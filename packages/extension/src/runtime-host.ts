@@ -39,9 +39,11 @@ export class RuntimeHost {
 
   private async start(): Promise<Runtime> {
     const o = this.options;
+    const [credentials, env] = await Promise.all([o.credentials(), o.environment()]);
     const { adapter, gameMaster } = o.dependencies({
-      credentials: await o.credentials(),
+      credentials,
       workspaceDir: o.workspaceDir,
+      env,
     });
     const runtime = new Runtime({
       storageDir: o.storageDir,
