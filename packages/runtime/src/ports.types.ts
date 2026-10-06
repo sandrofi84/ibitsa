@@ -1,5 +1,5 @@
 import type { GameMasterEvent } from '@ibitsa/core';
-import type { AgentEvent, CoreMessage, RepoView } from '@ibitsa/protocol';
+import type { ActionInfo, AgentEvent, CoreMessage, RepoView } from '@ibitsa/protocol';
 
 /** Starting one hero's agent session (spec §11.3). The adapter reports everything through `onEvent`. */
 export interface SessionStart {
@@ -49,6 +49,8 @@ export interface AgentAdapter {
   capabilities: { budgetCap: boolean; costReported: boolean };
   startSession(start: SessionStart, onEvent: (event: AgentEvent) => void): AgentSession;
   resumeSession(resume: SessionResume, onEvent: (event: AgentEvent) => void): AgentSession;
+  /** The `/` menu's actions for a folder (#84); adapters without skills leave it out. */
+  listActions?(request: { cwd: string }): Promise<ActionInfo[]>;
 }
 
 /** The game master's own work in the repo (spec §5.3, §5.5); results come back as core inputs. */

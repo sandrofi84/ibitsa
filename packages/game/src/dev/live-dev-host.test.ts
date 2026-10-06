@@ -180,4 +180,12 @@ describe('LiveDevHost', () => {
       expect.objectContaining({ islandId: 'i2', paths: expect.arrayContaining(['src/app.ts']) }),
     ]);
   });
+
+  it('answers the / menu with the built-ins (#84)', async () => {
+    const { host, messages, settle } = setup();
+    host.send({ type: 'requestActions' });
+    await settle();
+    const actions = messages.find((m) => m.type === 'actions');
+    expect(actions?.type === 'actions' && actions.actions.length).toBeGreaterThan(0);
+  });
 });

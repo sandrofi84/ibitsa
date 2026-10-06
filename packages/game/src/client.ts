@@ -1,4 +1,5 @@
 import {
+  type ActionInfo,
   type Command,
   type CoreMessage,
   type Cue,
@@ -24,6 +25,9 @@ export class GameClient {
   journal: JournalEntry[] = [];
   journalStart = 0;
   private readonly journalListeners: (() => void)[] = [];
+  /** The `/` menu's actions for the hero's folder (#84), as the runtime last sent them. */
+  actions: ActionInfo[] = [];
+  private readonly actionListeners: ((actions: ActionInfo[]) => void)[] = [];
 
   constructor(private readonly host: Host) {
     host.onMessage((m) => this.receive(m));
@@ -47,6 +51,15 @@ export class GameClient {
 
   onCue(listener: (c: Cue) => void): void {
     this.cueListeners.push(listener);
+  }
+
+  /** Asks the runtime for the `/` menu's actions; the answer, and any later change, arrive as `actions`. */
+  requestActions(): void {
+    this.host.send({ type: 'requestActions' });
+  }
+
+  onActions(listener: (actions: ActionInfo[]) => void): void {
+    this.actionListeners.push(listener);
   }
 
   /** Called whenever the held journal lines change. */
@@ -103,6 +116,10 @@ export class GameClient {
         } else if (message.start + message.entries.length === this.journalStart) {
           this.setJournal({ entries: [...message.entries, ...this.journal], start: message.start });
         }
+        return;
+      case 'actions':
+        this.actions = message.actions;
+        for (const l of this.actionListeners) l(message.actions);
         return;
       case 'journalAppend':
         if (message.start === 0) {

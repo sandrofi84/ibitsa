@@ -195,4 +195,37 @@ describe.skipIf(process.env.IBITSA_SMOKE !== '1')('live Claude session (smoke)',
     console.log(JSON.stringify(events, null, 2));
     expect(events.some((e) => e.type === 'compacted')).toBe(true);
   }, 240_000);
+
+  it('runs a custom project skill sent as /name args (#84, open question 7)', async () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'ibitsa-smoke-'));
+    mkdirSync(join(cwd, '.claude', 'skills', 'greet'), { recursive: true });
+    writeFileSync(
+      join(cwd, '.claude', 'skills', 'greet', 'SKILL.md'),
+      '---\nname: greet\ndescription: Greet someone\nargument-hint: "[name]"\ndisable-model-invocation: true\n---\nReply with exactly: IBITSA-GREETS $ARGUMENTS\n',
+    );
+    const events: AgentEvent[] = [];
+    const done = new Promise<void>((resolve) => {
+      const session = new ClaudeAdapter({ env: () => ({ ...process.env }) }).startSession(
+        {
+          heroId: 'h1',
+          sessionId: crypto.randomUUID(),
+          cwd,
+          classId: 'rogue',
+          prompt: '/greet Wren',
+        },
+        (event) => {
+          events.push(event);
+          if (event.type === 'turnEnded' || event.type === 'error') {
+            session.close();
+            resolve();
+          }
+        },
+      );
+    });
+    await done;
+    rmSync(cwd, { recursive: true, force: true });
+    console.log(JSON.stringify(events, null, 2));
+    const said = events.flatMap((e) => (e.type === 'message' ? [e.text] : [])).join('\n');
+    expect(said).toContain('IBITSA-GREETS Wren');
+  }, 240_000);
 });

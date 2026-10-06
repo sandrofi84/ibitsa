@@ -1,7 +1,10 @@
-import type { AgentEvent } from '@ibitsa/protocol';
+import { homedir } from 'node:os';
+import type { SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
+import type { ActionInfo, AgentEvent } from '@ibitsa/protocol';
 import type { AgentAdapter, AgentSession, SessionResume, SessionStart } from '@ibitsa/runtime';
 import type { ClaudeAdapterOptions } from './claude-adapter.types';
-import { ClaudeSession } from './claude-session';
+import { ClaudeSession, loadSdk, plugins } from './claude-session';
+import { SkillFiles } from './skill-files';
 
 /** The native Claude Agent SDK adapter (spec §11.3, §11.4). */
 export class ClaudeAdapter implements AgentAdapter {
@@ -41,4 +44,65 @@ export class ClaudeAdapter implements AgentAdapter {
       onEvent,
     });
   }
+
+  /**
+   * The `/` menu's actions for a folder (#84): what Claude Code itself would run there, from a short
+   * session that never sends a message (no model call, no tokens), without Claude Code's own commands.
+   */
+  async listActions({ cwd }: { cwd: string }): Promise<ActionInfo[]> {
+    const sdk = await (this.options.loadSdk ?? loadSdk)();
+    const pluginDirs = this.options.pluginDirs?.() ?? [];
+    const claudeCodePath = this.options.claudeCodePath?.()?.trim();
+    const query = sdk.query({
+      prompt: idle(),
+      options: {
+        cwd,
+        env: this.options.env(),
+        settingSources: this.options.settingSources?.() ?? ['project'],
+        ...plugins(pluginDirs),
+        ...(claudeCodePath ? { pathToClaudeCodeExecutable: claudeCodePath } : {}),
+      },
+    });
+    let commands: SlashCommand[];
+    try {
+      commands = await query.supportedCommands();
+    } finally {
+      query.close();
+    }
+    const files = new SkillFiles({ cwd, home: this.options.home ?? homedir(), pluginDirs });
+    return commands.filter((c) => !c.builtin).map((c) => toAction({ command: c, files }));
+  }
+}
+
+/** A prompt that never sends anything: the session only answers control requests. */
+async function* idle(): AsyncGenerator<SDKUserMessage> {
+  await new Promise(() => {});
+}
+
+const TARGETS = new Set(['hero', 'council', 'any']);
+
+/**
+ * The SDK tags descriptions with their source, e.g. "… (project)" or "(ibitsa) …" (seen in M2
+ * planning): Ibitsa shows the source as its own field instead.
+ */
+function toAction({ command, files }: { command: SlashCommand; files: SkillFiles }): ActionInfo {
+  let description = command.description;
+  let source: ActionInfo['source'] = 'other';
+  const tag = description.match(/ \((project|user)\)$/);
+  if (command.name.includes(':')) {
+    source = 'plugin';
+    description = description.replace(/^\([^)]*\) /, '');
+  } else if (tag) {
+    source = tag[1] as 'project' | 'user';
+    description = description.slice(0, -tag[0].length);
+  }
+  const target = files.find(command.name)?.fields['ibitsa-target'] ?? 'any';
+  return {
+    name: command.name,
+    description,
+    argumentHint: command.argumentHint,
+    aliases: command.aliases ?? [],
+    source,
+    target: (TARGETS.has(target) ? target : 'any') as ActionInfo['target'],
+  };
 }

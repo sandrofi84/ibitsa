@@ -162,3 +162,30 @@ describe('GameClient files (#83)', () => {
     expect(host.sent).toEqual([]);
   });
 });
+
+describe('GameClient actions (#84)', () => {
+  it('asks for the / menu and keeps what the runtime sends', () => {
+    const host = new FakeHost();
+    const client = new GameClient(host);
+    const seen: string[][] = [];
+    client.onActions((a) => seen.push(a.map((x) => x.name)));
+    client.requestActions();
+    expect(host.sent).toEqual([{ type: 'requestActions' }]);
+    host.deliver({
+      type: 'actions',
+      seq: 1,
+      actions: [
+        {
+          name: 'ibitsa:test',
+          description: '',
+          argumentHint: '',
+          aliases: ['test'],
+          source: 'plugin',
+          target: 'hero',
+        },
+      ],
+    });
+    expect(client.actions.map((a) => a.name)).toEqual(['ibitsa:test']);
+    expect(seen).toEqual([['ibitsa:test']]);
+  });
+});

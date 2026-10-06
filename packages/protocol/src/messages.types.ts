@@ -1,3 +1,4 @@
+import type { ActionInfo } from './actions.types';
 import type { JournalEntry } from './journal.types';
 import type { ActivityKind, Snapshot } from './snapshot.types';
 
@@ -13,7 +14,9 @@ export type CoreMessage =
   | { type: 'journal'; seq: number; entries: JournalEntry[]; start: number; total: number }
   | { type: 'journalAppend'; seq: number; entries: JournalEntry[]; start: number }
   /** Answers `requestFiles` (#83): the worktree's files, tracked and untracked but not ignored. */
-  | { type: 'files'; seq: number; islandId: string; paths: string[] };
+  | { type: 'files'; seq: number; islandId: string; paths: string[] }
+  /** The `/` menu's actions for the hero's folder (#84): answers `requestActions`, and again on change. */
+  | { type: 'actions'; seq: number; actions: ActionInfo[] };
 
 /** Fire-and-forget effects (animation, sound, toast). Carry no state: dropping any cue must be harmless. */
 export type Cue =

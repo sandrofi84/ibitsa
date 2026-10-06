@@ -40,10 +40,15 @@ Run tests so their exit status reaches you: don't pipe a test command through ta
 
 // The SDK ships ESM only and finds its native binary next to its own module, so it stays external to
 // the extension bundle and is loaded with import() (spec §13).
-const loadSdk = async (): Promise<SdkModule> => {
+export const loadSdk = async (): Promise<SdkModule> => {
   const sdk = await import('@anthropic-ai/claude-agent-sdk');
   return { query: sdk.query, createSdkMcpServer: sdk.createSdkMcpServer, tool: sdk.tool };
 };
+
+/** Ibitsa's built-in actions and any other local plugins, as SDK plugin configs (#84). */
+export function plugins(dirs: string[]): { plugins?: { type: 'local'; path: string }[] } {
+  return dirs.length > 0 ? { plugins: dirs.map((path) => ({ type: 'local' as const, path })) } : {};
+}
 
 /**
  * One hero's session: a long-lived `query()` in streaming input mode, which every control method
@@ -237,6 +242,7 @@ export class ClaudeSession implements AgentSession {
       systemPrompt: { type: 'preset', preset: 'claude_code', append: HERO_INSTRUCTIONS },
       ...hero,
       mcpServers: { ibitsa },
+      ...plugins(init.adapter.pluginDirs?.() ?? []),
       allowedTools: [SUBMIT_TOOL, ...(hero.allowedTools ?? [])],
       canUseTool: this.canUseTool,
       hooks: {
