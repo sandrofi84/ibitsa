@@ -774,3 +774,90 @@ describe('recovery', () => {
     expect(view(second.runtime.snapshotState).campaign).toBeNull();
   });
 });
+
+describe('when the outside world fails', () => {
+  const lastSnapshot = (received: CoreMessage[]) =>
+    (received.filter((m) => m.type === 'snapshot').at(-1) as { snapshot: Snapshot } | undefined)
+      ?.snapshot;
+
+  it('a worktree that cannot be created becomes an error for the hero', async () => {
+    const env = setup();
+    env.gameMaster.createWorktree = async () => {
+      throw new Error('disk full');
+    };
+    env.connection.receive(startQuest);
+    await flush();
+    env.clock.advance(SNAPSHOT_INTERVAL_MS);
+    expect(lastSnapshot(env.received)?.needsYou).toEqual([
+      expect.objectContaining({ kind: 'error', message: expect.stringContaining('disk full') }),
+    ]);
+  });
+
+  it('a submit check that cannot run rejects the submission with the reason', async () => {
+    const env = await arrived();
+    env.gameMaster.checkSubmit = async () => {
+      throw new Error('git missing');
+    };
+    env.session.emit({ type: 'taskSubmitted', toolUseId: 'u9', summary: 'Done.' });
+    await flush();
+    expect(env.session.calls).toContainEqual([
+      'completeSubmit',
+      {
+        toolUseId: 'u9',
+        accepted: false,
+        reason: expect.stringContaining('The submit check could not run: Error: git missing'),
+      },
+    ]);
+  });
+
+  it('a failed removal is reported; failed scans, listings and diffs change nothing', async () => {
+    const env = await arrived();
+    env.gameMaster.removeWorktree = async () => {
+      throw new Error('locked');
+    };
+    env.gameMaster.listFiles = async () => {
+      throw new Error('no git');
+    };
+    env.gameMaster.observeDiff = async () => {
+      throw new Error('no git');
+    };
+    env.gameMaster.scanRepo = async () => {
+      throw new Error('no git');
+    };
+    env.session.emit({ type: 'turnEnded', queuedTurns: 0 });
+    env.connection.receive({ type: 'requestFiles', islandId: 'i2' });
+    env.connection.receive({ type: 'hello', protocolVersion: 1 });
+    env.connection.receive({ type: 'abandonQuest', commandId: 'a' });
+    env.connection.receive({ type: 'removeWorktree', commandId: 'w', islandId: 'i2' });
+    await flush();
+    await flush();
+    expect(env.received).toContainEqual(
+      expect.objectContaining({ type: 'files', islandId: 'i2', paths: [] }),
+    );
+    expect(env.received).toContainEqual(
+      expect.objectContaining({
+        type: 'cue',
+        cue: expect.objectContaining({
+          type: 'commandRejected',
+          commandId: 'w',
+          reason: 'Error: locked',
+        }),
+      }),
+    );
+  });
+
+  it("a resumed session's events still reach core, and a closed connection gets nothing more", async () => {
+    const first = await arrived();
+    first.runtime.dispose();
+    const second = setup(first.storageDir);
+    second.connection.receive({ type: 'resumeHero', commandId: 'r', heroId: 'h4' });
+    const resumed = second.adapter.sessions.at(-1);
+    resumed?.emit({ type: 'message', text: 'Back at it.' });
+    expect(second.runtime.snapshotState.heroes[0]?.lastMessage).toBe('Back at it.');
+    second.connection.close();
+    const before = second.received.length;
+    resumed?.emit({ type: 'message', text: 'Anyone there?' });
+    second.clock.advance(SNAPSHOT_INTERVAL_MS);
+    expect(second.received.length).toBe(before);
+  });
+});

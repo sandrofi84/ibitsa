@@ -253,4 +253,11 @@ describe('ReplayExport', () => {
       event: { detail: `${WT.toUpperCase()}/a.ts src/b.ts` },
     });
   });
+
+  it('rewrites paths inside arrays too', () => {
+    const x = new ReplayExport({ repoDir: REPO, homeDir: HOME, blankMessages: false });
+    expect(x.relativize(scripted(), { files: [`${WT}/a.ts`, `${WT}/b.ts`] })).toEqual({
+      files: ['a.ts', 'b.ts'],
+    });
+  });
 });

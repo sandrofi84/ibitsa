@@ -89,6 +89,16 @@ describe('Replay', () => {
     expect(fed.map((f) => f.at)).toEqual([250, 500, 3_000]);
   });
 
+  it('changes speed mid-play, from the next record on, and reports its options', () => {
+    const { clock, fed, replay } = setup({ speed: 1, gapCapMs: null });
+    replay.play();
+    clock.advance(1_000);
+    expect(fed.map((f) => f.at)).toEqual([1_000]);
+    replay.setOptions({ speed: 'instant' });
+    expect(replay.options.speed).toBe('instant');
+    expect(fed).toHaveLength(3);
+  });
+
   it('feeds everything at once at instant speed', () => {
     const { fed, replay } = setup({ speed: 'instant' });
     replay.play();
