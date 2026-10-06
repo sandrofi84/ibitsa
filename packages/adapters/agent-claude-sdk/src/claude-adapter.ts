@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { homedir } from 'node:os';
 import { dirname } from 'node:path';
 import type { SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
@@ -19,12 +20,12 @@ import type {
   SittingSession,
   SittingStart,
 } from '@ibitsa/runtime';
-import { ChambersSession } from './chambers-session';
+import { CHAMBERS_INSTRUCTIONS, ChambersSession } from './chambers-session';
 import type { ClaudeAdapterOptions } from './claude-adapter.types';
 import { ClaudeSession, loadSdk, plugins } from './claude-session';
 import { CouncillorSkills } from './councillor-skills';
 import { ElderSession } from './elder-session';
-import { RoundTableSession } from './round-table-session';
+import { ROUND_TABLE_INSTRUCTIONS, RoundTableSession } from './round-table-session';
 import { expandSkill } from './skill-expansion';
 import type { Expansion } from './skill-expansion.types';
 import { SkillFiles } from './skill-files';
@@ -118,6 +119,17 @@ export class ClaudeAdapter implements AgentAdapter {
       args,
       variables: { CLAUDE_PROJECT_DIR: cwd, CLAUDE_SKILL_DIR: dirname(file.path) },
     });
+  }
+
+  /**
+   * A short hash of the council's prompts (§4.10, #106): part of the council version, so tallies from
+   * before and after a prompt change are told apart without anyone bumping a number.
+   */
+  get councilPromptVersion(): string {
+    return createHash('sha256')
+      .update([ROUND_TABLE_INSTRUCTIONS, CHAMBERS_INSTRUCTIONS].join('\n'))
+      .digest('hex')
+      .slice(0, 12);
   }
 
   /** The elder's research (spec §4.1, #101): read-only, capped, ending with `submit_brief`. */

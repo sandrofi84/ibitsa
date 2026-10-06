@@ -6,6 +6,7 @@ import type {
   DialogueLine,
   SittingMessage,
   SittingStatus,
+  SittingTally,
   SittingView,
 } from '@ibitsa/protocol';
 import { checkPlan } from '@ibitsa/protocol';
@@ -54,6 +55,8 @@ export class Sitting {
       dialogue: record.dialogue,
       gold: record.gold,
       error: record.error,
+      rating: record.rating,
+      comparisonOf: record.comparisonOf,
     };
   }
 
@@ -82,6 +85,8 @@ export class Sitting {
       councillorId,
       effort: efforts[councillorId] ?? command.effort,
     }));
+    if (state.sitting) state.pastSittings.push(state.sitting);
+    const brief = state.elder?.status === 'briefed' ? state.elder.brief : null;
     state.sitting = {
       id: sittingId,
       task: command.task,
@@ -100,6 +105,18 @@ export class Sitting {
       error: null,
       startedAt: this.ctx.t,
       endedAt: null,
+      councilVersion: null,
+      comparisonOf: command.comparisonOf ?? null,
+      rating: null,
+      usage: { byModel: [], byCouncillor: [] },
+      elderPicks: brief && {
+        effort: brief.effort.level,
+        councillors: brief.councillors.map(({ councillorId }) => ({
+          councillorId,
+          effort:
+            brief.councillorEfforts.find((e) => e.councillorId === councillorId)?.level ?? null,
+        })),
+      },
     };
     this.ctx.outbox.effect({
       type: 'startSitting',
@@ -108,7 +125,7 @@ export class Sitting {
       task: command.task,
       effort: command.effort,
       roster,
-      brief: state.elder?.status === 'briefed' ? state.elder.brief : null,
+      brief,
     });
   }
 
@@ -240,6 +257,87 @@ export class Sitting {
     this.end({ record, status: 'dismissed' });
   }
 
+  /** "How useful was the council?" (§4.10): only for a sitting that has ended with a plan or a dismissal. */
+  rate(command: Extract<Command, { type: 'rateSitting' }>): void {
+    const record = this.ctx.state.sitting;
+    if (
+      record?.id !== command.sittingId ||
+      (record.status !== 'approved' && record.status !== 'dismissed')
+    ) {
+      this.ctx.outbox.reject(command.commandId, 'Only a sitting that has ended can be rated.');
+      return;
+    }
+    record.rating =
+      command.note === undefined
+        ? { score: command.score }
+        : { score: command.score, note: command.note };
+  }
+
+  /** The runtime noted the council version as the session started (§4.10). */
+  versionNoted({ sittingId, version }: { sittingId: string; version: string }): void {
+    const record = this.ctx.state.sitting;
+    if (record?.id === sittingId) record.councilVersion = version;
+  }
+
+  /** What a sitting cost and produced (§4.10, #106). */
+  static tally(record: SittingRecord): SittingTally {
+    const reports = record.reports.map((r) => r.report);
+    const concerns = reports.flatMap((r) => r.concerns);
+    const plan = record.plans.at(-1)?.plan;
+    const picks = record.elderPicks;
+    const roster = record.roster.map(({ councillorId, effort }) => {
+      const pick = picks?.councillors.find((c) => c.councillorId === councillorId);
+      return {
+        councillorId,
+        effort,
+        elderEffort: pick?.effort ?? null,
+        recommended: pick !== undefined,
+      };
+    });
+    const changedElderPicks =
+      picks === null
+        ? null
+        : roster.length !== picks.councillors.length ||
+          roster.some((c) => !c.recommended) ||
+          (record.mode === 'roundTable'
+            ? record.effort !== picks.effort
+            : roster.some((c) => c.elderEffort !== null && c.elderEffort !== c.effort));
+    return {
+      sittingId: record.id,
+      mode: record.mode,
+      councilVersion: record.councilVersion,
+      comparisonOf: record.comparisonOf,
+      outcome: record.status,
+      startedAt: record.startedAt,
+      durationMs: record.endedAt === null ? null : record.endedAt - record.startedAt,
+      cost: {
+        totalMicroUsd: record.gold.kind === 'unknown' ? null : record.gold.value,
+        byModel: record.usage.byModel,
+        byCouncillor: record.usage.byCouncillor,
+      },
+      effort: record.effort,
+      elderEffort: picks?.effort ?? null,
+      roster,
+      changedElderPicks,
+      reports: reports.length,
+      bowOuts: reports.filter((r) => r.bowOut !== undefined).length,
+      concerns: concerns.length,
+      seriousConcerns: concerns.filter((c) => c.severity === 'serious' || c.severity === 'high')
+        .length,
+      questionsAsked: record.batches.reduce((n, b) => n + b.items.length, 0),
+      whys: record.dialogue.filter((d) => d.speaker === YOU).length,
+      revisions: record.revision,
+      reconsultations: record.reconsultations.length,
+      plansProposed: record.plans.length,
+      planTasks: plan?.tasks.length ?? 0,
+      planDecisions: plan?.decisions.length ?? 0,
+      planCriteria:
+        plan?.tasks.reduce((n, t) => n + t.criteria.reduce((m, c) => m + c.items.length, 0), 0) ??
+        0,
+      rating: record.rating,
+    };
+  }
+
   // ---------- the lead session's output ----------
 
   handle({ sittingId, event }: { sittingId: string; event: CouncilEvent }): void {
@@ -257,6 +355,8 @@ export class Sitting {
         return;
       case 'usage':
         record.gold = { kind: 'exact', value: event.totalCost };
+        if (event.byModel) record.usage.byModel = event.byModel;
+        if (event.byCouncillor) record.usage.byCouncillor = event.byCouncillor;
         return;
       case 'error':
         record.error = event.message;

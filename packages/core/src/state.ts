@@ -13,6 +13,7 @@ export function initialState(): CoreState {
     campaign: null,
     elder: null,
     sitting: null,
+    pastSittings: [],
     islands: [],
     heroes: [],
     needsYou: [],

@@ -25,7 +25,8 @@ import {
   type Snapshot,
 } from '@ibitsa/protocol';
 import { CampaignDocuments } from './campaign-documents';
-import { seatable, sittingPlan } from './council';
+import { councilVersion, seatable, sittingPlan } from './council';
+import { CouncilTallies } from './council-tallies';
 import type { AgentSession, FrontEnd, SittingSession } from './ports.types';
 import { ProjectRules } from './project-rules';
 import type { Connection, RuntimeOptions } from './runtime.types';
@@ -534,7 +535,26 @@ export class Runtime {
       this.sitting = { id: sittingId, session };
     } catch (e) {
       report({ type: 'error', message: String(e) });
+      return;
     }
+    // Which council sat (§4.10): the mode, the roster's skill files and the adapter's prompts.
+    const seats = effect.roster.map(
+      ({ councillorId }) =>
+        this.councillorList.find((c) => c.id === councillorId) ?? { id: councillorId, hash: '?' },
+    );
+    this.input({
+      kind: 'gm',
+      t: this.t(),
+      event: {
+        type: 'councilVersionNoted',
+        sittingId,
+        version: councilVersion({
+          mode: effect.mode,
+          councillors: seats,
+          promptVersion: this.options.adapter.councilPromptVersion ?? 'unknown',
+        }),
+      },
+    });
   }
 
   private sittingFor(sittingId: string): SittingSession | undefined {
@@ -693,6 +713,12 @@ export class Runtime {
       .list(cwd)
       .then((all) => seatable(all, disabled))
       .catch(() => []);
+  }
+
+  /** Every sitting's tally across this workspace's campaigns, as JSON or CSV (§4.10, #106). */
+  exportTallies(format: 'json' | 'csv'): string {
+    const tallies = new CouncilTallies(this.store);
+    return format === 'csv' ? tallies.csv() : tallies.json();
   }
 
   /** A session's allow rules: the quest's from core plus the project's kept here (#62). */

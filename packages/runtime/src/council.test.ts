@@ -19,7 +19,7 @@ describe('councilVersion (#98)', () => {
   const base = {
     mode: 'roundTable',
     councillors: [councillor('security'), councillor('tester')],
-    promptVersion: 1,
+    promptVersion: 'p1',
   };
 
   it("is the same for the same council, whatever the roster's order", () => {
@@ -34,7 +34,7 @@ describe('councilVersion (#98)', () => {
       { ...base, mode: 'chambers' },
       { ...base, councillors: [councillor('security')] },
       { ...base, councillors: [councillor('security', 'bbb'), councillor('tester')] },
-      { ...base, promptVersion: 2 },
+      { ...base, promptVersion: 'p2' },
     ];
     const versions = variants.map((v) => councilVersion(v));
     expect(versions).not.toContain(version);

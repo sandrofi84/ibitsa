@@ -8,11 +8,13 @@ import type {
   Effort,
   ElderStatus,
   MicroUsd,
+  ModelUsage,
   PlanOutcome,
   PlanProposal,
   Reading,
   ResearchBrief,
   SittingMode,
+  SittingRating,
   SittingStatus,
   TaskPointState,
 } from '@ibitsa/protocol';
@@ -36,6 +38,8 @@ export interface CoreState {
   elder: ElderRecord | null;
   /** The council's current or last sitting (spec §4.3). */
   sitting: SittingRecord | null;
+  /** Earlier sittings in this campaign, oldest first: kept for their tallies (§4.10). */
+  pastSittings: SittingRecord[];
   islands: Island[];
   heroes: HeroRecord[];
   needsYou: PendingItem[];
@@ -139,6 +143,16 @@ export interface SittingRecord {
   /** Core's clock (`t`) when convened and when it ended: the tally's time taken (#106). */
   startedAt: number;
   endedAt: number | null;
+  /** Noted by the runtime when the session starts (§4.10). */
+  councilVersion: string | null;
+  comparisonOf: string | null;
+  rating: SittingRating | null;
+  usage: { byModel: ModelUsage[]; byCouncillor: { councillorId: string; tokens: number }[] };
+  /** What the elder's brief recommended when the council convened; null without a brief. */
+  elderPicks: {
+    effort: Effort;
+    councillors: { councillorId: string; effort: Effort | null }[];
+  } | null;
 }
 
 /** One `ask_user` call; `answers` stays null until the user answers. */

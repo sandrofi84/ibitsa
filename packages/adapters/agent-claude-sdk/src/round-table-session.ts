@@ -117,6 +117,9 @@ export class RoundTableSession implements SittingSession {
   protected readonly toolUseIds = new Map<string, string[]>();
   private readonly verdicts = new Map<string, (verdict: Verdict) => void>();
   private readonly batches = new Map<string, AskedBatch>();
+  /** Agent calls that started a chamber, and the councillor each one is for (#106). */
+  private readonly startedChambers = new Map<string, string>();
+  private readonly tokens = new Map<string, number>();
   private query: Query | null = null;
   private closed = false;
   private failed = false;
@@ -390,8 +393,28 @@ export class RoundTableSession implements SittingSession {
       this.emit({ type: 'sessionStarted', sessionId: m.session_id });
       return;
     }
+    if (m.type === 'assistant') {
+      this.countTokens(m);
+      return;
+    }
     if (m.type !== 'result') return;
-    this.emit({ type: 'usage', totalCost: Math.round(m.total_cost_usd * 1_000_000) });
+    const byCouncillor = [...this.tokens].map(([councillorId, tokens]) => ({
+      councillorId,
+      tokens,
+    }));
+    this.emit({
+      type: 'usage',
+      totalCost: Math.round(m.total_cost_usd * 1_000_000),
+      byModel: Object.entries(m.modelUsage ?? {}).map(([model, u]) => ({
+        model,
+        inputTokens: u.inputTokens,
+        outputTokens: u.outputTokens,
+        cacheReadTokens: u.cacheReadInputTokens,
+        cacheWriteTokens: u.cacheCreationInputTokens,
+        costMicroUsd: Math.round(u.costUSD * 1_000_000),
+      })),
+      ...(byCouncillor.length > 0 ? { byCouncillor } : {}),
+    });
     if (this.closed || m.subtype === 'success') return;
     this.emit({
       type: 'error',
@@ -402,6 +425,32 @@ export class RoundTableSession implements SittingSession {
             ? 'The council took too many steps.'
             : `The sitting stopped: ${m.subtype.replaceAll('_', ' ')}.`,
     });
+  }
+
+  /**
+   * Tokens per councillor (#106): a subagent's messages carry the id of the Agent call that started it,
+   * and that call names the councillor. Only separate chambers has subagents.
+   */
+  private countTokens(m: Extract<SDKMessage, { type: 'assistant' }>): void {
+    if (m.parent_tool_use_id === null) {
+      for (const block of m.message.content) {
+        if (block.type !== 'tool_use' || (block.name !== 'Agent' && block.name !== 'Task'))
+          continue;
+        const type = (block.input as { subagent_type?: unknown } | null)?.subagent_type;
+        if (typeof type === 'string')
+          this.startedChambers.set(block.id, type.replace(/-deep$/, ''));
+      }
+      return;
+    }
+    const councillorId = this.startedChambers.get(m.parent_tool_use_id);
+    const usage = m.message.usage;
+    if (!councillorId || !usage) return;
+    const tokens =
+      usage.input_tokens +
+      usage.output_tokens +
+      (usage.cache_read_input_tokens ?? 0) +
+      (usage.cache_creation_input_tokens ?? 0);
+    this.tokens.set(councillorId, (this.tokens.get(councillorId) ?? 0) + tokens);
   }
 
   protected skills(): CouncillorSkills {

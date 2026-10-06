@@ -54,6 +54,11 @@
         "command": "ibitsa.exportReplay",
         "title": "Export Replay",
         "category": "Ibitsa"
+      },
+      {
+        "command": "ibitsa.exportTallies",
+        "title": "Export Council Tallies",
+        "category": "Ibitsa"
       }
     ],
     "configuration": {

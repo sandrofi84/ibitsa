@@ -103,6 +103,9 @@ function command(ctx: StepContext, command: Command): void {
     case 'requestPlanChange':
       new Sitting(ctx).requestChange(command);
       return;
+    case 'rateSitting':
+      new Sitting(ctx).rate(command);
+      return;
     case 'dismissCouncil':
       new Sitting(ctx).dismiss(command.commandId);
       return;
@@ -173,6 +176,9 @@ function gameMaster(ctx: StepContext, event: GameMasterEvent): void {
       return;
     case 'worktreeRemoveFailed':
       ctx.outbox.reject(event.commandId, event.reason);
+      return;
+    case 'councilVersionNoted':
+      new Sitting(ctx).versionNoted(event);
       return;
     case 'runtimeRestarted':
       if (ctx.state.campaign?.status === 'planning') {

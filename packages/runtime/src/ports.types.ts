@@ -73,6 +73,8 @@ export interface AgentAdapter {
   }): Promise<{ text: string; notes: string[] } | null>;
   /** The elder's research session (spec §4.1, #101); adapters that can't run it leave it out. */
   startElder?(start: ElderStart, onEvent: (event: ElderEvent) => void): { close(): void };
+  /** A short hash of the adapter's council prompts, part of the council version (§4.10, #106). */
+  councilPromptVersion?: string;
   /** A sitting's lead session (spec §4.3, #103); adapters that can't run one leave it out. */
   startSitting?(start: SittingStart, onEvent: (event: CouncilEvent) => void): SittingSession;
   /** The councillors a folder can seat (§4.7, #98); adapters without skills leave it out. */

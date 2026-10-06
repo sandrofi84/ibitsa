@@ -127,6 +127,16 @@ export const CommandSchema = v.variant('type', [
     roster: v.pipe(v.array(id), v.minLength(1)),
     effort: EffortSchema,
     councillorEfforts: v.optional(v.record(id, EffortSchema)),
+    /** Convened the other way, to compare with this earlier sitting (§4.10). */
+    comparisonOf: v.optional(id),
+  }),
+  /** "How useful was the council?" (§4.10): 1–5 and an optional note, once the sitting has ended. */
+  v.strictObject({
+    type: v.literal('rateSitting'),
+    commandId: id,
+    sittingId: id,
+    score: v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(5)),
+    note: v.optional(v.pipe(v.string(), v.trim(), v.nonEmpty(), v.maxLength(500))),
   }),
   /** Add a councillor mid-sitting; it must report before the next plan is accepted. */
   v.strictObject({

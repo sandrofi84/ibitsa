@@ -1137,3 +1137,20 @@ body.in-hut:has(.council-dialogue:not([hidden])) .needs-you {
 .convene .cap {
   font-weight: 600;
 }
+
+/* "How useful was the council?" and convening the other way (#106). */
+.elder-panel .rating {
+  margin: 10px 0 0;
+  border: 1px solid #8a6a3a;
+  border-radius: 3px;
+}
+
+.elder-panel .rating .scores {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.elder-panel .other-way {
+  margin-top: 8px;
+}
