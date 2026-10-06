@@ -126,3 +126,19 @@ test('shows what the hero is doing as an icon beside it (#60)', async ({ page })
   // Submitted, not working: no icon.
   expect(await probe(page, (p) => p.hero.icon())).toBeNull();
 });
+
+test('the journal shows a recorded real quest in full (#58)', async ({ page }) => {
+  await page.goto('/?fixture=m1-real&autoplay=1&speed=instant');
+  await expect.poll(() => probe(page, (p) => p.status().finished), { timeout: 20_000 }).toBe(true);
+  const pane = page.getByRole('region', { name: 'Hero' });
+  await pane.getByRole('button', { name: 'Journal' }).click();
+  const journal = pane.getByRole('list', { name: 'Journal' });
+  await expect(journal.getByRole('listitem').first()).toContainText(
+    'Quest started: Make slugify strip accents',
+  );
+  await expect(journal).toContainText('Asks to run command:');
+  await expect(journal).toContainText('You allowed: run command');
+  await expect(journal).toContainText('Submitted: slugify now normalizes');
+  await expect(journal.getByRole('listitem').last()).toContainText('You finished the quest.');
+  await expect(pane.getByRole('button', { name: 'Load earlier' })).toBeHidden();
+});

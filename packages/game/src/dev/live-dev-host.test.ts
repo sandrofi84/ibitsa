@@ -76,4 +76,26 @@ describe('LiveDevHost', () => {
     await settle();
     expect(events).toEqual(['credentials']);
   });
+
+  it('keeps a journal of the scripted quest and answers pages (#58)', async () => {
+    const { host, messages, settle } = setup();
+    host.send({ type: 'hello', protocolVersion: 1 });
+    host.send({
+      type: 'startQuest',
+      commandId: 'c1',
+      description: 'Fix the login redirect',
+      heroName: 'Ranger Ilse',
+      classId: 'ranger',
+      baseRef: 'main',
+    });
+    await settle();
+    expect(messages.some((m) => m.type === 'journalAppend')).toBe(true);
+    host.send({ type: 'requestJournal' });
+    await settle();
+    const page = messages.filter((m) => m.type === 'journal').at(-1);
+    expect(page?.type === 'journal' && page.entries[0]).toMatchObject({
+      kind: 'event',
+      text: 'Quest started: Fix the login redirect',
+    });
+  });
 });

@@ -1,10 +1,11 @@
 import { type EventLog, Replay, type ReplayOptions, type ReplayStatus } from '@ibitsa/agent-fake';
-import { type CoreState, initialState, step, view } from '@ibitsa/core';
+import { type CoreState, initialState, Journal, step, view } from '@ibitsa/core';
 import {
   type Command,
   type CoreMessage,
   type HostEvent,
   type HostRequest,
+  type JournalEntry,
   PROTOCOL_VERSION,
 } from '@ibitsa/protocol';
 import type { Host } from '../host.types';
@@ -31,6 +32,7 @@ export class DevHost implements Host {
   readonly viewStorage = new MemoryViewStorage();
   readonly channel = new FakeHostChannel({ credentialsReady: true });
   private state: CoreState = initialState();
+  private journal = new Journal();
   private seq = 0;
   private readonly listeners: ((m: CoreMessage) => void)[] = [];
   private readonly statusListeners: ((s: ReplayStatus) => void)[] = [];
@@ -44,10 +46,13 @@ export class DevHost implements Host {
           const result = step(this.state, input);
           this.state = result.state;
           for (const cue of result.cues) this.emit({ type: 'cue', seq: ++this.seq, cue });
+          this.appendJournal(this.journal.add({ record: input, state: this.state }));
           this.emitSnapshot();
         },
         restart: () => {
           this.state = initialState();
+          this.journal = new Journal();
+          this.emit({ type: 'journalAppend', seq: ++this.seq, entries: [], start: 0 });
           this.emitSnapshot();
         },
         status: (s) => {
@@ -76,6 +81,11 @@ export class DevHost implements Host {
   }
 
   send(command: Command): void {
+    if (command.type === 'requestJournal') {
+      const page = this.journal.page({ before: command.before, limit: command.limit });
+      this.emit({ type: 'journal', seq: ++this.seq, ...page });
+      return;
+    }
     if (command.type === 'hello') {
       this.emit({ type: 'welcome', seq: ++this.seq, protocolVersion: PROTOCOL_VERSION });
       this.emitSnapshot();
@@ -93,6 +103,12 @@ export class DevHost implements Host {
         },
       });
     }
+  }
+
+  private appendJournal(lines: JournalEntry[]): void {
+    if (lines.length === 0) return;
+    const start = this.journal.entries.length - lines.length;
+    this.emit({ type: 'journalAppend', seq: ++this.seq, entries: lines, start });
   }
 
   private emitSnapshot(): void {

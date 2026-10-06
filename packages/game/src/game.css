@@ -305,6 +305,67 @@ body {
   overflow: auto;
 }
 
+.hero-pane .journal {
+  margin-top: 8px;
+  border-top: 1px solid #c9b48a;
+  padding-top: 6px;
+}
+
+.hero-pane .journal-toggle,
+.hero-pane .journal-earlier {
+  font-size: 12px;
+  padding: 1px 8px;
+}
+
+.hero-pane .journal-earlier:not([hidden]) {
+  display: block;
+  margin-top: 6px;
+}
+
+.hero-pane .journal-lines {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  max-height: 14em;
+  overflow: auto;
+  font-size: 12px;
+  background: #fff6dc;
+  border: 1px solid #c9b48a;
+  border-radius: 3px;
+}
+
+.hero-pane .journal-lines:focus-visible {
+  outline: 2px solid #1a1420;
+}
+
+.hero-pane .journal-lines li {
+  display: grid;
+  grid-template-columns: 3em 1fr;
+  gap: 4px;
+  padding: 2px 6px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.hero-pane .journal-lines time {
+  color: #8a7350;
+}
+
+.hero-pane .journal-lines .journal-event {
+  font-style: italic;
+  color: #5e4a2a;
+}
+
+.hero-pane .journal-lines .journal-asked,
+.hero-pane .journal-lines .journal-answered,
+.hero-pane .journal-lines .journal-you {
+  background: #f3e6c4;
+}
+
+.hero-pane .journal-lines .failed {
+  color: #9a1e12;
+}
+
 .hero-pane .note {
   color: #5e4a2a;
   font-size: 12px;
