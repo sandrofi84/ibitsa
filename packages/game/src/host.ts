@@ -18,6 +18,8 @@ const CORE_MESSAGE_TYPES = new Set([
   'files',
   'actions',
   'preview',
+  'actionCreated',
+  'actionRejected',
 ]);
 
 /** The webview side of the extension: commands out via postMessage, core messages in via `message`. */

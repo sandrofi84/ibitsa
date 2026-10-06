@@ -18,6 +18,7 @@ export function mountCommandBar({
   history,
   onHistoryChange,
   startQuest,
+  newAction,
 }: CommandBarOptions): CommandBar {
   const bar = el('section', { className: 'command-bar' });
   bar.setAttribute('aria-label', 'Command bar');
@@ -30,7 +31,10 @@ export function mountCommandBar({
     placeholder: 'Message the hero… (/ or ⌘K)',
     history,
     onHistoryChange,
-    menus: [atMenu({ client, recipients: true }), slashMenu({ client })],
+    menus: [
+      atMenu({ client, recipients: true }),
+      slashMenu({ client, ...(newAction ? { newAction } : {}) }),
+    ],
     onSend: ({ text, priority }) => {
       const all = heroes();
       if (all.length === 0) {

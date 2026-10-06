@@ -126,6 +126,16 @@ export function createCommandInput({
   function choose(i: number): void {
     const item = items[i];
     if (!item || !token) return;
+    if (item.onChoose) {
+      // An item that does something instead of inserting: the token it was found with goes away.
+      const caret = input.selectionStart;
+      input.value = `${input.value.slice(0, token.start)}${input.value.slice(caret)}`;
+      input.setSelectionRange(token.start, token.start);
+      close();
+      fit();
+      item.onChoose();
+      return;
+    }
     const next = applyChoice({
       text: input.value,
       caret: input.selectionStart,

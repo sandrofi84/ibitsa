@@ -97,7 +97,14 @@ describe('slashMenu (#84)', () => {
     } as Snapshot;
     deliver({ type: 'snapshot', seq: 1, snapshot });
     const answer = () => deliver({ type: 'actions', seq: 2, actions: [action({ name: 'pr' })] });
-    return { menu: slashMenu({ client: c }), sent, answer };
+    const opened: string[] = [];
+    return {
+      menu: slashMenu({ client: c }),
+      withNew: slashMenu({ client: c, newAction: () => opened.push('form') }),
+      opened,
+      sent,
+      answer,
+    };
   }
   const query = (before: string) => ({ text: `${before}/`, token: '/', query: '', before });
 
@@ -114,5 +121,15 @@ describe('slashMenu (#84)', () => {
     const ended = client('finished');
     expect(await ended.menu.suggest(query(''))).toEqual([]);
     expect(ended.sent).toEqual([]);
+  });
+
+  it('offers New action… last, which opens the form instead of inserting (#86)', async () => {
+    const { withNew, opened, answer } = client('active');
+    const pending = withNew.suggest(query(''));
+    answer();
+    const items = await pending;
+    expect(items.at(-1)).toMatchObject({ id: 'new-action', label: 'New action…', insert: '' });
+    items.at(-1)?.onChoose?.();
+    expect(opened).toEqual(['form']);
   });
 });

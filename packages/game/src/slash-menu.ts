@@ -16,7 +16,14 @@ const GROUPS: Record<ActionInfo['source'], string> = {
  * for a message's first word (after the recipient, if one is named). Only actions for heroes or anyone
  * show while there's no council (M3). Ibitsa's built-ins come first, under their short names.
  */
-export function slashMenu({ client }: { client: GameClient }): MenuProvider {
+export function slashMenu({
+  client,
+  newAction,
+}: {
+  client: GameClient;
+  /** Offered last, as "New action…": opens the form that writes a skill (#86). */
+  newAction?: () => void;
+}): MenuProvider {
   return {
     trigger: '/',
     async suggest({ query, before }) {
@@ -26,7 +33,19 @@ export function slashMenu({ client }: { client: GameClient }): MenuProvider {
       const rest = parseMessage({ text: before, recipients: handles(snapshot.heroes) }).text;
       if (rest !== '') return [];
       const actions = await client.actionsReady();
-      return actionItems({ actions, query });
+      const items = actionItems({ actions, query });
+      if (!newAction) return items;
+      return [
+        ...items,
+        {
+          id: 'new-action',
+          label: 'New action…',
+          detail: 'Save a prompt you use often as a skill',
+          group: 'Actions',
+          insert: '',
+          onChoose: newAction,
+        },
+      ];
     },
   };
 }

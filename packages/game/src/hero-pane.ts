@@ -25,6 +25,7 @@ export function mountHeroPane({
   view,
   history,
   onHistoryChange,
+  newAction,
 }: {
   client: GameClient;
   host: Host;
@@ -32,6 +33,8 @@ export function mountHeroPane({
   /** Shared with the command bar: the pane's box is the same input, aimed at this hero (#81). */
   history: CommandHistory;
   onHistoryChange: () => void;
+  /** Opens the New action form from the / menu (#86). */
+  newAction?: () => void;
 }): HeroPane {
   const pane = el('section', { className: 'hero-pane' });
   pane.setAttribute('aria-label', 'Hero');
@@ -72,7 +75,10 @@ export function mountHeroPane({
     history,
     onHistoryChange,
     // Files only: this box always speaks to its hero (#83).
-    menus: [atMenu({ client, recipients: false }), slashMenu({ client })],
+    menus: [
+      atMenu({ client, recipients: false }),
+      slashMenu({ client, ...(newAction ? { newAction } : {}) }),
+    ],
     onSend: ({ text, priority }) => {
       if (heroId) client.send({ type: 'sendMessage', heroId, text, priority });
     },

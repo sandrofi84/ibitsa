@@ -196,4 +196,19 @@ describe('LiveDevHost', () => {
     const preview = messages.find((m) => m.type === 'preview');
     expect(preview?.type === 'preview' && preview.preview.text).toContain('alice');
   });
+
+  it('answers createAction too (#86)', async () => {
+    const { host, messages, settle } = setup();
+    host.send({
+      type: 'createAction',
+      name: 'pr-summary',
+      description: 'Summarize',
+      argumentHint: '[focus]',
+      prompt: 'p',
+      target: 'hero',
+      scope: 'personal',
+    });
+    await settle();
+    expect(messages.some((m) => m.type === 'actionCreated' && m.name === 'pr-summary')).toBe(true);
+  });
 });

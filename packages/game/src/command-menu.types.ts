@@ -10,6 +10,8 @@ export interface MenuItem {
   group?: string;
   /** What replaces the token being typed when chosen; a space follows. */
   insert: string;
+  /** Instead of inserting: clears the token and does this, e.g. opens the New action form (#86). */
+  onChoose?: () => void;
 }
 
 /** What a menu provider gets: the token being typed and where it sits. */
