@@ -56,11 +56,23 @@ export class NeedsYou {
   }
 
   /** Forwards an answer to the hero's session. Returns the hero it was for, or null if nothing was waiting. */
-  answer(command: AnswerCommand): string | null {
+  /** Answers a permission or question; returns the hero, and any rules to allow for the quest (#62). */
+  answer(command: AnswerCommand): { heroId: string; questRules: string[] } | null {
     const item = this.state.needsYou.find((i) => i.id === command.itemId);
     const expected = command.type === 'answerPermission' ? 'permission' : 'question';
     if (!item || item.kind !== expected) {
       this.outbox.reject(command.commandId, 'That request is no longer waiting.');
+      return null;
+    }
+    const always = command.type === 'answerPermission' ? command.always : undefined;
+    if (
+      always &&
+      item.kind === 'permission' &&
+      (command.type !== 'answerPermission' ||
+        command.decision !== 'allow' ||
+        item.alwaysAllow.length === 0)
+    ) {
+      this.outbox.reject(command.commandId, 'This request can’t be always allowed.');
       return null;
     }
     this.state.needsYou = this.state.needsYou.filter((i) => i.id !== item.id);
@@ -71,7 +83,9 @@ export class NeedsYou {
         requestId: item.requestId,
         decision: command.decision,
         ...(command.note === undefined ? {} : { note: command.note }),
+        ...(always ? { always, rules: [...item.alwaysAllow] } : {}),
       });
+      return { heroId: item.heroId, questRules: always === 'quest' ? [...item.alwaysAllow] : [] };
     } else if (item.kind === 'question' && command.type === 'answerQuestion') {
       this.outbox.effect({
         type: 'answerQuestion',
@@ -80,7 +94,7 @@ export class NeedsYou {
         answers: command.answers,
       });
     }
-    return item.heroId;
+    return { heroId: item.heroId, questRules: [] };
   }
 }
 

@@ -84,6 +84,34 @@ function renderItem({
           client,
         }),
       );
+      // "Always allow" (#62): only when the agent offers rules, never for the hard limits.
+      if (item.alwaysAllow.length > 0) {
+        const rule = el('p', { className: 'muted' });
+        rule.append('Always allow adds: ', el('code', { text: item.alwaysAllow.join(', ') }));
+        box.append(rule);
+        actions.append(
+          intentButton({
+            label: 'Always allow for this quest',
+            intent: () => ({
+              type: 'answerPermission',
+              itemId: item.id,
+              decision: 'allow',
+              always: 'quest',
+            }),
+            client,
+          }),
+          intentButton({
+            label: 'Always allow in this project',
+            intent: () => ({
+              type: 'answerPermission',
+              itemId: item.id,
+              decision: 'allow',
+              always: 'project',
+            }),
+            client,
+          }),
+        );
+      }
       break;
     }
     case 'question': {

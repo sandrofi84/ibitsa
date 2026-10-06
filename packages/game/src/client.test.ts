@@ -126,3 +126,11 @@ describe('GameClient journal (#58)', () => {
     expect(texts(client)).toEqual(['new']);
   });
 });
+
+describe('GameClient project rules (#62)', () => {
+  it('forgets a rule with a runtime-only command, without a command id', () => {
+    const host = new FakeHost();
+    new GameClient(host).forgetProjectRule('Bash(npm test:*)');
+    expect(host.sent).toEqual([{ type: 'forgetProjectRule', rule: 'Bash(npm test:*)' }]);
+  });
+});

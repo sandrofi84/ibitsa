@@ -5,6 +5,14 @@ import type { Command } from './commands.schema';
 const valid: Command[] = [
   { type: 'hello', protocolVersion: 1 },
   { type: 'requestJournal' },
+  { type: 'forgetProjectRule', rule: 'Bash(npm test:*)' },
+  {
+    type: 'answerPermission',
+    commandId: 'c9',
+    itemId: 'n5',
+    decision: 'allow',
+    always: 'project',
+  },
   { type: 'requestJournal', before: 120, limit: 100 },
   {
     type: 'sendMessage',
@@ -57,7 +65,7 @@ describe('parseCommand', () => {
   });
 
   it('covers every command type', () => {
-    expect(new Set(valid.map((c) => c.type)).size).toBe(13);
+    expect(new Set(valid.map((c) => c.type)).size).toBe(14);
   });
 
   it.each([
@@ -105,6 +113,17 @@ describe('parseCommand', () => {
     ['protocol version 0', { type: 'hello', protocolVersion: 0 }],
     ['a journal page over 500', { type: 'requestJournal', limit: 501 }],
     ['a negative journal index', { type: 'requestJournal', before: -1 }],
+    [
+      'an unknown always scope',
+      {
+        type: 'answerPermission',
+        commandId: 'c1',
+        itemId: 'p1',
+        decision: 'allow',
+        always: 'forever',
+      },
+    ],
+    ['an empty rule to forget', { type: 'forgetProjectRule', rule: '' }],
   ])('rejects %s', (_, input) => {
     const result = parseCommand(input);
     expect(result.ok).toBe(false);

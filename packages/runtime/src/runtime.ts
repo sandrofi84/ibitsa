@@ -19,6 +19,7 @@ import {
   type Snapshot,
 } from '@ibitsa/protocol';
 import type { AgentSession, FrontEnd } from './ports.types';
+import { ProjectRules } from './project-rules';
 import type { Connection, RuntimeOptions } from './runtime.types';
 import { type CampaignLog, CampaignStore } from './storage';
 
@@ -44,10 +45,12 @@ export class Runtime {
   private lastSnapshotAt = Number.NEGATIVE_INFINITY;
   private snapshotDirty = false;
   private readonly store: CampaignStore;
+  private readonly projectRules: ProjectRules;
   private readonly newId: () => string;
 
   constructor(private readonly options: RuntimeOptions) {
     this.store = new CampaignStore(options.storageDir);
+    this.projectRules = new ProjectRules(options.storageDir);
     this.newId = options.newId ?? randomUUID;
   }
 
@@ -109,6 +112,10 @@ export class Runtime {
       frontEnd.post({ type: 'welcome', seq: ++this.seq, protocolVersion: PROTOCOL_VERSION });
       frontEnd.post({ type: 'snapshot', seq: ++this.seq, snapshot: this.snapshot() });
       this.rescanRepo();
+      return;
+    }
+    if (command.type === 'forgetProjectRule') {
+      if (this.projectRules.remove(command.rule)) this.scheduleSnapshot();
       return;
     }
     if (command.type === 'requestJournal') {
@@ -223,8 +230,9 @@ export class Runtime {
           this.sessions.get(heroId)?.close();
           this.sessions.set(
             heroId,
-            this.options.adapter.startSession({ ...effect, sessionId: randomUUID() }, (event) =>
-              this.input({ kind: 'agent', t: this.t(), heroId, event }),
+            this.options.adapter.startSession(
+              { ...effect, ...this.allowRules(effect.allowRules), sessionId: randomUUID() },
+              (event) => this.input({ kind: 'agent', t: this.t(), heroId, event }),
             ),
           );
         } catch (e) {
@@ -244,8 +252,9 @@ export class Runtime {
           this.sessions.get(heroId)?.close();
           this.sessions.set(
             heroId,
-            this.options.adapter.resumeSession(resume, (event) =>
-              this.input({ kind: 'agent', t: this.t(), heroId, event }),
+            this.options.adapter.resumeSession(
+              { ...resume, ...this.allowRules(resume.allowRules) },
+              (event) => this.input({ kind: 'agent', t: this.t(), heroId, event }),
             ),
           );
         } catch (e) {
@@ -298,10 +307,14 @@ export class Runtime {
         session?.interrupt();
         return;
       case 'answerPermission':
+        if (effect.always === 'project' && effect.rules && this.projectRules.add(effect.rules)) {
+          this.scheduleSnapshot();
+        }
         session?.respondToPermission({
           requestId: effect.requestId,
           decision: effect.decision,
           ...(effect.note === undefined ? {} : { note: effect.note }),
+          ...(effect.always ? { always: true } : {}),
         });
         return;
       case 'answerQuestion':
@@ -371,8 +384,14 @@ export class Runtime {
   }
 
   /** Core's view plus the repo scan, which the New Quest form needs before any quest exists. */
+  /** A session's allow rules: the quest's from core plus the project's kept here (#62). */
+  private allowRules(quest: string[] | undefined): { allowRules?: string[] } {
+    const all = [...new Set([...(quest ?? []), ...this.projectRules.list()])];
+    return all.length > 0 ? { allowRules: all } : {};
+  }
+
   private snapshot(): Snapshot {
-    const snapshot = view(this.state);
+    const snapshot = { ...view(this.state), projectRules: this.projectRules.list() };
     return this.repo === undefined ? snapshot : { ...snapshot, repo: this.repo };
   }
 

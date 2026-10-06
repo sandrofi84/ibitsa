@@ -98,6 +98,107 @@ describe('speech', () => {
   });
 });
 
+describe('always allow (#62)', () => {
+  const ask = (h: Harness, alwaysAllow?: string[]) =>
+    h.agent({
+      type: 'permission',
+      requestId: 'r1',
+      tool: 'Bash',
+      input: { command: 'npm run lint' },
+      ...(alwaysAllow ? { alwaysAllow } : {}),
+    });
+
+  it('shows the offered rules on the item', () => {
+    const h = ask(quest(), ['Bash(npm run lint:*)']);
+    expect(h.items()[0]).toMatchObject({
+      kind: 'permission',
+      alwaysAllow: ['Bash(npm run lint:*)'],
+    });
+  });
+
+  it('for this quest: allows, keeps the rules on the hero, and passes them when the session resumes', () => {
+    const h = ask(quest(), ['Bash(npm run lint:*)']);
+    h.drain();
+    h.command({
+      type: 'answerPermission',
+      commandId: 'a',
+      itemId: 'n5',
+      decision: 'allow',
+      always: 'quest',
+    });
+    expect(h.effects).toContainEqual({
+      type: 'answerPermission',
+      heroId: 'h4',
+      requestId: 'r1',
+      decision: 'allow',
+      always: 'quest',
+      rules: ['Bash(npm run lint:*)'],
+    });
+    expect(h.state.heroes[0]?.allowRules).toEqual(['Bash(npm run lint:*)']);
+
+    // The same rule again is not added twice.
+    ask(h, ['Bash(npm run lint:*)']);
+    h.command({
+      type: 'answerPermission',
+      commandId: 'b',
+      itemId: 'n6',
+      decision: 'allow',
+      always: 'quest',
+    });
+    expect(h.state.heroes[0]?.allowRules).toEqual(['Bash(npm run lint:*)']);
+
+    h.gm({ type: 'runtimeRestarted' });
+    h.drain();
+    const error = h.items().find((i) => i.kind === 'error');
+    h.command({ type: 'resumeHero', commandId: 'r', heroId: 'h4' });
+    expect(error).toBeDefined();
+    expect(h.effects).toContainEqual(
+      expect.objectContaining({ type: 'resumeSession', allowRules: ['Bash(npm run lint:*)'] }),
+    );
+  });
+
+  it('for the project: the effect carries the rules for the runtime; the hero keeps none', () => {
+    const h = ask(quest(), ['Bash(npm test:*)']);
+    h.drain();
+    h.command({
+      type: 'answerPermission',
+      commandId: 'a',
+      itemId: 'n5',
+      decision: 'allow',
+      always: 'project',
+    });
+    expect(h.effects).toContainEqual(
+      expect.objectContaining({ always: 'project', rules: ['Bash(npm test:*)'] }),
+    );
+    expect(h.state.heroes[0]?.allowRules).toEqual([]);
+  });
+
+  it('refuses always when nothing was offered, or with deny, and leaves the request waiting', () => {
+    const h = ask(quest());
+    h.command({
+      type: 'answerPermission',
+      commandId: 'a',
+      itemId: 'n5',
+      decision: 'allow',
+      always: 'quest',
+    });
+    expect(h.cues).toContainEqual({
+      type: 'commandRejected',
+      commandId: 'a',
+      reason: 'This request can’t be always allowed.',
+    });
+    const offered = ask(quest(), ['Bash(x)']);
+    offered.command({
+      type: 'answerPermission',
+      commandId: 'b',
+      itemId: 'n5',
+      decision: 'deny',
+      always: 'quest',
+    });
+    expect(offered.items().map((i) => i.kind)).toEqual(['permission']);
+  });
+});
+
 describe('stall detection', () => {
   it('stalls after the same test fails 4 times in a row, pausing the hero', () => {
     const h = quest();

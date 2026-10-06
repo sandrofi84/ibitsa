@@ -74,6 +74,9 @@ export function mountHeroPane({
   const summary = el('p', { className: 'summary' });
   summary.hidden = true;
   const controls = el('div', { className: 'controls' });
+  // "Always allow in this project" rules (#62), with a way to take one back.
+  const rules = el('section', { className: 'project-rules' });
+  rules.setAttribute('aria-label', 'Project rules');
   const status = el('p', { className: 'note' });
   status.setAttribute('role', 'status');
   // The journal (#58): collapsible, newest last, following new lines unless you scrolled up.
@@ -95,7 +98,7 @@ export function mountHeroPane({
     renderJournal({ follow: true });
   };
   client.onJournal(() => renderJournal({ follow: false }));
-  body.append(title, facts, summary, message, controls, status, journal);
+  body.append(title, facts, summary, message, controls, status, rules, journal);
 
   let confirmAbandon = false;
   client.onSnapshot((snapshot) => render(snapshot));
@@ -219,6 +222,19 @@ export function mountHeroPane({
       : worktree === 'removed'
         ? `Worktree removed. The branch ${island?.branch ?? ''} is kept.`
         : 'The quest has ended. Its branch is kept.';
+    const projectRules = snapshot.projectRules ?? [];
+    rules.hidden = projectRules.length === 0;
+    rules.replaceChildren(el('h3', { text: 'Always allowed in this project' }), el('ul', {}));
+    rules.lastElementChild?.append(
+      ...projectRules.map((rule) => {
+        const li = el('li');
+        const remove = button({ label: 'Remove', onClick: () => client.forgetProjectRule(rule) });
+        remove.className = 'rule-remove';
+        remove.setAttribute('aria-label', `Remove ${rule}`);
+        li.append(el('code', { text: rule }), remove);
+        return li;
+      }),
+    );
     // The first journal page can arrive before the snapshot naming the hero.
     renderJournal({ follow: false });
   }

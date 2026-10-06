@@ -22,6 +22,7 @@ export class ClaudeAdapter implements AgentAdapter {
       ...(start.maxBudgetMicroUsd === undefined
         ? {}
         : { maxBudgetMicroUsd: start.maxBudgetMicroUsd }),
+      allowRules: start.allowRules ?? [],
       onEvent,
     });
   }
@@ -36,6 +37,7 @@ export class ClaudeAdapter implements AgentAdapter {
       ...(resume.maxBudgetMicroUsd === undefined
         ? {}
         : { maxBudgetMicroUsd: resume.maxBudgetMicroUsd }),
+      allowRules: resume.allowRules ?? [],
       onEvent,
     });
   }

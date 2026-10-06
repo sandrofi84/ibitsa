@@ -11,6 +11,8 @@ export interface SessionStart {
   prompt: string;
   /** For adapters with a native cap: what is left of the gold pouch (spec §7.3). */
   maxBudgetMicroUsd?: number;
+  /** Rules allowed without asking: this quest's and the project's "Always allow" (#62). */
+  allowRules?: string[];
 }
 
 export interface SessionResume {
@@ -21,16 +23,19 @@ export interface SessionResume {
   /** Sent after resuming when interrupted work should continue. */
   prompt?: string;
   maxBudgetMicroUsd?: number;
+  allowRules?: string[];
 }
 
 export interface AgentSession {
   send(text: string, priority: 'now' | 'next'): void;
   /** Interrupt and drop anything the adapter is holding (a full stop). */
   interrupt(): void;
+  /** `always`: also allow the request's suggested rules for the rest of the session (#62). */
   respondToPermission(answer: {
     requestId: string;
     decision: 'allow' | 'deny';
     note?: string;
+    always?: boolean;
   }): void;
   answerQuestion(requestId: string, answers: Record<string, string | string[]>): void;
   completeSubmit(result: { toolUseId: string; accepted: boolean; reason?: string }): void;

@@ -123,4 +123,43 @@ describe.skipIf(process.env.IBITSA_SMOKE !== '1')('live Claude session (smoke)',
     expect(wroteOutside).toBe(false);
     expect(events.some((e) => e.type === 'permission' && e.tool === 'Write')).toBe(true);
   }, 240_000);
+
+  it('always allow: the second identical request is not asked (#62)', async () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'ibitsa-smoke-'));
+    const events: AgentEvent[] = [];
+    const done = new Promise<void>((resolve) => {
+      const session = new ClaudeAdapter({ env: () => ({ ...process.env }) }).startSession(
+        {
+          heroId: 'h1',
+          sessionId: crypto.randomUUID(),
+          cwd,
+          classId: 'rogue',
+          prompt:
+            'Use the WebFetch tool to fetch https://example.com and say its title. Then use WebFetch on https://example.com once more and say its title again. Do nothing else.',
+        },
+        (event) => {
+          events.push(event);
+          if (event.type === 'permission') {
+            session.respondToPermission({
+              requestId: event.requestId,
+              decision: 'allow',
+              always: (event.alwaysAllow?.length ?? 0) > 0,
+            });
+          }
+          if (event.type === 'turnEnded' || event.type === 'error') {
+            session.close();
+            resolve();
+          }
+        },
+      );
+    });
+    await done;
+    rmSync(cwd, { recursive: true, force: true });
+    console.log(JSON.stringify(events, null, 2));
+    const asks = events.filter((e) => e.type === 'permission');
+    const fetches = events.filter((e) => e.type === 'activityStarted' && e.kind !== 'think');
+    expect(asks).toHaveLength(1);
+    expect(asks[0]?.type === 'permission' && asks[0].alwaysAllow?.length).toBeGreaterThan(0);
+    expect(fetches.length).toBeGreaterThanOrEqual(2);
+  }, 240_000);
 });

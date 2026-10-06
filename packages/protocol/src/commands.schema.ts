@@ -29,7 +29,11 @@ export const CommandSchema = v.variant('type', [
     itemId: id,
     decision: v.picklist(['allow', 'deny']),
     note: v.optional(v.string()),
+    /** Also allow the request's suggested rules from now on: for this quest, or for the project (#62). */
+    always: v.optional(v.picklist(['quest', 'project'])),
   }),
+  /** Removes an "Always allow in this project" rule. Runtime-only, never logged (#62). */
+  v.strictObject({ type: v.literal('forgetProjectRule'), rule: v.pipe(v.string(), v.nonEmpty()) }),
   v.strictObject({
     type: v.literal('answerQuestion'),
     commandId: id,

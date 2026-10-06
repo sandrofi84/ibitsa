@@ -9,6 +9,8 @@ export interface Snapshot {
   needsYou: NeedsYouItem[];
   /** The workspace repository, for the New Quest form. Added by the runtime, not core; null if not a git repo. */
   repo?: RepoView | null;
+  /** "Always allow in this project" rules (#62), passed to every hero session. Added by the runtime. */
+  projectRules?: string[];
 }
 
 export interface RepoView {
@@ -87,7 +89,16 @@ export interface AskUserQuestion {
 /** One entry in the "Needs you" queue; the comment names the commands that answer it. */
 export type NeedsYouItem =
   /** answerPermission. `action`/`target` are rendered exactly from the tool input, never paraphrased. */
-  | { kind: 'permission'; id: string; heroId: string; action: string; target: string; cwd: string }
+  | {
+      kind: 'permission';
+      id: string;
+      heroId: string;
+      action: string;
+      target: string;
+      cwd: string;
+      /** The rules "Always allow" would add (#62); empty when it isn't offered. */
+      alwaysAllow: string[];
+    }
   /** answerQuestion */
   | { kind: 'question'; id: string; heroId: string; questions: AskUserQuestion[] }
   /** sendMessage or markDone */

@@ -261,6 +261,7 @@ describe('needs you', () => {
         action: 'Run command',
         target: 'rm -rf node_modules',
         cwd: '/repo.ibitsa/ibitsa/fix-login',
+        alwaysAllow: [],
       },
     ]);
     expect(h.cues).toContainEqual({ type: 'needsYouAdded', itemId: 'n5' });
@@ -496,6 +497,7 @@ describe('state precedence (§5.4)', () => {
     inTurn: true,
     runningTools: [],
     lastMessage: null,
+    allowRules: [],
     resting: true,
     pendingSubmit: null,
     submitted: { summary: 's' },
