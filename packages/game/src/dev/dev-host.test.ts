@@ -120,4 +120,34 @@ describe('DevHost', () => {
     expect(previews[0]?.text).toContain('Only these tests if given: unit');
     expect(previews[1]?.text).toBeNull();
   });
+
+  it('keeps new actions in memory, refusing a taken name unless overwriting (#86)', async () => {
+    const host = new DevHost(parseLog(m0Walk), {});
+    const messages = await collect(host);
+    const draft = {
+      name: 'pr-summary',
+      description: 'Summarize',
+      argumentHint: '',
+      prompt: 'p',
+      target: 'any' as const,
+      scope: 'personal' as const,
+    };
+    host.send({ type: 'createAction', ...draft });
+    host.send({ type: 'createAction', ...draft });
+    host.send({ type: 'createAction', ...draft, scope: 'project', overwrite: true });
+    host.send({ type: 'createAction', ...draft, name: 'test' });
+    await flush();
+    expect(messages.map((m) => m.type)).toEqual([
+      'actionCreated',
+      'actions',
+      'actionRejected',
+      'actionCreated',
+      'actions',
+      'actionRejected',
+    ]);
+    const last = messages.filter((m) => m.type === 'actions').at(-1);
+    expect(last?.type === 'actions' && last.actions.filter((a) => a.name === 'pr-summary')).toEqual(
+      [expect.objectContaining({ source: 'project', target: 'any' })],
+    );
+  });
 });

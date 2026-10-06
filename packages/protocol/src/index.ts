@@ -1,6 +1,6 @@
 // Shared types between core and front ends: commands, events and state snapshots (spec §11.2.1).
 
-export type { ActionInfo, ActionPreview } from './actions.types';
+export type { ActionDraft, ActionInfo, ActionPreview } from './actions.types';
 export type { AgentEvent } from './agent-events.types';
 export { parseCommand } from './commands';
 export { type Command, CommandSchema } from './commands.schema';

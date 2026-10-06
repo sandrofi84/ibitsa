@@ -8,6 +8,8 @@ export type {
   AgentAdapter,
   AgentSession,
   Clock,
+  CreateActionRequest,
+  CreateActionResult,
   FrontEnd,
   GameMaster,
   SessionResume,

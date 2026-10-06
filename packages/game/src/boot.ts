@@ -8,6 +8,7 @@ import { mountHeroPane } from './hero-pane';
 import { reportDiagnostics } from './host';
 import type { Diagnostics, Host } from './host.types';
 import { mountNeedsYouPanel } from './needs-you-panel';
+import { mountNewActionForm } from './new-action-form';
 import { mountNewQuestForm } from './new-quest-form';
 import { PackScene } from './pack-scene';
 import { ViewState } from './view-state';
@@ -68,16 +69,26 @@ export function startGame(root: HTMLElement, host: Host): Started {
 
   mountNeedsYouPanel(client);
   const newQuest = mountNewQuestForm({ client, host });
+  const newActionForm = mountNewActionForm({ client });
+  const newAction = () => newActionForm.open();
   const view = new ViewState(host.viewStorage);
   // One ↑/↓ history for the bar and the pane's box, kept in view state (#81).
   const history = new CommandHistory({ entries: savedHistory(view) });
   const saveHistory = () => view.set(HISTORY_KEY, JSON.stringify(history.all));
-  const heroPane = mountHeroPane({ client, host, view, history, onHistoryChange: saveHistory });
+  const heroPane = mountHeroPane({
+    client,
+    host,
+    view,
+    history,
+    onHistoryChange: saveHistory,
+    newAction,
+  });
   mountCommandBar({
     client,
     history,
     onHistoryChange: saveHistory,
     startQuest: (description) => newQuest.open({ description }),
+    newAction,
   });
   const panel = () => ({ width: root.clientWidth || WIDTH, height: root.clientHeight || HEIGHT });
   const initial = fitViewport({ panel: panel(), world: { width: WIDTH, height: HEIGHT } });

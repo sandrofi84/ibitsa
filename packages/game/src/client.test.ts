@@ -262,3 +262,32 @@ describe('GameClient preview (#85)', () => {
     });
   });
 });
+
+describe('GameClient new actions (#86)', () => {
+  it('sends a draft, and reports how it went', () => {
+    const host = new FakeHost();
+    const client = new GameClient(host);
+    const results: unknown[] = [];
+    client.onActionResult((r) => results.push(r));
+    const draft = {
+      name: 'pr',
+      description: 'd',
+      argumentHint: '',
+      prompt: 'p',
+      target: 'hero' as const,
+      scope: 'personal' as const,
+    };
+    client.createAction({ draft, overwrite: false });
+    client.createAction({ draft, overwrite: true });
+    expect(host.sent).toEqual([
+      { type: 'createAction', ...draft },
+      { type: 'createAction', ...draft, overwrite: true },
+    ]);
+    host.deliver({ type: 'actionCreated', seq: 1, name: 'pr' });
+    host.deliver({ type: 'actionRejected', seq: 2, name: 'pr', reason: 'taken', clash: true });
+    expect(results).toEqual([
+      { ok: true, name: 'pr' },
+      { ok: false, name: 'pr', reason: 'taken', clash: true },
+    ]);
+  });
+});

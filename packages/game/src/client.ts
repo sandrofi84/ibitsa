@@ -1,4 +1,5 @@
 import {
+  type ActionDraft,
   type ActionInfo,
   type ActionPreview,
   type Command,
@@ -8,7 +9,7 @@ import {
   PROTOCOL_VERSION,
   type Snapshot,
 } from '@ibitsa/protocol';
-import type { CommandIntent } from './client.types';
+import type { ActionResult, CommandIntent } from './client.types';
 import type { Host } from './host.types';
 
 /**
@@ -29,6 +30,7 @@ export class GameClient {
   /** The `/` menu's actions for the hero's folder (#84), as the runtime last sent them. */
   actions: ActionInfo[] = [];
   private readonly actionListeners: ((actions: ActionInfo[]) => void)[] = [];
+  private readonly actionResultListeners: ((result: ActionResult) => void)[] = [];
   private actionsFor: string | null = null;
   private actionsWaiting: Promise<ActionInfo[]> | null = null;
   private actionResolvers: ((actions: ActionInfo[]) => void)[] = [];
@@ -95,6 +97,15 @@ export class GameClient {
     this.actionListeners.push(listener);
   }
 
+  /** Saves a new action as a skill (#86); the answer arrives through `onActionResult`. */
+  createAction({ draft, overwrite }: { draft: ActionDraft; overwrite: boolean }): void {
+    this.host.send({ type: 'createAction', ...draft, ...(overwrite ? { overwrite } : {}) });
+  }
+
+  onActionResult(listener: (result: ActionResult) => void): void {
+    this.actionResultListeners.push(listener);
+  }
+
   /** Called whenever the held journal lines change. */
   onJournal(listener: () => void): void {
     this.journalListeners.push(listener);
@@ -148,6 +159,14 @@ export class GameClient {
           this.setJournal({ entries: message.entries, start: message.start });
         } else if (message.start + message.entries.length === this.journalStart) {
           this.setJournal({ entries: [...message.entries, ...this.journal], start: message.start });
+        }
+        return;
+      case 'actionCreated':
+        for (const l of this.actionResultListeners) l({ ok: true, name: message.name });
+        return;
+      case 'actionRejected':
+        for (const l of this.actionResultListeners) {
+          l({ ok: false, name: message.name, reason: message.reason, clash: message.clash });
         }
         return;
       case 'actions':

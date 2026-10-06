@@ -313,7 +313,8 @@ Request review from: $ARGUMENTS
 
 - Use Claude Code's own placeholders (`$ARGUMENTS`, `$0`, named arguments, `${CLAUDE_PROJECT_DIR}`). Refer to game context as "the current task/branch" so the prompt works outside the game.
 - `disable-model-invocation: true` by default.
-- Scope chosen at creation: personal (`~/.claude/skills/`) or project (`.claude/skills/`).
+- **New action** (#86): offered last in the `/` menu, a form (name, description, argument hint, prompt, for heroes or anyone, scope) that writes `<root>/.claude/skills/<name>/SKILL.md` with `disable-model-invocation: true`, `ibitsa-target`, and the argument hint quoted (an unquoted `[x]` is a YAML list). Written by the Claude adapter's `SkillWriter` through the runtime-only `createAction` (answered by `actionCreated` or `actionRejected`); the `/` menu refreshes after.
+- Scope chosen at creation: personal (`~/.claude/skills/`, the default) or project (the workspace repository's `.claude/skills/`, to commit and share). A hero already on a quest runs in its worktree, so it sees a new project action only once that's in its branch; personal actions work at once.
 - Game-only metadata (e.g. `target: party | council | any`) lives in frontmatter if Claude Code tolerates extra fields, otherwise in a sidecar `actions.json` keyed by skill name. **[OPEN]** verify.
 - Name collisions with existing skills are detected and the user chooses rename/overwrite.
 - The SDK delivers `/name args` prompts to custom skills (checked live, #84).

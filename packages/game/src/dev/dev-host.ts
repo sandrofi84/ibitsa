@@ -10,7 +10,7 @@ import {
 } from '@ibitsa/protocol';
 import type { Host } from '../host.types';
 import { MemoryViewStorage } from '../view-state';
-import { DEV_ACTIONS, devPreview } from './dev-actions';
+import { DevActions, devPreview } from './dev-actions';
 import { DEMO_FILES, FakeHostChannel } from './fake-host-channel';
 
 /** Commands the game's UI can send; interactive replays wait for these and replay the rest. */
@@ -31,6 +31,7 @@ const ANSWERABLE: Command['type'][] = [
 export class DevHost implements Host {
   readonly replay: Replay;
   readonly viewStorage = new MemoryViewStorage();
+  private readonly devActions = new DevActions();
   readonly channel = new FakeHostChannel({ credentialsReady: true });
   private state: CoreState = initialState();
   private journal = new Journal();
@@ -93,7 +94,14 @@ export class DevHost implements Host {
       return;
     }
     if (command.type === 'requestActions') {
-      this.emit({ type: 'actions', seq: ++this.seq, actions: DEV_ACTIONS });
+      this.emit({ type: 'actions', seq: ++this.seq, actions: this.devActions.list });
+      return;
+    }
+    if (command.type === 'createAction') {
+      const { type: _type, overwrite = false, ...draft } = command;
+      for (const reply of this.devActions.create({ draft, overwrite })) {
+        this.emit({ ...reply, seq: ++this.seq });
+      }
       return;
     }
     if (command.type === 'requestJournal') {

@@ -749,3 +749,40 @@ body.hero-pane-open .command-bar {
 .action-preview button:focus-visible {
   outline: 2px solid #1a1420;
 }
+
+/* ---------- New action form (#86) ---------- */
+
+dialog.new-action {
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+}
+
+.new-action .choice {
+  border: 1px solid #c9b48a;
+  border-radius: 3px;
+  margin: 0 0 10px;
+  padding: 6px 8px;
+}
+
+.new-action .choice legend {
+  font-weight: 600;
+  padding: 0 4px;
+}
+
+.new-action label.radio {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 2px 0;
+}
+
+.new-action label.radio > span {
+  display: inline;
+  font-weight: 400;
+  margin: 0;
+}
+
+.new-action input[type="radio"] {
+  width: auto;
+  margin: 3px 0 0;
+}

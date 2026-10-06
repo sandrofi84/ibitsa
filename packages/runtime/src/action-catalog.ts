@@ -24,6 +24,12 @@ export class ActionCatalog {
     return listing;
   }
 
+  /** Drops every cached list and tells each watched folder's listeners, e.g. after a new skill (#86). */
+  refresh(): void {
+    this.cache.clear();
+    for (const cwd of this.watchers.keys()) this.options.onChange(cwd);
+  }
+
   dispose(): void {
     for (const list of this.watchers.values()) for (const w of list) w.close();
     this.watchers.clear();
