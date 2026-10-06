@@ -64,6 +64,9 @@ function command(ctx: StepContext, command: Command): void {
     case 'removeWorktree':
       quest.removeWorktree(command);
       return;
+    case 'setAutoApprove':
+      quest.setAutoApprove(command);
+      return;
     case 'answerPermission':
     case 'answerQuestion': {
       const answered = ctx.needsYou.answer(command);

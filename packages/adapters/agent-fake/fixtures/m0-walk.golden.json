@@ -97,6 +97,7 @@
           "id": "c1",
           "title": "Fix the login redirect",
           "status": "active",
+          "autoApprove": false,
           "gold": {
             "kind": "unknown"
           }
@@ -147,6 +148,7 @@
           "id": "c1",
           "title": "Fix the login redirect",
           "status": "active",
+          "autoApprove": false,
           "gold": {
             "kind": "unknown"
           }
@@ -199,6 +201,7 @@
           "id": "c1",
           "title": "Fix the login redirect",
           "status": "active",
+          "autoApprove": false,
           "gold": {
             "kind": "exact",
             "value": 42000
@@ -257,6 +260,7 @@
           "id": "c1",
           "title": "Fix the login redirect",
           "status": "active",
+          "autoApprove": false,
           "gold": {
             "kind": "exact",
             "value": 97000
@@ -323,6 +327,7 @@
           "id": "c1",
           "title": "Fix the login redirect",
           "status": "active",
+          "autoApprove": false,
           "gold": {
             "kind": "exact",
             "value": 108000
@@ -378,6 +383,7 @@
       "id": "c1",
       "title": "Fix the login redirect",
       "status": "active",
+      "autoApprove": false,
       "gold": {
         "kind": "exact",
         "value": 108000

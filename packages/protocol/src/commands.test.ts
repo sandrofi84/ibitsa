@@ -6,6 +6,7 @@ const valid: Command[] = [
   { type: 'hello', protocolVersion: 1 },
   { type: 'requestJournal' },
   { type: 'forgetProjectRule', rule: 'Bash(npm test:*)' },
+  { type: 'setAutoApprove', commandId: 'c10', on: true },
   {
     type: 'answerPermission',
     commandId: 'c9',
@@ -65,7 +66,7 @@ describe('parseCommand', () => {
   });
 
   it('covers every command type', () => {
-    expect(new Set(valid.map((c) => c.type)).size).toBe(14);
+    expect(new Set(valid.map((c) => c.type)).size).toBe(15);
   });
 
   it.each([
@@ -124,6 +125,7 @@ describe('parseCommand', () => {
       },
     ],
     ['an empty rule to forget', { type: 'forgetProjectRule', rule: '' }],
+    ['auto mode without on', { type: 'setAutoApprove', commandId: 'c1' }],
   ])('rejects %s', (_, input) => {
     const result = parseCommand(input);
     expect(result.ok).toBe(false);

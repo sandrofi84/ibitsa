@@ -311,4 +311,27 @@ describe('Journal', () => {
     expect(journal.page({ before: 1 }).entries).toHaveLength(1);
     expect(journal.page({ before: 99, limit: 5 })).toMatchObject({ start: 0, total: 2 });
   });
+
+  it('notes auto mode and what it allowed (#63)', () => {
+    const journal = journalOf([
+      ...quest,
+      { kind: 'command', command: { type: 'setAutoApprove', commandId: 'a', on: true } },
+      {
+        kind: 'agent',
+        heroId: 'h4',
+        event: {
+          type: 'permission',
+          requestId: 'r1',
+          tool: 'Bash',
+          input: { command: 'npm install' },
+        },
+      },
+      { kind: 'command', command: { type: 'setAutoApprove', commandId: 'b', on: false } },
+    ]);
+    expect(journal.entries.slice(-3).map((e) => ('text' in e ? e.text : ''))).toEqual([
+      'You turned auto mode on.',
+      'Auto-allowed: run command npm install',
+      'You turned auto mode off.',
+    ]);
+  });
 });

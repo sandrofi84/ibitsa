@@ -11,6 +11,8 @@ export interface Snapshot {
   repo?: RepoView | null;
   /** "Always allow in this project" rules (#62), passed to every hero session. Added by the runtime. */
   projectRules?: string[];
+  /** Whether hero shell commands run in an OS sandbox here (not on native Windows). Added by the runtime. */
+  sandboxed?: boolean;
 }
 
 export interface RepoView {
@@ -27,6 +29,8 @@ export interface CampaignView {
   status: 'active' | 'finished' | 'abandoned';
   /** Computed by core; front ends never sum hero gold themselves. */
   gold: Reading<MicroUsd>;
+  /** Auto mode (#63): permissions inside the worktree and the sandbox are allowed without asking. */
+  autoApprove: boolean;
 }
 
 export interface IslandView {

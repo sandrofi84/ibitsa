@@ -42,7 +42,7 @@ export class Quest {
     const taskPointId = newId(state, 't');
     const heroId = newId(state, 'h');
     const branch = `ibitsa/${slug(title) || 'quest'}`;
-    state.campaign = { id: campaignId, title, status: 'active' };
+    state.campaign = { id: campaignId, title, status: 'active', autoApprove: false };
     state.islands = [
       {
         id: islandId,
@@ -68,6 +68,16 @@ export class Quest {
     ];
     this.ctx.needsYou.clear();
     this.ctx.outbox.effect({ type: 'createWorktree', islandId, branch, baseRef: command.baseRef });
+  }
+
+  /** Auto mode on or off for the running quest (#63). */
+  setAutoApprove({ commandId, on }: { commandId: string; on: boolean }): void {
+    const campaign = this.ctx.state.campaign;
+    if (campaign?.status !== 'active') {
+      this.ctx.outbox.reject(commandId, 'There is no quest running.');
+      return;
+    }
+    campaign.autoApprove = on;
   }
 
   finish(commandId: string): void {

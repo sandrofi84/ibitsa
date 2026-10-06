@@ -30,6 +30,8 @@ export interface Campaign {
   id: string;
   title: string;
   status: 'active' | 'finished' | 'abandoned';
+  /** Auto mode (#63): permissions inside the hard limits are allowed without asking. */
+  autoApprove: boolean;
 }
 
 export interface Island {

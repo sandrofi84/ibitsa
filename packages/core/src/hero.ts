@@ -300,6 +300,16 @@ export class Hero {
         this.ctx.outbox.cue({ type: 'heroSaid', heroId: r.id, text: event.text });
         break;
       case 'permission':
+        // Auto mode answers at once, except across a hard limit, which always asks (#63).
+        if (this.ctx.state.campaign?.autoApprove && !event.boundary) {
+          this.ctx.outbox.effect({
+            type: 'answerPermission',
+            heroId: r.id,
+            requestId: event.requestId,
+            decision: 'allow',
+          });
+          break;
+        }
         this.ctx.needsYou.ask({
           kind: 'permission',
           heroId: r.id,
