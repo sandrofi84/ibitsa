@@ -10,6 +10,7 @@ import { GAME_VIEW_TYPE, GamePanel } from './game-panel';
 import { API_KEYS_URL, HostChannel } from './host-channel';
 import { anthropicKeyValidator } from './key-validator';
 import type { KeyValidator } from './key-validator.types';
+import { loginShellEnv } from './login-shell-env';
 import { missingCredentialsAdapter } from './placeholders';
 import { RuntimeHost } from './runtime-host';
 import type { DependencyFactory, Notifier } from './runtime-host.types';
@@ -20,8 +21,8 @@ export function activate(context: vscode.ExtensionContext): IbitsaApi {
   const config = () => vscode.workspace.getConfiguration('ibitsa');
   // In development the SDK may fall back to the developer's own Claude Code login (spec §11.6).
   const development = context.extensionMode === vscode.ExtensionMode.Development;
-  let dependencies: DependencyFactory = ({ workspaceDir, credentials }) => {
-    const env = agentEnvironment({ credentials, env: process.env, allowLogin: development });
+  let dependencies: DependencyFactory = ({ workspaceDir, credentials, env: base }) => {
+    const env = agentEnvironment({ credentials, env: base, allowLogin: development });
     return {
       adapter: env
         ? new ClaudeAdapter({
@@ -52,6 +53,9 @@ export function activate(context: vscode.ExtensionContext): IbitsaApi {
           workspaceDir,
           dependencies: (inputs) => dependencies(inputs),
           credentials: () => resolveCredentials(context.secrets, process.env),
+          // A fresh login shell's environment, not VS Code's start-up copy (#67).
+          environment: async () =>
+            (await loginShellEnv({ shell: process.env.SHELL })) ?? process.env,
           settings: () => readUserSettings(vscode.workspace.getConfiguration('ibitsa')),
           notify: (message) => notify(message),
           gameVisible: () => GamePanel.visible,

@@ -10,6 +10,8 @@ export interface Dependencies {
 export type DependencyFactory = (inputs: {
   credentials: Credentials;
   workspaceDir: string;
+  /** The environment hero sessions start from: a fresh login shell's when it resolves (#67). */
+  env: Record<string, string | undefined>;
 }) => Dependencies;
 
 /** Shows a "Needs you" notification; resolves true when the user asks to open the game. */
@@ -20,6 +22,8 @@ export interface RuntimeHostOptions {
   workspaceDir: string;
   dependencies: DependencyFactory;
   credentials: () => Promise<Credentials>;
+  /** Resolved each time the runtime starts, so a window reload picks up a changed Node setup (#67). */
+  environment: () => Promise<Record<string, string | undefined>>;
   settings: () => UserSettings;
   notify: Notifier;
   /** Is the game tab on screen? Notifications only appear when it isn't. */

@@ -34,7 +34,8 @@ export const SUBMIT_TOOL = 'mcp__ibitsa__submit_task';
 export const HERO_INSTRUCTIONS = `You are working on one task in your own git worktree.
 Commit your work with clear messages as you go.
 When the task is complete and every change is committed, call the submit_task tool with a short summary of what you did. If the submission is rejected, fix what it says and submit again.
-If you need a decision from the user, ask with the AskUserQuestion tool instead of guessing.`;
+If you need a decision from the user, ask with the AskUserQuestion tool instead of guessing.
+Run tests so their exit status reaches you: don't pipe a test command through tail, head or grep; use the runner's own options to shorten its output.`;
 
 // The SDK ships ESM only and finds its native binary next to its own module, so it stays external to
 // the extension bundle and is loaded with import() (spec §13).
