@@ -97,6 +97,8 @@ export class Journal {
           return line(c.heroId, { kind: 'event', text: 'You stopped the hero.' });
         case 'resumeHero':
           return line(c.heroId, { kind: 'event', text: 'You resumed the hero.' });
+        case 'restHero':
+          return line(c.heroId, { kind: 'event', text: 'You let the hero rest.' });
         case 'markDone':
           return line(c.heroId, { kind: 'event', text: 'You marked the task done.' });
         case 'raiseBudget':

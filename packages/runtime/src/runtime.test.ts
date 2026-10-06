@@ -59,6 +59,9 @@ class FakeSession implements AgentSession {
   interrupt() {
     this.calls.push(['interrupt']);
   }
+  compact() {
+    this.calls.push(['compact']);
+  }
   respondToPermission(...args: unknown[]) {
     this.calls.push(['respondToPermission', ...args]);
   }
@@ -523,6 +526,14 @@ describe('always allow (#62)', () => {
     const second = setup(first.storageDir);
     second.connection.receive({ type: 'resumeHero', commandId: 'r', heroId: 'h4' });
     expect(second.adapter.resumed[0]?.allowRules).toEqual(['Bash(npm run lint:*)']);
+  });
+});
+
+describe('rest (#82)', () => {
+  it('asks the session to compact', async () => {
+    const env = await arrived();
+    env.connection.receive({ type: 'restHero', commandId: 'r', heroId: 'h4' });
+    expect(env.session.calls).toContainEqual(['compact']);
   });
 });
 

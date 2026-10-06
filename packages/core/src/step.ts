@@ -89,6 +89,9 @@ function command(ctx: StepContext, command: Command): void {
     case 'stopHero':
       target.stop();
       return;
+    case 'restHero':
+      target.rest(command.commandId);
+      return;
     case 'resumeHero':
       target.resume(command.commandId);
       return;

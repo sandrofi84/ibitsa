@@ -30,6 +30,8 @@ export interface AgentSession {
   send(text: string, priority: 'now' | 'next'): void;
   /** Interrupt and drop anything the adapter is holding (a full stop). */
   interrupt(): void;
+  /** Compact the session to free context (Rest, #82). */
+  compact(): void;
   /** `always`: also allow the request's suggested rules for the rest of the session (#62). */
   respondToPermission(answer: {
     requestId: string;

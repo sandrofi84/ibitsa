@@ -30,6 +30,8 @@ export type Effect =
   | { type: 'sendMessage'; heroId: string; text: string; priority: 'now' | 'next' }
   /** Interrupt the turn and drop the adapter's queued messages. */
   | { type: 'interrupt'; heroId: string }
+  /** Compact the session (Rest, #82); the agent reports `resting` then `compacted`. */
+  | { type: 'compactSession'; heroId: string }
   | {
       type: 'answerPermission';
       heroId: string;

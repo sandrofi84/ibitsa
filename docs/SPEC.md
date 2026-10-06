@@ -316,7 +316,7 @@ Request review from: $ARGUMENTS
 ### 6.3 Controls (not prompts)
 Shown in the same hover menu, visually distinct:
 - **Stop:** interrupt the session now.
-- **Rest:** compact the session, or restart it fresh from a handoff summary.
+- **Rest:** compact the session (M2, #82): the `restHero` command, carried out as Claude Code's own `/compact` sent to the session, which reports `resting` then `compacted` (the z bubble, then HP back up). Refused while the hero has no live session, is already resting, or no quest runs. Restarting fresh from a handoff summary comes later.
 - **Re-review:** game master relaunches reviewers (all or chosen).
 - **Abandon task.**
 - **End campaign** (§4.9).

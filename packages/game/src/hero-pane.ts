@@ -179,6 +179,10 @@ export function mountHeroPane({
           label: 'Stop',
           onClick: () => client.send({ type: 'stopHero', heroId: hero.id }),
         }),
+        button({
+          label: 'Rest',
+          onClick: () => client.send({ type: 'restHero', heroId: hero.id }),
+        }),
       );
       if (hero.state.kind === 'submitted') {
         items.push(

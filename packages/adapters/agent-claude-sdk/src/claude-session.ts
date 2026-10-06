@@ -85,6 +85,14 @@ export class ClaudeSession implements AgentSession {
     if (!this.busy) this.release();
   }
 
+  /**
+   * Rest (#82): Claude Code's own `/compact`, queued like any message. The SDK reports it as
+   * `status: 'compacting'` then a `compact_boundary`, which map to `resting` and `compacted`.
+   */
+  compact(): void {
+    this.input.push(userMessage({ text: '/compact', priority: 'next' }));
+  }
+
   /** A full stop: interrupt and drop everything still held. */
   interrupt(): void {
     this.held.length = 0;

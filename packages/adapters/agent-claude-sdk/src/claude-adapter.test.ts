@@ -481,6 +481,15 @@ describe('messages and the full stop (#34)', () => {
   const sent = (fake: ReturnType<typeof fakeSdk>) =>
     (fake.calls[0]?.inputs ?? []).slice(1).map((m) => [m.message.content, m.priority, m.origin]);
 
+  it('rests by sending Claude Code its own /compact (#82)', async () => {
+    const { fake, session, finishTool } = working();
+    await flush();
+    session.compact();
+    finishTool();
+    await flush();
+    expect(sent(fake)[0]).toEqual(['/compact', 'next', undefined]);
+  });
+
   it("sends 'now' at once with a human origin", async () => {
     const { fake, session, finishTool } = working();
     await flush();

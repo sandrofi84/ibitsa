@@ -151,6 +151,24 @@ export class Hero {
     this.watchSilence();
   }
 
+  /** Rest (§6.3, #82): compact the live session to free context; the hero keeps its task. */
+  rest(commandId: string): void {
+    const r = this.record;
+    if (this.ctx.state.campaign?.status !== 'active') {
+      this.ctx.outbox.reject(commandId, 'There is no quest running.');
+      return;
+    }
+    if (!r.sessionLive) {
+      this.ctx.outbox.reject(commandId, 'The hero has no session to rest.');
+      return;
+    }
+    if (r.resting) {
+      this.ctx.outbox.reject(commandId, 'The hero is already resting.');
+      return;
+    }
+    this.ctx.outbox.effect({ type: 'compactSession', heroId: r.id });
+  }
+
   resume(commandId: string): void {
     const r = this.record;
     if (r.stalled !== null) {

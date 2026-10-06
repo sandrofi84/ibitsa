@@ -334,4 +334,16 @@ describe('Journal', () => {
       'You turned auto mode off.',
     ]);
   });
+
+  it('notes a rest (#82)', () => {
+    const journal = journalOf([
+      ...quest,
+      { kind: 'command', command: { type: 'restHero', commandId: 'r', heroId: 'h4' } },
+    ]);
+    expect(journal.entries.at(-1)).toMatchObject({
+      kind: 'event',
+      heroId: 'h4',
+      text: 'You let the hero rest.',
+    });
+  });
 });

@@ -7,6 +7,7 @@ const valid: Command[] = [
   { type: 'requestJournal' },
   { type: 'forgetProjectRule', rule: 'Bash(npm test:*)' },
   { type: 'setAutoApprove', commandId: 'c10', on: true },
+  { type: 'restHero', commandId: 'c11', heroId: 'h1' },
   {
     type: 'answerPermission',
     commandId: 'c9',
@@ -66,7 +67,7 @@ describe('parseCommand', () => {
   });
 
   it('covers every command type', () => {
-    expect(new Set(valid.map((c) => c.type)).size).toBe(15);
+    expect(new Set(valid.map((c) => c.type)).size).toBe(16);
   });
 
   it.each([
