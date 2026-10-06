@@ -1,3 +1,4 @@
+import type { CameraState } from './camera-director.types';
 import type { GameClient } from './client';
 
 /** Starts the game in `root`, talking to the core through `host`. Shared by the webview and standalone builds. */
@@ -14,4 +15,6 @@ export interface Started {
     /** The activity icon showing beside it. */
     icon(): string | null;
   };
+  /** The map camera, for tests; null before the game is ready. */
+  camera(): CameraState | null;
 }

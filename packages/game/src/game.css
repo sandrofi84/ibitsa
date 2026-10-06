@@ -426,3 +426,43 @@ body.hero-pane-open .needs-you {
   transform: none;
   width: min(560px, calc(100vw - 304px));
 }
+
+/* ---------- Map view controls (#59) ---------- */
+
+.camera-controls {
+  position: fixed;
+  /* The middle of the left edge: the HUD has the top, Needs you the bottom, the hero pane the right. */
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.camera-controls button {
+  font:
+    13px / 1.4 system-ui,
+    sans-serif;
+  min-width: 28px;
+  padding: 3px 8px;
+  border: 1px solid #5e3b1c;
+  background: #efe0b8;
+  color: #1a1420;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.camera-controls button[aria-pressed="true"] {
+  background: #d9f2c4;
+}
+
+.camera-controls button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.camera-controls button:focus-visible {
+  outline: 2px solid #1a1420;
+}

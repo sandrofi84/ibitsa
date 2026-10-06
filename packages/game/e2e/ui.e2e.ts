@@ -15,6 +15,7 @@ interface Probe {
     icon(): string | null;
   };
   zoom(): number;
+  camera(): { zoom: number } | null;
 }
 
 const probe = <T>(page: Page, read: (p: Probe) => T) =>
@@ -217,7 +218,8 @@ test('speech bubbles: a message excerpt that fades, then "Ready for review!" unt
   await pane.getByRole('button', { name: /hero pane/ }).click();
   await expect(pane.getByLabel('Message to the hero')).toBeHidden();
   const hero = await probe(page, (p) => p.hero.onPage());
-  const zoom = await probe(page, (p) => p.zoom());
+  // The bubble sits 22 map pixels above the sprite's middle: scaled by the panel and the camera.
+  const zoom = await probe(page, (p) => p.zoom() * (p.camera()?.zoom ?? 1));
   await page.mouse.click(hero?.x ?? 0, (hero?.y ?? 0) - 22 * zoom);
   await expect(pane.getByText('Ready for review.')).toBeVisible();
 
