@@ -4,6 +4,7 @@ import m1Demo from '../fixtures/m1-demo.jsonl?raw';
 import m1Real from '../fixtures/m1-real.jsonl?raw';
 import m1RealLive from '../fixtures/m1-real.live.json';
 import m1Trouble from '../fixtures/m1-trouble.jsonl?raw';
+import m3RoundTable from '../fixtures/m3-round-table.jsonl?raw';
 import { parseLog } from './log';
 import { replayThroughCore } from './run';
 
@@ -14,6 +15,7 @@ const fixtures = {
   'm1-trouble': m1Trouble,
   'm1-real': m1Real,
   'm1-demo': m1Demo,
+  'm3-round-table': m3RoundTable,
 };
 
 describe.each(Object.entries(fixtures))('fixture %s', (name, text) => {
@@ -114,6 +116,43 @@ describe('m1-demo', () => {
     expect(at('submitted')?.heroes[0]?.state.kind).toBe('submitted');
     expect(output.final.campaign?.status).toBe('finished');
     expect(output.final.islands[0]?.worktree).toBe('removed');
+    expect(output.cues.some((c) => c.cue.type === 'commandRejected')).toBe(false);
+  });
+});
+
+describe('m3-round-table', () => {
+  // A hand-written round-table sitting (#100): reports, an early plan refused, questions, a change, approval.
+  const output = replayThroughCore(parseLog(m3RoundTable));
+  const at = (mark: string) => output.marks.find((m) => m.mark === mark)?.snapshot.sitting;
+
+  it('refuses the plan proposed before every councillor reported', () => {
+    expect(at('rejected-early')).toMatchObject({ status: 'deliberating', plans: [] });
+    expect(
+      at('rejected-early')
+        ?.roster.filter((r) => !r.reported)
+        .map((r) => r.councillorId),
+    ).toEqual(['tester', 'accessibility']);
+  });
+
+  it('asks a batch named after its councillors, then waits for approval', () => {
+    expect(at('asking')?.questions?.items.map((q) => q.councillorId)).toEqual([
+      'architect',
+      'security',
+    ]);
+    expect(at('proposed')).toMatchObject({ status: 'awaitingApproval', questions: null });
+    expect(at('change-requested')).toMatchObject({ status: 'deliberating', revision: 1 });
+  });
+
+  it('replays to an approved plan, with the re-consultation and cost recorded', () => {
+    expect(output.final.sitting).toMatchObject({
+      status: 'approved',
+      gold: { kind: 'exact', value: 412_000 },
+      reconsultations: [{ councillorId: 'security', revision: 1, reportId: 'r9' }],
+      plans: [
+        { version: 1, outcome: { kind: 'changeRequested' } },
+        { version: 2, outcome: { kind: 'approved' } },
+      ],
+    });
     expect(output.cues.some((c) => c.cue.type === 'commandRejected')).toBe(false);
   });
 });

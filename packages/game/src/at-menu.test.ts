@@ -43,6 +43,7 @@ function connected({
     seq: 1,
     snapshot: {
       campaign: { id: 'c1', title: 'Q', status, gold: { kind: 'unknown' }, autoApprove: false },
+      sitting: null,
       islands: [{ id: 'i2', name: 'Q', branch: 'b', worktree, taskPoints: [] }],
       heroes: [
         {

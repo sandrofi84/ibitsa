@@ -1,4 +1,4 @@
-import type { AgentEvent, Command } from '@ibitsa/protocol';
+import type { AgentEvent, Command, CouncilEvent } from '@ibitsa/protocol';
 import type { QuestSettings } from './state.types';
 
 /** Results of the game master's own work, reported by the runtime (spec §11.2). */
@@ -22,6 +22,8 @@ export type GameMasterEvent =
  */
 export type CoreInput =
   | { kind: 'agent'; t: number; heroId: string; event: AgentEvent }
+  /** From a sitting's lead session; ignored unless `sittingId` is the current sitting. */
+  | { kind: 'council'; t: number; sittingId: string; event: CouncilEvent }
   | { kind: 'command'; t: number; command: Command }
   | { kind: 'gm'; t: number; event: GameMasterEvent }
   | { kind: 'timer'; t: number; timerId: string };

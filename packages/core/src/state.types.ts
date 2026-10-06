@@ -1,8 +1,16 @@
 import type {
   ActivityKind,
   AskUserQuestion,
+  CouncilAnswer,
+  CouncilQuestion,
+  CouncilReport,
+  Effort,
   MicroUsd,
+  PlanOutcome,
+  PlanProposal,
   Reading,
+  SittingMode,
+  SittingStatus,
   TaskPointState,
 } from '@ibitsa/protocol';
 
@@ -21,6 +29,8 @@ export interface CoreState {
   nextId: number;
   settings: QuestSettings;
   campaign: Campaign | null;
+  /** The council's current or last sitting (spec §4.3). */
+  sitting: SittingRecord | null;
   islands: Island[];
   heroes: HeroRecord[];
   needsYou: PendingItem[];
@@ -92,6 +102,37 @@ export interface StallWatch {
   passedThisTurn: boolean;
   lastDiff: string | null;
   quietTurns: number;
+}
+
+/** Raw facts about a sitting; the `Sitting` class gives them behaviour (ADR 0002). */
+export interface SittingRecord {
+  id: string;
+  task: string;
+  mode: SittingMode;
+  status: SittingStatus;
+  effort: Effort;
+  /** Fixed when the council convenes; `addCouncillor` is the only way to grow it. */
+  roster: { councillorId: string; effort: Effort }[];
+  sessionId: string | null;
+  reports: { id: string; councillorId: string; revision: number; report: CouncilReport }[];
+  batches: QuestionBatch[];
+  plans: { version: number; plan: PlanProposal; outcome: PlanOutcome }[];
+  /** Change requests so far. */
+  revision: number;
+  reconsultations: { councillorId: string; revision: number; reportId: string }[];
+  gold: Reading<MicroUsd>;
+  error: string | null;
+  /** Core's clock (`t`) when convened and when it ended: the tally's time taken (#106). */
+  startedAt: number;
+  endedAt: number | null;
+}
+
+/** One `ask_user` call; `answers` stays null until the user answers. */
+export interface QuestionBatch {
+  id: string;
+  toolUseId: string;
+  items: (CouncilQuestion & { id: string })[];
+  answers: CouncilAnswer[] | null;
 }
 
 export type PendingItem =

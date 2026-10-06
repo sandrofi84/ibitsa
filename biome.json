@@ -6,7 +6,13 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!**/.tsbuild", "!prototypes", "!packages/assets/default-pack"]
+    "includes": [
+      "**",
+      "!**/.tsbuild",
+      "!prototypes",
+      "!packages/assets/default-pack",
+      "!**/*.golden.json"
+    ]
   },
   "formatter": {
     "indentStyle": "space",

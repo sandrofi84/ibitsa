@@ -1,0 +1,100 @@
+import type { Effort, SittingMode } from './commands.schema';
+import type { MicroUsd, Reading } from './values.types';
+
+/** A concern in a councillor's report (spec §4.3). */
+export interface Concern {
+  summary: string;
+  severity: 'low' | 'medium' | 'high' | 'serious';
+  reason: string;
+}
+
+/**
+ * What a councillor files through the `report` tool (spec §4.3). A councillor with nothing to add
+ * files a bow-out: `bowOut` says why, and the lists may be empty. It still counts as reported.
+ */
+export interface CouncilReport {
+  concerns: Concern[];
+  /** Questions it wants put to the user; the sitting asks them with `ask_user`. */
+  questions: string[];
+  recommendations: string[];
+  /** What it didn't check (a cap, a turn limit, out of its slice). Shown under "Why?". */
+  notChecked: string[];
+  bowOut?: string;
+}
+
+/** One question in an `ask_user` batch (spec §4.4). */
+export interface CouncilQuestion {
+  /** Must be a councillor on the roster: drives speaker, portrait and voice. */
+  councillorId: string;
+  /** The report it comes from (separate chambers); must be one of that councillor's reports. */
+  reportId?: string;
+  question: string;
+  options: { id: string; label: string; tradeoff: string }[];
+  recommendation?: { optionId: string; reason: string };
+  allowFreeText: boolean;
+}
+
+/**
+ * Placeholder for the plan `propose_plan` submits. Its real schema (tasks, criteria, Book of Decisions)
+ * arrives with #104; until then core keeps `detail` as given and only reads `summary`.
+ */
+export interface PlanProposal {
+  summary: string;
+  detail?: unknown;
+}
+
+/**
+ * Normalized output of a sitting's lead session (round table, or the elder in separate chambers).
+ * Core input only, like `AgentEvent`. Tool calls carry `toolUseId`: core answers each one with a
+ * `completeSittingTool` or `answerSittingQuestions` effect, accepting or rejecting it.
+ */
+export type CouncilEvent =
+  | { type: 'sessionStarted'; sessionId: string }
+  | { type: 'reportFiled'; toolUseId: string; councillorId: string; report: CouncilReport }
+  | { type: 'questionsAsked'; toolUseId: string; questions: CouncilQuestion[] }
+  | { type: 'planProposed'; toolUseId: string; plan: PlanProposal }
+  /** Running total for the sitting, never a delta. */
+  | { type: 'usage'; totalCost: MicroUsd }
+  /** The session cannot continue. */
+  | { type: 'error'; message: string };
+
+export type SittingStatus =
+  /** Convened; the session is starting. */
+  | 'convening'
+  | 'deliberating'
+  /** A plan is waiting for Approve, Change or Dismiss. */
+  | 'awaitingApproval'
+  | 'approved'
+  | 'dismissed'
+  | 'failed';
+
+/** The sitting as front ends see it (spec §4.3–4.6): who is at the table and what they've said. */
+export interface SittingView {
+  id: string;
+  task: string;
+  mode: SittingMode;
+  status: SittingStatus;
+  /** The sitting's effort; in separate chambers each councillor also has its own. */
+  effort: Effort;
+  roster: { councillorId: string; effort: Effort; reported: boolean }[];
+  reports: { id: string; councillorId: string; revision: number; report: CouncilReport }[];
+  /** The batch waiting for the user, if any; answered with `answerCouncil`. */
+  questions: {
+    batchId: string;
+    items: (CouncilQuestion & { id: string })[];
+  } | null;
+  /** Every version proposed, oldest first; the last one is current. */
+  plans: { version: number; plan: PlanProposal; outcome: PlanOutcome }[];
+  /** Number of change requests so far. */
+  revision: number;
+  /** A councillor reporting again after a change request (spec §4.6). */
+  reconsultations: { councillorId: string; revision: number; reportId: string }[];
+  gold: Reading<MicroUsd>;
+  error: string | null;
+}
+
+export type PlanOutcome =
+  | { kind: 'proposed' }
+  | { kind: 'approved' }
+  | { kind: 'changeRequested'; text: string }
+  | { kind: 'dismissed' };

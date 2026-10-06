@@ -1,3 +1,5 @@
+import type { CouncilAnswer, Effort, SittingMode } from '@ibitsa/protocol';
+
 /** Requests core makes of the runtime. Core never performs them itself (ADR 0001). */
 export type Effect =
   | { type: 'createWorktree'; islandId: string; branch: string; baseRef: string }
@@ -59,5 +61,36 @@ export type Effect =
       reason?: string;
     }
   | { type: 'closeSession'; heroId: string }
+  /** Start a sitting's lead session (spec §4.3); its output comes back as `council` inputs. */
+  | {
+      type: 'startSitting';
+      sittingId: string;
+      mode: SittingMode;
+      task: string;
+      effort: Effort;
+      roster: { councillorId: string; effort: Effort }[];
+    }
+  /** Something the user did that the sitting must hear about. */
+  | { type: 'sittingMessage'; sittingId: string; message: SittingMessage }
+  /** The result of a `report` or `propose_plan` call: accepted, or rejected with the reason. */
+  | {
+      type: 'completeSittingTool';
+      sittingId: string;
+      toolUseId: string;
+      accepted: boolean;
+      reason?: string;
+    }
+  /** The user's answers to an `ask_user` batch, in question order. */
+  | {
+      type: 'answerSittingQuestions';
+      sittingId: string;
+      toolUseId: string;
+      answers: CouncilAnswer[];
+    }
+  | { type: 'closeSitting'; sittingId: string }
   | { type: 'setTimer'; timerId: string; at: number }
   | { type: 'cancelTimer'; timerId: string };
+
+export type SittingMessage =
+  | { kind: 'changeRequested'; version: number; text: string }
+  | { kind: 'councillorAdded'; councillorId: string; effort: Effort };
