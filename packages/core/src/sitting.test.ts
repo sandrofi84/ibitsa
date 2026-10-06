@@ -459,6 +459,29 @@ describe('approval', () => {
     ]);
   });
 
+  it('turns back a plan whose islands leave a task out (#120)', () => {
+    const c = deliberating();
+    c.event({
+      type: 'planProposed',
+      toolUseId: 'p1',
+      plan: { ...planOf('Plan'), islands: [{ id: 'I1', title: 'One', tasks: [] }] } as Plan,
+    });
+    expect(c.effects.at(-1)).toMatchObject({
+      accepted: false,
+      reason: expect.stringContaining('islands.0.tasks'),
+    });
+    c.event({
+      type: 'planProposed',
+      toolUseId: 'p2',
+      plan: {
+        ...planOf('Plan'),
+        islands: [{ id: 'I1', title: 'One', tasks: ['T1'] }],
+        branching: 'stacked',
+      },
+    });
+    expect(c.effects.at(-1)).toMatchObject({ accepted: true });
+  });
+
   it('turns a plan with problems back to the council, naming each one (#104)', () => {
     const c = deliberating();
     const bad = {

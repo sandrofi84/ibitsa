@@ -1,4 +1,4 @@
-import { type Plan, type Snapshot, taskOrder } from '@ibitsa/protocol';
+import { type Plan, planIslands, type Snapshot, taskOrder } from '@ibitsa/protocol';
 import type { GameClient } from './client';
 import { button, el } from './dom';
 
@@ -87,6 +87,20 @@ export function planDetails(plan: Plan): HTMLElement[] {
   const parts: HTMLElement[] = [el('p', { className: 'goal', text: `Goal: ${plan.goal}` })];
   if (plan.scope) parts.push(el('p', { className: 'scope', text: `Scope: ${plan.scope}` }));
   parts.push(el('h3', { text: 'Tasks' }), tasks);
+  if (plan.islands) {
+    // Which tasks share a branch and a hero, and how the branches relate (#120).
+    const { islands, branching } = planIslands(plan);
+    const list = el('ol', { className: 'islands' });
+    list.setAttribute('aria-label', 'Islands');
+    for (const island of islands) {
+      list.append(el('li', { text: `${island.id} ${island.title}: ${island.tasks.join(', ')}` }));
+    }
+    const how =
+      branching === 'stacked'
+        ? 'Stacked: each island builds on the one before it.'
+        : 'Separate: every island branches from the base.';
+    parts.push(el('h3', { text: 'Islands' }), el('p', { className: 'note', text: how }), list);
+  }
   if (plan.decisions.length > 0) {
     const book = el('ul', { className: 'decisions' });
     book.setAttribute('aria-label', 'Book of Decisions');

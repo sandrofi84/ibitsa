@@ -177,7 +177,8 @@ ask_user({
 - On approval Ibitsa writes `.ibitsa/campaigns/<id>/plan.json` (the game reads it), `plan-v<n>.json` (each approved version kept) and `plan.md` (for people, decisions in the record format below). Ibitsa writes campaign documents but never commits them; the user decides whether they belong in the repo.
 - Plan contents:
   - Goal and scope
-  - Tasks (id, title, description, files likely touched, dependencies, suggested hero class, estimated effort, optional source ticket). A **ticket** is an item in an outside ticket system; it is not part of the game world. See `GLOSSARY.md`.
+  - Tasks (id, title, description, files likely touched, dependencies, suggested hero class, estimated effort, optional source ticket).
+  - **Islands** (#120): `I1…`, each a title and its tasks in the order its hero works them, and **branching** `separate` or `stacked`; stacked islands stack in the order listed. Core checks every task is on exactly one island, each island's order keeps its own dependencies, a stacked task depends only on its own or earlier islands, and separate islands don't wait on each other in a circle. A plan without islands is one island with every task, separate. A **ticket** is an item in an outside ticket system; it is not part of the game world. See `GLOSSARY.md`.
   - Branching strategy: `separate` or `stacked`, with branch names and bases
   - **Acceptance criteria per reviewing councillor per task**
   - Recommended party composition per worktree

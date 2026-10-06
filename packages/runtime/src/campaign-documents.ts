@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { CodePointer, Plan, ResearchBrief } from '@ibitsa/protocol';
+import { type CodePointer, type Plan, planIslands, type ResearchBrief } from '@ibitsa/protocol';
 
 /**
  * A campaign's documents in the workspace repository (spec §8.3): `.ibitsa/campaigns/<id>/`. Ibitsa
@@ -102,6 +102,12 @@ export function planMarkdown({ version, plan }: { version: number; plan: Plan })
       );
     }
     if (t.decisions.length > 0) lines.push('', `**Decisions:** ${t.decisions.join(', ')}`);
+  }
+  if (plan.islands) {
+    const { islands, branching } = planIslands(plan);
+    lines.push('', `## Islands (${branching})`, '');
+    for (const island of islands)
+      lines.push(`- **${island.id} · ${island.title}:** ${island.tasks.join(', ')}`);
   }
   lines.push('', '## Book of Decisions');
   if (plan.decisions.length === 0) lines.push('', '(none)');
