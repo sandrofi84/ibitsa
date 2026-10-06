@@ -4,6 +4,7 @@ import type { CommandBar, CommandBarOptions } from './command-bar.types';
 import { createCommandInput } from './command-input';
 import { el } from './dom';
 import { ALL, heroHandle, parseMessage } from './mentions';
+import { slashMenu } from './slash-menu';
 
 /**
  * The command bar (spec §6.1, #81): one input along the bottom of the game, focused with / or ⌘K.
@@ -28,7 +29,7 @@ export function mountCommandBar({
     placeholder: 'Message the hero… (/ or ⌘K)',
     history,
     onHistoryChange,
-    menus: [atMenu({ client, recipients: true })],
+    menus: [atMenu({ client, recipients: true }), slashMenu({ client })],
     onSend: ({ text, priority }) => {
       const all = heroes();
       if (all.length === 0) {

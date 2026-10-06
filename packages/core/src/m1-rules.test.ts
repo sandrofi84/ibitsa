@@ -199,6 +199,24 @@ describe('always allow (#62)', () => {
   });
 });
 
+describe('runtime-only commands', () => {
+  it('leave core untouched: no effects, no cues, no state change', () => {
+    const h = quest();
+    h.drain();
+    const before = JSON.stringify(h.state);
+    for (const command of [
+      { type: 'requestActions' },
+      { type: 'requestJournal' },
+      { type: 'forgetProjectRule', rule: 'Bash(x)' },
+    ] as Command[]) {
+      h.command(command);
+    }
+    expect(h.effects).toEqual([]);
+    expect(h.cues).toEqual([]);
+    expect(JSON.stringify(h.state)).toBe(before);
+  });
+});
+
 describe('auto mode (#63)', () => {
   const ask = (h: Harness, boundary?: 'sandboxEscape' | 'outsideWorktree') =>
     h.agent({

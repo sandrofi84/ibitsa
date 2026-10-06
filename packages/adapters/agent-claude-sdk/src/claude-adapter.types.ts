@@ -20,6 +20,10 @@ export interface ClaudeAdapterOptions {
   loadSdk?: () => Promise<SdkModule>;
   /** `ibitsa.hero.settingSources`; defaults to `['project']` (spec §11.6). */
   settingSources?: () => SettingSource[];
+  /** Local plugin folders every session loads, e.g. Ibitsa's built-in actions (#84). */
+  pluginDirs?: () => string[];
+  /** The user's home, for personal skills; injectable for tests. */
+  home?: string;
   /** Injectable for tests; defaults to the real platform and a PATH lookup. */
   platform?: NodeJS.Platform;
   hasCommand?: (name: string) => boolean;

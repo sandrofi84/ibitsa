@@ -7,6 +7,7 @@ import { button, el } from './dom';
 import type { HeroPane } from './hero-pane.types';
 import { HERO_CLASSES, STATE_LABELS } from './heroes';
 import type { Host } from './host.types';
+import { slashMenu } from './slash-menu';
 import type { ViewState } from './view-state';
 
 const OPEN_KEY = 'heroPaneOpen';
@@ -70,7 +71,7 @@ export function mountHeroPane({
     history,
     onHistoryChange,
     // Files only: this box always speaks to its hero (#83).
-    menus: [atMenu({ client, recipients: false })],
+    menus: [atMenu({ client, recipients: false }), slashMenu({ client })],
     onSend: ({ text, priority }) => {
       if (heroId) client.send({ type: 'sendMessage', heroId, text, priority });
     },

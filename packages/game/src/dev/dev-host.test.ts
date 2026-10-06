@@ -98,4 +98,15 @@ describe('DevHost', () => {
       }),
     ]);
   });
+
+  it('answers the / menu with the built-ins (#84)', async () => {
+    const host = new DevHost(parseLog(m0Walk), {});
+    const messages = await collect(host);
+    host.send({ type: 'requestActions' });
+    await flush();
+    const actions = messages.find((m) => m.type === 'actions');
+    expect(actions?.type === 'actions' && actions.actions.map((a) => a.name)).toContain(
+      'ibitsa:test',
+    );
+  });
 });

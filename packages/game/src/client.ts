@@ -1,4 +1,5 @@
 import {
+  type ActionInfo,
   type Command,
   type CoreMessage,
   type Cue,
@@ -24,6 +25,12 @@ export class GameClient {
   journal: JournalEntry[] = [];
   journalStart = 0;
   private readonly journalListeners: (() => void)[] = [];
+  /** The `/` menu's actions for the hero's folder (#84), as the runtime last sent them. */
+  actions: ActionInfo[] = [];
+  private readonly actionListeners: ((actions: ActionInfo[]) => void)[] = [];
+  private actionsFor: string | null = null;
+  private actionsWaiting: Promise<ActionInfo[]> | null = null;
+  private actionResolvers: ((actions: ActionInfo[]) => void)[] = [];
 
   constructor(private readonly host: Host) {
     host.onMessage((m) => this.receive(m));
@@ -47,6 +54,29 @@ export class GameClient {
 
   onCue(listener: (c: Cue) => void): void {
     this.cueListeners.push(listener);
+  }
+
+  /** Asks the runtime for the `/` menu's actions; the answer, and any later change, arrive as `actions`. */
+  requestActions(): void {
+    this.host.send({ type: 'requestActions' });
+  }
+
+  /**
+   * The `/` menu's actions for the running quest: asked for once, then kept up to date by the runtime's
+   * pushes. A new quest (another worktree) asks again.
+   */
+  actionsReady(): Promise<ActionInfo[]> {
+    const campaign = this.snapshot?.campaign?.id ?? null;
+    if (this.actionsFor !== campaign || !this.actionsWaiting) {
+      this.actionsFor = campaign;
+      this.actionsWaiting = new Promise((resolve) => this.actionResolvers.push(resolve));
+      this.requestActions();
+    }
+    return this.actionsWaiting;
+  }
+
+  onActions(listener: (actions: ActionInfo[]) => void): void {
+    this.actionListeners.push(listener);
   }
 
   /** Called whenever the held journal lines change. */
@@ -103,6 +133,12 @@ export class GameClient {
         } else if (message.start + message.entries.length === this.journalStart) {
           this.setJournal({ entries: [...message.entries, ...this.journal], start: message.start });
         }
+        return;
+      case 'actions':
+        this.actions = message.actions;
+        this.actionsWaiting = Promise.resolve(message.actions);
+        for (const resolve of this.actionResolvers.splice(0)) resolve(message.actions);
+        for (const l of this.actionListeners) l(message.actions);
         return;
       case 'journalAppend':
         if (message.start === 0) {

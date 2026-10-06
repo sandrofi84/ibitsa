@@ -30,6 +30,7 @@ export function activate(context: vscode.ExtensionContext): IbitsaApi {
             claudeCodePath: () => config().get<string>('claudeCodePath'),
             settingSources: () =>
               config().get<('project' | 'user' | 'local')[]>('hero.settingSources') ?? ['project'],
+            pluginDirs: () => [vscode.Uri.joinPath(context.extensionUri, 'dist', 'plugin').fsPath],
           })
         : missingCredentialsAdapter,
       gameMaster: new GitGameMaster({

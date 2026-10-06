@@ -1,3 +1,4 @@
+import type { FolderWatcher } from './action-catalog.types';
 import type { AgentAdapter, Clock, GameMaster, UserSettings } from './ports.types';
 
 export interface RuntimeOptions {
@@ -11,6 +12,10 @@ export interface RuntimeOptions {
   newId?: () => string;
   /** Defaults to the real one; native Windows has no hero sandbox, which the game warns about (#63). */
   platform?: NodeJS.Platform;
+  /** The user's home, for personal skills in the `/` menu (#84); defaults to the real one. */
+  home?: string;
+  /** How skill folders are watched; injectable for tests. */
+  watchFolder?: FolderWatcher;
 }
 
 export interface Connection {

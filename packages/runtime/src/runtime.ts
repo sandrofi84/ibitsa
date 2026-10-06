@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { homedir } from 'node:os';
 import {
   type CoreInput,
   type CoreState,
@@ -11,6 +12,7 @@ import {
   view,
 } from '@ibitsa/core';
 import {
+  type ActionInfo,
   type CoreMessage,
   type Cue,
   PROTOCOL_VERSION,
@@ -18,6 +20,7 @@ import {
   type RepoView,
   type Snapshot,
 } from '@ibitsa/protocol';
+import { ActionCatalog, watchFolder } from './action-catalog';
 import type { AgentSession, FrontEnd } from './ports.types';
 import { ProjectRules } from './project-rules';
 import type { Connection, RuntimeOptions } from './runtime.types';
@@ -46,11 +49,24 @@ export class Runtime {
   private snapshotDirty = false;
   private readonly store: CampaignStore;
   private readonly projectRules: ProjectRules;
+  private readonly actions: ActionCatalog | null;
   private readonly newId: () => string;
 
   constructor(private readonly options: RuntimeOptions) {
     this.store = new CampaignStore(options.storageDir);
     this.projectRules = new ProjectRules(options.storageDir);
+    const list = options.adapter.listActions?.bind(options.adapter);
+    this.actions = list
+      ? new ActionCatalog({
+          list,
+          home: options.home ?? homedir(),
+          watch: options.watchFolder ?? watchFolder,
+          // A skill changed: every front end gets the fresh list for the hero's folder.
+          onChange: () => {
+            for (const frontEnd of this.frontEnds) this.postActions(frontEnd);
+          },
+        })
+      : null;
     this.newId = options.newId ?? randomUUID;
   }
 
@@ -91,6 +107,7 @@ export class Runtime {
     if (this.snapshotTimer !== null) this.options.clock.clearTimeout(this.snapshotTimer);
     for (const session of this.sessions.values()) session.close();
     this.sessions.clear();
+    this.actions?.dispose();
     this.frontEnds.clear();
   }
 
@@ -112,6 +129,10 @@ export class Runtime {
       frontEnd.post({ type: 'welcome', seq: ++this.seq, protocolVersion: PROTOCOL_VERSION });
       frontEnd.post({ type: 'snapshot', seq: ++this.seq, snapshot: this.snapshot() });
       this.rescanRepo();
+      return;
+    }
+    if (command.type === 'requestActions') {
+      this.postActions(frontEnd);
       return;
     }
     if (command.type === 'forgetProjectRule') {
@@ -404,6 +425,18 @@ export class Runtime {
       return;
     }
     void this.options.gameMaster.listFiles({ worktreePath: path }).then(post, () => post([]));
+  }
+
+  /** The `/` menu's actions for the hero's worktree; none without a quest or if listing fails (#84). */
+  private postActions(frontEnd: FrontEnd): void {
+    const cwd = this.state.islands.find((i) => i.worktreePath)?.worktreePath;
+    const send = (actions: ActionInfo[]) =>
+      frontEnd.post({ type: 'actions', seq: ++this.seq, actions });
+    if (!cwd || !this.actions || this.state.campaign?.status !== 'active') {
+      send([]);
+      return;
+    }
+    this.actions.list(cwd).then(send, () => send([]));
   }
 
   /** A session's allow rules: the quest's from core plus the project's kept here (#62). */

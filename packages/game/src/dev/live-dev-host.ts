@@ -19,6 +19,7 @@ import {
 } from '@ibitsa/protocol';
 import type { Host } from '../host.types';
 import { MemoryViewStorage } from '../view-state';
+import { DEV_ACTIONS } from './dev-actions';
 import { DEMO_FILES, FakeHostChannel } from './fake-host-channel';
 
 const STEP_MS = 120;
@@ -77,6 +78,10 @@ export class LiveDevHost implements Host {
     }
     if (command.type === 'requestFiles') {
       this.emit({ type: 'files', seq: ++this.seq, islandId: command.islandId, paths: DEMO_FILES });
+      return;
+    }
+    if (command.type === 'requestActions') {
+      this.emit({ type: 'actions', seq: ++this.seq, actions: DEV_ACTIONS });
       return;
     }
     if (command.type === 'requestJournal') {

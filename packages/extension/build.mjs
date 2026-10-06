@@ -31,3 +31,7 @@ await esbuild.build({
 });
 
 cpSync(gameDist, new URL('./dist/webview/', import.meta.url), { recursive: true });
+// Ibitsa's built-in actions (/test, /tidy, /explain), loaded by hero sessions as a local plugin (#84).
+cpSync(new URL('./plugin/', import.meta.url), new URL('./dist/plugin/', import.meta.url), {
+  recursive: true,
+});

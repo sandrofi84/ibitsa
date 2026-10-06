@@ -1,4 +1,4 @@
-import { appendFileSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { type GameMasterEvent, parseLog, SILENCE_MS, view } from '@ibitsa/core';
@@ -427,6 +427,81 @@ describe('M1 effects', () => {
         },
       }),
     );
+  });
+});
+
+describe('the / menu (#84)', () => {
+  const action = (name: string) => ({
+    name,
+    description: '',
+    argumentHint: '',
+    aliases: [],
+    source: 'project' as const,
+    target: 'any' as const,
+  });
+  const actionsOf = (received: CoreMessage[]) =>
+    received
+      .filter((m) => m.type === 'actions')
+      .map((m) => (m.type === 'actions' ? m.actions : []));
+
+  async function withActions(list: (cwd: string) => Promise<ReturnType<typeof action>[]>) {
+    const env = await arrived();
+    const adapter = Object.assign(env.adapter, {
+      listActions: ({ cwd }: { cwd: string }) => list(cwd),
+    });
+    const fire: (() => void)[] = [];
+    // A home with a .claude folder, so there's something to watch whatever machine runs this (CI has none).
+    const home = mkdtempSync(join(tmpdir(), 'ibitsa-home-'));
+    dirs.push(home);
+    mkdirSync(join(home, '.claude'));
+    const runtime = new Runtime({
+      storageDir: env.storageDir,
+      adapter,
+      gameMaster: env.gameMaster,
+      clock: env.clock,
+      home,
+      watchFolder: ({ onChange }) => {
+        fire.push(onChange);
+        return { close: () => {} };
+      },
+    });
+    env.runtime.dispose();
+    runtime.start();
+    const received: CoreMessage[] = [];
+    const connection = runtime.connect({ post: (m) => received.push(m) });
+    return { connection, received, fire };
+  }
+
+  it('lists none without a quest', () => {
+    const env = setup();
+    env.connection.receive({ type: 'requestActions' });
+    expect(actionsOf(env.received)).toEqual([[]]);
+  });
+
+  it("lists the hero's worktree once, and sends a fresh list when a skill changes", async () => {
+    let calls = 0;
+    const cwds: string[] = [];
+    const { connection, received, fire } = await withActions(async (cwd) => {
+      cwds.push(cwd);
+      return [action(`v${++calls}`)];
+    });
+    connection.receive({ type: 'requestActions' });
+    connection.receive({ type: 'requestActions' });
+    await flush();
+    expect(actionsOf(received)).toEqual([[action('v1')], [action('v1')]]);
+    expect(cwds).toEqual(['/wt/ibitsa/fix-the-login-redirect']);
+    for (const f of fire) f();
+    await flush();
+    expect(actionsOf(received).at(-1)).toEqual([action('v2')]);
+  });
+
+  it('lists none when listing fails', async () => {
+    const { connection, received } = await withActions(async () => {
+      throw new Error('no CLI');
+    });
+    connection.receive({ type: 'requestActions' });
+    await flush();
+    expect(actionsOf(received)).toEqual([[]]);
   });
 });
 

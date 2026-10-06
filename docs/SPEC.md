@@ -290,7 +290,8 @@ On the map, councillors walk out of the council hut to the task point, show a ma
   - The first `@` target is the recipient; later `@` mentions are file references.
   - **As built (#83):** a hero's handle is its name in lower case with dashes (`@ranger-ilse`); M2 offers the hero and `@all` (the council arrives with M3, parties with M4). The recipient mention is taken out of the message; file mentions stay as written (`@src/app.ts`), so the hero reads the path. Without a recipient the message goes to the only hero. The hero pane's box offers files only. Files come from `git ls-files --cached --others --exclude-standard` in the worktree (at most 20 000), through the runtime-only `requestFiles` command answered by a `files` message; the game caches each list for 30 s. Ranking: name starts with the query, then name contains it, then path contains it, then the query's letters in order (fewer gaps first); shorter paths win ties.
   - **Menus:** a token starting with a trigger (`@`, `/`) at the start of the input or after whitespace opens a combobox listbox of suggestions, grouped under headings. ↑/↓ move, Enter or Tab chooses, a click chooses, Esc closes the menu before clearing the input.
-- **`/` autocomplete:** actions valid for the chosen target, with description, argument hint, and source tag (built-in / user / project). Also lists the user's existing Claude Code commands/skills where valid.
+- **`/` autocomplete** (#84): for a message's first word (after the recipient, if named), the actions Claude Code itself would run in the hero's folder: the SDK's `supportedCommands()` from a short session that sends no message, without Claude Code's own commands, grouped by source (Ibitsa, Project, Personal, Plugins). Only actions for heroes or anyone show until the council exists (M3). The runtime caches the list per worktree and pushes a fresh one when a `.claude` folder (the project's or the user's) changes. Choosing inserts the short name (`/test`); the message is sent as `/name args`, which the SDK runs as the skill (checked live).
+- **Ibitsa's built-in actions** ship as a local plugin in the extension (`dist/plugin`, passed to every session): `/test [filter]`, `/tidy`, `/explain [focus]`, all `disable-model-invocation: true`, `ibitsa-target: hero`. They appear as `ibitsa:test` with the alias `test`.
 - **Preview:** the expanded prompt is shown before sending and can be edited for that one message.
 - Messages to a working party are delivered as **queued** by default (after the current step); a "now" option interrupts the current step.
 - Note: VS Code chat participants are declared statically, so per-party `@names` are not possible in VS Code's chat view. A single `@ibitsa` chat participant is an optional later integration. **[OPEN]**
@@ -315,7 +316,7 @@ Request review from: $ARGUMENTS
 - Scope chosen at creation: personal (`~/.claude/skills/`) or project (`.claude/skills/`).
 - Game-only metadata (e.g. `target: party | council | any`) lives in frontmatter if Claude Code tolerates extra fields, otherwise in a sidecar `actions.json` keyed by skill name. **[OPEN]** verify.
 - Name collisions with existing skills are detected and the user chooses rename/overwrite.
-- Verify the SDK delivers `/name args` prompts to custom skills/commands. **[OPEN]** verify.
+- The SDK delivers `/name args` prompts to custom skills (checked live, #84).
 
 ### 6.3 Controls (not prompts)
 Shown in the same hover menu, visually distinct:
@@ -787,7 +788,7 @@ Settled in [#11](https://github.com/sandrofi84/ibitsa/issues/11).
 4. ~~Game engine: Phaser vs PixiJS.~~ Settled: Phaser 4 (§9.1).
 5. Councillor skill location so they don't clutter the normal `/` menu.
 6. ~~Whether Claude Code tolerates extra frontmatter fields (for action `target`), else sidecar.~~ Settled in M2 planning: a skill with an extra flat field loads and is listed by `supportedCommands()`; Ibitsa uses `ibitsa-target` and reads it from the file.
-7. Confirm SDK invocation of custom skills via `/name` prompts.
+7. ~~Confirm SDK invocation of custom skills via `/name` prompts.~~ Settled (#84): a real session sent `/greet Wren` ran the project skill with its argument (opt-in smoke test).
 8. ACP capability coverage per agent.
 9. Subscription (claude.ai) sign-in for the published extension: possible only with Anthropic's approval; not requested yet (§11.6).
 10. Default max parallel parties.
