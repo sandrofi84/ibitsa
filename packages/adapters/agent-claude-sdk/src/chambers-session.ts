@@ -61,10 +61,12 @@ export class ChambersSession extends RoundTableSession {
     return [...ids].flatMap((councillorId) => {
       const entry = seated.get(councillorId);
       const effort = entry?.effort ?? 'standard';
+      const guidance = this.guidance(councillorId);
       const prompt = chamberPrompt({
         councillorId,
-        guidance: this.guidance(councillorId),
+        guidance,
         brief: start.brief,
+        steps: CHAMBER_TURNS[effort],
       });
       const chamber: Chamber = {
         name: councillorId,
@@ -79,7 +81,7 @@ export class ChambersSession extends RoundTableSession {
         ...chamber,
         name: `${councillorId}${SUFFIX}`,
         ...DEEP_PASS,
-        prompt: `${prompt}\n\nYou are ${councillorId}'s deeper pass: the elder names one serious concern in its request. Look into that concern only, thoroughly, and file a report for ${councillorId}.`,
+        prompt: `${chamberPrompt({ councillorId, guidance, brief: start.brief, steps: DEEP_PASS.maxTurns })}\n\nYou are ${councillorId}'s deeper pass: the elder names one serious concern in its request. Look into that concern only, thoroughly, and file a report for ${councillorId}.`,
       };
       return [chamber, deep];
     });
@@ -197,10 +199,13 @@ export function chamberPrompt({
   councillorId,
   guidance,
   brief,
+  steps,
 }: {
   councillorId: string;
   guidance: string;
   brief: ResearchBrief | null;
+  /** The chamber's turn limit (`maxTurns`): it is told, so it reports before running out. */
+  steps: number;
 }): string {
   const slice = brief?.slices.find((s) => s.councillorId === councillorId);
   const pointer = (p: CodePointer) => `- ${p.path}${p.lines ? `:${p.lines}` : ''}: ${p.note}`;
@@ -217,7 +222,8 @@ export function chamberPrompt({
     ...(brief && brief.files.length > 0
       ? [`The file map:\n${brief.files.map(pointer).join('\n')}`]
       : []),
-    `When you're done, call the report tool once with councillorId "${councillorId}": your concerns (severity and reason), the questions you want put to the user, your recommendations, and what you didn't check. If nothing in this task touches your field, file a bow-out saying why in one line. Read beyond your slice only when you must: your steps are few.`,
+    `When you're done, call the report tool once with councillorId "${councillorId}": your concerns (severity and reason), the questions you want put to the user, your recommendations, and what you didn't check. If nothing in this task touches your field, file a bow-out saying why in one line.`,
+    `You have at most ${steps} steps (each tool call is one), and nothing you find counts until you report it. Read what your slice points to first and beyond it only when you must. Call the report tool by step ${Math.max(1, steps - 2)} at the latest: if you run short, report what you have and list the rest under what you didn't check. Read opens files only; to see what's in a folder, use Glob.`,
   ];
   return parts.join('\n\n');
 }
