@@ -218,9 +218,10 @@ test('speech bubbles: a message excerpt that fades, then "Ready for review!" unt
   await pane.getByRole('button', { name: /hero pane/ }).click();
   await expect(pane.getByLabel('Message to the hero')).toBeHidden();
   const hero = await probe(page, (p) => p.hero.onPage());
-  // The bubble sits 22 map pixels above the sprite's middle: scaled by the panel and the camera.
-  const zoom = await probe(page, (p) => p.zoom() * (p.camera()?.zoom ?? 1));
-  await page.mouse.click(hero?.x ?? 0, (hero?.y ?? 0) - 22 * zoom);
+  // The bubble's bottom sits 14 map pixels above the sprite's middle and keeps its size (#75): its
+  // text's middle is 8 canvas pixels higher whatever the camera zoom.
+  const { base, cam } = await probe(page, (p) => ({ base: p.zoom(), cam: p.camera()?.zoom ?? 1 }));
+  await page.mouse.click(hero?.x ?? 0, (hero?.y ?? 0) - (14 * cam + 8) * base);
   await expect(pane.getByText('Ready for review.')).toBeVisible();
 
   await pane.getByRole('button', { name: 'Finish quest' }).click();

@@ -210,6 +210,8 @@ export class WorldScene extends Phaser.Scene {
     const inset = ((this.registry.get(RIGHT_INSET) as number | undefined) ?? 0) / this.scale.zoom;
     // Phaser centres on target − offset: a negative x puts the hero left of the middle.
     cam.setFollowOffset(-inset / 2 / cam.zoom, 0);
+    // Bubbles and icons keep their whole-map size while the map zooms (#75).
+    for (const token of this.heroes.values()) token.keepSize(cam.zoom);
   }
 
   /** Moves the main camera to the director's aim: zoom, follow the hero, or ease back to the map. */
@@ -374,6 +376,8 @@ export class HeroToken {
   private readonly icon: Phaser.GameObjects.Sprite;
   private readonly iconKinds: readonly string[];
   private iconLinger: Phaser.Time.TimerEvent | null = null;
+  /** The camera zoom the bubbles and icon are sized for. */
+  private zoom = 1;
   private speechFade: Phaser.Tweens.Tween | null = null;
   private travel: Phaser.Tweens.Tween | null = null;
   private traveled = false;
@@ -457,6 +461,24 @@ export class HeroToken {
       duration: 500,
       onComplete: () => this.hideSpeech(),
     });
+  }
+
+  /**
+   * Keeps the speech bubble, status bubble and activity icon at their whole-map size whatever the camera
+   * zoom (#75). They stay anchored to the hero in map coordinates; only their size counters the zoom.
+   */
+  keepSize(zoom: number): void {
+    if (zoom === this.zoom) return;
+    this.zoom = zoom;
+    const size = 1 / zoom;
+    this.speech.setScale(size);
+    this.bubble.setScale(size);
+    this.icon.setScale(size);
+  }
+
+  /** The speech bubble's width on the canvas while it shows, given the camera's real zoom (tests). */
+  speechWidth(cameraZoom: number): number | null {
+    return this.speech.visible ? this.speechText.width * this.speech.scaleX * cameraZoom : null;
   }
 
   /** The activity icon showing, else null. */
@@ -556,7 +578,12 @@ export class HeroToken {
     if (bubble) {
       this.bubble.setText(` ${bubble[0]} `).setBackgroundColor(bubble[1]);
       if (previous !== s.kind) {
-        this.scene.tweens.add({ targets: this.bubble, scale: { from: 1.6, to: 1 }, duration: 200 });
+        const size = 1 / this.zoom;
+        this.scene.tweens.add({
+          targets: this.bubble,
+          scale: { from: 1.6 * size, to: size },
+          duration: 200,
+        });
       }
     }
 

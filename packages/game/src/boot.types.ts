@@ -12,6 +12,8 @@ export interface Started {
     onPage(): { x: number; y: number } | null;
     /** What its speech bubble says while it shows. */
     speech(): string | null;
+    /** How wide its speech bubble's text is on the canvas, in game pixels. */
+    speechWidth(): number | null;
     /** The activity icon showing beside it. */
     icon(): string | null;
   };
