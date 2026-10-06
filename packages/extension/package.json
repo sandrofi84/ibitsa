@@ -26,6 +26,21 @@
         "category": "Ibitsa"
       },
       {
+        "command": "ibitsa.messageHero",
+        "title": "Message Hero\u2026",
+        "category": "Ibitsa"
+      },
+      {
+        "command": "ibitsa.runAction",
+        "title": "Run Action\u2026",
+        "category": "Ibitsa"
+      },
+      {
+        "command": "ibitsa.stopHero",
+        "title": "Stop Hero",
+        "category": "Ibitsa"
+      },
+      {
         "command": "ibitsa.setApiKey",
         "title": "Set API Key",
         "category": "Ibitsa"

@@ -12,6 +12,7 @@ import { anthropicKeyValidator } from './key-validator';
 import type { KeyValidator } from './key-validator.types';
 import { loginShellEnv } from './login-shell-env';
 import { missingCredentialsAdapter } from './placeholders';
+import { runAction } from './run-action';
 import { RuntimeHost } from './runtime-host';
 import type { DependencyFactory, Notifier } from './runtime-host.types';
 import { readUserSettings } from './settings';
@@ -82,6 +83,22 @@ export function activate(context: vscode.ExtensionContext): IbitsaApi {
   context.subscriptions.push(
     { dispose: () => host?.dispose() },
     vscode.commands.registerCommand('ibitsa.openGame', openGame),
+    vscode.commands.registerCommand('ibitsa.messageHero', () => {
+      openGame();
+      GamePanel.postHost({ channel: 'host', type: 'focusCommandBar' });
+    }),
+    vscode.commands.registerCommand('ibitsa.runAction', (picked?: { name: string; args: string }) =>
+      runAction({ host, picked, open: openGame }),
+    ),
+    vscode.commands.registerCommand('ibitsa.stopHero', async () => {
+      const state = host && (await host.state());
+      const hero = state?.campaign?.status === 'active' ? state.heroes[0] : undefined;
+      if (!host || !hero) {
+        void vscode.window.showInformationMessage('No hero is on a quest.');
+        return;
+      }
+      await host.command({ type: 'stopHero', heroId: hero.id });
+    }),
     vscode.commands.registerCommand('ibitsa.newQuest', () => {
       openGame();
       GamePanel.postHost({ channel: 'host', type: 'openNewQuest' });

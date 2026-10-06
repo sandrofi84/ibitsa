@@ -51,6 +51,11 @@ export class FakeHostChannel {
     }
   }
 
+  /** Plays an event the extension would send, e.g. from the Command Palette (tests, #87). */
+  send(event: HostEvent): void {
+    this.emit(event);
+  }
+
   private emit(event: HostEvent): void {
     queueMicrotask(() => {
       for (const l of this.listeners) l(event);

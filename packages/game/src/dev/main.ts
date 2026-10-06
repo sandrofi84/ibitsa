@@ -47,6 +47,7 @@ if (name === 'live') {
   w.__ibitsa = {
     snapshot: () => client.snapshot,
     hostRequests: () => host.channel.requests,
+    hostEvent: (event: Parameters<typeof host.channel.send>[0]) => host.channel.send(event),
     zoom,
     hero,
     camera,

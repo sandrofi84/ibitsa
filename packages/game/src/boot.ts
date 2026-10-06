@@ -83,12 +83,17 @@ export function startGame(root: HTMLElement, host: Host): Started {
     onHistoryChange: saveHistory,
     newAction,
   });
-  mountCommandBar({
+  const commandBar = mountCommandBar({
     client,
     history,
     onHistoryChange: saveHistory,
     startQuest: (description) => newQuest.open({ description }),
     newAction,
+  });
+  // The Command Palette's Message Hero… and Run Action… (#87).
+  host.onHostEvent((event) => {
+    if (event.type === 'focusCommandBar') commandBar.focus();
+    if (event.type === 'fillCommandBar') commandBar.fill(event.text);
   });
   const panel = () => ({ width: root.clientWidth || WIDTH, height: root.clientHeight || HEIGHT });
   const initial = fitViewport({ panel: panel(), world: { width: WIDTH, height: HEIGHT } });

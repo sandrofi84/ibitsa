@@ -235,6 +235,26 @@ suite('extension wiring (#36)', () => {
     assert.equal(start.command.description, 'Fix the login redirect');
   });
 
+  test('the Command Palette: Message Hero…, Run Action… and Stop Hero (#87)', async () => {
+    await vscode.commands.executeCommand('ibitsa.messageHero');
+    await until(
+      () => api.hostEvents().some((e) => e.type === 'focusCommandBar'),
+      'focusCommandBar',
+    );
+    await vscode.commands.executeCommand('ibitsa.runAction', { name: 'pr', args: 'alice' });
+    await until(
+      () => api.hostEvents().some((e) => e.type === 'fillCommandBar' && e.text === '/pr alice'),
+      'fillCommandBar',
+    );
+    const session = sessions[0] as FakeSession;
+    const before = session.calls.filter((c) => c[0] === 'interrupt').length;
+    await vscode.commands.executeCommand('ibitsa.stopHero');
+    await until(
+      () => session.calls.filter((c) => c[0] === 'interrupt').length > before,
+      'the hero to be stopped',
+    );
+  });
+
   test('a reload rebuilds the quest from the log and offers to resume', async () => {
     await api.restartRuntime();
     api.receive({ type: 'hello', protocolVersion: 1 });

@@ -1,6 +1,7 @@
 import type { HeroRecord } from '@ibitsa/core';
+import type { ActionInfo } from '@ibitsa/protocol';
 import { type Connection, type FrontEnd, Runtime, systemClock } from '@ibitsa/runtime';
-import type { RuntimeHostOptions } from './runtime-host.types';
+import type { CommandIntent, RuntimeHostOptions } from './runtime-host.types';
 
 /**
  * Hosts the runtime inside the extension (spec §11.2) and watches it for things the user must see
@@ -8,6 +9,9 @@ import type { RuntimeHostOptions } from './runtime-host.types';
  */
 export class RuntimeHost {
   private runtime: Runtime | null = null;
+  /** The host's own connection, for commands from the Command Palette (#87). */
+  private connection: Connection | null = null;
+  private commands = 0;
   private starting: Promise<Runtime> | null = null;
   private readonly options: RuntimeHostOptions;
 
@@ -23,6 +27,17 @@ export class RuntimeHost {
   /** Read-only access for commands (e.g. the worktree to open). */
   async state() {
     return (await this.ensure()).snapshotState;
+  }
+
+  /** The `/` menu's actions for the running quest (#87). */
+  async actions(): Promise<ActionInfo[]> {
+    return (await this.ensure()).currentActions();
+  }
+
+  /** Sends a command as if from a front end, e.g. Stop Hero from the Command Palette (#87). */
+  async command(intent: CommandIntent): Promise<void> {
+    await this.ensure();
+    this.connection?.receive({ ...intent, commandId: `palette-${++this.commands}` });
   }
 
   dispose(): void {
@@ -53,7 +68,7 @@ export class RuntimeHost {
       settings: o.settings,
       repoDir: o.workspaceDir,
     });
-    runtime.connect(this.watcher(runtime));
+    this.connection = runtime.connect(this.watcher(runtime));
     runtime.start();
     this.runtime = runtime;
     return runtime;

@@ -281,7 +281,8 @@ On the map, councillors walk out of the council hut to the task point, show a ma
 ## 6. Interaction
 
 ### 6.1 Command bar
-- A text input along the bottom of the game panel, focused with `/` or ⌘K (#81); Needs you stacks above it. The hero pane's message box is the same input, aimed at that hero, and they share one ↑/↓ history (view state). Later the same input serves party and council dialogue boxes. Actions are also Command Palette commands.
+- A text input along the bottom of the game panel, focused with `/` or ⌘K (#81); Needs you stacks above it. The hero pane's message box is the same input, aimed at that hero, and they share one ↑/↓ history (view state). Later the same input serves party and council dialogue boxes.
+- **Command Palette** (#87): **Ibitsa: Message Hero…** opens the game with the bar focused; **Ibitsa: Run Action…** offers a quick pick of the `/` actions, asks for their arguments, then puts `/action args` in the bar with its preview; **Ibitsa: Stop Hero** stops the hero. Not one command per action: VS Code needs every Palette command declared in `package.json`.
 - **Keys:** Enter sends after the current step (queued), ⌥Enter sends now, ⇧Enter adds a line, ↑/↓ recall earlier messages, Esc clears and then leaves the input.
 - **No quest running:** Enter offers "Start a quest" with the text as its task, opening the New Quest form filled in.
 - **`@` autocomplete**, two groups:

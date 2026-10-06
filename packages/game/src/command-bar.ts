@@ -88,5 +88,12 @@ export function mountCommandBar({
     input.input.focus();
   });
 
-  return { focus: () => input.input.focus() };
+  return {
+    focus: () => input.input.focus(),
+    fill: (text) => {
+      input.input.value = text;
+      input.input.dispatchEvent(new Event('input'));
+      input.input.focus();
+    },
+  };
 }
