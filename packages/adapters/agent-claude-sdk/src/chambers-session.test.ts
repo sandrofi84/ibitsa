@@ -383,9 +383,20 @@ describe('separate chambers (#105)', () => {
   });
 
   it('briefs a chamber without a brief to read what its field needs', () => {
-    expect(chamberPrompt({ councillorId: 'tester', guidance: 'G', brief: null })).toContain(
-      'There is no research brief: read what your field needs, briefly.',
-    );
+    expect(
+      chamberPrompt({ councillorId: 'tester', guidance: 'G', brief: null, steps: 8 }),
+    ).toContain('There is no research brief: read what your field needs, briefly.');
+  });
+
+  it('tells a chamber its steps, to report before running out, and to list folders with Glob', () => {
+    // Seen live: a Tester chamber spent its steps reading (and tried to Read a folder) without reporting.
+    const prompt = chamberPrompt({ councillorId: 'tester', guidance: 'G', brief: null, steps: 8 });
+    expect(prompt).toContain('You have at most 8 steps (each tool call is one)');
+    expect(prompt).toContain('Call the report tool by step 6 at the latest');
+    expect(prompt).toContain("Read opens files only; to see what's in a folder, use Glob.");
+    expect(
+      chamberPrompt({ councillorId: 'tester', guidance: 'G', brief: null, steps: 1 }),
+    ).toContain('by step 1');
   });
 
   it('opens without a brief and words a plain "Why?"', async () => {
