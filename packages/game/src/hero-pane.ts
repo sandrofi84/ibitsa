@@ -69,10 +69,13 @@ export function mountHeroPane({
   message.rows = 3;
   message.placeholder = 'Message the hero…';
   message.setAttribute('aria-label', 'Message to the hero');
+  // The hero's own summary once it submits: what the "Ready for review!" bubble leads to (#57).
+  const summary = el('p', { className: 'summary' });
+  summary.hidden = true;
   const controls = el('div', { className: 'controls' });
   const status = el('p', { className: 'note' });
   status.setAttribute('role', 'status');
-  body.append(title, facts, message, controls, status);
+  body.append(title, facts, summary, message, controls, status);
 
   let confirmAbandon = false;
   client.onSnapshot((snapshot) => render(snapshot));
@@ -117,6 +120,9 @@ export function mountHeroPane({
         return [el('dt', { text: k }), value];
       }),
     );
+
+    summary.hidden = hero.state.kind !== 'submitted';
+    summary.textContent = hero.state.kind === 'submitted' ? hero.state.summary : '';
 
     const active = campaign.status === 'active';
     const island = snapshot.islands[0];

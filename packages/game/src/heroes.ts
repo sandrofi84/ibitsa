@@ -24,3 +24,22 @@ export function defaultHeroName(classId: string): string {
   const heroClass = HERO_CLASSES.find((c) => c.id === classId);
   return heroClass ? `${heroClass.label} ${heroClass.names[0]}` : 'Hero';
 }
+
+/** The longest speech bubble excerpt, in characters: it has to fit above a 16 px hero. */
+export const SPEECH_MAX = 34;
+
+/**
+ * What a speech bubble shows of a hero's message (#57): its first sentence, without Markdown marks or
+ * line breaks, cut to `SPEECH_MAX` with an ellipsis. The full text goes to the journal.
+ */
+export function speechExcerpt(text: string): string {
+  const plain = text
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/[`*_#>]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const sentence = plain.match(/^.*?[.!?](?=\s|$)/)?.[0] ?? plain;
+  return sentence.length <= SPEECH_MAX
+    ? sentence
+    : `${sentence.slice(0, SPEECH_MAX - 1).trimEnd()}…`;
+}
