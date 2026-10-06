@@ -261,3 +261,150 @@ describe('ReplayExport', () => {
     });
   });
 });
+
+describe('blanking the elder and the council (#103)', () => {
+  const brief = {
+    task: 'Add sign-in for the Contoso portal',
+    files: [{ path: 'src/auth.ts', note: 'sessions' }],
+    findings: ['Contoso wants SSO later'],
+    slices: [{ councillorId: 'security', summary: 'Contoso secrets', pointers: [] }],
+    councillors: [{ councillorId: 'security', reason: 'Sessions' }],
+    effort: { level: 'standard' as const, reason: 'Decisions' },
+    councillorEfforts: [],
+    quickQuest: { recommended: false, reason: 'Needs decisions' },
+  };
+  const question = {
+    councillorId: 'security',
+    question: 'Contoso session length?',
+    options: [{ id: 'day', label: 'A day', tradeoff: 'Safer' }],
+    recommendation: { optionId: 'day', reason: 'Contoso policy' },
+    allowFreeText: true,
+  };
+  const records: LogRecord[] = [
+    {
+      t: 0,
+      kind: 'command',
+      command: { type: 'consultElder', commandId: 'e1', task: 'Add sign-in\nfor Contoso' },
+    },
+    { t: 1, kind: 'elder', elderId: 'e2', event: { type: 'briefSubmitted', brief } },
+    {
+      t: 2,
+      kind: 'command',
+      command: {
+        type: 'conveneCouncil',
+        commandId: 'k1',
+        task: 'Add sign-in\nfor Contoso',
+        mode: 'roundTable',
+        roster: ['security'],
+        effort: 'standard',
+      },
+    },
+    {
+      t: 3,
+      kind: 'council',
+      sittingId: 's3',
+      event: {
+        type: 'reportFiled',
+        toolUseId: 'u1',
+        councillorId: 'security',
+        report: {
+          concerns: [{ summary: 'Contoso tokens', severity: 'high', reason: 'Leaks' }],
+          questions: ['Contoso?'],
+          recommendations: ['Rotate'],
+          notChecked: ['SSO'],
+          bowOut: 'n/a',
+        },
+      },
+    },
+    {
+      t: 4,
+      kind: 'council',
+      sittingId: 's3',
+      event: { type: 'questionsAsked', toolUseId: 'u2', questions: [question] },
+    },
+    {
+      t: 5,
+      kind: 'council',
+      sittingId: 's3',
+      event: { type: 'said', councillorId: 'security', text: 'Contoso said so' },
+    },
+    {
+      t: 6,
+      kind: 'command',
+      command: {
+        type: 'askCouncilWhy',
+        commandId: 'w1',
+        batchId: 'b5',
+        questionId: 'q6',
+        text: 'Contoso?',
+      },
+    },
+    {
+      t: 7,
+      kind: 'command',
+      command: {
+        type: 'answerCouncil',
+        commandId: 'a1',
+        batchId: 'b5',
+        answers: { q6: { text: 'Contoso: a week' } },
+      },
+    },
+    {
+      t: 8,
+      kind: 'council',
+      sittingId: 's3',
+      event: {
+        type: 'planProposed',
+        toolUseId: 'u3',
+        plan: { summary: 'Contoso plan', detail: 'x' },
+      },
+    },
+    {
+      t: 9,
+      kind: 'command',
+      command: {
+        type: 'requestPlanChange',
+        commandId: 'c1',
+        version: 1,
+        text: 'Contoso wants more',
+      },
+    },
+    { t: 10, kind: 'council', sittingId: 's3', event: { type: 'usage', totalCost: 5 } },
+  ];
+  const log: EventLog = {
+    header: {
+      kind: 'header',
+      logVersion: 1,
+      protocolVersion: 1,
+      campaignId: 'c',
+      startedAt: '2026-10-06T00:00:00.000Z',
+    },
+    records,
+    tornTail: false,
+  };
+
+  it('keeps no user or model words, only titles, ids and paths', () => {
+    const out = exportOf(log, true);
+    expect(out).not.toContain('Contoso');
+    expect(out).toContain('Add sign-in');
+    expect(out).toContain('src/auth.ts');
+    expect(out).toContain('"optionId":"day"');
+  });
+
+  it('replays to the same sitting, apart from the words', () => {
+    const replay = (l: EventLog) => {
+      let state = initialState();
+      for (const r of l.records) state = step(state, r).state;
+      return view(state);
+    };
+    const original = replay(log);
+    expect(original.sitting?.reports).toHaveLength(1);
+    const blanked = replay(parseLog(exportOf(log, true)));
+    expect(blanked.sitting?.status).toBe(original.sitting?.status);
+    expect(blanked.sitting?.reports.map((r) => r.councillorId)).toEqual(['security']);
+    expect(blanked.sitting?.plans.map((p) => p.outcome.kind)).toEqual(
+      original.sitting?.plans.map((p) => p.outcome.kind),
+    );
+    expect(blanked.elder?.status).toBe('briefed');
+  });
+});

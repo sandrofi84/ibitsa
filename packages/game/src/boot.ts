@@ -6,8 +6,8 @@ import { mountCameraControls } from './camera-controls';
 import { GameClient } from './client';
 import { mountCommandBar } from './command-bar';
 import { CommandHistory } from './command-history';
+import { mountConveneForm } from './convene-form';
 import { mountCouncilDialogue } from './council-dialogue-box';
-
 import { mountElderPanel } from './elder-panel';
 import { mountHeroPane } from './hero-pane';
 import { reportDiagnostics } from './host';
@@ -19,7 +19,8 @@ import { mountNeedsYouPanel } from './needs-you-panel';
 import { mountNewActionForm } from './new-action-form';
 import { mountNewQuestForm } from './new-quest-form';
 import { PACK_KEY, PackScene } from './pack-scene';
-import { isSitting, SittingFeed } from './sitting-hut';
+import { mountPlanBox } from './plan-box';
+import { isSitting, rememberCouncillors, SittingFeed } from './sitting-hut';
 import { ViewState } from './view-state';
 import { fitViewport } from './viewport';
 import { HEIGHT, HERO_SELECTED, RIGHT_INSET, WIDTH, WorldScene } from './world-scene';
@@ -68,6 +69,8 @@ export function startGame(root: HTMLElement, host: Host): Started {
   });
 
   const client = new GameClient(host);
+  // First, so every panel's titles and portraits follow this snapshot's councillors (#103).
+  client.onSnapshot((snapshot) => rememberCouncillors(snapshot.councillors));
   if (!hasWebGL(root)) {
     root.innerHTML =
       '<p class="notice">Ibitsa needs WebGL, and it isn’t available here, so the game can’t start. ' +
@@ -103,10 +106,15 @@ export function startGame(root: HTMLElement, host: Host): Started {
   });
   mountNeedsYouPanel({ client, openCouncil: () => councilDialogue.focus() });
   const newQuest = mountNewQuestForm({ client, host });
-  mountElderPanel({ client, options: { quickQuest: (task) => newQuest.quickQuest(task) } });
   const newActionForm = mountNewActionForm({ client });
   const newAction = () => newActionForm.open();
   const view = new ViewState(host.viewStorage);
+  const conveneForm = mountConveneForm({ client, view });
+  mountPlanBox({ client });
+  mountElderPanel({
+    client,
+    options: { quickQuest: (task) => newQuest.quickQuest(task), convene: () => conveneForm.open() },
+  });
   // One ↑/↓ history for the bar and the pane's box, kept in view state (#81).
   const history = new CommandHistory({ entries: savedHistory(view) });
   const saveHistory = () => view.set(HISTORY_KEY, JSON.stringify(history.all));

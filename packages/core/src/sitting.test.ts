@@ -15,7 +15,11 @@ import { view } from './view';
 
 /** Feeds commands and council events in order, collecting cues and effects. */
 class Council {
-  state: CoreState = initialState();
+  /** Sittings belong to a planning campaign (the elder's); convening without one is tested on its own. */
+  state: CoreState = {
+    ...initialState(),
+    campaign: { id: 'c0', title: 'Add sign-in', status: 'planning', autoApprove: false },
+  };
   cues: Cue[] = [];
   effects: Effect[] = [];
   t = 0;
@@ -66,7 +70,7 @@ class Council {
       | Extract<Effect, { type: 'completeSittingTool' }>
       | undefined;
   }
-  private feed(input: Parameters<typeof step>[1]): this {
+  feed(input: Parameters<typeof step>[1]): this {
     const result = step(this.state, input);
     this.state = result.state;
     this.cues.push(...result.cues);
@@ -139,6 +143,7 @@ describe('convening', () => {
           { councillorId: 'architect', effort: 'light' },
           { councillorId: 'security', effort: 'deep' },
         ],
+        brief: null,
       },
     ]);
     c.event({ type: 'sessionStarted', sessionId: 's-1' });
@@ -592,5 +597,81 @@ describe('"Why?" (§4.4, #102)', () => {
       ['d3', 'architect', undefined],
       ['d4', 'elder', undefined],
     ]);
+  });
+});
+
+describe('the sitting and its campaign (#103)', () => {
+  it('starts a planning campaign when convened without one, titled by the task', () => {
+    const c = new Council();
+    c.state = initialState();
+    c.convene();
+    expect(view(c.state).campaign).toMatchObject({ title: 'Add sign-in', status: 'planning' });
+  });
+
+  it("starts from the elder's brief when there is one", () => {
+    const c = new Council();
+    const brief = {
+      task: 'Add sign-in',
+      files: [],
+      findings: [],
+      slices: [],
+      councillors: [],
+      effort: { level: 'light' as const, reason: 'Small' },
+      councillorEfforts: [],
+      quickQuest: { recommended: false, reason: 'Needs decisions' },
+    };
+    c.state.elder = {
+      id: 'e1',
+      task: 'Add sign-in',
+      status: 'briefed',
+      progress: null,
+      brief,
+      gold: { kind: 'exact', value: 1 },
+      error: null,
+      sessionId: null,
+      startedAt: 0,
+      endedAt: 1,
+    };
+    c.convene();
+    expect(c.effects.find((e) => e.type === 'startSitting')).toMatchObject({ brief });
+    const researching = new Council();
+    researching.state.elder = {
+      ...(c.state.elder as NonNullable<CoreState['elder']>),
+      status: 'researching',
+    };
+    researching.convene();
+    expect(researching.rejections()).toEqual(['The elder is still researching.']);
+  });
+
+  it('fails an active sitting on a reload or when its campaign is abandoned, keeping its reports', () => {
+    const reload = new Council().convene().report('architect');
+    reload.feed({ kind: 'gm', t: 0, event: { type: 'runtimeRestarted' } });
+    expect(reload.sitting()).toMatchObject({
+      status: 'failed',
+      error: 'The sitting stopped when VS Code reloaded.',
+    });
+    expect(reload.sitting().reports).toHaveLength(1);
+    const abandoned = new Council().convene();
+    abandoned.do({ type: 'abandonQuest' });
+    expect(abandoned.sitting()).toMatchObject({
+      status: 'failed',
+      error: 'The quest was abandoned.',
+    });
+    expect(abandoned.effects).toContainEqual({
+      type: 'closeSitting',
+      sittingId: abandoned.sitting().id,
+    });
+  });
+
+  it('refuses a quick quest while the council sits', () => {
+    const c = new Council().convene();
+    c.do({
+      type: 'startQuest',
+      description: 'x',
+      heroName: 'Ilse',
+      classId: 'ranger',
+      baseRef: 'main',
+    });
+    expect(c.rejections()).toEqual(['The council is sitting.']);
   });
 });

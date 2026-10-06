@@ -1,4 +1,4 @@
-import type { SittingStatus, SittingView } from '@ibitsa/protocol';
+import type { CouncillorInfo, SittingStatus, SittingView } from '@ibitsa/protocol';
 import { ELDER, emptyHut } from './hut-view';
 import type { HutCouncillor, HutFeed, HutStep, HutView } from './hut-view.types';
 import type { SittingFocus } from './sitting-hut.types';
@@ -10,16 +10,29 @@ export function isSitting(sitting: SittingView | null | undefined): sitting is S
   return sitting != null && SITTING.includes(sitting.status);
 }
 
-/** `security` → `Security`, `api-design` → `Api design`: the roster carries ids, not titles. */
+/** The workspace's councillors from the last snapshot (#103): their titles and portraits. */
+const known = new Map<string, CouncillorInfo>();
+
+/** Keeps the snapshot's councillor list, so titles and portraits follow the skill files. */
+export function rememberCouncillors(list: readonly CouncillorInfo[] | undefined): void {
+  if (!list) return;
+  known.clear();
+  for (const c of list) known.set(c.id, c);
+}
+
+/** A councillor's title from its skill, else from its id: `api-design` → `Api design`. */
 export function councillorTitle(id: string): string {
   if (id === ELDER) return 'Elder';
+  const title = known.get(id)?.title;
+  if (title) return title;
   const words = id.replaceAll('-', ' ');
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
-/** The pack character a councillor is drawn with. */
+/** The pack character a councillor is drawn with: its `ibitsa-portrait`, else the default. */
 export function councillorAppearance(id: string): string {
-  return id === ELDER ? 'councillor.elder' : 'councillor.default';
+  if (id === ELDER) return 'councillor.elder';
+  return known.get(id)?.portrait ?? 'councillor.default';
 }
 
 /**

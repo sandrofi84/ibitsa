@@ -18,6 +18,8 @@ export interface RuntimeOptions {
   repoDir?: string;
   /** The elder's model and cap (spec §4.1); Haiku and $0.25 by default. */
   elder?: () => { model: string; budgetMicroUsd: number };
+  /** `ibitsa.council.mode` (§4.2, #103); `ask` by default. */
+  councilMode?: () => 'ask' | 'roundTable' | 'chambers';
   /** Councillor ids the user turned off (§4.7, #98); read each time the roster is asked for. */
   disabledCouncillors?: () => string[];
   /** How skill folders are watched; injectable for tests. */

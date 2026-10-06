@@ -172,7 +172,10 @@ function gameMaster(ctx: StepContext, event: GameMasterEvent): void {
       ctx.outbox.reject(event.commandId, event.reason);
       return;
     case 'runtimeRestarted':
-      if (ctx.state.campaign?.status === 'planning') new Elder(ctx).restarted();
+      if (ctx.state.campaign?.status === 'planning') {
+        new Elder(ctx).restarted();
+        new Sitting(ctx).restarted();
+      }
       if (ctx.state.campaign?.status !== 'active') return;
       ctx.needsYou.dropRequests();
       for (const h of heroes(ctx)) h.restarted();

@@ -398,7 +398,7 @@ test('the elder researches first, then its brief starts a quick quest (#101)', a
   await expect(elder).toContainText('src/app.ts:1-40 where the change goes');
   await expect(elder).toContainText('tester The change needs a test.');
   await expect(elder).toContainText('Gold spent: $0.04');
-  await expect(elder.getByRole('button', { name: 'Convene council' })).toBeDisabled();
+  await expect(elder.getByRole('button', { name: 'Convene council' })).toBeEnabled();
   await page.screenshot({ path: 'test-results/elder-brief.png' });
 
   await elder.getByRole('button', { name: 'Quick quest' }).click();
@@ -428,4 +428,56 @@ test('a failed brief offers asking again, a quick quest anyway, or abandoning (#
   await elder.getByRole('button', { name: 'Abandon' }).click();
   await expect(elder).toBeHidden();
   await expect(page.getByRole('button', { name: 'New quest' })).toBeVisible();
+});
+
+test('the brief convenes a round table that asks, answers "Why?" and proposes a plan (#103)', async ({
+  page,
+}) => {
+  const errors = watchErrors(page);
+  await page.goto('/?fixture=live');
+  await page.getByRole('button', { name: 'New quest' }).click();
+  await page.getByLabel('Task').fill('Fix the login redirect');
+  await page.getByRole('button', { name: 'Ask the elder' }).click();
+  const elder = page.getByRole('region', { name: 'Elder' });
+  await elder.getByRole('button', { name: 'Convene council' }).click();
+
+  const convene = page.getByRole('dialog', { name: 'Convene the council' });
+  await expect(convene.getByRole('radio', { name: /Round table/ })).toBeChecked();
+  await expect(convene.getByRole('radio', { name: /Separate chambers/ })).toBeDisabled();
+  const tester = convene.getByRole('checkbox', { name: /Tester/ });
+  await expect(tester).toBeChecked();
+  await expect(convene).toContainText('The elder: The change needs a test.');
+  await expect(convene.getByRole('checkbox', { name: /Architect/ })).not.toBeChecked();
+  await expect(convene.getByLabel('Effort')).toHaveValue('light');
+  await page.screenshot({ path: 'test-results/convene.png' });
+  await tester.uncheck();
+  await expect(convene.getByRole('button', { name: 'Convene' })).toBeDisabled();
+  await tester.check();
+  await convene.getByRole('checkbox', { name: /Security/ }).check();
+  await convene.getByRole('button', { name: 'Convene' }).click();
+
+  // The hut takes over; the elder panel steps aside.
+  await expect(elder).toBeHidden();
+  const box = page.getByRole('dialog', { name: 'The council asks' });
+  await expect(box).toContainText('Tester asks');
+  await expect(box).toContainText('Should the change come with a test?');
+  await box.getByRole('button', { name: 'Why?' }).click();
+  await expect(box.getByRole('list', { name: 'Discussion' })).toContainText(
+    'Because nothing else checks this code.',
+  );
+  await box.getByRole('radio', { name: /Yes/ }).click();
+  await box.getByRole('button', { name: 'Send answers' }).click();
+
+  const plan = page.getByRole('region', { name: "The council's plan" });
+  await expect(plan).toContainText('One task: make the change, with a test.');
+  await page.screenshot({ path: 'test-results/round-table-plan.png' });
+  await plan.getByRole('button', { name: 'Ask for changes' }).click();
+  await plan.getByLabel('What should change?').fill('Two tasks');
+  await plan.getByRole('button', { name: 'Ask for changes' }).click();
+  await expect(plan).toContainText('Revised: Two tasks');
+  await plan.getByRole('button', { name: 'Approve' }).click();
+  await expect(plan).toBeHidden();
+  await expect(elder).toBeVisible();
+  expect(await probe(page, (p) => p.snapshot()?.campaign?.status)).toBe('planning');
+  expect(errors).toEqual([]);
 });

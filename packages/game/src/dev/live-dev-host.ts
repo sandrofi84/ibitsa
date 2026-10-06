@@ -12,6 +12,8 @@ import {
   type AgentEvent,
   type Command,
   type CoreMessage,
+  type CouncilEvent,
+  type CouncillorInfo,
   type ElderEvent,
   type HostEvent,
   type HostRequest,
@@ -127,6 +129,15 @@ export class LiveDevHost implements Host {
     for (const effect of result.effects) this.perform(effect);
   }
 
+  private council(sittingId: string, events: CouncilEvent[]): void {
+    events.forEach((event, i) => {
+      setTimeout(
+        () => this.input({ kind: 'council', t: this.t(), sittingId, event }),
+        STEP_MS * (i + 1),
+      );
+    });
+  }
+
   private elder(elderId: string, events: ElderEvent[]): void {
     events.forEach((event, i) => {
       setTimeout(
@@ -188,6 +199,73 @@ export class LiveDevHost implements Host {
             }),
           STEP_MS,
         );
+        return;
+      case 'startSitting': {
+        const [first] = effect.roster;
+        this.council(effect.sittingId, [
+          { type: 'sessionStarted', sessionId: 'live-sitting' },
+          ...effect.roster.map(
+            (c, i): CouncilEvent => ({
+              type: 'reportFiled',
+              toolUseId: `rep${i}`,
+              councillorId: c.councillorId,
+              report: {
+                concerns: [],
+                questions: [],
+                recommendations: ['Keep it small.'],
+                notChecked: [],
+              },
+            }),
+          ),
+          {
+            type: 'questionsAsked',
+            toolUseId: 'ask1',
+            questions: [
+              {
+                councillorId: first?.councillorId ?? 'tester',
+                question: 'Should the change come with a test?',
+                options: [
+                  { id: 'yes', label: 'Yes', tradeoff: 'A little slower; safer' },
+                  { id: 'no', label: 'No', tradeoff: 'Faster; nothing guards it' },
+                ],
+                recommendation: { optionId: 'yes', reason: 'It is cheap here.' },
+                allowFreeText: true,
+              },
+            ],
+          },
+          { type: 'usage', totalCost: 180_000 },
+        ]);
+        return;
+      }
+      case 'sittingMessage':
+        if (effect.message.kind === 'why') {
+          this.council(effect.sittingId, [
+            {
+              type: 'said',
+              councillorId: effect.message.councillorId,
+              text: 'Because nothing else checks this code.',
+              questionId: effect.message.questionId,
+            },
+          ]);
+        } else if (effect.message.kind === 'changeRequested') {
+          this.council(effect.sittingId, [
+            {
+              type: 'planProposed',
+              toolUseId: `plan${++this.diffs}`,
+              plan: { summary: `Revised: ${effect.message.text}` },
+            },
+          ]);
+        }
+        return;
+      case 'answerSittingQuestions':
+        this.council(effect.sittingId, [
+          {
+            type: 'planProposed',
+            toolUseId: 'plan0',
+            plan: { summary: 'One task: make the change, with a test.' },
+          },
+          { type: 'usage', totalCost: 260_000 },
+        ]);
         return;
       case 'startElder':
         this.elder(effect.elderId, elderScript(effect.task));
@@ -283,6 +361,8 @@ export class LiveDevHost implements Host {
         repo: this.repo,
         projectRules: this.projectRules,
         sandboxed: this.sandboxed,
+        councillors: LIVE_COUNCILLORS,
+        councilMode: 'ask',
       },
     });
   }
@@ -332,3 +412,21 @@ function elderScript(task: string): ElderEvent[] {
     { type: 'usage', totalCost: 42_000 },
   ];
 }
+
+/** The built-in roster, as the runtime would list it from Ibitsa's plugin (#98). */
+const LIVE_COUNCILLORS: CouncillorInfo[] = [
+  ['architect', 'Architect', 'Structure and boundaries'],
+  ['tester', 'Tester', 'Tests and behaviour'],
+  ['security', 'Security', 'Trust boundaries'],
+].map(([id = '', title = '', description = '']) => ({
+  id,
+  skill: `ibitsa:${id}`,
+  title,
+  description,
+  source: 'builtin',
+  portrait: null,
+  model: null,
+  tools: ['Read', 'Grep', 'Glob'],
+  modes: { planning: true, review: true },
+  hash: id,
+}));

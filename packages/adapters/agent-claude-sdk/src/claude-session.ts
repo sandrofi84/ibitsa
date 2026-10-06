@@ -388,7 +388,7 @@ function toQuestions(input: Record<string, unknown>): AskUserQuestion[] {
   }));
 }
 
-function userMessage({
+export function userMessage({
   text,
   priority,
   human = false,

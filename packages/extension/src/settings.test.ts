@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { readDisabledCouncillors, readElderSettings, readUserSettings } from './settings';
+import {
+  readCouncilMode,
+  readDisabledCouncillors,
+  readElderSettings,
+  readUserSettings,
+} from './settings';
 
 const config = (values: Record<string, unknown>) => ({
   get: <T>(key: string) => values[key] as T | undefined,
@@ -54,5 +59,14 @@ describe('readElderSettings (#101)', () => {
         budgetMicroUsd: 250_000,
       });
     }
+  });
+});
+
+describe('readCouncilMode (#103)', () => {
+  it('reads the mode, asking by default', () => {
+    expect(readCouncilMode(config({ 'council.mode': 'roundTable' }))).toBe('roundTable');
+    expect(readCouncilMode(config({ 'council.mode': 'chambers' }))).toBe('chambers');
+    expect(readCouncilMode(config({ 'council.mode': 'sideways' }))).toBe('ask');
+    expect(readCouncilMode(config({}))).toBe('ask');
   });
 });

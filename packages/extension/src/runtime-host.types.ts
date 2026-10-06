@@ -26,6 +26,8 @@ export interface RuntimeHostOptions {
   /** Resolved each time the runtime starts, so a window reload picks up a changed Node setup (#67). */
   environment: () => Promise<Record<string, string | undefined>>;
   settings: () => UserSettings;
+  /** `ibitsa.council.mode` (#103). */
+  councilMode?: () => 'ask' | 'roundTable' | 'chambers';
   /** The elder's model and cap from `ibitsa.elder.*` (#101). */
   elder?: () => { model: string; budgetMicroUsd: number };
   /** Councillor ids turned off in `ibitsa.council.disabled` (#98). */

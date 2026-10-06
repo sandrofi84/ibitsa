@@ -1,3 +1,4 @@
+import type { CouncillorInfo } from './councillors.types';
 import type { ElderView } from './elder.types';
 import type { SittingView } from './sitting.types';
 import type { MicroUsd, Reading } from './values.types';
@@ -19,6 +20,10 @@ export interface Snapshot {
   projectRules?: string[];
   /** Whether hero shell commands run in an OS sandbox here (not on native Windows). Added by the runtime. */
   sandboxed?: boolean;
+  /** The councillors the workspace can seat (§4.7), for convening and the hut. Added by the runtime. */
+  councillors?: CouncillorInfo[];
+  /** `ibitsa.council.mode`: ask how the council sits each time, or always one way (§4.2). Added by the runtime. */
+  councilMode?: 'ask' | 'roundTable' | 'chambers';
 }
 
 export interface RepoView {

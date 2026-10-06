@@ -5,7 +5,16 @@
       "mark": "convened",
       "t": 0,
       "snapshot": {
-        "campaign": null,
+        "campaign": {
+          "id": "c-s1",
+          "title": "Add email sign-in",
+          "status": "planning",
+          "autoApprove": false,
+          "gold": {
+            "kind": "exact",
+            "value": 0
+          }
+        },
         "elder": null,
         "sitting": {
           "id": "s1",
@@ -55,7 +64,16 @@
       "mark": "rejected-early",
       "t": 6500,
       "snapshot": {
-        "campaign": null,
+        "campaign": {
+          "id": "c-s1",
+          "title": "Add email sign-in",
+          "status": "planning",
+          "autoApprove": false,
+          "gold": {
+            "kind": "exact",
+            "value": 0
+          }
+        },
         "elder": null,
         "sitting": {
           "id": "s1",
@@ -151,7 +169,16 @@
       "mark": "asking",
       "t": 9000,
       "snapshot": {
-        "campaign": null,
+        "campaign": {
+          "id": "c-s1",
+          "title": "Add email sign-in",
+          "status": "planning",
+          "autoApprove": false,
+          "gold": {
+            "kind": "exact",
+            "value": 0
+          }
+        },
         "elder": null,
         "sitting": {
           "id": "s1",
@@ -322,7 +349,16 @@
       "mark": "proposed",
       "t": 20000,
       "snapshot": {
-        "campaign": null,
+        "campaign": {
+          "id": "c-s1",
+          "title": "Add email sign-in",
+          "status": "planning",
+          "autoApprove": false,
+          "gold": {
+            "kind": "exact",
+            "value": 0
+          }
+        },
         "elder": null,
         "sitting": {
           "id": "s1",
@@ -453,7 +489,16 @@
       "mark": "change-requested",
       "t": 26000,
       "snapshot": {
-        "campaign": null,
+        "campaign": {
+          "id": "c-s1",
+          "title": "Add email sign-in",
+          "status": "planning",
+          "autoApprove": false,
+          "gold": {
+            "kind": "exact",
+            "value": 0
+          }
+        },
         "elder": null,
         "sitting": {
           "id": "s1",
@@ -585,7 +630,16 @@
       "mark": "approved",
       "t": 40000,
       "snapshot": {
-        "campaign": null,
+        "campaign": {
+          "id": "c-s1",
+          "title": "Add email sign-in",
+          "status": "planning",
+          "autoApprove": false,
+          "gold": {
+            "kind": "exact",
+            "value": 0
+          }
+        },
         "elder": null,
         "sitting": {
           "id": "s1",
@@ -750,7 +804,16 @@
     }
   ],
   "final": {
-    "campaign": null,
+    "campaign": {
+      "id": "c-s1",
+      "title": "Add email sign-in",
+      "status": "planning",
+      "autoApprove": false,
+      "gold": {
+        "kind": "exact",
+        "value": 0
+      }
+    },
     "elder": null,
     "sitting": {
       "id": "s1",

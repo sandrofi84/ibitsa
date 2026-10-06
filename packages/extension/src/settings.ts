@@ -20,6 +20,13 @@ export function readDisabledCouncillors(config: ConfigReader): string[] {
 }
 
 const ELDER_MODELS = ['haiku', 'sonnet', 'opus', 'fable'];
+const COUNCIL_MODES = ['ask', 'roundTable', 'chambers'] as const;
+
+/** `ibitsa.council.mode`: ask how the council sits each time, or always one way (§4.2, #103). */
+export function readCouncilMode(config: ConfigReader): (typeof COUNCIL_MODES)[number] {
+  const mode = config.get<unknown>('council.mode');
+  return COUNCIL_MODES.find((m) => m === mode) ?? 'ask';
+}
 
 /** `ibitsa.elder.*`: the elder's model and cap (spec §4.1, #101); Haiku and $0.25 unless set. */
 export function readElderSettings(config: ConfigReader): { model: string; budgetMicroUsd: number } {

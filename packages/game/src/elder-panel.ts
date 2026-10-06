@@ -3,6 +3,7 @@ import type { GameClient } from './client';
 import { button, el } from './dom';
 import type { ElderPanelOptions } from './elder-panel.types';
 import { gold } from './hero-pane';
+import { isSitting } from './sitting-hut';
 
 /** How many files the panel lists; the rest are in `brief.md`. */
 const FILES_SHOWN = 8;
@@ -26,7 +27,11 @@ export function mountElderPanel({
   let shown: string | null = null;
 
   client.onSnapshot((snapshot: Snapshot) => {
-    const elder = snapshot.campaign?.status === 'planning' ? snapshot.elder : null;
+    // While the council sits the hut takes over; the panel comes back when the sitting ends.
+    const elder =
+      snapshot.campaign?.status === 'planning' && !isSitting(snapshot.sitting)
+        ? snapshot.elder
+        : null;
     panel.hidden = elder === null;
     if (!elder) {
       shown = null;
@@ -91,9 +96,7 @@ export function mountElderPanel({
       councillors.append(li);
     }
     const quick = button({ label: 'Quick quest', onClick: () => options.quickQuest(elder.task) });
-    const convene = button({ label: 'Convene council', onClick: () => {} });
-    convene.disabled = true;
-    convene.title = "The council can't sit yet.";
+    const convene = button({ label: 'Convene council', onClick: () => options.convene() });
     const recommended = brief.quickQuest.recommended ? quick : convene;
     recommended.classList.add('recommended');
     return [

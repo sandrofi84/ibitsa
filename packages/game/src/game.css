@@ -1014,3 +1014,95 @@ body.in-hut:has(.council-dialogue:not([hidden])) .needs-you {
 .elder-panel button.recommended {
   font-weight: 700;
 }
+
+/* Convening the council (#103): the New Quest form's look. */
+.convene {
+  width: min(460px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  box-sizing: border-box;
+  background: #efe0b8;
+  border: 2px solid #8a6a3a;
+  border-radius: 4px;
+  color: #1a1420;
+  font:
+    13px / 1.4 system-ui,
+    sans-serif;
+}
+
+.convene::backdrop {
+  background: rgba(10, 8, 20, 0.5);
+}
+
+.convene h2 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+
+.convene fieldset {
+  margin: 8px 0;
+  border: 1px solid #8a6a3a;
+  border-radius: 3px;
+}
+
+.convene fieldset label {
+  display: block;
+  margin: 4px 0;
+}
+
+.convene .roster strong {
+  margin: 0 4px;
+}
+
+.convene label > span {
+  display: block;
+  font-weight: 600;
+}
+
+.convene .note {
+  color: #4a3a2a;
+}
+
+.convene .error {
+  color: #8a1a1a;
+}
+
+.convene .actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+/* The council's plan in the hut (#103), where the dialogue box sits. */
+.plan-box {
+  position: fixed;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  width: min(680px, calc(100vw - 32px));
+  box-sizing: border-box;
+  padding: 8px 10px;
+  background: rgba(239, 224, 184, 0.97);
+  border: 3px solid #5a3e1c;
+  border-radius: 4px;
+  color: #1a1420;
+  font:
+    13px / 1.45 system-ui,
+    sans-serif;
+}
+
+.plan-box h2 {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+
+.plan-box textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.plan-box .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
