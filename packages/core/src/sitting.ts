@@ -8,6 +8,7 @@ import type {
   SittingStatus,
   SittingView,
 } from '@ibitsa/protocol';
+import { checkPlan } from '@ibitsa/protocol';
 import { Quest } from './quest';
 import { newId } from './state';
 import type { CoreState, QuestionBatch, SittingRecord } from './state.types';
@@ -211,6 +212,12 @@ export class Sitting {
     if (!plan) return;
     plan.entry.outcome = { kind: 'approved' };
     this.end({ record: plan.record, status: 'approved' });
+    this.ctx.outbox.effect({
+      type: 'savePlan',
+      sittingId: plan.record.id,
+      version: plan.entry.version,
+      plan: plan.entry.plan,
+    });
   }
 
   requestChange(command: Extract<Command, { type: 'requestPlanChange' }>): void {
@@ -346,9 +353,8 @@ export class Sitting {
       this.complete({ record, toolUseId, reason: 'A plan is already waiting for the user.' });
       return;
     }
-    const missing = record.roster
-      .map((c) => c.councillorId)
-      .filter((id) => !record.reports.some((r) => r.councillorId === id));
+    const roster = record.roster.map((c) => c.councillorId);
+    const missing = roster.filter((id) => !record.reports.some((r) => r.councillorId === id));
     if (missing.length > 0) {
       this.complete({
         record,
@@ -357,9 +363,18 @@ export class Sitting {
       });
       return;
     }
+    const checked = checkPlan({ input: event.plan, roster });
+    if (!checked.ok) {
+      this.complete({
+        record,
+        toolUseId,
+        reason: `The plan has problems:\n- ${checked.problems.join('\n- ')}`,
+      });
+      return;
+    }
     record.plans.push({
       version: record.plans.length + 1,
-      plan: event.plan,
+      plan: checked.plan,
       outcome: { kind: 'proposed' },
     });
     record.status = 'awaitingApproval';

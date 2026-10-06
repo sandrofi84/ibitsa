@@ -78,6 +78,8 @@ export function hutFromSitting({ sitting, focus }: SittingFocus): HutView {
     stage: studying ? 'study' : 'dialogue',
     councillors,
     speaker,
+    // The Book of Decisions on the table: the latest plan's decisions (#104).
+    decisions: sitting.plans.at(-1)?.plan.decisions.length ?? 0,
   };
 }
 

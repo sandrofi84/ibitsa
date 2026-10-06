@@ -465,7 +465,136 @@
             {
               "version": 1,
               "plan": {
-                "summary": "Email sign-in in three tasks: auth module, cookie sessions, form and tests."
+                "summary": "Email sign-in in three tasks: auth module, cookie sessions, form and tests.",
+                "goal": "Let users sign in with email and password.",
+                "tasks": [
+                  {
+                    "id": "T1",
+                    "title": "Auth module",
+                    "description": "Add an auth module that checks email and password.",
+                    "files": [
+                      "src/auth.ts"
+                    ],
+                    "dependsOn": [],
+                    "criteria": [
+                      {
+                        "councillorId": "architect",
+                        "items": [
+                          "Auth lives in its own module."
+                        ]
+                      },
+                      {
+                        "councillorId": "security",
+                        "items": [
+                          "Passwords are hashed with a slow hash."
+                        ]
+                      }
+                    ],
+                    "decisions": [
+                      "D1"
+                    ]
+                  },
+                  {
+                    "id": "T2",
+                    "title": "Cookie sessions",
+                    "description": "Keep the session in a signed cookie.",
+                    "files": [
+                      "src/session.ts"
+                    ],
+                    "dependsOn": [
+                      "T1"
+                    ],
+                    "criteria": [
+                      {
+                        "councillorId": "security",
+                        "items": [
+                          "The cookie is HttpOnly and Secure."
+                        ]
+                      }
+                    ],
+                    "decisions": [
+                      "D2"
+                    ]
+                  },
+                  {
+                    "id": "T3",
+                    "title": "Sign-in form",
+                    "description": "Add the sign-in form.",
+                    "files": [
+                      "src/sign-in.tsx"
+                    ],
+                    "dependsOn": [
+                      "T1"
+                    ],
+                    "criteria": [
+                      {
+                        "councillorId": "accessibility",
+                        "items": [
+                          "The form works from the keyboard alone."
+                        ]
+                      }
+                    ],
+                    "decisions": [
+                      "D1"
+                    ]
+                  },
+                  {
+                    "id": "T4",
+                    "title": "Tests",
+                    "description": "Cover sign-in and sessions with tests.",
+                    "files": [
+                      "src/auth.test.ts"
+                    ],
+                    "dependsOn": [
+                      "T2",
+                      "T3"
+                    ],
+                    "criteria": [
+                      {
+                        "councillorId": "tester",
+                        "items": [
+                          "Each behaviour has a test that fails without it."
+                        ]
+                      }
+                    ],
+                    "decisions": []
+                  }
+                ],
+                "decisions": [
+                  {
+                    "id": "D1",
+                    "title": "Sign-in methods",
+                    "raisedBy": "architect",
+                    "chosen": "Email and password only",
+                    "alternatives": [
+                      {
+                        "option": "Email + Google",
+                        "rejectedBecause": "OAuth setup and a third-party dependency."
+                      }
+                    ],
+                    "why": "Ship the core first.",
+                    "affects": [
+                      "T1",
+                      "T3"
+                    ]
+                  },
+                  {
+                    "id": "D2",
+                    "title": "Session length",
+                    "raisedBy": "security",
+                    "chosen": "A week, with sign out everywhere",
+                    "alternatives": [
+                      {
+                        "option": "One day",
+                        "rejectedBecause": "Users would sign in daily."
+                      }
+                    ],
+                    "why": "A week, with sign out everywhere.",
+                    "affects": [
+                      "T2"
+                    ]
+                  }
+                ]
               },
               "outcome": {
                 "kind": "proposed"
@@ -605,7 +734,136 @@
             {
               "version": 1,
               "plan": {
-                "summary": "Email sign-in in three tasks: auth module, cookie sessions, form and tests."
+                "summary": "Email sign-in in three tasks: auth module, cookie sessions, form and tests.",
+                "goal": "Let users sign in with email and password.",
+                "tasks": [
+                  {
+                    "id": "T1",
+                    "title": "Auth module",
+                    "description": "Add an auth module that checks email and password.",
+                    "files": [
+                      "src/auth.ts"
+                    ],
+                    "dependsOn": [],
+                    "criteria": [
+                      {
+                        "councillorId": "architect",
+                        "items": [
+                          "Auth lives in its own module."
+                        ]
+                      },
+                      {
+                        "councillorId": "security",
+                        "items": [
+                          "Passwords are hashed with a slow hash."
+                        ]
+                      }
+                    ],
+                    "decisions": [
+                      "D1"
+                    ]
+                  },
+                  {
+                    "id": "T2",
+                    "title": "Cookie sessions",
+                    "description": "Keep the session in a signed cookie.",
+                    "files": [
+                      "src/session.ts"
+                    ],
+                    "dependsOn": [
+                      "T1"
+                    ],
+                    "criteria": [
+                      {
+                        "councillorId": "security",
+                        "items": [
+                          "The cookie is HttpOnly and Secure."
+                        ]
+                      }
+                    ],
+                    "decisions": [
+                      "D2"
+                    ]
+                  },
+                  {
+                    "id": "T3",
+                    "title": "Sign-in form",
+                    "description": "Add the sign-in form.",
+                    "files": [
+                      "src/sign-in.tsx"
+                    ],
+                    "dependsOn": [
+                      "T1"
+                    ],
+                    "criteria": [
+                      {
+                        "councillorId": "accessibility",
+                        "items": [
+                          "The form works from the keyboard alone."
+                        ]
+                      }
+                    ],
+                    "decisions": [
+                      "D1"
+                    ]
+                  },
+                  {
+                    "id": "T4",
+                    "title": "Tests",
+                    "description": "Cover sign-in and sessions with tests.",
+                    "files": [
+                      "src/auth.test.ts"
+                    ],
+                    "dependsOn": [
+                      "T2",
+                      "T3"
+                    ],
+                    "criteria": [
+                      {
+                        "councillorId": "tester",
+                        "items": [
+                          "Each behaviour has a test that fails without it."
+                        ]
+                      }
+                    ],
+                    "decisions": []
+                  }
+                ],
+                "decisions": [
+                  {
+                    "id": "D1",
+                    "title": "Sign-in methods",
+                    "raisedBy": "architect",
+                    "chosen": "Email and password only",
+                    "alternatives": [
+                      {
+                        "option": "Email + Google",
+                        "rejectedBecause": "OAuth setup and a third-party dependency."
+                      }
+                    ],
+                    "why": "Ship the core first.",
+                    "affects": [
+                      "T1",
+                      "T3"
+                    ]
+                  },
+                  {
+                    "id": "D2",
+                    "title": "Session length",
+                    "raisedBy": "security",
+                    "chosen": "A week, with sign out everywhere",
+                    "alternatives": [
+                      {
+                        "option": "One day",
+                        "rejectedBecause": "Users would sign in daily."
+                      }
+                    ],
+                    "why": "A week, with sign out everywhere.",
+                    "affects": [
+                      "T2"
+                    ]
+                  }
+                ]
               },
               "outcome": {
                 "kind": "changeRequested",
@@ -765,7 +1023,136 @@
             {
               "version": 1,
               "plan": {
-                "summary": "Email sign-in in three tasks: auth module, cookie sessions, form and tests."
+                "summary": "Email sign-in in three tasks: auth module, cookie sessions, form and tests.",
+                "goal": "Let users sign in with email and password.",
+                "tasks": [
+                  {
+                    "id": "T1",
+                    "title": "Auth module",
+                    "description": "Add an auth module that checks email and password.",
+                    "files": [
+                      "src/auth.ts"
+                    ],
+                    "dependsOn": [],
+                    "criteria": [
+                      {
+                        "councillorId": "architect",
+                        "items": [
+                          "Auth lives in its own module."
+                        ]
+                      },
+                      {
+                        "councillorId": "security",
+                        "items": [
+                          "Passwords are hashed with a slow hash."
+                        ]
+                      }
+                    ],
+                    "decisions": [
+                      "D1"
+                    ]
+                  },
+                  {
+                    "id": "T2",
+                    "title": "Cookie sessions",
+                    "description": "Keep the session in a signed cookie.",
+                    "files": [
+                      "src/session.ts"
+                    ],
+                    "dependsOn": [
+                      "T1"
+                    ],
+                    "criteria": [
+                      {
+                        "councillorId": "security",
+                        "items": [
+                          "The cookie is HttpOnly and Secure."
+                        ]
+                      }
+                    ],
+                    "decisions": [
+                      "D2"
+                    ]
+                  },
+                  {
+                    "id": "T3",
+                    "title": "Sign-in form",
+                    "description": "Add the sign-in form.",
+                    "files": [
+                      "src/sign-in.tsx"
+                    ],
+                    "dependsOn": [
+                      "T1"
+                    ],
+                    "criteria": [
+                      {
+                        "councillorId": "accessibility",
+                        "items": [
+                          "The form works from the keyboard alone."
+                        ]
+                      }
+                    ],
+                    "decisions": [
+                      "D1"
+                    ]
+                  },
+                  {
+                    "id": "T4",
+                    "title": "Tests",
+                    "description": "Cover sign-in and sessions with tests.",
+                    "files": [
+                      "src/auth.test.ts"
+                    ],
+                    "dependsOn": [
+                      "T2",
+                      "T3"
+                    ],
+                    "criteria": [
+                      {
+                        "councillorId": "tester",
+                        "items": [
+                          "Each behaviour has a test that fails without it."
+                        ]
+                      }
+                    ],
+                    "decisions": []
+                  }
+                ],
+                "decisions": [
+                  {
+                    "id": "D1",
+                    "title": "Sign-in methods",
+                    "raisedBy": "architect",
+                    "chosen": "Email and password only",
+                    "alternatives": [
+                      {
+                        "option": "Email + Google",
+                        "rejectedBecause": "OAuth setup and a third-party dependency."
+                      }
+                    ],
+                    "why": "Ship the core first.",
+                    "affects": [
+                      "T1",
+                      "T3"
+                    ]
+                  },
+                  {
+                    "id": "D2",
+                    "title": "Session length",
+                    "raisedBy": "security",
+                    "chosen": "A week, with sign out everywhere",
+                    "alternatives": [
+                      {
+                        "option": "One day",
+                        "rejectedBecause": "Users would sign in daily."
+                      }
+                    ],
+                    "why": "A week, with sign out everywhere.",
+                    "affects": [
+                      "T2"
+                    ]
+                  }
+                ]
               },
               "outcome": {
                 "kind": "changeRequested",
@@ -775,7 +1162,136 @@
             {
               "version": 2,
               "plan": {
-                "summary": "Email sign-in in four tasks: auth module, server-side sessions with revoke-all, form, tests."
+                "summary": "Email sign-in in four tasks: auth module, server-side sessions with revoke-all, form, tests.",
+                "goal": "Let users sign in with email and password.",
+                "tasks": [
+                  {
+                    "id": "T1",
+                    "title": "Auth module",
+                    "description": "Add an auth module that checks email and password.",
+                    "files": [
+                      "src/auth.ts"
+                    ],
+                    "dependsOn": [],
+                    "criteria": [
+                      {
+                        "councillorId": "architect",
+                        "items": [
+                          "Auth lives in its own module."
+                        ]
+                      },
+                      {
+                        "councillorId": "security",
+                        "items": [
+                          "Passwords are hashed with a slow hash."
+                        ]
+                      }
+                    ],
+                    "decisions": [
+                      "D1"
+                    ]
+                  },
+                  {
+                    "id": "T2",
+                    "title": "Server-side sessions",
+                    "description": "Keep sessions on the server so they can be revoked.",
+                    "files": [
+                      "src/session.ts"
+                    ],
+                    "dependsOn": [
+                      "T1"
+                    ],
+                    "criteria": [
+                      {
+                        "councillorId": "security",
+                        "items": [
+                          "Sign out everywhere revokes every session."
+                        ]
+                      }
+                    ],
+                    "decisions": [
+                      "D2"
+                    ]
+                  },
+                  {
+                    "id": "T3",
+                    "title": "Sign-in form",
+                    "description": "Add the sign-in form.",
+                    "files": [
+                      "src/sign-in.tsx"
+                    ],
+                    "dependsOn": [
+                      "T1"
+                    ],
+                    "criteria": [
+                      {
+                        "councillorId": "accessibility",
+                        "items": [
+                          "The form works from the keyboard alone."
+                        ]
+                      }
+                    ],
+                    "decisions": [
+                      "D1"
+                    ]
+                  },
+                  {
+                    "id": "T4",
+                    "title": "Tests",
+                    "description": "Cover sign-in and sessions with tests.",
+                    "files": [
+                      "src/auth.test.ts"
+                    ],
+                    "dependsOn": [
+                      "T2",
+                      "T3"
+                    ],
+                    "criteria": [
+                      {
+                        "councillorId": "tester",
+                        "items": [
+                          "Each behaviour has a test that fails without it."
+                        ]
+                      }
+                    ],
+                    "decisions": []
+                  }
+                ],
+                "decisions": [
+                  {
+                    "id": "D1",
+                    "title": "Sign-in methods",
+                    "raisedBy": "architect",
+                    "chosen": "Email and password only",
+                    "alternatives": [
+                      {
+                        "option": "Email + Google",
+                        "rejectedBecause": "OAuth setup and a third-party dependency."
+                      }
+                    ],
+                    "why": "Ship the core first.",
+                    "affects": [
+                      "T1",
+                      "T3"
+                    ]
+                  },
+                  {
+                    "id": "D2",
+                    "title": "Session length",
+                    "raisedBy": "security",
+                    "chosen": "A week, with sign out everywhere",
+                    "alternatives": [
+                      {
+                        "option": "One day",
+                        "rejectedBecause": "Users would sign in daily."
+                      }
+                    ],
+                    "why": "A week, with sign out everywhere.",
+                    "affects": [
+                      "T2"
+                    ]
+                  }
+                ]
               },
               "outcome": {
                 "kind": "approved"
@@ -939,7 +1455,136 @@
         {
           "version": 1,
           "plan": {
-            "summary": "Email sign-in in three tasks: auth module, cookie sessions, form and tests."
+            "summary": "Email sign-in in three tasks: auth module, cookie sessions, form and tests.",
+            "goal": "Let users sign in with email and password.",
+            "tasks": [
+              {
+                "id": "T1",
+                "title": "Auth module",
+                "description": "Add an auth module that checks email and password.",
+                "files": [
+                  "src/auth.ts"
+                ],
+                "dependsOn": [],
+                "criteria": [
+                  {
+                    "councillorId": "architect",
+                    "items": [
+                      "Auth lives in its own module."
+                    ]
+                  },
+                  {
+                    "councillorId": "security",
+                    "items": [
+                      "Passwords are hashed with a slow hash."
+                    ]
+                  }
+                ],
+                "decisions": [
+                  "D1"
+                ]
+              },
+              {
+                "id": "T2",
+                "title": "Cookie sessions",
+                "description": "Keep the session in a signed cookie.",
+                "files": [
+                  "src/session.ts"
+                ],
+                "dependsOn": [
+                  "T1"
+                ],
+                "criteria": [
+                  {
+                    "councillorId": "security",
+                    "items": [
+                      "The cookie is HttpOnly and Secure."
+                    ]
+                  }
+                ],
+                "decisions": [
+                  "D2"
+                ]
+              },
+              {
+                "id": "T3",
+                "title": "Sign-in form",
+                "description": "Add the sign-in form.",
+                "files": [
+                  "src/sign-in.tsx"
+                ],
+                "dependsOn": [
+                  "T1"
+                ],
+                "criteria": [
+                  {
+                    "councillorId": "accessibility",
+                    "items": [
+                      "The form works from the keyboard alone."
+                    ]
+                  }
+                ],
+                "decisions": [
+                  "D1"
+                ]
+              },
+              {
+                "id": "T4",
+                "title": "Tests",
+                "description": "Cover sign-in and sessions with tests.",
+                "files": [
+                  "src/auth.test.ts"
+                ],
+                "dependsOn": [
+                  "T2",
+                  "T3"
+                ],
+                "criteria": [
+                  {
+                    "councillorId": "tester",
+                    "items": [
+                      "Each behaviour has a test that fails without it."
+                    ]
+                  }
+                ],
+                "decisions": []
+              }
+            ],
+            "decisions": [
+              {
+                "id": "D1",
+                "title": "Sign-in methods",
+                "raisedBy": "architect",
+                "chosen": "Email and password only",
+                "alternatives": [
+                  {
+                    "option": "Email + Google",
+                    "rejectedBecause": "OAuth setup and a third-party dependency."
+                  }
+                ],
+                "why": "Ship the core first.",
+                "affects": [
+                  "T1",
+                  "T3"
+                ]
+              },
+              {
+                "id": "D2",
+                "title": "Session length",
+                "raisedBy": "security",
+                "chosen": "A week, with sign out everywhere",
+                "alternatives": [
+                  {
+                    "option": "One day",
+                    "rejectedBecause": "Users would sign in daily."
+                  }
+                ],
+                "why": "A week, with sign out everywhere.",
+                "affects": [
+                  "T2"
+                ]
+              }
+            ]
           },
           "outcome": {
             "kind": "changeRequested",
@@ -949,7 +1594,136 @@
         {
           "version": 2,
           "plan": {
-            "summary": "Email sign-in in four tasks: auth module, server-side sessions with revoke-all, form, tests."
+            "summary": "Email sign-in in four tasks: auth module, server-side sessions with revoke-all, form, tests.",
+            "goal": "Let users sign in with email and password.",
+            "tasks": [
+              {
+                "id": "T1",
+                "title": "Auth module",
+                "description": "Add an auth module that checks email and password.",
+                "files": [
+                  "src/auth.ts"
+                ],
+                "dependsOn": [],
+                "criteria": [
+                  {
+                    "councillorId": "architect",
+                    "items": [
+                      "Auth lives in its own module."
+                    ]
+                  },
+                  {
+                    "councillorId": "security",
+                    "items": [
+                      "Passwords are hashed with a slow hash."
+                    ]
+                  }
+                ],
+                "decisions": [
+                  "D1"
+                ]
+              },
+              {
+                "id": "T2",
+                "title": "Server-side sessions",
+                "description": "Keep sessions on the server so they can be revoked.",
+                "files": [
+                  "src/session.ts"
+                ],
+                "dependsOn": [
+                  "T1"
+                ],
+                "criteria": [
+                  {
+                    "councillorId": "security",
+                    "items": [
+                      "Sign out everywhere revokes every session."
+                    ]
+                  }
+                ],
+                "decisions": [
+                  "D2"
+                ]
+              },
+              {
+                "id": "T3",
+                "title": "Sign-in form",
+                "description": "Add the sign-in form.",
+                "files": [
+                  "src/sign-in.tsx"
+                ],
+                "dependsOn": [
+                  "T1"
+                ],
+                "criteria": [
+                  {
+                    "councillorId": "accessibility",
+                    "items": [
+                      "The form works from the keyboard alone."
+                    ]
+                  }
+                ],
+                "decisions": [
+                  "D1"
+                ]
+              },
+              {
+                "id": "T4",
+                "title": "Tests",
+                "description": "Cover sign-in and sessions with tests.",
+                "files": [
+                  "src/auth.test.ts"
+                ],
+                "dependsOn": [
+                  "T2",
+                  "T3"
+                ],
+                "criteria": [
+                  {
+                    "councillorId": "tester",
+                    "items": [
+                      "Each behaviour has a test that fails without it."
+                    ]
+                  }
+                ],
+                "decisions": []
+              }
+            ],
+            "decisions": [
+              {
+                "id": "D1",
+                "title": "Sign-in methods",
+                "raisedBy": "architect",
+                "chosen": "Email and password only",
+                "alternatives": [
+                  {
+                    "option": "Email + Google",
+                    "rejectedBecause": "OAuth setup and a third-party dependency."
+                  }
+                ],
+                "why": "Ship the core first.",
+                "affects": [
+                  "T1",
+                  "T3"
+                ]
+              },
+              {
+                "id": "D2",
+                "title": "Session length",
+                "raisedBy": "security",
+                "chosen": "A week, with sign out everywhere",
+                "alternatives": [
+                  {
+                    "option": "One day",
+                    "rejectedBecause": "Users would sign in daily."
+                  }
+                ],
+                "why": "A week, with sign out everywhere.",
+                "affects": [
+                  "T2"
+                ]
+              }
+            ]
           },
           "outcome": {
             "kind": "approved"

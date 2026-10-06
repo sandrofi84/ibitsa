@@ -4,6 +4,7 @@ import type {
   CouncilQuestion,
   CouncilReport,
   Cue,
+  Plan,
   SittingView,
 } from '@ibitsa/protocol';
 import { describe, expect, it } from 'vitest';
@@ -12,6 +13,26 @@ import { initialState } from './state';
 import type { CoreState } from './state.types';
 import { step } from './step';
 import { view } from './view';
+
+/** The smallest plan that checks out: one task, no criteria, no decisions. */
+function planOf(summary: string): Plan {
+  return {
+    summary,
+    goal: 'Add sign-in',
+    tasks: [
+      {
+        id: 'T1',
+        title: 'Do it',
+        description: 'Do it.',
+        files: [],
+        dependsOn: [],
+        criteria: [],
+        decisions: [],
+      },
+    ],
+    decisions: [],
+  };
+}
 
 /** Feeds commands and council events in order, collecting cues and effects. */
 class Council {
@@ -54,7 +75,7 @@ class Council {
     });
   }
   propose(summary = 'Plan'): this {
-    return this.event({ type: 'planProposed', toolUseId: `u${++this.n}`, plan: { summary } });
+    return this.event({ type: 'planProposed', toolUseId: `u${++this.n}`, plan: planOf(summary) });
   }
   sitting(): SittingView {
     const sitting = view(this.state).sitting;
@@ -378,7 +399,7 @@ describe('proposing a plan', () => {
     expect(c.lastTool()).toMatchObject({ accepted: true });
     expect(c.sitting()).toMatchObject({
       status: 'awaitingApproval',
-      plans: [{ version: 1, plan: { summary: 'Plan' }, outcome: { kind: 'proposed' } }],
+      plans: [{ version: 1, plan: planOf('Plan'), outcome: { kind: 'proposed' } }],
     });
   });
 
@@ -431,7 +452,36 @@ describe('approval', () => {
       plans: [{ outcome: { kind: 'approved' } }],
     });
     expect(c.state.sitting?.endedAt).toBe(9_000);
-    expect(c.effects.at(-1)).toEqual({ type: 'closeSitting', sittingId: 's1' });
+    expect(c.effects.slice(-2)).toEqual([
+      { type: 'closeSitting', sittingId: 's1' },
+      // The approved plan goes to the campaign folder (#104).
+      { type: 'savePlan', sittingId: 's1', version: 1, plan: planOf('Plan') },
+    ]);
+  });
+
+  it('turns a plan with problems back to the council, naming each one (#104)', () => {
+    const c = deliberating();
+    const bad = {
+      ...planOf('Plan'),
+      tasks: [
+        {
+          ...planOf('Plan').tasks[0],
+          id: 'T1',
+          dependsOn: ['T9'],
+          criteria: [{ councillorId: 'bard', items: ['x'] }],
+        },
+      ],
+    };
+    c.event({ type: 'planProposed', toolUseId: 'p1', plan: bad as Plan });
+    expect(c.effects.at(-1)).toEqual({
+      type: 'completeSittingTool',
+      sittingId: 's1',
+      toolUseId: 'p1',
+      accepted: false,
+      reason:
+        "The plan has problems:\n- T1 depends on T9, which isn't a task.\n- T1 has criteria for bard, who isn't on the roster.",
+    });
+    expect(c.sitting().plans).toEqual([]);
   });
 
   it('a change request sends the council back and records re-consultations', () => {
@@ -450,7 +500,7 @@ describe('approval', () => {
       reconsultations: [{ councillorId: 'security', revision: 1, reportId: 'r4' }],
       plans: [
         { version: 1, outcome: { kind: 'changeRequested', text: 'No Google sign-in' } },
-        { version: 2, plan: { summary: 'Plan v2' }, outcome: { kind: 'approved' } },
+        { version: 2, plan: planOf('Plan v2'), outcome: { kind: 'approved' } },
       ],
     });
   });

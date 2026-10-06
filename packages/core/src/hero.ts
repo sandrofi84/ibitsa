@@ -392,11 +392,27 @@ export class Hero {
       : `The session has not started after ${minutes} min.`;
   }
 
+  /**
+   * A task handed in. In a planned quest the hero moves on to the next task, told as a message on the
+   * same session (spec §14.2); after the last one, the hero is submitted.
+   */
   submit(summary: string): void {
-    this.record.submitted = { summary };
     this.ctx.needsYou.removeFor(this.id, ['reply']);
     const task = this.task();
     if (task) task.state = 'doneUnreviewed';
+    const next = this.island()?.taskPoints.find((tp) => tp.state === 'locked');
+    if (!next) {
+      this.record.submitted = { summary };
+      return;
+    }
+    next.state = 'active';
+    this.record.taskPointId = next.id;
+    this.ctx.outbox.effect({
+      type: 'sendMessage',
+      heroId: this.id,
+      text: this.prompt(),
+      priority: 'next',
+    });
   }
 
   /** Arm the silence timer while a turn is in progress with no tool running; disarm otherwise. */

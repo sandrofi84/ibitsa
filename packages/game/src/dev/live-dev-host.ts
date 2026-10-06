@@ -17,6 +17,7 @@ import {
   type ElderEvent,
   type HostEvent,
   type HostRequest,
+  type Plan,
   PROTOCOL_VERSION,
   type RepoView,
 } from '@ibitsa/protocol';
@@ -44,6 +45,8 @@ export class LiveDevHost implements Host {
   private readonly listeners: ((m: CoreMessage) => void)[] = [];
   private readonly repo: RepoView | null;
   private diffs = 0;
+  /** The scripted sitting's first councillor: it asks, and reviews the plan's tasks. */
+  private asker = 'tester';
 
   /** False acts like native Windows, where hero commands run without a sandbox (#63). */
   private readonly sandboxed: boolean;
@@ -202,6 +205,7 @@ export class LiveDevHost implements Host {
         return;
       case 'startSitting': {
         const [first] = effect.roster;
+        this.asker = first?.councillorId ?? 'tester';
         this.council(effect.sittingId, [
           { type: 'sessionStarted', sessionId: 'live-sitting' },
           ...effect.roster.map(
@@ -252,7 +256,10 @@ export class LiveDevHost implements Host {
             {
               type: 'planProposed',
               toolUseId: `plan${++this.diffs}`,
-              plan: { summary: `Revised: ${effect.message.text}` },
+              plan: livePlan({
+                summary: `Revised: ${effect.message.text}`,
+                councillorId: this.asker,
+              }),
             },
           ]);
         }
@@ -262,7 +269,10 @@ export class LiveDevHost implements Host {
           {
             type: 'planProposed',
             toolUseId: 'plan0',
-            plan: { summary: 'One task: make the change, with a test.' },
+            plan: livePlan({
+              summary: 'Two tasks: make the change, then cover it with a test.',
+              councillorId: this.asker,
+            }),
           },
           { type: 'usage', totalCost: 260_000 },
         ]);
@@ -278,9 +288,10 @@ export class LiveDevHost implements Host {
         ]);
         return;
       case 'sendMessage':
-        // Asking it to submit hands the task in, so the Finish flow can be played too; asking it to
+        // Asking it to submit hands the task in, so the Finish flow can be played too (a planned quest's next
+        // task says to commit and submit, and is handed in straight away); asking it only to
         // commit asks your permission first, offering "Always allow" (#62).
-        if (/commit/i.test(effect.text)) {
+        if (/commit/i.test(effect.text) && !/submit/i.test(effect.text)) {
           this.agent(effect.heroId, [
             { type: 'turnStarted' },
             {
@@ -430,3 +441,42 @@ const LIVE_COUNCILLORS: CouncillorInfo[] = [
   modes: { planning: true, review: true },
   hash: id,
 }));
+
+/** A small valid plan (#104): two tasks in order, a decision raised by the asking councillor. */
+function livePlan({ summary, councillorId }: { summary: string; councillorId: string }): Plan {
+  return {
+    summary,
+    goal: 'Fix the login redirect so it no longer loops.',
+    tasks: [
+      {
+        id: 'T1',
+        title: 'Fix the redirect',
+        description: 'Stop the login redirect from looping.',
+        files: ['src/app.ts'],
+        dependsOn: [],
+        criteria: [{ councillorId, items: ['Signing in lands on the page you asked for.'] }],
+        decisions: ['D1'],
+      },
+      {
+        id: 'T2',
+        title: 'Cover it with a test',
+        description: 'Add a test for the redirect.',
+        files: ['src/app.test.ts'],
+        dependsOn: ['T1'],
+        criteria: [{ councillorId, items: ['The test fails without the fix.'] }],
+        decisions: ['D1'],
+      },
+    ],
+    decisions: [
+      {
+        id: 'D1',
+        title: 'Test the fix',
+        raisedBy: councillorId,
+        chosen: 'Yes',
+        alternatives: [{ option: 'No', rejectedBecause: 'Nothing would guard it.' }],
+        why: 'It is cheap here.',
+        affects: ['T1', 'T2'],
+      },
+    ],
+  };
+}

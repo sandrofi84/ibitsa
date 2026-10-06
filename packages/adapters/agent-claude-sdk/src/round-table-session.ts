@@ -11,6 +11,7 @@ import type {
   CouncilEvent,
   CouncilQuestion,
   CouncilReport,
+  PlanProposal,
   SittingMessage,
 } from '@ibitsa/protocol';
 import { briefMarkdown, type SittingSession } from '@ibitsa/runtime';
@@ -34,7 +35,7 @@ Work in this order:
 1. For every councillor on the roster, think as that councillor (their guidance is in the first message) and call report once for them: their concerns (with severity and reason), questions for the user, recommendations, and what they didn't check. A councillor with nothing to add files a short bow-out saying why. Read code only where a councillor needs more than the brief.
 2. Put the questions that matter to the user with ask_user, in one batch where you can: each names the councillor asking, offers options with their trade-offs, recommends one with a reason, and allows free text when the user might want something else. When ask_user accepts the batch, end your turn: the answers arrive as a message.
 3. While you wait, the user may ask a councillor "Why?". Answer in that councillor's voice with say (others may add a line with say if their concern is affected), then end your turn again.
-4. When every councillor has reported and the answers are in, call propose_plan with a short summary of the plan and the decisions taken. If it is accepted, end your turn: the user approves, asks for changes, or dismisses the council. On changes, consult again the councillors the change affects (they report again), then propose again.
+4. When every councillor has reported and the answers are in, call propose_plan: the goal, the tasks in the order one hero should work them (each with the files likely touched, its dependencies, and acceptance criteria from the councillors who will review it), and the Book of Decisions (every choice the user made, with the alternatives and the user's reason in their words). If it is accepted, end your turn: the user approves, asks for changes, or dismisses the council. On changes, consult again the councillors the change affects (they report again), then propose again.
 
 Speak to the user only through say and ask_user; anything else you write is not shown. Keep reports and lines short. If a tool rejects a call, fix what it says and call it again.`;
 
@@ -59,8 +60,41 @@ const ASK_SHAPE = {
   ),
 };
 const PLAN_SHAPE = {
-  summary: z.string().describe('The plan in a few sentences, with the decisions taken.'),
-  detail: z.string().optional().describe('Tasks and anything else worth keeping, as markdown.'),
+  summary: z.string().describe('The plan in a sentence or two.'),
+  goal: z.string(),
+  scope: z.string().optional().describe("What's in and out."),
+  tasks: z
+    .array(
+      z.object({
+        id: z.string().describe('T1, T2, …'),
+        title: z.string(),
+        description: z.string().describe('What the hero is told to do.'),
+        files: z.array(z.string()).describe('Files likely touched.'),
+        dependsOn: z.array(z.string()).describe('Task ids this one needs first.'),
+        heroClass: z.enum(['paladin', 'barbarian', 'ranger', 'rogue']).optional(),
+        criteria: z
+          .array(z.object({ councillorId: z.string(), items: z.array(z.string()) }))
+          .describe('Acceptance criteria per reviewing councillor on the roster.'),
+        decisions: z.array(z.string()).describe('Decision ids this task depends on.'),
+      }),
+    )
+    .describe('One hero works them in order, on one branch.'),
+  decisions: z
+    .array(
+      z.object({
+        id: z.string().describe('D1, D2, …'),
+        title: z.string(),
+        raisedBy: z.string().describe('The councillor who raised it, or "elder".'),
+        chosen: z.string(),
+        alternatives: z.array(z.object({ option: z.string(), rejectedBecause: z.string() })),
+        tradeoffs: z.string().optional(),
+        why: z.string().describe("The user's reason, in their words when they gave one."),
+        discussion: z.string().optional().describe('2–3 lines; never a transcript.'),
+        affects: z.array(z.string()).describe('Task ids.'),
+        supersedes: z.string().optional(),
+      }),
+    )
+    .describe('The Book of Decisions: every choice the user made.'),
 };
 const SAY_SHAPE = {
   councillorId: z.string().describe('Who speaks: a councillor on the roster, or "elder".'),
@@ -175,20 +209,12 @@ export class RoundTableSession implements SittingSession {
     });
   }
 
-  private async proposePlan({
-    summary,
-    detail,
-  }: {
-    summary: string;
-    detail?: string | undefined;
-  }): Promise<ToolReply> {
+  /** The plan goes to core as sent (without empty optional fields); core checks it (`checkPlan`). */
+  private async proposePlan(input: unknown): Promise<ToolReply> {
+    const plan = JSON.parse(JSON.stringify(input)) as PlanProposal;
     return this.ruled({
       tool: 'propose_plan',
-      event: (toolUseId) => ({
-        type: 'planProposed',
-        toolUseId,
-        plan: detail === undefined ? { summary } : { summary, detail },
-      }),
+      event: (toolUseId) => ({ type: 'planProposed', toolUseId, plan }),
       ok: 'The plan is with the user. End your turn: you will hear if they ask for changes.',
     });
   }

@@ -1,8 +1,9 @@
-import type { ElderView, Snapshot } from '@ibitsa/protocol';
+import type { ElderView, Plan, Snapshot } from '@ibitsa/protocol';
 import type { GameClient } from './client';
 import { button, el } from './dom';
 import type { ElderPanelOptions } from './elder-panel.types';
 import { gold } from './hero-pane';
+import { planDetails } from './plan-review';
 import { isSitting } from './sitting-hut';
 
 /** How many files the panel lists; the rest are in `brief.md`. */
@@ -28,11 +29,20 @@ export function mountElderPanel({
 
   client.onSnapshot((snapshot: Snapshot) => {
     // While the council sits the hut takes over; the panel comes back when the sitting ends.
-    const elder =
-      snapshot.campaign?.status === 'planning' && !isSitting(snapshot.sitting)
-        ? snapshot.elder
-        : null;
-    panel.hidden = elder === null;
+    const planning = snapshot.campaign?.status === 'planning' && !isSitting(snapshot.sitting);
+    const approved =
+      planning && snapshot.sitting?.status === 'approved'
+        ? snapshot.sitting.plans.find((p) => p.outcome.kind === 'approved')
+        : undefined;
+    const elder = planning ? snapshot.elder : null;
+    panel.hidden = !elder && !approved;
+    if (approved) {
+      const key = `plan:${snapshot.sitting?.id}:${approved.version}`;
+      if (key === shown) return;
+      shown = key;
+      panel.replaceChildren(...renderPlan(approved.plan));
+      return;
+    }
     if (!elder) {
       shown = null;
       return;
@@ -43,6 +53,21 @@ export function mountElderPanel({
     shown = key;
     panel.replaceChildren(...render(elder));
   });
+
+  /** The approved plan (#104): what the hero will work through, and Start the quest. */
+  function renderPlan(plan: Plan): HTMLElement[] {
+    const start = button({ label: 'Start the quest', onClick: () => options.startPlan(plan) });
+    start.classList.add('recommended');
+    return [
+      el('h2', { text: "The council's plan" }),
+      el('p', { className: 'verdict', text: `Approved. ${plan.summary}` }),
+      ...planDetails(plan),
+      actions(
+        start,
+        button({ label: 'Abandon', onClick: () => client.send({ type: 'abandonQuest' }) }),
+      ),
+    ];
+  }
 
   function render(elder: ElderView): HTMLElement[] {
     const heading = el('h2', { text: 'The elder' });

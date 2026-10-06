@@ -70,6 +70,9 @@ function command(ctx: StepContext, command: Command): void {
     case 'startQuest':
       quest.start(command);
       return;
+    case 'startPlannedQuest':
+      quest.startPlanned(command);
+      return;
     case 'finishQuest':
       quest.finish(command.commandId);
       return;

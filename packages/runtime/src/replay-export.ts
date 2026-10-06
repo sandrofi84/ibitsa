@@ -184,8 +184,34 @@ function blankCouncil(event: CouncilEvent): CouncilEvent {
           ...(q.recommendation ? { recommendation: { ...q.recommendation, reason: BLANKED } } : {}),
         })),
       };
-    case 'planProposed':
-      return { ...event, plan: { summary: BLANKED } };
+    case 'planProposed': {
+      // Words go; ids, files, councillors and the order stay, so the blanked plan still checks out.
+      const { plan } = event;
+      return {
+        ...event,
+        plan: {
+          ...plan,
+          summary: BLANKED,
+          goal: BLANKED,
+          ...(plan.scope === undefined ? {} : { scope: BLANKED }),
+          tasks: plan.tasks.map((t) => ({
+            ...t,
+            title: BLANKED,
+            description: BLANKED,
+            criteria: t.criteria.map((c) => ({ ...c, items: c.items.map(() => BLANKED) })),
+          })),
+          decisions: plan.decisions.map((d) => ({
+            ...d,
+            title: BLANKED,
+            chosen: BLANKED,
+            why: BLANKED,
+            alternatives: d.alternatives.map(() => ({ option: BLANKED, rejectedBecause: BLANKED })),
+            ...(d.tradeoffs === undefined ? {} : { tradeoffs: BLANKED }),
+            ...(d.discussion === undefined ? {} : { discussion: BLANKED }),
+          })),
+        },
+      };
+    }
     case 'said':
       return { ...event, text: BLANKED };
     default:
