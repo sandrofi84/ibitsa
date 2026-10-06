@@ -6,7 +6,11 @@ import { expect, type Page, test } from '@playwright/test';
 interface Probe {
   snapshot(): { heroes: { state: { kind: string } }[] } | null;
   status(): { waitingFor: string | null };
-  hero: { onPage(): { x: number; y: number } | null };
+  hero: {
+    onPage(): { x: number; y: number } | null;
+    speech(): string | null;
+    speechWidth(): number | null;
+  };
   camera(): {
     zoom: number;
     aim: { zoom: number; follow: boolean };
@@ -119,4 +123,33 @@ test('while following, the hero sits in the middle of the map you can see, left 
   const middle = (tab?.x ?? 1000) / 2;
   await expect.poll(async () => Math.abs((await heroX()) - middle)).toBeLessThan(24);
   await page.screenshot({ path: 'test-results/camera-collapsed.png' });
+});
+
+test('bubbles keep their size when the map zooms (#75)', async ({ page }) => {
+  await page.goto('/?fixture=live');
+  await page.getByRole('button', { name: 'New quest' }).click();
+  await page.getByLabel('Task').fill('Tidy the README');
+  await page.getByRole('button', { name: 'Start quest' }).click();
+  await expect.poll(() => heroState(page)).toBe('idle');
+  const pane = page.getByRole('region', { name: 'Hero' });
+  const say = async () => {
+    await pane.getByLabel('Message to the hero').fill('Once more');
+    await pane.getByRole('button', { name: 'Send', exact: true }).click();
+    await expect.poll(() => probe(page, (p) => p.hero.speech())).toBe('Done: Once more');
+  };
+  const width = () => probe(page, (p) => p.hero.speechWidth() ?? 0);
+
+  // Each finished turn waits for orders, which brings the camera back: zoom only after the reply.
+  await say();
+  await expect.poll(() => heroState(page)).toBe('idle');
+  await page.locator('body').press('0');
+  await expect.poll(() => cameraZoom(page)).toBe(1);
+  const atOne = await width();
+  expect(atOne).toBeGreaterThan(0);
+  await page.screenshot({ path: 'test-results/bubble-zoom-1.png' });
+
+  await page.locator('body').press('+');
+  await expect.poll(() => cameraZoom(page)).toBe(2);
+  expect(Math.abs((await width()) - atOne)).toBeLessThanOrEqual(1);
+  await page.screenshot({ path: 'test-results/bubble-zoom-2.png' });
 });

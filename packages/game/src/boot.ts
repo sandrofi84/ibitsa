@@ -18,7 +18,12 @@ function hasWebGL(root: HTMLElement): boolean {
   return Boolean(canvas.getContext('webgl2') ?? canvas.getContext('webgl'));
 }
 
-const NO_HERO: Started['hero'] = { onPage: () => null, speech: () => null, icon: () => null };
+const NO_HERO: Started['hero'] = {
+  onPage: () => null,
+  speech: () => null,
+  speechWidth: () => null,
+  icon: () => null,
+};
 
 export function startGame(root: HTMLElement, host: Host): Started {
   const assetBase = root.dataset.assetBase ?? './';
@@ -123,6 +128,7 @@ export function startGame(root: HTMLElement, host: Host): Started {
       return { x: rect.left + at.x * game.scale.zoom, y: rect.top + at.y * game.scale.zoom };
     },
     speech: () => token()?.speaking() ?? null,
+    speechWidth: () => token()?.speechWidth(world()?.cameras.main.zoom ?? 1) ?? null,
     icon: () => token()?.showingIcon() ?? null,
   };
   const camera = () => (world()?.sys.isActive() ? (world()?.cameraState() ?? null) : null);
