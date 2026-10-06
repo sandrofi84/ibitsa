@@ -73,7 +73,8 @@ test('keyboard zoom: + and - step, 0 shows the whole map; typing in the pane doe
 });
 
 test('stays where you put it until something needs you, then comes back', async ({ page }) => {
-  await page.goto('/?autoplay=1&speed=4&mode=interactive');
+  // 1×: about 16 s between work starting and the permission request, so slow runners' polls fit.
+  await page.goto('/?autoplay=1&speed=1&mode=interactive');
   await expect.poll(() => heroState(page), { timeout: 20_000 }).toBe('working');
   await expect.poll(() => cameraZoom(page)).toBe(2);
   await page.getByRole('button', { name: 'Zoom out' }).click();
@@ -82,7 +83,7 @@ test('stays where you put it until something needs you, then comes back', async 
   await page.waitForTimeout(1_000);
   expect(await cameraZoom(page)).toBe(1);
   // The permission request needs you: the camera comes back to the hero.
-  await expect.poll(() => heroState(page), { timeout: 20_000 }).toBe('waitingOnYou');
+  await expect.poll(() => heroState(page), { timeout: 30_000 }).toBe('waitingOnYou');
   await expect.poll(() => cameraZoom(page)).toBe(2);
 });
 
