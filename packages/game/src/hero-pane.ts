@@ -206,6 +206,7 @@ export function mountHeroPane({
       if (!open) setOpen(true);
       tab.focus();
     },
+    element: pane,
   };
 }
 

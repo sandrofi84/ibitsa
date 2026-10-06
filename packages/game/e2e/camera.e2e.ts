@@ -6,6 +6,7 @@ import { expect, type Page, test } from '@playwright/test';
 interface Probe {
   snapshot(): { heroes: { state: { kind: string } }[] } | null;
   status(): { waitingFor: string | null };
+  hero: { onPage(): { x: number; y: number } | null };
   camera(): {
     zoom: number;
     aim: { zoom: number; follow: boolean };
@@ -96,4 +97,25 @@ test('with auto-focus off the camera never moves by itself', async ({ page }) =>
   await page.waitForTimeout(1_000);
   expect(await cameraZoom(page)).toBe(1);
   expect(await probe(page, (p) => p.camera()?.auto)).toBe(false);
+});
+
+test('while following, the hero sits in the middle of the map you can see, left of the open pane', async ({
+  page,
+}) => {
+  await page.goto('/?autoplay=1&speed=2');
+  await expect.poll(() => heroState(page), { timeout: 20_000 }).toBe('working');
+  await expect.poll(() => cameraZoom(page)).toBe(2);
+  const heroX = () => probe(page, (p) => p.hero.onPage()?.x ?? 0);
+  const pane = page.getByRole('region', { name: 'Hero' });
+
+  const box = await pane.boundingBox();
+  const visibleMiddle = (box?.x ?? 1000) / 2;
+  await expect.poll(async () => Math.abs((await heroX()) - visibleMiddle)).toBeLessThan(24);
+
+  // Collapsed, the pane covers almost nothing: the hero moves back to the middle of the panel.
+  await pane.getByRole('button', { name: /hero pane/ }).click();
+  const tab = await pane.boundingBox();
+  const middle = (tab?.x ?? 1000) / 2;
+  await expect.poll(async () => Math.abs((await heroX()) - middle)).toBeLessThan(24);
+  await page.screenshot({ path: 'test-results/camera-collapsed.png' });
 });
