@@ -50,6 +50,7 @@ function command(ctx: StepContext, command: Command): void {
   switch (command.type) {
     case 'hello':
     case 'requestJournal':
+    case 'requestFiles':
     case 'forgetProjectRule':
       return; // handled by the runtime (welcome + snapshot; journal pages; project rules), never logged
     case 'startQuest':

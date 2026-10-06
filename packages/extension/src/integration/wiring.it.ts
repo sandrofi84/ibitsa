@@ -66,6 +66,7 @@ const gameMaster: GameMaster = {
   observeDiff: async () => 'hash',
   removeWorktree: async () => ({ ok: true }),
   scanRepo: async () => ({ defaultBranch: 'main', branches: ['main'], uncommittedChanges: 0 }),
+  listFiles: async () => ['README.md'],
 };
 
 async function until(check: () => boolean, what: string): Promise<void> {

@@ -72,6 +72,8 @@ export interface GameMaster {
   }): Promise<{ ok: true } | { ok: false; reason: string }>;
   /** Default branch, local branches and uncommitted changes of the workspace; null if not a git repo. */
   scanRepo(): Promise<RepoView | null>;
+  /** The worktree's files, tracked and untracked but not ignored, for @ references (#83). */
+  listFiles(request: { worktreePath: string }): Promise<string[]>;
 }
 
 export interface Clock {

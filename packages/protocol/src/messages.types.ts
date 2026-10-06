@@ -11,7 +11,9 @@ export type CoreMessage =
    * Appends go to every front end as entries are written; `start` 0 means a new campaign began.
    */
   | { type: 'journal'; seq: number; entries: JournalEntry[]; start: number; total: number }
-  | { type: 'journalAppend'; seq: number; entries: JournalEntry[]; start: number };
+  | { type: 'journalAppend'; seq: number; entries: JournalEntry[]; start: number }
+  /** Answers `requestFiles` (#83): the worktree's files, tracked and untracked but not ignored. */
+  | { type: 'files'; seq: number; islandId: string; paths: string[] };
 
 /** Fire-and-forget effects (animation, sound, toast). Carry no state: dropping any cue must be harmless. */
 export type Cue =
