@@ -103,24 +103,34 @@ export function commandExists(name: string): boolean {
 const FILE_TOOLS = new Set(['Edit', 'MultiEdit', 'Write', 'NotebookEdit']);
 
 /**
- * What "Always allow" may offer for a request (#62): the SDK's own suggested allow rules, for this
- * session only. Never for the two hard limits (spec §11.6): escaping the sandbox, or touching anything
- * outside the worktree (a blocked path, an extra directory, a file tool aimed elsewhere).
+ * Which hard limit a request crosses, if any (spec §11.6): escaping the sandbox, or touching anything
+ * outside the worktree (a blocked path, an extra directory, a file tool aimed elsewhere). Neither
+ * "Always allow" (#62) nor auto mode (#63) ever covers these.
  */
-export function offeredRules({
+export function boundaryOf({
   toolName,
   input,
   cwd,
   suggestions = [],
   blockedPath,
-}: PermissionRequest): OfferedRules {
-  const none: OfferedRules = { rules: [], updates: [] };
-  if (input.dangerouslyDisableSandbox === true || blockedPath) return none;
-  if (suggestions.some((s) => s.type === 'addDirectories')) return none;
+}: PermissionRequest): 'sandboxEscape' | 'outsideWorktree' | null {
+  if (input.dangerouslyDisableSandbox === true) return 'sandboxEscape';
+  if (blockedPath || suggestions.some((s) => s.type === 'addDirectories')) return 'outsideWorktree';
   const file = input.file_path ?? input.notebook_path;
   if (FILE_TOOLS.has(toolName) && (typeof file !== 'string' || !inside({ path: file, dir: cwd }))) {
-    return none;
+    return 'outsideWorktree';
   }
+  return null;
+}
+
+/**
+ * What "Always allow" may offer for a request (#62): the SDK's own suggested allow rules, for this
+ * session only, and nothing across a hard limit.
+ */
+export function offeredRules(request: PermissionRequest): OfferedRules {
+  const none: OfferedRules = { rules: [], updates: [] };
+  if (boundaryOf(request)) return none;
+  const suggestions = request.suggestions ?? [];
   const updates = suggestions.flatMap((s) =>
     s.type === 'addRules' && s.behavior === 'allow'
       ? [{ ...s, destination: 'session' as const }]

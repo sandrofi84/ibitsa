@@ -16,7 +16,7 @@ import { TestDetector } from './activity';
 import type { SdkModule } from './claude-adapter.types';
 import type { ClaudeSessionInit, Pending, PermissionAnswer } from './claude-session.types';
 import { EventMapper } from './event-mapper';
-import { heroSettings, offeredRules, sandboxProblem } from './hero-settings';
+import { boundaryOf, heroSettings, offeredRules, sandboxProblem } from './hero-settings';
 import type { HeroSettings } from './hero-settings.types';
 import { InputQueue } from './input-queue';
 
@@ -274,7 +274,9 @@ export class ClaudeSession implements AgentSession {
         this.emit({ type: 'question', requestId: toolUseID, questions: toQuestions(input) });
         return;
       }
-      const offered = offeredRules({ toolName, input, cwd: this.cwd, suggestions, blockedPath });
+      const request = { toolName, input, cwd: this.cwd, suggestions, blockedPath };
+      const offered = offeredRules(request);
+      const boundary = boundaryOf(request);
       this.pending.set(toolUseID, {
         kind: 'permission',
         input,
@@ -298,6 +300,7 @@ export class ClaudeSession implements AgentSession {
         ...(title === undefined ? {} : { title }),
         ...(description === undefined ? {} : { description }),
         ...(offered.rules.length > 0 ? { alwaysAllow: offered.rules } : {}),
+        ...(boundary ? { boundary } : {}),
       });
     });
 

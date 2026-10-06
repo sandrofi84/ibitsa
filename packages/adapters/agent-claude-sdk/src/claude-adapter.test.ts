@@ -336,6 +336,16 @@ describe('permissions and questions (#34)', () => {
     done();
   });
 
+  it('marks a request that crosses a hard limit (#63)', async () => {
+    const { session, events, ask, done } = withCanUseTool();
+    const pending = ask('Bash', { command: 'curl x', dangerouslyDisableSandbox: true }, opts('t1'));
+    await flush();
+    expect(events.at(-1)).toMatchObject({ type: 'permission', boundary: 'sandboxEscape' });
+    session.respondToPermission({ requestId: 't1', decision: 'deny' });
+    await pending;
+    done();
+  });
+
   it('denies with the note, or a default message', async () => {
     const { session, ask, done } = withCanUseTool();
     const first = ask('Bash', { command: 'rm -rf dist' }, opts('t1'));
