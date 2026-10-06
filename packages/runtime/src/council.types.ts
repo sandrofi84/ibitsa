@@ -5,8 +5,8 @@ export interface CouncilVersionInput {
   /** How the council sits, e.g. `roundTable` or `chambers`. */
   mode: string;
   councillors: readonly Pick<CouncillorInfo, 'id' | 'hash'>[];
-  /** Bumped whenever Ibitsa's own council prompts change. */
-  promptVersion: number;
+  /** Changes whenever Ibitsa's own council prompts change: the adapter hashes them. */
+  promptVersion: string;
 }
 
 /** The models and cap a sitting's session starts with (spec §4.2). */

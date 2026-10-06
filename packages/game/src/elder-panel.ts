@@ -1,4 +1,4 @@
-import type { ElderView, Plan, Snapshot } from '@ibitsa/protocol';
+import type { ElderView, Plan, SittingView, Snapshot } from '@ibitsa/protocol';
 import type { GameClient } from './client';
 import { button, el } from './dom';
 import type { ElderPanelOptions } from './elder-panel.types';
@@ -37,10 +37,11 @@ export function mountElderPanel({
     const elder = planning ? snapshot.elder : null;
     panel.hidden = !elder && !approved;
     if (approved) {
-      const key = `plan:${snapshot.sitting?.id}:${approved.version}`;
+      const sitting = snapshot.sitting as SittingView;
+      const key = `plan:${sitting.id}:${approved.version}:${sitting.rating?.score ?? ''}`;
       if (key === shown) return;
       shown = key;
-      panel.replaceChildren(...renderPlan(approved.plan));
+      panel.replaceChildren(...renderPlan({ plan: approved.plan, sitting }));
       return;
     }
     if (!elder) {
@@ -55,13 +56,15 @@ export function mountElderPanel({
   });
 
   /** The approved plan (#104): what the hero will work through, and Start the quest. */
-  function renderPlan(plan: Plan): HTMLElement[] {
+  function renderPlan({ plan, sitting }: { plan: Plan; sitting: SittingView }): HTMLElement[] {
     const start = button({ label: 'Start the quest', onClick: () => options.startPlan(plan) });
     start.classList.add('recommended');
     return [
       el('h2', { text: "The council's plan" }),
       el('p', { className: 'verdict', text: `Approved. ${plan.summary}` }),
       ...planDetails(plan),
+      rating({ client, sitting }),
+      otherWay({ client, sitting }),
       actions(
         start,
         button({ label: 'Abandon', onClick: () => client.send({ type: 'abandonQuest' }) }),
@@ -147,4 +150,81 @@ function actions(...buttons: HTMLButtonElement[]): HTMLElement {
   const row = el('div', { className: 'actions' });
   row.append(...buttons);
   return row;
+}
+
+/**
+ * "How useful was the council?" (§4.10, #106): 1–5 and an optional note, once. Optional: the plan can be
+ * carried out without it.
+ */
+function rating({ client, sitting }: { client: GameClient; sitting: SittingView }): HTMLElement {
+  const box = el('fieldset', { className: 'rating' });
+  box.append(el('legend', { text: 'How useful was the council?' }));
+  if (sitting.rating) {
+    box.append(el('p', { text: `You rated it ${sitting.rating.score} of 5. Thank you.` }));
+    return box;
+  }
+  const note = el('input');
+  note.placeholder = 'A note (optional)';
+  note.setAttribute('aria-label', 'A note about the council (optional)');
+  const scores = el('div', { className: 'scores' });
+  for (let score = 1; score <= 5; score++) {
+    const b = button({
+      label: String(score),
+      onClick: () =>
+        client.send({
+          type: 'rateSitting',
+          sittingId: sitting.id,
+          score,
+          ...(note.value.trim() ? { note: note.value.trim() } : {}),
+        }),
+    });
+    b.setAttribute('aria-label', `${score} of 5`);
+    scores.append(b);
+  }
+  box.append(scores, note, el('p', { className: 'note', text: '1 not useful, 5 very useful.' }));
+  return box;
+}
+
+/**
+ * Convene the other way (§4.10, #106): the same task and councillors, in the other mode, to compare.
+ * It costs a second sitting, so it asks first.
+ */
+function otherWay({ client, sitting }: { client: GameClient; sitting: SittingView }): HTMLElement {
+  const other = sitting.mode === 'roundTable' ? 'chambers' : 'roundTable';
+  const name = other === 'chambers' ? 'in separate chambers' : 'at a round table';
+  const box = el('div', { className: 'other-way' });
+  const ask = button({
+    label: 'Convene the other way',
+    onClick: () => {
+      const confirm = el('p', {
+        text: `The council sits again ${name} on the same task, to compare. That costs a second sitting. Convene?`,
+      });
+      const yes = button({
+        label: `Yes, sit ${name}`,
+        onClick: () =>
+          client.send({
+            type: 'conveneCouncil',
+            task: sitting.task,
+            mode: other,
+            roster: sitting.roster.map((c) => c.councillorId),
+            effort: sitting.effort,
+            ...(other === 'chambers'
+              ? {
+                  councillorEfforts: Object.fromEntries(
+                    sitting.roster.map((c) => [c.councillorId, c.effort]),
+                  ),
+                }
+              : {}),
+            comparisonOf: sitting.id,
+          }),
+      });
+      box.replaceChildren(
+        confirm,
+        actions(yes, button({ label: 'No', onClick: () => box.replaceChildren(ask) })),
+      );
+      yes.focus();
+    },
+  });
+  box.append(ask);
+  return box;
 }

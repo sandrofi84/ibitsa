@@ -41,10 +41,13 @@ export type {
   CouncilQuestion,
   CouncilReport,
   DialogueLine,
+  ModelUsage,
   PlanOutcome,
   PlanProposal,
   SittingMessage,
+  SittingRating,
   SittingStatus,
+  SittingTally,
   SittingView,
 } from './sitting.types';
 export type {

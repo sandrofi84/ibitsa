@@ -48,12 +48,19 @@ export class CampaignStore {
   latestId(): string | null {
     const active = this.activeId();
     if (active) return active;
-    if (!existsSync(this.root)) return null;
-    const logs = readdirSync(this.root, { withFileTypes: true })
-      .filter((d) => d.isDirectory() && existsSync(this.logPath(d.name)))
-      .map((d) => ({ id: d.name, modified: statSync(this.logPath(d.name)).mtimeMs }))
+    const logs = this.ids()
+      .map((id) => ({ id, modified: statSync(this.logPath(id)).mtimeMs }))
       .sort((a, b) => b.modified - a.modified);
     return logs[0]?.id ?? null;
+  }
+
+  /** Every campaign with a log, e.g. for exporting council tallies (#106). */
+  ids(): string[] {
+    if (!existsSync(this.root)) return [];
+    return readdirSync(this.root, { withFileTypes: true })
+      .filter((d) => d.isDirectory() && existsSync(this.logPath(d.name)))
+      .map((d) => d.name)
+      .sort();
   }
 
   read(id: string): EventLog {

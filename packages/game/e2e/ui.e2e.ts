@@ -8,6 +8,7 @@ interface Probe {
     campaign: { status: string } | null;
     heroes: { state: { kind: string }; queuedMessages: number }[];
     islands: { taskPoints: { state: string }[] }[];
+    sitting: { mode: string; comparisonOf: string | null; rating: unknown } | null;
   } | null;
   hut(): { decisions: number } | null;
   hostRequests(): { type: string; key?: string }[];
@@ -544,5 +545,49 @@ test('separate chambers: an effort per councillor, the study stage, then the que
   const box = page.getByRole('dialog', { name: 'The council asks' });
   await expect(box).toContainText('Should the change come with a test?', { timeout: 15_000 });
   expect(await probe(page, (p) => p.hut()?.stage)).toBe('dialogue');
+  expect(errors).toEqual([]);
+});
+
+test('after a sitting: rate the council, then convene it the other way to compare (#106)', async ({
+  page,
+}) => {
+  const errors = watchErrors(page);
+  await page.goto('/?fixture=live');
+  await page.getByRole('button', { name: 'New quest' }).click();
+  await page.getByLabel('Task').fill('Fix the login redirect');
+  await page.getByRole('button', { name: 'Ask the elder' }).click();
+  const elder = page.getByRole('region', { name: 'Elder' });
+  await elder.getByRole('button', { name: 'Convene council' }).click();
+  await page
+    .getByRole('dialog', { name: 'Convene the council' })
+    .getByRole('button', { name: 'Convene' })
+    .click();
+  const box = page.getByRole('dialog', { name: 'The council asks' });
+  await box.getByRole('radio', { name: /Yes/ }).click();
+  await box.getByRole('button', { name: 'Send answers' }).click();
+  await page
+    .getByRole('region', { name: "The council's plan" })
+    .getByRole('button', { name: 'Approve' })
+    .click();
+
+  const rating = elder.getByRole('group', { name: 'How useful was the council?' });
+  await rating.getByLabel('A note about the council (optional)').fill('Good questions');
+  await rating.getByRole('button', { name: '4 of 5' }).click();
+  await expect(rating).toContainText('You rated it 4 of 5.');
+  expect(await probe(page, (p) => p.snapshot()?.sitting)).toMatchObject({
+    rating: { score: 4, note: 'Good questions' },
+  });
+  await page.screenshot({ path: 'test-results/rating.png' });
+
+  await elder.getByRole('button', { name: 'Convene the other way' }).click();
+  await expect(elder).toContainText('The council sits again in separate chambers on the same task');
+  await elder.getByRole('button', { name: 'Yes, sit in separate chambers' }).click();
+  await expect.poll(() => probe(page, (p) => p.hut()?.decisions)).toBe(0);
+  expect(await probe(page, (p) => p.snapshot()?.sitting)).toMatchObject({
+    mode: 'chambers',
+    rating: null,
+  });
+  expect(await probe(page, (p) => p.snapshot()?.sitting?.comparisonOf)).toBeTruthy();
+  await expect(box).toBeVisible({ timeout: 15_000 });
   expect(errors).toEqual([]);
 });

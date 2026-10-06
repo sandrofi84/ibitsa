@@ -4,6 +4,8 @@
 export { briefMarkdown, CampaignDocuments, planMarkdown } from './campaign-documents';
 export { councilVersion } from './council';
 export type { CouncilVersionInput } from './council.types';
+export { CouncilTallies } from './council-tallies';
+export type { ExportedTally } from './council-tallies.types';
 export { GitGameMaster } from './git-game-master';
 export type { GitGameMasterOptions } from './git-game-master.types';
 export type {

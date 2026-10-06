@@ -4,6 +4,8 @@ import { councillorTitle, hutFromSitting, isSitting, SittingFeed } from './sitti
 
 const sitting = (over: Partial<SittingView> = {}): SittingView => ({
   id: 's1',
+  rating: null,
+  comparisonOf: null,
   task: 'Add sign-in',
   mode: 'roundTable',
   status: 'deliberating',

@@ -14,6 +14,7 @@ import type {
   Snapshot,
 } from '@ibitsa/protocol';
 import { afterEach, describe, expect, it } from 'vitest';
+import { councilVersion } from './council';
 import type {
   AgentAdapter,
   AgentSession,
@@ -1537,5 +1538,131 @@ describe('the approved plan (#104)', () => {
     );
     expect(readFileSync(join(dir, 'plan.md'), 'utf8')).toContain('### T1 · Do it');
     runtime.dispose();
+  });
+});
+
+describe('council tallies (#106)', () => {
+  async function sat() {
+    const storageDir = mkdtempSync(join(tmpdir(), 'ibitsa-runtime-'));
+    const home = mkdtempSync(join(tmpdir(), 'ibitsa-home-'));
+    dirs.push(storageDir, home);
+    let emit: (e: CouncilEvent) => void = () => {};
+    const adapter = Object.assign(new FakeAdapter(), {
+      councilPromptVersion: 'prompts-1',
+      listCouncillors: async () => [
+        {
+          id: 'security',
+          skill: 'ibitsa:security',
+          title: 'Security',
+          description: '',
+          source: 'builtin',
+          portrait: null,
+          model: null,
+          tools: ['Read'],
+          modes: { planning: true, review: true },
+          hash: 'h1',
+        } satisfies CouncillorInfo,
+      ],
+      startSitting: (_s: SittingStart, onEvent: (e: CouncilEvent) => void) => {
+        emit = onEvent;
+        return { message: () => {}, completeTool: () => {}, answer: () => {}, close: () => {} };
+      },
+    });
+    const runtime = new Runtime({
+      storageDir,
+      adapter,
+      gameMaster: new FakeGameMaster(),
+      clock: new ManualClock(),
+      home,
+      newId: () => 'camp-1',
+      repoDir: '/repo',
+      watchFolder: () => ({ close: () => {} }),
+    });
+    runtime.start();
+    await flush();
+    const connection = runtime.connect({ post: () => {} });
+    connection.receive({
+      type: 'conveneCouncil',
+      commandId: 'k',
+      task: 'Add sign-in, "fast"',
+      mode: 'roundTable',
+      roster: ['security'],
+      effort: 'light',
+    });
+    await flush();
+    emit({
+      type: 'reportFiled',
+      toolUseId: 'r',
+      councillorId: 'security',
+      report: { concerns: [], questions: [], recommendations: [], notChecked: [] },
+    });
+    emit({ type: 'usage', totalCost: 250_000 });
+    emit({ type: 'planProposed', toolUseId: 'p', plan: SMALL_PLAN });
+    connection.receive({ type: 'approvePlan', commandId: 'a', version: 1 });
+    connection.receive({
+      type: 'rateSitting',
+      commandId: 'g',
+      sittingId: 's1',
+      score: 5,
+      note: 'Sharp, "useful"',
+    });
+    return { runtime, storageDir };
+  }
+
+  it("notes the council version when the session starts: mode, skill files and the adapter's prompts", async () => {
+    const { storageDir } = await sat();
+    const noted = logOf(storageDir).records.find(
+      (r) => r.kind === 'gm' && r.event.type === 'councilVersionNoted',
+    );
+    expect(noted?.kind === 'gm' && noted.event).toEqual({
+      type: 'councilVersionNoted',
+      sittingId: 's1',
+      version: councilVersion({
+        mode: 'roundTable',
+        councillors: [{ id: 'security', hash: 'h1' }],
+        promptVersion: 'prompts-1',
+      }),
+    });
+  });
+
+  it('exports every sitting with its campaign, as JSON and as CSV', async () => {
+    const { runtime } = await sat();
+    const json = JSON.parse(runtime.exportTallies('json'));
+    expect(json).toMatchObject([
+      {
+        campaignId: 'camp-1',
+        campaignTitle: 'Add sign-in, "fast"',
+        sittingId: 's1',
+        outcome: 'approved',
+        cost: { totalMicroUsd: 250_000 },
+        rating: { score: 5, note: 'Sharp, "useful"' },
+        convenedAt: '2026-10-04T15:00:00.000Z',
+      },
+    ]);
+    const [header, row, ...rest] = runtime.exportTallies('csv').trimEnd().split('\n');
+    expect(rest).toEqual([]);
+    expect(
+      header?.startsWith('campaignId,campaignTitle,sittingId,convenedAt,mode,councilVersion'),
+    ).toBe(true);
+    expect(row).toContain('camp-1,"Add sign-in, ""fast""",s1,2026-10-04T15:00:00.000Z,roundTable,');
+    expect(row).toContain(
+      ',0.25,0,0,0,0,,light,,security:light,,1,0,0,0,0,0,0,0,1,1,0,0,5,"Sharp, ""useful"""',
+    );
+    runtime.dispose();
+  });
+
+  it('exports nothing without sittings, and skips unreadable logs', () => {
+    const storageDir = mkdtempSync(join(tmpdir(), 'ibitsa-runtime-'));
+    dirs.push(storageDir);
+    mkdirSync(join(storageDir, 'campaigns', 'broken'), { recursive: true });
+    appendFileSync(join(storageDir, 'campaigns', 'broken', 'events.jsonl'), 'not json\n');
+    const runtime = new Runtime({
+      storageDir,
+      adapter: new FakeAdapter(),
+      gameMaster: new FakeGameMaster(),
+      clock: new ManualClock(),
+    });
+    expect(JSON.parse(runtime.exportTallies('json'))).toEqual([]);
+    expect(runtime.exportTallies('csv').split('\n')[1]).toBe('');
   });
 });

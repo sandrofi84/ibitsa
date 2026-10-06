@@ -231,16 +231,16 @@ ask_user({
 - Hero sessions are task-scoped and end when their task's PR opens or the task is abandoned.
 
 ### 4.10 Measuring sittings
-Built so round table and separate chambers, and later changes to either, can be compared on real tasks.
-- Each sitting records a **tally** in the event log (so it survives reloads and replays):
-  - **Cost:** the SDK's figures (total cost; input, output and cache tokens per model) and time taken; in separate chambers also per councillor (from subagent attribution).
-  - **Output:** reports and concerns, concerns that made it into the plan, questions asked, plan revisions.
-  - **Rating:** after approval, one optional prompt, "How useful was the council?" 1–5 plus a note.
-  - **Effort:** each councillor's effort and whether the user changed the elder's pick.
-  - **Council version:** the mode, a hash of the councillor skill files, and the prompt version; tallies group by it, so editing a councillor or prompt starts a new group.
+Built so round table and separate chambers, and later changes to either, can be compared on real tasks (#106).
+- Each sitting's **tally** is computed by core (`Sitting.tally`) from what the event log already holds, so it survives reloads and replays; earlier sittings in a campaign are kept (`pastSittings`) for theirs.
+  - **Cost:** the total; input, output and cache tokens and cost **per model** (the SDK's `modelUsage`); in separate chambers, **tokens per councillor** (each chamber's messages carry the id of the call that started it). Per-councillor dollars aren't known: the SDK prices the session, not each subagent. Time taken from core's clock.
+  - **Output:** reports, bow-outs, concerns (and how many high or serious), questions asked, "Why?"s, revisions, re-consultations, plans proposed, and the last plan's tasks, decisions and criteria. *Concerns that made it into the plan* aren't counted: nothing links a concern to a plan task yet; the plan's size stands in.
+  - **Effort:** the sitting's and each councillor's effort, the elder's recommendations, and whether the user changed them.
+  - **Rating:** after a plan is approved (or the council dismissed), the elder panel asks "How useful was the council?" 1–5 with an optional note; optional, and can be changed.
+  - **Council version:** noted by the runtime when the session starts: a hash of the mode, the roster's skill-file hashes and the adapter's `councilPromptVersion` (itself a hash of the council's instruction texts), so editing a councillor or a prompt starts a new group without anyone bumping a number.
   - Quest outcomes (tasks redone, review findings, whether a raised concern mattered) are added once reviews exist (M5).
-- **Convene the other way:** after a sitting, the same quest's council can sit in the other mode for comparison only. It costs a second sitting, so it always asks first.
-- **"Ibitsa: Export council tallies"** (Command Palette) writes JSON or CSV. An in-game view can follow once there is data worth showing.
+- **Convene the other way:** after a sitting, the elder panel offers the same task and councillors in the other mode, marked as a comparison (`comparisonOf`). It costs a second sitting, so it asks first. **Start the quest** carries out the latest approved plan.
+- **"Ibitsa: Export Council Tallies"** (Command Palette) replays every campaign log in the workspace and writes JSON (everything) or CSV (one row per sitting). An in-game view can follow once there is data worth showing.
 
 ---
 

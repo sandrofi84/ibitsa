@@ -322,6 +322,7 @@ describe('the round table (#103)', () => {
     expect(events.filter((e) => e.type === 'usage')[0]).toEqual({
       type: 'usage',
       totalCost: 300_000,
+      byModel: [],
     });
   });
 
@@ -364,5 +365,93 @@ describe('the round table (#103)', () => {
     );
     await until(() => events.length > 0);
     expect(events).toEqual([{ type: 'error', message: 'no SDK' }]);
+  });
+});
+
+describe('what a sitting cost (#106)', () => {
+  it('reports cost per model, and tokens per councillor from the chambers it started', async () => {
+    const assistant = (m: Record<string, unknown>) => message({ type: 'assistant', ...m });
+    const { events } = run(async function* ({ next }) {
+      await next();
+      // The lead session starts a chamber for security (and its deeper pass); their messages carry its id.
+      yield assistant({
+        parent_tool_use_id: null,
+        message: {
+          content: [
+            { type: 'text', text: 'Dispatching' },
+            {
+              type: 'tool_use',
+              id: 'agent-1',
+              name: 'Agent',
+              input: { subagent_type: 'security' },
+            },
+            {
+              type: 'tool_use',
+              id: 'agent-2',
+              name: 'Task',
+              input: { subagent_type: 'security-deep' },
+            },
+            { type: 'tool_use', id: 'read-1', name: 'Read', input: { file_path: 'x' } },
+          ],
+        },
+      });
+      yield assistant({
+        parent_tool_use_id: 'agent-1',
+        message: {
+          content: [],
+          usage: { input_tokens: 100, output_tokens: 20, cache_read_input_tokens: 300 },
+        },
+      });
+      yield assistant({
+        parent_tool_use_id: 'agent-2',
+        message: {
+          content: [],
+          usage: { input_tokens: 50, output_tokens: 10, cache_creation_input_tokens: 5 },
+        },
+      });
+      yield assistant({
+        parent_tool_use_id: 'unknown',
+        message: { content: [], usage: { input_tokens: 9, output_tokens: 9 } },
+      });
+      yield message({
+        type: 'result',
+        subtype: 'success',
+        is_error: false,
+        total_cost_usd: 0.3,
+        modelUsage: {
+          'claude-sonnet': {
+            inputTokens: 1000,
+            outputTokens: 200,
+            cacheReadInputTokens: 5000,
+            cacheCreationInputTokens: 400,
+            costUSD: 0.25,
+          },
+        },
+      });
+    });
+    await until(() => events.some((e) => e.type === 'usage'));
+    expect(events.find((e) => e.type === 'usage')).toEqual({
+      type: 'usage',
+      totalCost: 300_000,
+      byModel: [
+        {
+          model: 'claude-sonnet',
+          inputTokens: 1000,
+          outputTokens: 200,
+          cacheReadTokens: 5000,
+          cacheWriteTokens: 400,
+          costMicroUsd: 250_000,
+        },
+      ],
+      byCouncillor: [{ councillorId: 'security', tokens: 485 }],
+    });
+  });
+
+  it('names the council prompts by a hash, the same every time', () => {
+    const adapter = new ClaudeAdapter({ env: () => ({}) });
+    expect(adapter.councilPromptVersion).toMatch(/^[0-9a-f]{12}$/);
+    expect(new ClaudeAdapter({ env: () => ({}) }).councilPromptVersion).toBe(
+      adapter.councilPromptVersion,
+    );
   });
 });

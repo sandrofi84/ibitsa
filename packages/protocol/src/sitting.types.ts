@@ -54,7 +54,14 @@ export type CouncilEvent =
    */
   | { type: 'said'; councillorId: string; text: string; questionId?: string }
   /** Running total for the sitting, never a delta. */
-  | { type: 'usage'; totalCost: MicroUsd }
+  | {
+      type: 'usage';
+      totalCost: MicroUsd;
+      /** Tokens and cost per model, as the SDK reports them (#106). */
+      byModel?: ModelUsage[];
+      /** Tokens per councillor, from its chamber's messages (separate chambers only, #106). */
+      byCouncillor?: { councillorId: string; tokens: number }[];
+    }
   /** The session cannot continue. */
   | { type: 'error'; message: string };
 
@@ -93,6 +100,71 @@ export interface SittingView {
   reconsultations: { councillorId: string; revision: number; reportId: string }[];
   gold: Reading<MicroUsd>;
   error: string | null;
+  /** The user's answer to "How useful was the council?" (§4.10), once given. */
+  rating: SittingRating | null;
+  /** Set when this sitting was convened the other way, to compare with that one (§4.10). */
+  comparisonOf: string | null;
+}
+
+export interface SittingRating {
+  /** 1 (not useful) to 5 (very useful). */
+  score: number;
+  note?: string;
+}
+
+/** Tokens and cost for one model in a sitting. */
+export interface ModelUsage {
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+  costMicroUsd: MicroUsd;
+}
+
+/**
+ * What a sitting cost and produced (spec §4.10, #106): computed by core from the sitting, exported to
+ * compare round tables and separate chambers, and later versions of either.
+ */
+export interface SittingTally {
+  sittingId: string;
+  mode: SittingMode;
+  /** The mode, the councillors' skill files and Ibitsa's prompts, hashed; null if never noted. */
+  councilVersion: string | null;
+  comparisonOf: string | null;
+  outcome: SittingStatus;
+  /** Core's clock when convened (ms since the campaign log began) and how long it sat. */
+  startedAt: number;
+  durationMs: number | null;
+  cost: {
+    totalMicroUsd: MicroUsd | null;
+    byModel: ModelUsage[];
+    byCouncillor: { councillorId: string; tokens: number }[];
+  };
+  effort: Effort;
+  /** What the elder recommended for a round table, if it wrote a brief. */
+  elderEffort: Effort | null;
+  roster: {
+    councillorId: string;
+    effort: Effort;
+    elderEffort: Effort | null;
+    recommended: boolean;
+  }[];
+  /** Whether the user's roster or efforts differ from the elder's recommendation. */
+  changedElderPicks: boolean | null;
+  reports: number;
+  bowOuts: number;
+  concerns: number;
+  seriousConcerns: number;
+  questionsAsked: number;
+  whys: number;
+  revisions: number;
+  reconsultations: number;
+  plansProposed: number;
+  planTasks: number;
+  planDecisions: number;
+  planCriteria: number;
+  rating: SittingRating | null;
 }
 
 /** One line of the sitting's dialogue. `speaker` is a councillor on the roster, the elder, or `you`. */
