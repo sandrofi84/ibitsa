@@ -16,6 +16,8 @@ function hasWebGL(root: HTMLElement): boolean {
   return Boolean(canvas.getContext('webgl2') ?? canvas.getContext('webgl'));
 }
 
+const NO_HERO: Started['hero'] = { onPage: () => null, speech: () => null, icon: () => null };
+
 export function startGame(root: HTMLElement, host: Host): Started {
   const assetBase = root.dataset.assetBase ?? './';
   const cspViolations: string[] = [];
@@ -40,7 +42,7 @@ export function startGame(root: HTMLElement, host: Host): Started {
       '<p class="notice">Ibitsa needs WebGL, and it isn’t available here, so the game can’t start. ' +
       'Your agents are not affected.</p>';
     reportDiagnostics(diagnostics);
-    return { client, zoom: () => 0, heroOnPage: () => null, heroSpeech: () => null };
+    return { client, zoom: () => 0, hero: NO_HERO };
   }
 
   mountNeedsYouPanel(client);
@@ -93,15 +95,17 @@ export function startGame(root: HTMLElement, host: Host): Started {
     }).observe(root);
     client.start();
   });
-  const heroOnPage = () => {
-    const scene = game.scene.getScene('world') as WorldScene | null;
-    const at = scene?.heroPosition();
-    if (!at) return null;
-    const rect = game.canvas.getBoundingClientRect();
-    const zoom = game.scale.zoom;
-    return { x: rect.left + at.x * zoom, y: rect.top + at.y * zoom };
+  const token = () => (game.scene.getScene('world') as WorldScene | null)?.firstHero() ?? null;
+  const hero: Started['hero'] = {
+    onPage: () => {
+      const t = token();
+      if (!t) return null;
+      const at = t.position();
+      const rect = game.canvas.getBoundingClientRect();
+      return { x: rect.left + at.x * game.scale.zoom, y: rect.top + at.y * game.scale.zoom };
+    },
+    speech: () => token()?.speaking() ?? null,
+    icon: () => token()?.showingIcon() ?? null,
   };
-  const heroSpeech = () =>
-    (game.scene.getScene('world') as WorldScene | null)?.heroSpeech() ?? null;
-  return { client, zoom: () => diagnostics.zoom, heroOnPage, heroSpeech };
+  return { client, zoom: () => diagnostics.zoom, hero };
 }

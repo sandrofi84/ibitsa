@@ -41,16 +41,9 @@ export class WorldScene extends Phaser.Scene {
     super('world');
   }
 
-  /** What the first hero's speech bubble says while it shows (for tests and probes). */
-  heroSpeech(): string | null {
-    const token = this.heroes.values().next().value;
-    return token ? token.speaking() : null;
-  }
-
-  /** Where the first hero's sprite is, in canvas pixels (for tests and probes). */
-  heroPosition(): { x: number; y: number } | null {
-    const token = this.heroes.values().next().value;
-    return token ? token.position() : null;
+  /** The first hero's token, for tests and probes. */
+  firstHero(): HeroToken | null {
+    return this.heroes.values().next().value ?? null;
   }
 
   create(): void {
@@ -163,6 +156,7 @@ export class WorldScene extends Phaser.Scene {
         token = new HeroToken({
           scene: this,
           hero,
+          iconKinds: this.manifest.activityIcons.kinds,
           character: this.characterKey(hero.classId),
           layout: this.layout,
         });
@@ -188,8 +182,8 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private cue(cue: Cue): void {
-    if (cue.type === 'activityFinished') this.heroes.get(cue.heroId)?.flash(cue.outcome);
-    if (cue.type === 'retrying') this.heroes.get(cue.heroId)?.flash('failed');
+    if (cue.type === 'activityFinished') this.heroes.get(cue.heroId)?.flash(cue);
+    if (cue.type === 'retrying') this.heroes.get(cue.heroId)?.flash({ outcome: 'failed' });
     if (cue.type === 'heroSaid') this.heroes.get(cue.heroId)?.say(cue.text);
   }
 }
@@ -200,6 +194,9 @@ function gold(reading: Reading<number>): string {
   return reading.kind === 'estimated' ? `~${g}` : String(g);
 }
 
+/** How long the flask stays, green or red, after a test run. */
+const TEST_LINGER_MS = 900;
+
 /** How long a message's speech bubble stays before it fades. */
 const SPEECH_MS = 4000;
 
@@ -207,7 +204,7 @@ const SPEECH_MS = 4000;
 export const HERO_SELECTED = 'heroSelected';
 
 /** A hero on the map: round token base, sprite, HP bar and status bubble (spec §7.2). */
-class HeroToken {
+export class HeroToken {
   private readonly container: Phaser.GameObjects.Container;
   private readonly sprite: Phaser.GameObjects.Sprite;
   private readonly hpBar: Phaser.GameObjects.Graphics;
@@ -217,6 +214,10 @@ class HeroToken {
   private readonly speechBox: Phaser.GameObjects.Graphics;
   private readonly speechText: Phaser.GameObjects.Text;
   private speechKind: 'none' | 'message' | 'submitted' = 'none';
+  /** What the hero is doing, as an icon beside its head (#60); lingers briefly after a test. */
+  private readonly icon: Phaser.GameObjects.Sprite;
+  private readonly iconKinds: readonly string[];
+  private iconLinger: Phaser.Time.TimerEvent | null = null;
   private speechFade: Phaser.Tweens.Tween | null = null;
   private travel: Phaser.Tweens.Tween | null = null;
   private traveled = false;
@@ -228,15 +229,18 @@ class HeroToken {
   constructor({
     scene,
     hero,
+    iconKinds,
     character,
     layout,
   }: {
     scene: Phaser.Scene;
     hero: HeroView;
+    iconKinds: readonly string[];
     character: string;
     layout: WorldLayout;
   }) {
     this.scene = scene;
+    this.iconKinds = iconKinds;
     this.character = character;
     const start =
       hero.state.kind === 'traveling'
@@ -259,10 +263,12 @@ class HeroToken {
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => scene.game.events.emit(HERO_SELECTED, hero.id));
     this.speech = scene.add.container(0, -24, [this.speechBox, this.speechText]).setVisible(false);
+    this.icon = scene.add.sprite(13, -9, 'activityIcons', 0).setVisible(false);
     this.container = scene.add.container(start?.x ?? 0, start?.y ?? 0, [
       base,
       this.sprite,
       this.hpBar,
+      this.icon,
       this.bubble,
       this.speech,
     ]);
@@ -285,6 +291,18 @@ class HeroToken {
       duration: 500,
       onComplete: () => this.hideSpeech(),
     });
+  }
+
+  /** The activity icon showing, else null. */
+  showingIcon(): string | null {
+    return this.icon.visible ? (this.iconKinds[Number(this.icon.frame.name)] ?? null) : null;
+  }
+
+  private showIcon(kind: string): boolean {
+    const frame = this.iconKinds.indexOf(kind);
+    if (frame < 0) return false;
+    this.icon.setFrame(frame).setVisible(true);
+    return true;
   }
 
   /** The speech bubble's text while it shows, else null. */
@@ -376,6 +394,11 @@ class HeroToken {
       }
     }
 
+    if (!this.iconLinger) {
+      const activity = s.kind === 'working' ? hero.activity : null;
+      if (!activity || !this.showIcon(activity.kind)) this.icon.setVisible(false);
+    }
+
     // "Ready for review!" stays until the quest is finished or the hero gets back to work.
     const readyForReview = s.kind === 'submitted' && questActive;
     if (readyForReview && this.speechKind !== 'submitted') {
@@ -447,7 +470,16 @@ class HeroToken {
     g.fillStyle(color, hp.kind === 'estimated' ? 0.6 : 1).fillRect(x, y, Math.round(w * left), 2);
   }
 
-  flash(outcome: 'ok' | 'failed'): void {
+  flash({ outcome, kind }: { outcome: 'ok' | 'failed'; kind?: string }): void {
+    if (kind === 'test' && this.showIcon('test')) {
+      // The flask turns green or red and stays a moment, so a quick test run is still seen.
+      this.icon.setTint(outcome === 'ok' ? 0x7fdc7f : 0xff6a5a);
+      this.iconLinger?.remove();
+      this.iconLinger = this.scene.time.delayedCall(TEST_LINGER_MS, () => {
+        this.iconLinger = null;
+        this.icon.clearTint().setVisible(false);
+      });
+    }
     if (outcome === 'failed') {
       this.scene.tweens.add({
         targets: this.sprite,

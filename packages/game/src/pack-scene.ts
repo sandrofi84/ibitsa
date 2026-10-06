@@ -36,6 +36,11 @@ export class PackScene extends Phaser.Scene {
       frameWidth: tp.size,
       frameHeight: tp.size,
     });
+    const ai = manifest.activityIcons;
+    this.load.spritesheet('activityIcons', this.url(ai.image), {
+      frameWidth: ai.size,
+      frameHeight: ai.size,
+    });
     for (const [key, b] of Object.entries(manifest.buildings))
       this.load.image(`building:${key}`, this.url(b.image));
 

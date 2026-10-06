@@ -5,8 +5,13 @@ export interface Started {
   client: GameClient;
   /** Current integer zoom, 0 before the game is ready or without WebGL. */
   zoom(): number;
-  /** The first hero's sprite in page pixels, for tests; null without a hero or before the game is ready. */
-  heroOnPage(): { x: number; y: number } | null;
-  /** What the first hero's speech bubble says while it shows, for tests. */
-  heroSpeech(): string | null;
+  /** The first hero on the map, for tests; every read is null without a hero or before the game is ready. */
+  hero: {
+    /** The sprite's middle in page pixels. */
+    onPage(): { x: number; y: number } | null;
+    /** What its speech bubble says while it shows. */
+    speech(): string | null;
+    /** The activity icon showing beside it. */
+    icon(): string | null;
+  };
 }

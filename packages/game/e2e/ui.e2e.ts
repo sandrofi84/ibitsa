@@ -9,8 +9,11 @@ interface Probe {
     heroes: { state: { kind: string }; queuedMessages: number }[];
   } | null;
   hostRequests(): { type: string; key?: string }[];
-  heroOnPage(): { x: number; y: number } | null;
-  heroSpeech(): string | null;
+  hero: {
+    onPage(): { x: number; y: number } | null;
+    speech(): string | null;
+    icon(): string | null;
+  };
   zoom(): number;
 }
 
@@ -168,7 +171,7 @@ test('the hero pane docks right, collapses to a tab, and opens when you click th
   await expect(message).toBeHidden();
 
   // Clicking the hero on the map opens the pane and focuses it.
-  const hero = await probe(page, (p) => p.heroOnPage());
+  const hero = await probe(page, (p) => p.hero.onPage());
   expect(hero).not.toBeNull();
   await page.mouse.click(hero?.x ?? 0, hero?.y ?? 0);
   await expect(message).toBeVisible();
@@ -194,7 +197,7 @@ test('speech bubbles: a message excerpt that fades, then "Ready for review!" unt
   await page.getByRole('button', { name: 'New quest' }).click();
   await page.getByLabel('Task').fill('Tidy the README');
   await page.getByRole('button', { name: 'Start quest' }).click();
-  const speech = () => probe(page, (p) => p.heroSpeech());
+  const speech = () => probe(page, (p) => p.hero.speech());
 
   // The scripted reply is "I looked around and made a first change. What next?"
   await expect.poll(speech).toBe('I looked around and made a first…');
@@ -213,7 +216,7 @@ test('speech bubbles: a message excerpt that fades, then "Ready for review!" unt
   // Clicking it opens the pane at the hero's summary.
   await pane.getByRole('button', { name: /hero pane/ }).click();
   await expect(pane.getByLabel('Message to the hero')).toBeHidden();
-  const hero = await probe(page, (p) => p.heroOnPage());
+  const hero = await probe(page, (p) => p.hero.onPage());
   const zoom = await probe(page, (p) => p.zoom());
   await page.mouse.click(hero?.x ?? 0, (hero?.y ?? 0) - 22 * zoom);
   await expect(pane.getByText('Ready for review.')).toBeVisible();
