@@ -101,8 +101,9 @@ export interface SittingStart {
   task: string;
   /** The elder's brief, when there is one: the sitting starts from it (§4.1). */
   brief: ResearchBrief | null;
-  roster: readonly { councillorId: string; effort: Effort }[];
-  /** From the sitting's effort (§4.2). */
+  /** In separate chambers each councillor also has its own model, from its effort (§4.2). */
+  roster: readonly { councillorId: string; effort: Effort; model?: string }[];
+  /** From the sitting's effort (§4.2); in separate chambers, the chairing elder's. */
   model: string;
   maxBudgetMicroUsd: number;
 }

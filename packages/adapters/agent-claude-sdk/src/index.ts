@@ -1,4 +1,6 @@
 // Native Claude Agent SDK adapter (spec §11.3, §11.4).
+
+export { CHAMBERS_INSTRUCTIONS } from './chambers-session';
 export { ClaudeAdapter } from './claude-adapter';
 export type { ClaudeAdapterOptions, SdkModule } from './claude-adapter.types';
 export { CLASS_MODELS, HERO_INSTRUCTIONS, SUBMIT_TOOL } from './claude-session';

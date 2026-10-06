@@ -365,16 +365,4 @@ describe('the round table (#103)', () => {
     await until(() => events.length > 0);
     expect(events).toEqual([{ type: 'error', message: 'no SDK' }]);
   });
-
-  it("says separate chambers aren't available yet", async () => {
-    const { events, session } = run(async function* () {}, { mode: 'chambers' });
-    await until(() => events.length > 0);
-    expect(events).toEqual([
-      { type: 'error', message: "Separate chambers aren't available yet: convene a round table." },
-    ]);
-    session.message({ kind: 'why', questionId: 'q', councillorId: 'c', question: 'q' });
-    session.completeTool({ toolUseId: 't', accepted: true });
-    session.answer({ toolUseId: 't', answers: [] });
-    session.close();
-  });
 });

@@ -22,9 +22,9 @@ import type { ToolReply } from './elder-session.types';
 import { InputQueue } from './input-queue';
 import type { AskedBatch, RoundTableInit, Seat, Verdict } from './round-table-session.types';
 
-const TOOL = (name: string) => `mcp__ibitsa__${name}`;
+export const TOOL = (name: string) => `mcp__ibitsa__${name}`;
 export const COUNCIL_TOOLS = ['report', 'ask_user', 'propose_plan', 'say'].map(TOOL);
-const READ_TOOLS = ['Read', 'Grep', 'Glob'];
+export const READ_TOOLS = ['Read', 'Grep', 'Glob'];
 /** A sitting runs long: reports, questions, revisions. The cap usually ends it first. */
 const MAX_TURNS = 120;
 
@@ -109,12 +109,12 @@ const SAY_SHAPE = {
  * messages, so the session stays open between turns.
  */
 export class RoundTableSession implements SittingSession {
-  private readonly init: RoundTableInit;
+  protected readonly init: RoundTableInit;
   /** The streaming prompt: messages the session reads one by one, as the user acts. */
   private readonly input = new InputQueue<SDKUserMessage>();
-  private readonly seats: Seat[];
+  protected readonly seats: Seat[];
   /** Tool-use ids from the PreToolUse hook, per tool, waiting for their handler. */
-  private readonly toolUseIds = new Map<string, string[]>();
+  protected readonly toolUseIds = new Map<string, string[]>();
   private readonly verdicts = new Map<string, (verdict: Verdict) => void>();
   private readonly batches = new Map<string, AskedBatch>();
   private query: Query | null = null;
@@ -133,12 +133,7 @@ export class RoundTableSession implements SittingSession {
   }
 
   message(message: SittingMessage): void {
-    this.input.push(
-      userMessage({
-        text: messageText({ message, seats: this.seats, skills: this.skills() }),
-        priority: 'next',
-      }),
-    );
+    this.input.push(userMessage({ text: this.wording(message), priority: 'next' }));
   }
 
   completeTool({
@@ -173,8 +168,9 @@ export class RoundTableSession implements SittingSession {
 
   // ---------- the tools ----------
 
-  private async report(
+  protected async report(
     input: { councillorId: string; bowOut?: string | undefined } & Omit<CouncilReport, 'bowOut'>,
+    callId?: string,
   ): Promise<ToolReply> {
     const { councillorId, ...rest } = input;
     const report: CouncilReport = {
@@ -186,21 +182,26 @@ export class RoundTableSession implements SittingSession {
     };
     return this.ruled({
       tool: 'report',
+      callId,
       event: (toolUseId) => ({ type: 'reportFiled', toolUseId, councillorId, report }),
       ok: `Filed ${councillorId}'s report.`,
     });
   }
 
-  private async askUser(input: {
-    questions: (Omit<CouncilQuestion, 'recommendation'> & {
-      recommendation?: CouncilQuestion['recommendation'] | undefined;
-    })[];
-  }): Promise<ToolReply> {
+  private async askUser(
+    input: {
+      questions: (Omit<CouncilQuestion, 'recommendation'> & {
+        recommendation?: CouncilQuestion['recommendation'] | undefined;
+      })[];
+    },
+    callId?: string,
+  ): Promise<ToolReply> {
     const questions: CouncilQuestion[] = input.questions.map(({ recommendation, ...q }) =>
       recommendation ? { ...q, recommendation } : q,
     );
     return this.ruled({
       tool: 'ask_user',
+      callId,
       event: (toolUseId) => {
         this.batches.set(toolUseId, { questions });
         return { type: 'questionsAsked', toolUseId, questions };
@@ -210,10 +211,11 @@ export class RoundTableSession implements SittingSession {
   }
 
   /** The plan goes to core as sent (without empty optional fields); core checks it (`checkPlan`). */
-  private async proposePlan(input: unknown): Promise<ToolReply> {
+  private async proposePlan(input: unknown, callId?: string): Promise<ToolReply> {
     const plan = JSON.parse(JSON.stringify(input)) as PlanProposal;
     return this.ruled({
       tool: 'propose_plan',
+      callId,
       event: (toolUseId) => ({ type: 'planProposed', toolUseId, plan }),
       ok: 'The plan is with the user. End your turn: you will hear if they ask for changes.',
     });
@@ -238,16 +240,19 @@ export class RoundTableSession implements SittingSession {
   }
 
   /** Sends a tool call to core and returns its verdict to the model. */
-  private ruled({
+  protected ruled({
     tool,
+    callId,
     event,
     ok,
   }: {
     tool: string;
+    /** The call's id from Claude Code's request metadata, when it sent one. */
+    callId?: string | undefined;
     event: (toolUseId: string) => CouncilEvent;
     ok: string;
   }): Promise<ToolReply> {
-    const toolUseId = this.toolUseIds.get(TOOL(tool))?.shift() ?? `${tool}-${Date.now()}`;
+    const toolUseId = this.claim({ tool, callId }) ?? `${tool}-${Date.now()}`;
     const verdict = new Promise<Verdict>((resolve) => this.verdicts.set(toolUseId, resolve));
     this.emit(event(toolUseId));
     return verdict.then(({ accepted, reason }) =>
@@ -255,6 +260,25 @@ export class RoundTableSession implements SittingSession {
         ? reply(ok)
         : { ...reply(`Not accepted: ${reason ?? 'no reason given'}`), isError: true },
     );
+  }
+
+  /**
+   * The tool-use id a handler serves: the one Claude Code names in the request's metadata, else the
+   * oldest one the PreToolUse hook saw. Calls running at the same time (chambers reporting in parallel)
+   * may reach their handlers in any order, so the metadata is what ties a call to its id.
+   */
+  protected claim({
+    tool,
+    callId,
+  }: {
+    tool: string;
+    callId?: string | undefined;
+  }): string | undefined {
+    const queue = this.toolUseIds.get(TOOL(tool)) ?? [];
+    if (callId === undefined) return queue.shift();
+    const at = queue.indexOf(callId);
+    if (at >= 0) queue.splice(at, 1);
+    return callId;
   }
 
   // ---------- the session ----------
@@ -266,21 +290,27 @@ export class RoundTableSession implements SittingSession {
         name: 'ibitsa',
         version: '1.0.0',
         tools: [
-          sdk.tool('report', "File one councillor's report.", REPORT_SHAPE, (i) => this.report(i), {
-            alwaysLoad: true,
-          }),
+          sdk.tool(
+            'report',
+            "File one councillor's report.",
+            REPORT_SHAPE,
+            (i, extra) => this.report(i, callIdOf(extra)),
+            {
+              alwaysLoad: true,
+            },
+          ),
           sdk.tool(
             'ask_user',
             'Put a batch of questions to the user.',
             ASK_SHAPE,
-            (i) => this.askUser(i),
+            (i, extra) => this.askUser(i, callIdOf(extra)),
             { alwaysLoad: true },
           ),
           sdk.tool(
             'propose_plan',
             'Propose the plan to the user.',
             PLAN_SHAPE,
-            (i) => this.proposePlan(i),
+            (i, extra) => this.proposePlan(i, callIdOf(extra)),
             { alwaysLoad: true },
           ),
           sdk.tool(
@@ -297,12 +327,7 @@ export class RoundTableSession implements SittingSession {
       const query = sdk.query({ prompt: this.input, options: this.options(ibitsa) });
       this.query = query;
       if (this.closed) query.close();
-      this.input.push(
-        userMessage({
-          text: openingText({ start: this.init.start, seats: this.seats }),
-          priority: 'next',
-        }),
-      );
+      this.input.push(userMessage({ text: this.opening(), priority: 'next' }));
       for await (const message of query) this.onSdkMessage(message);
     } catch (error) {
       if (!this.closed)
@@ -313,7 +338,17 @@ export class RoundTableSession implements SittingSession {
     }
   }
 
-  private options(ibitsa: NonNullable<Options['mcpServers']>[string]): Options {
+  /** The first message. Separate chambers words it for the chairing elder. */
+  protected opening(): string {
+    return openingText({ start: this.init.start, seats: this.seats });
+  }
+
+  /** What the user did, worded for the session. */
+  protected wording(message: SittingMessage): string {
+    return messageText({ message, seats: this.seats, skills: this.skills() });
+  }
+
+  protected options(ibitsa: NonNullable<Options['mcpServers']>[string]): Options {
     const { adapter, start } = this.init;
     const claudeCodePath = adapter.claudeCodePath?.()?.trim();
     return {
@@ -331,13 +366,7 @@ export class RoundTableSession implements SittingSession {
           {
             hooks: [
               async (i) => {
-                const { tool_name, tool_use_id } = i as PreToolUseHookInput;
-                if (COUNCIL_TOOLS.includes(tool_name)) {
-                  this.toolUseIds.set(tool_name, [
-                    ...(this.toolUseIds.get(tool_name) ?? []),
-                    tool_use_id,
-                  ]);
-                }
+                this.noteToolUse(i as PreToolUseHookInput);
                 return {};
               },
             ],
@@ -348,6 +377,12 @@ export class RoundTableSession implements SittingSession {
       maxBudgetUsd: start.maxBudgetMicroUsd / 1_000_000,
       ...(claudeCodePath ? { pathToClaudeCodeExecutable: claudeCodePath } : {}),
     };
+  }
+
+  /** Keeps a council tool call's id for its handler, which the SDK doesn't give one. */
+  protected noteToolUse({ tool_name, tool_use_id }: PreToolUseHookInput): void {
+    if (!COUNCIL_TOOLS.includes(tool_name)) return;
+    this.toolUseIds.set(tool_name, [...(this.toolUseIds.get(tool_name) ?? []), tool_use_id]);
   }
 
   private onSdkMessage(m: SDKMessage): void {
@@ -369,7 +404,7 @@ export class RoundTableSession implements SittingSession {
     });
   }
 
-  private skills(): CouncillorSkills {
+  protected skills(): CouncillorSkills {
     return new CouncillorSkills({
       cwd: this.init.start.cwd,
       home: this.init.adapter.home ?? homedir(),
@@ -377,7 +412,7 @@ export class RoundTableSession implements SittingSession {
     });
   }
 
-  private emit(event: CouncilEvent): void {
+  protected emit(event: CouncilEvent): void {
     if (event.type === 'error') {
       if (this.failed) return;
       this.failed = true;
@@ -386,11 +421,24 @@ export class RoundTableSession implements SittingSession {
   }
 }
 
-function reply(text: string): ToolReply {
+/** The tool-use id Claude Code puts in an MCP call's request metadata (`claudecode/toolUseId`). */
+export function callIdOf(extra: unknown): string | undefined {
+  const meta = (extra as { _meta?: Record<string, unknown> } | null | undefined)?._meta;
+  const id = meta?.['claudecode/toolUseId'];
+  return typeof id === 'string' ? id : undefined;
+}
+
+export function reply(text: string): ToolReply {
   return { content: [{ type: 'text', text }] };
 }
 
-function seat({ skills, councillorId }: { skills: CouncillorSkills; councillorId: string }): Seat {
+export function seat({
+  skills,
+  councillorId,
+}: {
+  skills: CouncillorSkills;
+  councillorId: string;
+}): Seat {
   const found = skills.planning(councillorId);
   return found
     ? { id: councillorId, title: found.info.title, guidance: found.guidance }

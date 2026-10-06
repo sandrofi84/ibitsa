@@ -27,6 +27,8 @@ import { DevActions, devPreview } from './dev-actions';
 import { DEMO_FILES, FakeHostChannel } from './fake-host-channel';
 
 const STEP_MS = 120;
+/** How much slower a chambers sitting's reports arrive than other scripted steps. */
+const CHAMBER_PACE = 6;
 
 /**
  * Standalone `live` mode (#37): the real core, answered by a scripted fake runtime instead of a replay,
@@ -132,6 +134,16 @@ export class LiveDevHost implements Host {
     for (const effect of result.effects) this.perform(effect);
   }
 
+  /** A chambers sitting: councillors study a while before each report arrives. */
+  private slowly(sittingId: string, events: CouncilEvent[]): void {
+    events.forEach((event, i) => {
+      setTimeout(
+        () => this.input({ kind: 'council', t: this.t(), sittingId, event }),
+        STEP_MS * CHAMBER_PACE * (i + 1),
+      );
+    });
+  }
+
   private council(sittingId: string, events: CouncilEvent[]): void {
     events.forEach((event, i) => {
       setTimeout(
@@ -206,7 +218,12 @@ export class LiveDevHost implements Host {
       case 'startSitting': {
         const [first] = effect.roster;
         this.asker = first?.councillorId ?? 'tester';
-        this.council(effect.sittingId, [
+        // In separate chambers the reports come in one by one, so the study stage can be watched (#105).
+        const play = (events: CouncilEvent[]) =>
+          effect.mode === 'chambers'
+            ? this.slowly(effect.sittingId, events)
+            : this.council(effect.sittingId, events);
+        play([
           { type: 'sessionStarted', sessionId: 'live-sitting' },
           ...effect.roster.map(
             (c, i): CouncilEvent => ({

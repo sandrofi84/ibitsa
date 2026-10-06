@@ -25,7 +25,7 @@ import {
   type Snapshot,
 } from '@ibitsa/protocol';
 import { CampaignDocuments } from './campaign-documents';
-import { seatable } from './council';
+import { seatable, sittingPlan } from './council';
 import type { AgentSession, FrontEnd, SittingSession } from './ports.types';
 import { ProjectRules } from './project-rules';
 import type { Connection, RuntimeOptions } from './runtime.types';
@@ -35,13 +35,6 @@ import { type CampaignLog, CampaignStore } from './storage';
 /** Snapshots go out at most this often (spec §11.2.1: throttled, ~10/s). */
 /** The elder's defaults (spec §4.1): the smallest model, a quarter of a dollar. */
 const DEFAULT_ELDER = { model: 'haiku', budgetMicroUsd: 250_000 };
-
-/** A round table's model and cap by effort (spec §4.2); starting numbers, to be tuned from tallies. */
-const SITTING_EFFORT = {
-  light: { model: 'haiku', budgetMicroUsd: 500_000 },
-  standard: { model: 'sonnet', budgetMicroUsd: 2_000_000 },
-  deep: { model: 'opus', budgetMicroUsd: 6_000_000 },
-} as const;
 
 export const SNAPSHOT_INTERVAL_MS = 100;
 
@@ -523,7 +516,7 @@ export class Runtime {
       });
       return;
     }
-    const { model, budgetMicroUsd } = SITTING_EFFORT[effect.effort];
+    const plan = sittingPlan(effect);
     try {
       this.sitting?.session.close();
       const session = start(
@@ -532,9 +525,9 @@ export class Runtime {
           mode: effect.mode,
           task: effect.task,
           brief: effect.brief,
-          roster: effect.roster,
-          model,
-          maxBudgetMicroUsd: budgetMicroUsd,
+          roster: plan.roster,
+          model: plan.model,
+          maxBudgetMicroUsd: plan.maxBudgetMicroUsd,
         },
         report,
       );

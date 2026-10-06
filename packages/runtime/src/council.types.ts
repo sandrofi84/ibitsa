@@ -1,4 +1,4 @@
-import type { CouncillorInfo } from '@ibitsa/protocol';
+import type { CouncillorInfo, Effort } from '@ibitsa/protocol';
 
 /** What a council version is made of (§4.10). */
 export interface CouncilVersionInput {
@@ -7,4 +7,12 @@ export interface CouncilVersionInput {
   councillors: readonly Pick<CouncillorInfo, 'id' | 'hash'>[];
   /** Bumped whenever Ibitsa's own council prompts change. */
   promptVersion: number;
+}
+
+/** The models and cap a sitting's session starts with (spec §4.2). */
+export interface SittingPlan {
+  /** The round table's, or the chairing elder's in separate chambers. */
+  model: string;
+  maxBudgetMicroUsd: number;
+  roster: { councillorId: string; effort: Effort; model?: string }[];
 }
