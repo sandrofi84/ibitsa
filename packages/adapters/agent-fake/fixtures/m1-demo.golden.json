@@ -87,6 +87,14 @@
       }
     },
     {
+      "t": 47102,
+      "cue": {
+        "type": "heroSaid",
+        "heroId": "h4",
+        "text": "The default node (v14) doesn't support `--test`, so I'll run the tests with node 24."
+      }
+    },
+    {
       "t": 47685,
       "cue": {
         "type": "needsYouAdded",
@@ -118,6 +126,14 @@
         "heroId": "h4",
         "kind": "other",
         "outcome": "ok"
+      }
+    },
+    {
+      "t": 58246,
+      "cue": {
+        "type": "heroSaid",
+        "heroId": "h4",
+        "text": "I fixed `slugify` so it strips accents, added a test for underscores, committed, and submitted. All four tests pass, but only under node v24: the default node v14 doesn't support `node --test`, so `npm test` fails there. I didn't run the suite before my change, because it couldn't run under v14. I ran it with v24 only after the fix.\n\n- **Fix:** `slugify` in `slug.mjs` now normalizes to NFD and removes the accent marks before lowercasing.\n- **Underscores:** you answered yes, so I added a test that `hello_world` becomes `hello-world`. It already passed without a code change, because the existing non-alphanumeric regex turns underscores into dashes.\n- **Notes file:** I did not append a line to `~/ibitsa-demo-notes.md`. It already held two lines describing this exact change (the accent fix and the underscore test), so a third would have duplicated them. I don't know how they got there, since my earlier session ended before it touched that file. If you want a line appended anyway, say so.\n- **Commit:** `668f4bf fix: strip accents in slugify`."
       }
     }
   ],

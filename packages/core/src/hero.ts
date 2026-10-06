@@ -296,6 +296,7 @@ export class Hero {
         break;
       case 'message':
         r.lastMessage = event.text;
+        this.ctx.outbox.cue({ type: 'heroSaid', heroId: r.id, text: event.text });
         break;
       case 'permission':
         this.ctx.needsYou.ask({

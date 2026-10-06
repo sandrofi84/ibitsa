@@ -51,6 +51,14 @@
         "kind": "other",
         "outcome": "ok"
       }
+    },
+    {
+      "t": 12167,
+      "cue": {
+        "type": "heroSaid",
+        "heroId": "h4",
+        "text": "`slugify` now strips accents, so \"Crème Brûlée\" becomes \"creme-brulee\". I added a test for it, and all 3 tests pass with `node --test`.\n\nThe fix in `slug.mjs` normalizes the text to NFD and removes the combining accent marks before the existing lowercase and dash steps. The change is committed as `feat: strip accents in slugify` and submitted for review."
+      }
     }
   ],
   "marks": [],

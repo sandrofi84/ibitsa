@@ -87,6 +87,17 @@ function quest(settings: Partial<QuestSettings> = {}): Harness {
   return h;
 }
 
+describe('speech', () => {
+  it('passes what the hero says to the game as a cue (#57)', () => {
+    const h = quest().agent({ type: 'message', text: 'Done! The tests pass now.' });
+    expect(h.cues).toContainEqual({
+      type: 'heroSaid',
+      heroId: 'h4',
+      text: 'Done! The tests pass now.',
+    });
+  });
+});
+
 describe('stall detection', () => {
   it('stalls after the same test fails 4 times in a row, pausing the hero', () => {
     const h = quest();
