@@ -7,6 +7,7 @@ interface Probe {
   } | null;
   status(): { finished: boolean; diverged: boolean; waitingFor: string | null };
   zoom(): number;
+  heroSpeech(): string | null;
 }
 
 const probe = <T>(page: Page, read: (p: Probe) => T) =>
@@ -36,6 +37,8 @@ test('replays m0-walk to the submitted state', async ({ page }) => {
     'doneUnreviewed',
   );
   expect(await probe(page, (p) => p.status().finished)).toBe(true);
+  // The quest is still active, so the submitted hero says so until you finish it (#57).
+  expect(await probe(page, (p) => p.heroSpeech())).toBe('Ready for review!');
   await page.screenshot({ path: 'test-results/m0-walk-submitted.png' });
   expect(errors).toEqual([]);
 });

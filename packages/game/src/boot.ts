@@ -40,7 +40,7 @@ export function startGame(root: HTMLElement, host: Host): Started {
       '<p class="notice">Ibitsa needs WebGL, and it isn’t available here, so the game can’t start. ' +
       'Your agents are not affected.</p>';
     reportDiagnostics(diagnostics);
-    return { client, zoom: () => 0, heroOnPage: () => null };
+    return { client, zoom: () => 0, heroOnPage: () => null, heroSpeech: () => null };
   }
 
   mountNeedsYouPanel(client);
@@ -101,5 +101,7 @@ export function startGame(root: HTMLElement, host: Host): Started {
     const zoom = game.scale.zoom;
     return { x: rect.left + at.x * zoom, y: rect.top + at.y * zoom };
   };
-  return { client, zoom: () => diagnostics.zoom, heroOnPage };
+  const heroSpeech = () =>
+    (game.scene.getScene('world') as WorldScene | null)?.heroSpeech() ?? null;
+  return { client, zoom: () => diagnostics.zoom, heroOnPage, heroSpeech };
 }

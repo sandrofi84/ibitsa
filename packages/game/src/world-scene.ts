@@ -2,6 +2,7 @@ import type { Manifest } from '@ibitsa/assets';
 import type { Cue, HeroView, Reading, Snapshot, TaskPointState } from '@ibitsa/protocol';
 import * as Phaser from 'phaser';
 import type { GameClient } from './client';
+import { speechExcerpt } from './heroes';
 import { heroSpot, layoutWorld, pathTo } from './layout';
 import type { Point, WorldLayout } from './layout.types';
 import { PACK_KEY } from './pack-scene';
@@ -38,6 +39,12 @@ export class WorldScene extends Phaser.Scene {
 
   constructor() {
     super('world');
+  }
+
+  /** What the first hero's speech bubble says while it shows (for tests and probes). */
+  heroSpeech(): string | null {
+    const token = this.heroes.values().next().value;
+    return token ? token.speaking() : null;
   }
 
   /** Where the first hero's sprite is, in canvas pixels (for tests and probes). */
@@ -161,7 +168,11 @@ export class WorldScene extends Phaser.Scene {
         });
         this.heroes.set(hero.id, token);
       }
-      token.update(hero, this.layout);
+      token.update({
+        hero,
+        layout: this.layout,
+        questActive: snapshot.campaign?.status === 'active',
+      });
     }
     for (const [id, token] of this.heroes) {
       if (!seen.has(id)) {
@@ -179,6 +190,7 @@ export class WorldScene extends Phaser.Scene {
   private cue(cue: Cue): void {
     if (cue.type === 'activityFinished') this.heroes.get(cue.heroId)?.flash(cue.outcome);
     if (cue.type === 'retrying') this.heroes.get(cue.heroId)?.flash('failed');
+    if (cue.type === 'heroSaid') this.heroes.get(cue.heroId)?.say(cue.text);
   }
 }
 
@@ -187,6 +199,9 @@ function gold(reading: Reading<number>): string {
   const g = Math.round(reading.value / 10_000); // 1 gold = 1 cent
   return reading.kind === 'estimated' ? `~${g}` : String(g);
 }
+
+/** How long a message's speech bubble stays before it fades. */
+const SPEECH_MS = 4000;
 
 /** Emitted on `game.events` with the hero's id when the hero is clicked on the map (#61). */
 export const HERO_SELECTED = 'heroSelected';
@@ -197,6 +212,12 @@ class HeroToken {
   private readonly sprite: Phaser.GameObjects.Sprite;
   private readonly hpBar: Phaser.GameObjects.Graphics;
   private readonly bubble: Phaser.GameObjects.Text;
+  /** Speech: a message excerpt that fades, or "Ready for review!" while submitted (#57). */
+  private readonly speech: Phaser.GameObjects.Container;
+  private readonly speechBox: Phaser.GameObjects.Graphics;
+  private readonly speechText: Phaser.GameObjects.Text;
+  private speechKind: 'none' | 'message' | 'submitted' = 'none';
+  private speechFade: Phaser.Tweens.Tween | null = null;
   private travel: Phaser.Tweens.Tween | null = null;
   private traveled = false;
   private state: HeroView['state']['kind'] = 'traveling';
@@ -232,11 +253,18 @@ class HeroToken {
     this.bubble = scene.add
       .text(0, -26, '', { ...textStyle('#1a1420'), backgroundColor: '#f2c230' })
       .setOrigin(0.5);
+    this.speechBox = scene.add.graphics();
+    this.speechText = scene.add.text(0, -3, '', textStyle('#1a1420')).setOrigin(0.5, 1);
+    this.speechText
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => scene.game.events.emit(HERO_SELECTED, hero.id));
+    this.speech = scene.add.container(0, -24, [this.speechBox, this.speechText]).setVisible(false);
     this.container = scene.add.container(start?.x ?? 0, start?.y ?? 0, [
       base,
       this.sprite,
       this.hpBar,
       this.bubble,
+      this.speech,
     ]);
     this.container.setDepth(5);
   }
@@ -246,7 +274,62 @@ class HeroToken {
     return { x: this.container.x, y: this.container.y - this.sprite.height / 2 };
   }
 
-  update(hero: HeroView, layout: WorldLayout): void {
+  /** A message from the hero: its excerpt shows for a few seconds, unless "Ready for review!" is up. */
+  say(text: string): void {
+    if (this.speechKind === 'submitted') return;
+    this.showSpeech({ text: speechExcerpt(text), kind: 'message' });
+    this.speechFade = this.scene.tweens.add({
+      targets: this.speech,
+      alpha: 0,
+      delay: SPEECH_MS,
+      duration: 500,
+      onComplete: () => this.hideSpeech(),
+    });
+  }
+
+  /** The speech bubble's text while it shows, else null. */
+  speaking(): string | null {
+    return this.speech.visible ? this.speechText.text : null;
+  }
+
+  private showSpeech({ text, kind }: { text: string; kind: 'message' | 'submitted' }): void {
+    this.speechFade?.stop();
+    this.speechFade = null;
+    this.speechKind = kind;
+    this.speechText.setText(text);
+    const w = Math.ceil(this.speechText.width) + 8;
+    const h = Math.ceil(this.speechText.height) + 4;
+    const fill = kind === 'submitted' ? 0xd9f2c4 : 0xfff6dc;
+    this.speechBox
+      .clear()
+      .fillStyle(fill)
+      .fillRoundedRect(-w / 2, -h - 1, w, h, 3)
+      .lineStyle(1, 0x5e3b1c)
+      .strokeRoundedRect(-w / 2, -h - 1, w, h, 3)
+      .fillStyle(fill)
+      .fillTriangle(-3, -2, 3, -2, 0, 3)
+      .lineStyle(1, 0x5e3b1c)
+      .lineBetween(-3, -1, 0, 3)
+      .lineBetween(3, -1, 0, 3);
+    this.speech.setAlpha(1).setVisible(true);
+  }
+
+  private hideSpeech(): void {
+    this.speechFade?.stop();
+    this.speechFade = null;
+    this.speechKind = 'none';
+    this.speech.setVisible(false);
+  }
+
+  update({
+    hero,
+    layout,
+    questActive,
+  }: {
+    hero: HeroView;
+    layout: WorldLayout;
+    questActive: boolean;
+  }): void {
     const previous = this.state;
     this.state = hero.state.kind;
     const s = hero.state;
@@ -292,6 +375,16 @@ class HeroToken {
         this.scene.tweens.add({ targets: this.bubble, scale: { from: 1.6, to: 1 }, duration: 200 });
       }
     }
+
+    // "Ready for review!" stays until the quest is finished or the hero gets back to work.
+    const readyForReview = s.kind === 'submitted' && questActive;
+    if (readyForReview && this.speechKind !== 'submitted') {
+      this.showSpeech({ text: 'Ready for review!', kind: 'submitted' });
+    } else if (!readyForReview && this.speechKind === 'submitted') {
+      this.hideSpeech();
+    }
+    // Above the status bubble when one shows, so neither covers the other or the HP bar.
+    this.speech.setY(this.bubble.visible ? -32 : -22);
 
     this.drawHp(hero.hp);
   }

@@ -295,6 +295,16 @@ body {
   color: #1a1420;
 }
 
+.hero-pane .summary {
+  margin: 0 0 8px;
+  padding: 6px 8px;
+  background: #d9f2c4;
+  border: 1px solid #5e3b1c;
+  border-radius: 3px;
+  max-height: 8em;
+  overflow: auto;
+}
+
 .hero-pane .note {
   color: #5e4a2a;
   font-size: 12px;

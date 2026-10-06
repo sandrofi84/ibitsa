@@ -37,6 +37,14 @@
       }
     },
     {
+      "t": 12000,
+      "cue": {
+        "type": "heroSaid",
+        "heroId": "h4",
+        "text": "The redirect test still fails: logout keeps the stored return URL."
+      }
+    },
+    {
       "t": 13600,
       "cue": {
         "type": "activityFinished",

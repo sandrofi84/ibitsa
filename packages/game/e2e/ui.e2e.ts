@@ -10,6 +10,8 @@ interface Probe {
   } | null;
   hostRequests(): { type: string; key?: string }[];
   heroOnPage(): { x: number; y: number } | null;
+  heroSpeech(): string | null;
+  zoom(): number;
 }
 
 const probe = <T>(page: Page, read: (p: Probe) => T) =>
@@ -183,4 +185,39 @@ test('nothing overlaps at a larger panel size', async ({ page }) => {
   await page.screenshot({ path: 'test-results/ui-pane-1400.png' });
   const box = await page.getByRole('region', { name: 'Hero' }).boundingBox();
   expect(box && box.x + box.width).toBeGreaterThan(1400 - 20);
+});
+
+test('speech bubbles: a message excerpt that fades, then "Ready for review!" until you finish', async ({
+  page,
+}) => {
+  await page.goto('/?fixture=live');
+  await page.getByRole('button', { name: 'New quest' }).click();
+  await page.getByLabel('Task').fill('Tidy the README');
+  await page.getByRole('button', { name: 'Start quest' }).click();
+  const speech = () => probe(page, (p) => p.heroSpeech());
+
+  // The scripted reply is "I looked around and made a first change. What next?"
+  await expect.poll(speech).toBe('I looked around and made a first…');
+  await page.screenshot({ path: 'test-results/ui-speech-message.png' });
+  await expect.poll(speech, { timeout: 8_000 }).toBeNull();
+
+  const pane = page.getByRole('region', { name: 'Hero' });
+  await pane.getByLabel('Message to the hero').fill('Looks good, submit it');
+  await pane.getByRole('button', { name: 'Send now' }).click();
+  await expect.poll(speech).toBe('Ready for review!');
+  await page.screenshot({ path: 'test-results/ui-speech-ready.png' });
+  // It stays: no fade while the work waits for you.
+  await page.waitForTimeout(5_000);
+  expect(await speech()).toBe('Ready for review!');
+
+  // Clicking it opens the pane at the hero's summary.
+  await pane.getByRole('button', { name: /hero pane/ }).click();
+  await expect(pane.getByLabel('Message to the hero')).toBeHidden();
+  const hero = await probe(page, (p) => p.heroOnPage());
+  const zoom = await probe(page, (p) => p.zoom());
+  await page.mouse.click(hero?.x ?? 0, (hero?.y ?? 0) - 22 * zoom);
+  await expect(pane.getByText('Ready for review.')).toBeVisible();
+
+  await pane.getByRole('button', { name: 'Finish quest' }).click();
+  await expect.poll(speech).toBeNull();
 });

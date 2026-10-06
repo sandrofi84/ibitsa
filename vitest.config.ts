@@ -15,6 +15,7 @@ export default defineConfig({
         'packages/adapters/*/src/**',
         'packages/assets/src/**',
         'packages/game/src/client.ts',
+        'packages/game/src/heroes.ts',
         'packages/game/src/layout.ts',
         'packages/game/src/view-state.ts',
         'packages/game/src/dev/dev-host.ts',
