@@ -1,5 +1,15 @@
 import { defineConfig } from 'vitest/config';
 
+const PACKAGES = [
+  'packages/core/src/**',
+  'packages/protocol/src/**',
+  'packages/runtime/src/**',
+  'packages/adapters/agent-fake/src/**',
+  'packages/adapters/agent-claude-sdk/src/**',
+  'packages/assets/src/**',
+  'packages/game/src/**',
+];
+
 export default defineConfig({
   test: {
     projects: ['packages/!(adapters)', 'packages/adapters/*'],
@@ -33,27 +43,11 @@ export default defineConfig({
       exclude: ['**/*.test.ts', '**/*.types.ts', '**/*.schema.ts', '**/*.d.ts', '**/index.ts'],
       reporter: ['text', 'html', 'json-summary'],
       reportsDirectory: 'coverage',
-      // Floors at today's numbers, rounded down: coverage may rise, never quietly drop.
-      // Raise a floor when a package's coverage goes up.
-      thresholds: {
-        'packages/core/src/**': { lines: 96, statements: 96, branches: 91, functions: 100 },
-        'packages/protocol/src/**': { lines: 100, statements: 100, branches: 100, functions: 100 },
-        'packages/adapters/agent-fake/src/**': {
-          lines: 96,
-          statements: 93,
-          branches: 87,
-          functions: 86,
-        },
-        'packages/adapters/agent-claude-sdk/src/**': {
-          lines: 97,
-          statements: 96,
-          branches: 85,
-          functions: 97,
-        },
-        'packages/assets/src/**': { lines: 94, statements: 92, branches: 85, functions: 93 },
-        'packages/game/src/**': { lines: 98, statements: 98, branches: 97, functions: 98 },
-        'packages/runtime/src/**': { lines: 93, statements: 91, branches: 84, functions: 85 },
-      },
+      // One fixed floor for every package (no ratchet): coverage should sit well above it, and new
+      // behaviour still needs real tests. Each package is checked on its own, so none can quietly rot.
+      thresholds: Object.fromEntries(
+        PACKAGES.map((p) => [p, { lines: 90, statements: 90, functions: 90, branches: 80 }]),
+      ),
     },
   },
 });

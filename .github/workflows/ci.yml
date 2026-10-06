@@ -40,6 +40,10 @@ jobs:
       - name: Unit tests, fixture golden files and coverage floors (Vitest)
         run: pnpm exec vitest run --coverage
 
+      - name: Coverage per package in the run summary
+        if: always()
+        run: node scripts/coverage-summary.mjs >> "$GITHUB_STEP_SUMMARY" || true
+
       - name: Upload coverage report
         if: always()
         uses: actions/upload-artifact@v7
