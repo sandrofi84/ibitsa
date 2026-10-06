@@ -4,9 +4,15 @@ import type {
   ActionInfo,
   AgentEvent,
   CoreMessage,
+  CouncilAnswer,
+  CouncilEvent,
   CouncillorInfo,
+  Effort,
   ElderEvent,
   RepoView,
+  ResearchBrief,
+  SittingMessage,
+  SittingMode,
 } from '@ibitsa/protocol';
 
 /** Starting one hero's agent session (spec §11.3). The adapter reports everything through `onEvent`. */
@@ -67,6 +73,8 @@ export interface AgentAdapter {
   }): Promise<{ text: string; notes: string[] } | null>;
   /** The elder's research session (spec §4.1, #101); adapters that can't run it leave it out. */
   startElder?(start: ElderStart, onEvent: (event: ElderEvent) => void): { close(): void };
+  /** A sitting's lead session (spec §4.3, #103); adapters that can't run one leave it out. */
+  startSitting?(start: SittingStart, onEvent: (event: CouncilEvent) => void): SittingSession;
   /** The councillors a folder can seat (§4.7, #98); adapters without skills leave it out. */
   listCouncillors?(request: { cwd: string }): Promise<CouncillorInfo[]>;
   /** Writes a new action (#86); adapters without skills leave it out. */
@@ -83,6 +91,31 @@ export interface ElderStart {
   /** A model alias or id; Haiku by default. */
   model: string;
   maxBudgetMicroUsd: number;
+}
+
+/** Starting a sitting's lead session (spec §4.3): read-only, capped, with the council's tools. */
+export interface SittingStart {
+  /** The workspace repository the council plans for. */
+  cwd: string;
+  mode: SittingMode;
+  task: string;
+  /** The elder's brief, when there is one: the sitting starts from it (§4.1). */
+  brief: ResearchBrief | null;
+  roster: readonly { councillorId: string; effort: Effort }[];
+  /** From the sitting's effort (§4.2). */
+  model: string;
+  maxBudgetMicroUsd: number;
+}
+
+/** A running sitting: core's answers to its tool calls and what the user did go back through it. */
+export interface SittingSession {
+  /** The user asked for changes, added a councillor, or asked "Why?". */
+  message(message: SittingMessage): void;
+  /** Core's verdict on a `report`, `ask_user` or `propose_plan` call. */
+  completeTool(result: { toolUseId: string; accepted: boolean; reason?: string }): void;
+  /** The user's answers to an accepted `ask_user` batch, in question order. */
+  answer(result: { toolUseId: string; answers: CouncilAnswer[] }): void;
+  close(): void;
 }
 
 /** A new action to write, and where each scope keeps its skills. */

@@ -17,6 +17,8 @@ export type {
   GameMaster,
   SessionResume,
   SessionStart,
+  SittingSession,
+  SittingStart,
   UserSettings,
 } from './ports.types';
 export { BLANKED, ReplayExport } from './replay-export';

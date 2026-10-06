@@ -34,6 +34,7 @@ export type {
   DialogueLine,
   PlanOutcome,
   PlanProposal,
+  SittingMessage,
   SittingStatus,
   SittingView,
 } from './sitting.types';

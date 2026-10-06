@@ -1,4 +1,10 @@
-import type { CouncilAnswer, Effort, ResearchBrief, SittingMode } from '@ibitsa/protocol';
+import type {
+  CouncilAnswer,
+  Effort,
+  ResearchBrief,
+  SittingMessage,
+  SittingMode,
+} from '@ibitsa/protocol';
 
 /** Requests core makes of the runtime. Core never performs them itself (ADR 0001). */
 export type Effect =
@@ -74,6 +80,8 @@ export type Effect =
       task: string;
       effort: Effort;
       roster: { councillorId: string; effort: Effort }[];
+      /** The elder's brief the sitting starts from (spec §4.1); null when convened without one. */
+      brief: ResearchBrief | null;
     }
   /** Something the user did that the sitting must hear about. */
   | { type: 'sittingMessage'; sittingId: string; message: SittingMessage }
@@ -95,9 +103,3 @@ export type Effect =
   | { type: 'closeSitting'; sittingId: string }
   | { type: 'setTimer'; timerId: string; at: number }
   | { type: 'cancelTimer'; timerId: string };
-
-export type SittingMessage =
-  | { kind: 'changeRequested'; version: number; text: string }
-  | { kind: 'councillorAdded'; councillorId: string; effort: Effort }
-  /** "Why?" (§4.4): the councillor who asked `question` explains; `text` is the user's follow-up. */
-  | { kind: 'why'; questionId: string; councillorId: string; question: string; text?: string };

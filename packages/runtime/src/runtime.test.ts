@@ -6,6 +6,7 @@ import type {
   AgentEvent,
   Command,
   CoreMessage,
+  CouncilEvent,
   CouncillorInfo,
   ElderEvent,
   RepoView,
@@ -23,6 +24,7 @@ import type {
   GameMaster,
   SessionResume,
   SessionStart,
+  SittingStart,
   UserSettings,
 } from './ports.types';
 import { Runtime, SNAPSHOT_INTERVAL_MS } from './runtime';
@@ -1286,5 +1288,166 @@ describe('the elder (#101)', () => {
     env.connection.receive({ type: 'abandonQuest', commandId: 'a1' });
     await flush();
     expect(env.starts).toEqual([]);
+  });
+});
+
+describe('the round table (#103)', () => {
+  type Call = {
+    start: SittingStart;
+    emit: (e: CouncilEvent) => void;
+    log: unknown[];
+    closed: boolean;
+  };
+  function withSitting(options: { sittings?: boolean; repoDir?: string | null } = {}) {
+    const storageDir = mkdtempSync(join(tmpdir(), 'ibitsa-runtime-'));
+    const repoDir = options.repoDir === undefined ? '/repo' : options.repoDir;
+    const home = mkdtempSync(join(tmpdir(), 'ibitsa-home-'));
+    dirs.push(storageDir, home);
+    const calls: Call[] = [];
+    const adapter = new FakeAdapter();
+    Object.assign(adapter, {
+      listCouncillors: async () => [
+        {
+          id: 'security',
+          skill: 'ibitsa:security',
+          title: 'Security',
+          description: '',
+          source: 'builtin',
+          portrait: null,
+          model: null,
+          tools: ['Read'],
+          modes: { planning: true, review: true },
+          hash: 'a',
+        },
+      ],
+      ...(options.sittings === false
+        ? {}
+        : {
+            startSitting: (start: SittingStart, emit: (e: CouncilEvent) => void) => {
+              const call: Call = { start, emit, log: [], closed: false };
+              calls.push(call);
+              return {
+                message: (m: unknown) => call.log.push(['message', m]),
+                completeTool: (r: unknown) => call.log.push(['completeTool', r]),
+                answer: (r: unknown) => call.log.push(['answer', r]),
+                close: () => (call.closed = true),
+              };
+            },
+          }),
+    });
+    const clock = new ManualClock();
+    let n = 0;
+    const runtime = new Runtime({
+      storageDir,
+      adapter,
+      gameMaster: new FakeGameMaster(),
+      clock,
+      home,
+      newId: () => `camp-${++n}`,
+      councilMode: () => 'roundTable',
+      watchFolder: () => ({ close: () => {} }),
+      ...(repoDir ? { repoDir } : {}),
+    });
+    runtime.start();
+    const received: CoreMessage[] = [];
+    const connection = runtime.connect({ post: (m) => received.push(m) });
+    const snapshot = () =>
+      received.flatMap((m) => (m.type === 'snapshot' ? [m.snapshot] : [])).at(-1);
+    const settle = async () => {
+      await flush();
+      clock.advance(SNAPSHOT_INTERVAL_MS);
+    };
+    return { storageDir, runtime, connection, calls, snapshot, settle };
+  }
+  const convene = {
+    type: 'conveneCouncil',
+    commandId: 'k1',
+    task: 'Add sign-in',
+    mode: 'roundTable',
+    roster: ['security'],
+    effort: 'standard',
+  } as const;
+
+  it('puts the councillors and the council mode in the snapshot', async () => {
+    const env = withSitting();
+    await env.settle();
+    env.connection.receive({ type: 'hello', protocolVersion: 1 });
+    expect(env.snapshot()?.councillors?.map((c) => c.id)).toEqual(['security']);
+    expect(env.snapshot()?.councilMode).toBe('roundTable');
+  });
+
+  it("opens a campaign and a round table on the effort's model and cap, and logs what it says", async () => {
+    const env = withSitting();
+    env.connection.receive(convene);
+    await flush();
+    expect(env.calls.map((c) => c.start)).toEqual([
+      {
+        cwd: '/repo',
+        mode: 'roundTable',
+        task: 'Add sign-in',
+        brief: null,
+        roster: [{ councillorId: 'security', effort: 'standard' }],
+        model: 'sonnet',
+        maxBudgetMicroUsd: 2_000_000,
+      },
+    ]);
+    const call = env.calls[0];
+    call?.emit({ type: 'sessionStarted', sessionId: 'x' });
+    call?.emit({
+      type: 'reportFiled',
+      toolUseId: 'u1',
+      councillorId: 'security',
+      report: { concerns: [], questions: [], recommendations: [], notChecked: [] },
+    });
+    expect(call?.log).toEqual([['completeTool', { toolUseId: 'u1', accepted: true }]]);
+    call?.emit({
+      type: 'questionsAsked',
+      toolUseId: 'u2',
+      questions: [
+        { councillorId: 'security', question: 'Long?', options: [], allowFreeText: true },
+      ],
+    });
+    await env.settle();
+    const questions = env.snapshot()?.sitting?.questions;
+    const item = questions?.items[0];
+    env.connection.receive({
+      type: 'askCouncilWhy',
+      commandId: 'w',
+      batchId: questions?.batchId ?? '',
+      questionId: item?.id ?? '',
+    });
+    env.connection.receive({
+      type: 'answerCouncil',
+      commandId: 'a',
+      batchId: questions?.batchId ?? '',
+      answers: { [item?.id ?? '']: { text: 'A week' } },
+    });
+    expect(call?.log.slice(1).map((l) => (l as [string])[0])).toEqual([
+      'completeTool',
+      'message',
+      'answer',
+    ]);
+    call?.emit({ type: 'planProposed', toolUseId: 'u3', plan: { summary: 'Plan' } });
+    env.connection.receive({ type: 'dismissCouncil', commandId: 'd' });
+    expect(call?.closed).toBe(true);
+    expect(logOf(env.storageDir).records.filter((r) => r.kind === 'council').length).toBe(4);
+  });
+
+  it('runs a deep sitting on Opus with $6', async () => {
+    const env = withSitting();
+    env.connection.receive({ ...convene, effort: 'deep' });
+    await flush();
+    expect(env.calls[0]?.start).toMatchObject({ model: 'opus', maxBudgetMicroUsd: 6_000_000 });
+  });
+
+  it('fails the sitting without a repository or an agent that can plan', async () => {
+    for (const env of [withSitting({ sittings: false }), withSitting({ repoDir: null })]) {
+      env.connection.receive(convene);
+      await env.settle();
+      expect(env.snapshot()?.sitting).toMatchObject({
+        status: 'failed',
+        error: 'The council needs a workspace folder and an agent that can plan.',
+      });
+    }
   });
 });

@@ -1,6 +1,7 @@
 import type { Command, MicroUsd, Reading } from '@ibitsa/protocol';
 import { Elder } from './elder';
 import { Hero } from './hero';
+import { Sitting } from './sitting';
 import { newId } from './state';
 import type { StepContext } from './step.types';
 
@@ -48,7 +49,9 @@ export class Quest {
         ? 'Finish or abandon the current quest first.'
         : state.campaign?.status === 'planning' && state.elder?.status === 'researching'
           ? 'The elder is still researching.'
-          : undefined;
+          : Sitting.active(state.sitting)
+            ? 'The council is sitting.'
+            : undefined;
     if (problem) {
       this.ctx.outbox.reject(command.commandId, problem);
       return;
@@ -172,6 +175,7 @@ export class Quest {
     const state = this.ctx.state;
     if (state.campaign) state.campaign.status = status;
     new Elder(this.ctx).stop();
+    new Sitting(this.ctx).stop('The quest was abandoned.');
     for (const hero of state.heroes) {
       this.ctx.outbox.effect({ type: 'closeSession', heroId: hero.id });
       this.ctx.outbox.effect({ type: 'cancelTimer', timerId: Hero.silenceTimer(hero.id) });

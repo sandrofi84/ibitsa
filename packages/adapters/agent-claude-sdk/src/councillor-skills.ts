@@ -19,11 +19,33 @@ export class CouncillorSkills {
   constructor(private readonly options: SkillFilesOptions) {}
 
   list(): CouncillorInfo[] {
-    const byId = new Map<string, CouncillorInfo>();
+    return [...this.byId().values()]
+      .map(({ info }) => info)
+      .sort((a, b) => a.id.localeCompare(b.id));
+  }
+
+  /**
+   * What a councillor brings to planning (#103): its skill's opening lines (who it is, how it speaks)
+   * and its `## Planning` section, or the whole body when it has no sections. Null for an unknown id.
+   */
+  planning(id: string): { info: CouncillorInfo; guidance: string } | null {
+    const found = this.byId().get(id);
+    if (!found) return null;
+    const { body } = readSkillFile(found.path);
+    const sections = body.split(/^(?=##\s)/m);
+    const opening = sections[0] ?? '';
+    const planning = sections.find((part) => /^##\s+Planning\b/i.test(part));
+    const review = sections.some((part) => /^##\s+Review\b/i.test(part));
+    const guidance = planning || !review ? `${opening}${planning ?? ''}` : opening;
+    return { info: found.info, guidance: guidance.trim() };
+  }
+
+  private byId(): Map<string, { info: CouncillorInfo; path: string }> {
+    const byId = new Map<string, { info: CouncillorInfo; path: string }>();
     for (const root of this.roots()) {
-      for (const councillor of councillorsIn(root)) byId.set(councillor.id, councillor);
+      for (const found of councillorsIn(root)) byId.set(found.info.id, found);
     }
-    return [...byId.values()].sort((a, b) => a.id.localeCompare(b.id));
+    return byId;
   }
 
   private roots(): SkillRoot[] {
@@ -40,14 +62,16 @@ export class CouncillorSkills {
   }
 }
 
-function councillorsIn(root: SkillRoot): CouncillorInfo[] {
+function councillorsIn(root: SkillRoot): { info: CouncillorInfo; path: string }[] {
   if (!existsSync(root.dir)) return [];
   return readdirSync(root.dir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => join(root.dir, entry.name, 'SKILL.md'))
     .filter((path) => existsSync(path))
-    .map((path) => toCouncillor({ path, root }))
-    .filter((c): c is CouncillorInfo => c !== null);
+    .flatMap((path) => {
+      const info = toCouncillor({ path, root });
+      return info ? [{ info, path }] : [];
+    });
 }
 
 function toCouncillor({ path, root }: { path: string; root: SkillRoot }): CouncillorInfo | null {

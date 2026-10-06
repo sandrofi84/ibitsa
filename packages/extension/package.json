@@ -106,6 +106,21 @@
           "minimum": 0.01,
           "markdownDescription": "The most the elder's research may cost, in US dollars. It stops when the cap is reached."
         },
+        "ibitsa.council.mode": {
+          "type": "string",
+          "enum": [
+            "ask",
+            "roundTable",
+            "chambers"
+          ],
+          "enumDescriptions": [
+            "Ask each time the council convenes.",
+            "One session voices every councillor: cheaper and quicker.",
+            "Each councillor studies alone after the elder's briefing: sharper roles, costs more."
+          ],
+          "default": "ask",
+          "markdownDescription": "How the council sits when you convene it."
+        },
         "ibitsa.council.disabled": {
           "type": "array",
           "items": {

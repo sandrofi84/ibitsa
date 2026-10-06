@@ -1,5 +1,5 @@
 // Pure game master: step(state, input) → { state, cues, effects }. No Node or vscode imports (ADR 0001).
-export type { Effect, SittingMessage } from './effects.types';
+export type { Effect } from './effects.types';
 export { Elder } from './elder';
 export { LOG_VERSION, LogFormatError, parseLog, serializeLine } from './event-log';
 export type { EventLog, LogHeader, LogRecord } from './event-log.types';

@@ -111,7 +111,7 @@ Every character is backed by a real agent session. The game layer makes multi-ag
 - The raw research transcript is **not** carried into planning. The brief is the handoff. It is kept in the campaign folder and reused by reviews (M5).
 
 ### 4.2 Choosing the council
-- UI: how the council sits (**Round table** / **Separate chambers**; asked each time while `ibitsa.council.mode` is `ask`, the default, else preselected); list of available councillors with checkboxes, recommended ones pre-checked with the elder's reason; effort (one selector for a round table, one per councillor in separate chambers, each set to the elder's pick with its reason); estimated cost.
+- UI (#103): the **convene form**, opened from the elder panel's **Convene council**. How the council sits (**Round table** / **Separate chambers**, disabled until #105; asked each time while `ibitsa.council.mode` is `ask`, the default, else stated); list of available councillors with checkboxes, recommended ones pre-checked with the elder's reason; effort (one selector for a round table, one per councillor in separate chambers, each set to the elder's pick with its reason); estimated cost.
 - **Effort levels** (models and caps configurable; starting defaults, tuned from tallies, §4.10):
 
 | Effort | Models | Round table cap | Per councillor in chambers |
@@ -121,7 +121,9 @@ Every character is backed by a real agent session. The game layer makes multi-ag
 | Deep | Opus for serious concerns, Sonnet otherwise | $6 | $1.20 |
 
   In separate chambers the elder also keeps a $0.30 reserve for summing up. Reaching a cap is not an error: the councillor or sitting wraps up with what it has and says what it didn't check.
-- The last selection is remembered per project as the default for next time ("Reset to defaults" available).
+- The last selection is remembered per project as the default for next time, used when the elder recommends no councillors ("Reset to defaults" available later, M8).
+- Convening without the elder's campaign starts a planning campaign of its own. While the council sits the elder panel steps aside; when the sitting ends it comes back, to convene again or start a quick quest.
+- While the game tab is hidden, each new batch of questions and each plan waiting for approval raises a VS Code notification (with "Open Game").
 - Councillors can also be added during planning.
 
 ### 4.3 The sitting: round table or separate chambers
@@ -134,7 +136,11 @@ Both kinds of sitting are built, so they can be measured against each other on r
   - The elder proposes the plan with `propose_plan` (§4.5), which is **rejected until every councillor on the roster has filed a report**.
   - Every `ask_user` question names a councillor on the roster (§4.4).
   - Read-only tools only.
-- **Round table:** one session on the chosen effort's model, starting from the whole brief. The councillors' skills are loaded as instructions and the session voices each of them, filing a report per councillor. Attribution is the model's word.
+- **Round table** (#103): one session on the chosen effort's model and cap (Light Haiku $0.50, Standard Sonnet $2, Deep Opus $6), read-only (`Read`, `Grep`, `Glob`; everything else denied). Its first message carries the task, the whole brief, and each councillor's opening lines and `## Planning` section from its skill; the system prompt is the same for every round table, so it caches. It voices each councillor, filing a report per councillor. Attribution is the model's word.
+  - Tools: `report`, `ask_user`, `propose_plan` and `say` (a line from a councillor or the elder, e.g. answering "Why?"). Core rules on every call and its verdict is the tool's result, so a rejection ("Waiting for: security") reaches the model to fix.
+  - `ask_user` returns as soon as core accepts the batch and the session ends its turn: the answers, "Why?", change requests and added councillors all arrive later as messages. A tool call that waited for the user would block the model from answering "Why?".
+  - Checked live (#103, opt-in smoke, Haiku): with Architect and Tester on a small task in this repository it filed both reports, asked one question with options and a recommendation, took the answer as a message and proposed a plan, every call accepted first time.
+  - Reaching the cap ends the sitting as failed ("ran out of gold"), keeping the reports so far; a softer wrap-up before the cap is left for later (the session only learns its cost at the end of a turn).
 - **Separate chambers:** the elder chairs a session and each councillor runs as an SDK **subagent** (`agents` option) with its own context, instructions (its skill, preloaded), tools, model and cap, from its effort.
   - A councillor starts from the shared findings, its own field slice and the file map. Ibitsa adds the slice to the subagent's first message itself (a hook on the dispatch), not by trusting the elder to pass it on.
   - The councillor reads more only when its slice isn't enough, within its cap and a turn limit (`maxTurns`).
@@ -191,7 +197,7 @@ ask_user({
   - Changes **supersede**, never overwrite ("D7 supersedes D3", old record kept).
 
 ### 4.6 Plan approval
-- **Approve**, **Change** with free-text context, or **Dismiss the council**.
+- **Approve**, **Change** with free-text context, or **Dismiss the council**. Until the plan review (#104), a **plan box** in the hut shows the proposed plan's summary with these three.
 - A change goes to the elder, who revises. In separate chambers the elder consults again only the councillors the change affects; each consultation is recorded and costed, and the every-councillor-reported rule still holds. No cap on revisions; each shows what it cost.
 - Each approved version is saved; amendments later in the campaign create new versions with a visible diff.
 - **Until parties exist (M4)**, an approved plan is carried out by one hero who works its tasks in order on one branch (§14.2).

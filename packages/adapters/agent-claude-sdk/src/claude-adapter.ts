@@ -1,7 +1,13 @@
 import { homedir } from 'node:os';
 import { dirname } from 'node:path';
 import type { SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
-import type { ActionInfo, AgentEvent, CouncillorInfo, ElderEvent } from '@ibitsa/protocol';
+import type {
+  ActionInfo,
+  AgentEvent,
+  CouncilEvent,
+  CouncillorInfo,
+  ElderEvent,
+} from '@ibitsa/protocol';
 import type {
   AgentAdapter,
   AgentSession,
@@ -10,11 +16,14 @@ import type {
   ElderStart,
   SessionResume,
   SessionStart,
+  SittingSession,
+  SittingStart,
 } from '@ibitsa/runtime';
 import type { ClaudeAdapterOptions } from './claude-adapter.types';
 import { ClaudeSession, loadSdk, plugins } from './claude-session';
 import { CouncillorSkills } from './councillor-skills';
 import { ElderSession } from './elder-session';
+import { RoundTableSession } from './round-table-session';
 import { expandSkill } from './skill-expansion';
 import type { Expansion } from './skill-expansion.types';
 import { SkillFiles } from './skill-files';
@@ -113,6 +122,23 @@ export class ClaudeAdapter implements AgentAdapter {
   /** The elder's research (spec §4.1, #101): read-only, capped, ending with `submit_brief`. */
   startElder(start: ElderStart, onEvent: (event: ElderEvent) => void): { close(): void } {
     return new ElderSession({ adapter: this.options, start, onEvent });
+  }
+
+  /**
+   * A sitting's lead session (spec §4.3): a round table (#103). Separate chambers come with #105; until
+   * then convening that way reports an error.
+   */
+  startSitting(start: SittingStart, onEvent: (event: CouncilEvent) => void): SittingSession {
+    if (start.mode === 'chambers') {
+      queueMicrotask(() =>
+        onEvent({
+          type: 'error',
+          message: "Separate chambers aren't available yet: convene a round table.",
+        }),
+      );
+      return { message: () => {}, completeTool: () => {}, answer: () => {}, close: () => {} };
+    }
+    return new RoundTableSession({ adapter: this.options, start, onEvent });
   }
 
   /** The councillors a folder can seat (§4.7, #98), read from the skill files; no session needed. */

@@ -113,3 +113,10 @@ export type PlanOutcome =
   | { kind: 'approved' }
   | { kind: 'changeRequested'; text: string }
   | { kind: 'dismissed' };
+
+/** Something the user did that a sitting's lead session must hear about (spec §4.4–4.6). */
+export type SittingMessage =
+  | { kind: 'changeRequested'; version: number; text: string }
+  | { kind: 'councillorAdded'; councillorId: string; effort: Effort }
+  /** "Why?" (§4.4): the councillor who asked `question` explains; `text` is the user's follow-up. */
+  | { kind: 'why'; questionId: string; councillorId: string; question: string; text?: string };

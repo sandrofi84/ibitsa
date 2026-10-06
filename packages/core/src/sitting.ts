@@ -4,10 +4,11 @@ import type {
   CouncilEvent,
   CouncilQuestion,
   DialogueLine,
+  SittingMessage,
   SittingStatus,
   SittingView,
 } from '@ibitsa/protocol';
-import type { SittingMessage } from './effects.types';
+import { Quest } from './quest';
 import { newId } from './state';
 import type { CoreState, QuestionBatch, SittingRecord } from './state.types';
 import type { StepContext } from './step.types';
@@ -64,12 +65,22 @@ export class Sitting {
       this.ctx.outbox.reject(command.commandId, problem);
       return;
     }
+    const sittingId = newId(state, 's');
+    // The sitting belongs to a planning campaign: the elder's, or a new one when convened directly,
+    // named after the sitting so the counter (and every recorded id after it) stays as it was.
+    if (state.campaign?.status !== 'planning') {
+      state.campaign = {
+        id: `c-${sittingId}`,
+        title: Quest.title(command.task),
+        status: 'planning',
+        autoApprove: false,
+      };
+    }
     const efforts = command.councillorEfforts ?? {};
     const roster = command.roster.map((councillorId) => ({
       councillorId,
       effort: efforts[councillorId] ?? command.effort,
     }));
-    const sittingId = newId(state, 's');
     state.sitting = {
       id: sittingId,
       task: command.task,
@@ -96,7 +107,21 @@ export class Sitting {
       task: command.task,
       effort: command.effort,
       roster,
+      brief: state.elder?.status === 'briefed' ? state.elder.brief : null,
     });
+  }
+
+  /** VS Code reloaded: the lead session is gone (spec §12). Reports and questions so far are kept. */
+  restarted(): void {
+    this.stop('The sitting stopped when VS Code reloaded.');
+  }
+
+  /** Ends an active sitting as failed, e.g. when its campaign is abandoned. */
+  stop(reason: string): void {
+    const record = this.ctx.state.sitting;
+    if (!Sitting.active(record)) return;
+    record.error = reason;
+    this.end({ record, status: 'failed' });
   }
 
   addCouncillor(command: Extract<Command, { type: 'addCouncillor' }>): void {
@@ -305,6 +330,8 @@ export class Sitting {
       answers: null,
     };
     record.batches.push(batch);
+    // Accepted: the session ends its turn and hears the answers later, so it can answer "Why?" meanwhile.
+    this.complete({ record, toolUseId });
   }
 
   private propose({
@@ -431,6 +458,7 @@ function conveneProblem({
 }): string | undefined {
   if (Sitting.active(state.sitting)) return 'The council is already sitting.';
   if (state.campaign?.status === 'active') return 'Finish or abandon the current quest first.';
+  if (state.elder?.status === 'researching') return 'The elder is still researching.';
   const { roster, mode } = command;
   const efforts = command.councillorEfforts ?? {};
   const twice = roster.find((id, i) => roster.indexOf(id) !== i);

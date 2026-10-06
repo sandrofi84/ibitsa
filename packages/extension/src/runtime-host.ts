@@ -1,6 +1,8 @@
 import type { HeroRecord } from '@ibitsa/core';
-import type { ActionInfo } from '@ibitsa/protocol';
+import type { ActionInfo, SittingView } from '@ibitsa/protocol';
 import { type Connection, type FrontEnd, Runtime, systemClock } from '@ibitsa/runtime';
+import { councilNews } from './council-notices';
+import type { Noticed } from './council-notices.types';
 import type { CommandIntent, RuntimeHostOptions } from './runtime-host.types';
 
 /**
@@ -8,6 +10,8 @@ import type { CommandIntent, RuntimeHostOptions } from './runtime-host.types';
  * while the game tab is hidden (spec §6.4).
  */
 export class RuntimeHost {
+  /** What the council last told the user about, so each news is noticed once. */
+  private noticed: Noticed = { batch: null, plan: null };
   private runtime: Runtime | null = null;
   /** The host's own connection, for commands from the Command Palette (#87). */
   private connection: Connection | null = null;
@@ -68,6 +72,7 @@ export class RuntimeHost {
       settings: o.settings,
       repoDir: o.workspaceDir,
       ...(o.elder ? { elder: o.elder } : {}),
+      ...(o.councilMode ? { councilMode: o.councilMode } : {}),
       ...(o.disabledCouncillors ? { disabledCouncillors: o.disabledCouncillors } : {}),
     });
     this.connection = runtime.connect(this.watcher(runtime));
@@ -77,6 +82,19 @@ export class RuntimeHost {
   }
 
   /** An internal front end: notifications while the game is hidden, and the waiting count. */
+  /**
+   * The council's questions and plans while the game is hidden (#103): one notification for each new
+   * batch of questions and each plan waiting for approval.
+   */
+  private noticeCouncil(sitting: SittingView | null): void {
+    const news = councilNews({ sitting, noticed: this.noticed });
+    this.noticed = news.noticed;
+    if (!news.text || this.options.gameVisible()) return;
+    void this.options.notify(news.text).then((open) => {
+      if (open) this.options.openGame();
+    });
+  }
+
   private watcher(runtime: Runtime): FrontEnd {
     return {
       post: (message) => {
@@ -84,6 +102,7 @@ export class RuntimeHost {
           // The council's open questions count as one more thing waiting (#102).
           const council = message.snapshot.sitting?.questions ? 1 : 0;
           this.options.onWaitingChanged(message.snapshot.needsYou.length + council);
+          this.noticeCouncil(message.snapshot.sitting);
         }
         if (message.type !== 'cue' || message.cue.type !== 'needsYouAdded') return;
         if (this.options.gameVisible()) return;

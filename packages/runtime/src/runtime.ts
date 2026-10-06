@@ -15,6 +15,7 @@ import {
   type ActionInfo,
   type Command,
   type CoreMessage,
+  type CouncilEvent,
   type CouncillorInfo,
   type Cue,
   type ElderEvent,
@@ -25,7 +26,7 @@ import {
 } from '@ibitsa/protocol';
 import { CampaignDocuments } from './campaign-documents';
 import { seatable } from './council';
-import type { AgentSession, FrontEnd } from './ports.types';
+import type { AgentSession, FrontEnd, SittingSession } from './ports.types';
 import { ProjectRules } from './project-rules';
 import type { Connection, RuntimeOptions } from './runtime.types';
 import { SkillCatalog, watchFolder } from './skill-catalog';
@@ -34,6 +35,13 @@ import { type CampaignLog, CampaignStore } from './storage';
 /** Snapshots go out at most this often (spec §11.2.1: throttled, ~10/s). */
 /** The elder's defaults (spec §4.1): the smallest model, a quarter of a dollar. */
 const DEFAULT_ELDER = { model: 'haiku', budgetMicroUsd: 250_000 };
+
+/** A round table's model and cap by effort (spec §4.2); starting numbers, to be tuned from tallies. */
+const SITTING_EFFORT = {
+  light: { model: 'haiku', budgetMicroUsd: 500_000 },
+  standard: { model: 'sonnet', budgetMicroUsd: 2_000_000 },
+  deep: { model: 'opus', budgetMicroUsd: 6_000_000 },
+} as const;
 
 export const SNAPSHOT_INTERVAL_MS = 100;
 
@@ -52,6 +60,9 @@ export class Runtime {
   private readonly frontEnds = new Set<FrontEnd>();
   private readonly sessions = new Map<string, AgentSession>();
   private elderSession: { close(): void } | null = null;
+  private sitting: { id: string; session: SittingSession } | null = null;
+  /** The workspace's councillors, kept for the snapshot (#103). */
+  private councillorList: CouncillorInfo[] = [];
   private readonly timers = new Map<string, unknown>();
   private snapshotTimer: unknown = null;
   private lastSnapshotAt = Number.NEGATIVE_INFINITY;
@@ -83,8 +94,8 @@ export class Runtime {
           list: listCouncillors,
           home: options.home ?? homedir(),
           watch: options.watchFolder ?? watchFolder,
-          // Nothing shows the roster until convening (#103), which asks for it fresh.
-          onChange: () => {},
+          // A councillor changed: the snapshot's list follows (#103).
+          onChange: () => this.refreshCouncillors(),
         })
       : null;
     this.newId = options.newId ?? randomUUID;
@@ -96,6 +107,7 @@ export class Runtime {
    */
   start(): void {
     this.rescanRepo();
+    this.refreshCouncillors();
     const id = this.store.activeId();
     if (!id) return;
     const { header, records } = this.store.read(id);
@@ -129,6 +141,7 @@ export class Runtime {
     this.sessions.clear();
     this.actions?.dispose();
     this.elderSession?.close();
+    this.sitting?.session.close();
     this.councillors?.dispose();
     this.frontEnds.clear();
   }
@@ -178,7 +191,8 @@ export class Runtime {
       frontEnd.post({ type: 'journal', seq: ++this.seq, ...page });
       return;
     }
-    if ((command.type === 'startQuest' || command.type === 'consultElder') && !this.live()) {
+    const opens = ['startQuest', 'consultElder', 'conveneCouncil'].includes(command.type);
+    if (opens && !this.live()) {
       // A new quest, or asking the elder, is a new campaign with its own log, a fresh core and journal.
       // A quick quest after the elder's brief continues the planning campaign instead (#101).
       this.state = initialState();
@@ -411,6 +425,29 @@ export class Runtime {
         }
         return;
       }
+      case 'startSitting':
+        this.startSitting(effect);
+        return;
+      case 'sittingMessage':
+        this.sittingFor(effect.sittingId)?.message(effect.message);
+        return;
+      case 'completeSittingTool':
+        this.sittingFor(effect.sittingId)?.completeTool({
+          toolUseId: effect.toolUseId,
+          accepted: effect.accepted,
+          ...(effect.reason === undefined ? {} : { reason: effect.reason }),
+        });
+        return;
+      case 'answerSittingQuestions':
+        this.sittingFor(effect.sittingId)?.answer({
+          toolUseId: effect.toolUseId,
+          answers: effect.answers,
+        });
+        return;
+      case 'closeSitting':
+        this.sittingFor(effect.sittingId)?.close();
+        if (this.sitting?.id === effect.sittingId) this.sitting = null;
+        return;
       case 'setTimer':
         this.arm(effect.timerId, effect.at);
         return;
@@ -455,6 +492,52 @@ export class Runtime {
     } catch (e) {
       report({ type: 'error', message: String(e) });
     }
+  }
+
+  /** The round table plans in the workspace repository on its effort's model and cap (#103). */
+  private startSitting(effect: Extract<Effect, { type: 'startSitting' }>): void {
+    const { sittingId } = effect;
+    const report = (event: CouncilEvent) =>
+      this.input({ kind: 'council', t: this.t(), sittingId, event });
+    const start = this.options.adapter.startSitting?.bind(this.options.adapter);
+    const cwd = this.options.repoDir;
+    if (!start || !cwd) {
+      report({
+        type: 'error',
+        message: 'The council needs a workspace folder and an agent that can plan.',
+      });
+      return;
+    }
+    const { model, budgetMicroUsd } = SITTING_EFFORT[effect.effort];
+    try {
+      this.sitting?.session.close();
+      const session = start(
+        {
+          cwd,
+          mode: effect.mode,
+          task: effect.task,
+          brief: effect.brief,
+          roster: effect.roster,
+          model,
+          maxBudgetMicroUsd: budgetMicroUsd,
+        },
+        report,
+      );
+      this.sitting = { id: sittingId, session };
+    } catch (e) {
+      report({ type: 'error', message: String(e) });
+    }
+  }
+
+  private sittingFor(sittingId: string): SittingSession | undefined {
+    return this.sitting?.id === sittingId ? this.sitting.session : undefined;
+  }
+
+  private refreshCouncillors(): void {
+    void this.currentCouncillors().then((list) => {
+      this.councillorList = list;
+      this.scheduleSnapshot();
+    });
   }
 
   /** `at` is in log time (ms since the header). */
@@ -615,6 +698,8 @@ export class Runtime {
       ...view(this.state),
       projectRules: this.projectRules.list(),
       sandboxed: (this.options.platform ?? process.platform) !== 'win32',
+      councillors: this.councillorList,
+      councilMode: this.options.councilMode?.() ?? 'ask',
     };
     return this.repo === undefined ? snapshot : { ...snapshot, repo: this.repo };
   }

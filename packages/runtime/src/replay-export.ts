@@ -1,6 +1,7 @@
 import { realpathSync } from 'node:fs';
 import { relative } from 'node:path';
 import { type EventLog, type LogRecord, serializeLine } from '@ibitsa/core';
+import type { CouncilEvent } from '@ibitsa/protocol';
 import type { ReplayExportOptions } from './replay-export.types';
 
 export const BLANKED = '[message removed]';
@@ -103,8 +104,27 @@ function mapStrings(value: unknown, fn: (text: string) => string): unknown {
   return value;
 }
 
-/** What the user and the hero said, replaced; the quest's first line stays as its title. */
+/**
+ * What the user, the hero, the elder and the council said, replaced; a task's first line stays as its
+ * title. Ids, councillors, options' ids and file paths stay, so the copy replays the same way.
+ */
 function blank(record: LogRecord): LogRecord {
+  if (record.kind === 'elder' && record.event.type === 'briefSubmitted') {
+    const { brief } = record.event;
+    return {
+      ...record,
+      event: {
+        ...record.event,
+        brief: {
+          ...brief,
+          task: BLANKED,
+          findings: brief.findings.map(() => BLANKED),
+          slices: brief.slices.map((slice) => ({ ...slice, summary: BLANKED })),
+        },
+      },
+    };
+  }
+  if (record.kind === 'council') return { ...record, event: blankCouncil(record.event) };
   if (record.kind === 'agent') {
     const e = record.event;
     if (e.type === 'message') return { ...record, event: { ...e, text: BLANKED } };
@@ -116,10 +136,59 @@ function blank(record: LogRecord): LogRecord {
     if (c.type === 'startQuest') {
       return { ...record, command: { ...c, description: c.description.split('\n')[0] ?? '' } };
     }
-    if (c.type === 'sendMessage') return { ...record, command: { ...c, text: BLANKED } };
+    if (c.type === 'consultElder' || c.type === 'conveneCouncil') {
+      return { ...record, command: { ...c, task: c.task.split('\n')[0] ?? '' } };
+    }
+    if (c.type === 'sendMessage' || c.type === 'requestPlanChange') {
+      return { ...record, command: { ...c, text: BLANKED } };
+    }
+    if (c.type === 'askCouncilWhy' && c.text !== undefined) {
+      return { ...record, command: { ...c, text: BLANKED } };
+    }
+    if (c.type === 'answerCouncil') {
+      const answers = Object.fromEntries(
+        Object.entries(c.answers).map(([id, a]) => [id, 'text' in a ? { text: BLANKED } : a]),
+      );
+      return { ...record, command: { ...c, answers } };
+    }
     if (c.type === 'answerPermission' && c.note !== undefined) {
       return { ...record, command: { ...c, note: BLANKED } };
     }
   }
   return record;
+}
+
+function blankCouncil(event: CouncilEvent): CouncilEvent {
+  const all = (items: string[]) => items.map(() => BLANKED);
+  switch (event.type) {
+    case 'reportFiled': {
+      const { report } = event;
+      return {
+        ...event,
+        report: {
+          concerns: report.concerns.map((c) => ({ ...c, summary: BLANKED, reason: BLANKED })),
+          questions: all(report.questions),
+          recommendations: all(report.recommendations),
+          notChecked: all(report.notChecked),
+          ...(report.bowOut === undefined ? {} : { bowOut: BLANKED }),
+        },
+      };
+    }
+    case 'questionsAsked':
+      return {
+        ...event,
+        questions: event.questions.map((q) => ({
+          ...q,
+          question: BLANKED,
+          options: q.options.map((o) => ({ ...o, label: BLANKED, tradeoff: BLANKED })),
+          ...(q.recommendation ? { recommendation: { ...q.recommendation, reason: BLANKED } } : {}),
+        })),
+      };
+    case 'planProposed':
+      return { ...event, plan: { summary: BLANKED } };
+    case 'said':
+      return { ...event, text: BLANKED };
+    default:
+      return event;
+  }
 }
