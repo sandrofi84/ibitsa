@@ -134,3 +134,31 @@ describe('GameClient project rules (#62)', () => {
     expect(host.sent).toEqual([{ type: 'forgetProjectRule', rule: 'Bash(npm test:*)' }]);
   });
 });
+
+describe('GameClient files (#83)', () => {
+  it('asks once, shares the answer, and asks again once the list is old', async () => {
+    const host = new FakeHost();
+    const client = new GameClient(host);
+    const first = client.files('i2');
+    const second = client.files('i2');
+    expect(host.sent).toEqual([{ type: 'requestFiles', islandId: 'i2' }]);
+    host.deliver({ type: 'files', seq: 1, islandId: 'i2', paths: ['a.ts'] });
+    expect(await first).toEqual(['a.ts']);
+    expect(await second).toEqual(['a.ts']);
+
+    const realNow = Date.now;
+    Date.now = () => realNow() + GameClient.FILES_TTL_MS + 1;
+    try {
+      void client.files('i2');
+      expect(host.sent).toHaveLength(2);
+    } finally {
+      Date.now = realNow;
+    }
+  });
+
+  it('ignores an answer nobody asked for', () => {
+    const host = new FakeHost();
+    new GameClient(host).receive({ type: 'files', seq: 1, islandId: 'x', paths: [] });
+    expect(host.sent).toEqual([]);
+  });
+});

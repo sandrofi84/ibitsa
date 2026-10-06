@@ -1,11 +1,15 @@
 import type { Snapshot } from '@ibitsa/protocol';
+import { atMenu, handles } from './at-menu';
 import type { CommandBar, CommandBarOptions } from './command-bar.types';
 import { createCommandInput } from './command-input';
 import { el } from './dom';
+import { ALL, heroHandle, parseMessage } from './mentions';
 
 /**
  * The command bar (spec §6.1, #81): one input along the bottom of the game, focused with / or ⌘K.
  * While a quest runs it messages the hero; with none, Enter offers to start one with what you typed.
+ * The first @mention naming a recipient (#83) chooses who gets the message and is taken out of it;
+ * file @mentions stay in the text as paths. Without one, the message goes to the only hero.
  */
 export function mountCommandBar({
   client,
@@ -16,18 +20,32 @@ export function mountCommandBar({
   const bar = el('section', { className: 'command-bar' });
   bar.setAttribute('aria-label', 'Command bar');
   let snapshot: Snapshot | null = null;
-  const hero = () =>
-    snapshot?.campaign?.status === 'active' ? (snapshot.heroes[0] ?? null) : null;
+  const heroes = () => (snapshot?.campaign?.status === 'active' ? snapshot.heroes : []);
+  const hero = () => heroes()[0] ?? null;
 
   const input = createCommandInput({
     label: 'Command bar',
     placeholder: 'Message the hero… (/ or ⌘K)',
     history,
     onHistoryChange,
+    menus: [atMenu({ client, recipients: true })],
     onSend: ({ text, priority }) => {
-      const target = hero();
-      if (target) client.send({ type: 'sendMessage', heroId: target.id, text, priority });
-      else startQuest(text);
+      const all = heroes();
+      if (all.length === 0) {
+        startQuest(text);
+        return;
+      }
+      const parsed = parseMessage({ text, recipients: handles(all) });
+      if (!parsed.text) return;
+      const targets =
+        parsed.recipient === ALL
+          ? all
+          : all.filter((h) =>
+              parsed.recipient ? heroHandle(h.name) === parsed.recipient : h === all[0],
+            );
+      for (const target of targets) {
+        client.send({ type: 'sendMessage', heroId: target.id, text: parsed.text, priority });
+      }
     },
   });
   bar.append(input.element);
@@ -37,7 +55,7 @@ export function mountCommandBar({
     snapshot = s;
     const target = hero();
     input.input.placeholder = target
-      ? `Message ${target.name}… (/ or ⌘K)`
+      ? `Message ${target.name}, @ for files… (/ or ⌘K)`
       : 'Describe a task to start a quest… (/ or ⌘K)';
     input.setButtons(
       target ? { next: 'Send', now: 'Send now' } : { next: 'Start a quest', now: null },

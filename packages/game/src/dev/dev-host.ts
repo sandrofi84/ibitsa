@@ -10,7 +10,7 @@ import {
 } from '@ibitsa/protocol';
 import type { Host } from '../host.types';
 import { MemoryViewStorage } from '../view-state';
-import { FakeHostChannel } from './fake-host-channel';
+import { DEMO_FILES, FakeHostChannel } from './fake-host-channel';
 
 /** Commands the game's UI can send; interactive replays wait for these and replay the rest. */
 const ANSWERABLE: Command['type'][] = [
@@ -83,6 +83,10 @@ export class DevHost implements Host {
   send(command: Command): void {
     // The standalone build keeps no project rules (#62).
     if (command.type === 'forgetProjectRule') return;
+    if (command.type === 'requestFiles') {
+      this.emit({ type: 'files', seq: ++this.seq, islandId: command.islandId, paths: DEMO_FILES });
+      return;
+    }
     if (command.type === 'requestJournal') {
       const page = this.journal.page({ before: command.before, limit: command.limit });
       this.emit({ type: 'journal', seq: ++this.seq, ...page });
