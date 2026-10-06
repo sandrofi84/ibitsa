@@ -59,8 +59,10 @@ Every character is backed by a real agent session. The game layer makes multi-ag
 | **Campaign** | One goal from the user, from first question to final PRs. |
 | **Elder** | The council's first and permanent member. Does initial research, recommends councillors, moderates and owns the plan. |
 | **Councillor** | A domain persona (Architect, Tester, Accessibility, Security, Designer, …) defined as a skill with a **planning mode** and/or a **review mode**. |
-| **Council session** | The single agent session in which planning happens. Councillors are perspectives inside it, not separate agents. |
-| **Research brief** | Short document written by the elder's research pass; input to planning. |
+| **Sitting** | One meeting of the council to plan a campaign, held as a **round table** (one session voices every councillor) or in **separate chambers** (each councillor studies alone, then reports). |
+| **Effort** | Light, Standard or Deep: which models a councillor or council uses and how much it may spend. |
+| **Research brief** | Short document written by the elder's research pass, with a slice for each councillor's field; input to planning. |
+| **Tally** | What a sitting cost and produced, plus the user's rating; used to compare sittings. |
 | **Plan** | Saved document: tasks, branches, acceptance criteria, decision records. |
 | **Decision record** | A recorded user choice with its alternatives, trade-offs and reasons. |
 | **Hero** | A coding agent session that executes tasks. Its **class** maps to an adapter + model. |
@@ -76,12 +78,12 @@ Every character is backed by a real agent session. The game layer makes multi-ag
 ## 3. Campaign lifecycle
 
 1. **Start.** The user opens the panel and describes a task to the **elder** (free text, optionally from a ticket).
-2. **Research.** The elder (cheap/fast model) researches the codebase and writes the **research brief**: relevant files, current patterns, open questions, recommended councillors with a one-line reason each, recommended council effort, and whether this is a **quick quest**.
+2. **Research.** The elder (cheap/fast model) researches the codebase and writes the **research brief**: relevant files, current patterns, open questions, a slice for each councillor's field, recommended councillors with a one-line reason each, recommended effort, and whether this is a **quick quest**.
 3. **Quick quest path.** If the task is small and clear, the elder offers to skip the council and dispatch a single hero directly.
-4. **Convene the council.** The user picks councillors (checkboxes, recommended ones pre-checked with reasons) and **one effort level for the whole council** (= the council session's model).
-5. **Planning.** A fresh council session starts from the brief on the chosen model. Councillors contribute their domain concerns, ask the user steering questions (in their own voice), and can be questioned about trade-offs ("Why?").
+4. **Convene the council.** The user picks how the council sits (**round table** or **separate chambers**, §4.3), the councillors (checkboxes, recommended ones pre-checked with reasons) and the **effort**: one for a round table, one per councillor in separate chambers (each pre-set by the elder with a reason).
+5. **Planning.** The sitting starts from the brief. Every councillor files a report on its field; the elder asks the user steering questions in the voice of the councillor who raised them, and any councillor can be questioned about trade-offs ("Why?").
 6. **Plan proposal.** The elder presents the plan: tasks, dependencies, branching strategy (separate or stacked), suggested hero classes, acceptance criteria per reviewing councillor, decision records.
-7. **Approval.** The user approves, or requests changes with context. The plan is saved to the repo.
+7. **Approval.** The user approves, or requests changes with context. The plan is written to the campaign folder (§8.3); Ibitsa never commits it.
 8. **Assemble parties.** One party per worktree. The user picks the hero class per party and which councillors join each party (= will review its work). All pre-filled with recommendations from the plan.
 9. **Adventure.** Heroes work on the map. The user can talk to any party or to the council at any time.
 10. **Review loop.** When a hero submits a task, its party's councillors review it concurrently against the agreed criteria. Blocking findings send the hero back. Loop ends when all are satisfied or the loop limit escalates to the user.
@@ -93,34 +95,58 @@ Every character is backed by a real agent session. The game layer makes multi-ag
 ## 4. The council
 
 ### 4.1 Elder and research pass
-- The elder runs a **separate, short research session** on a cheap/fast model (configurable; default: smallest available model).
-- Read-only tools. Output is the **research brief** (`brief.md`) in a fixed structure:
+- A new quest's description goes to the elder first (M3 puts the elder in front of the New Quest form, §14.1).
+- The elder runs a **separate, short research session** on a cheap/fast model (configurable; default Haiku), read-only tools, capped at **$0.25** (configurable). It ends by calling a custom `submit_brief` tool; Ibitsa validates the brief against a schema and renders `brief.md` and `brief.json`.
+- The **research brief** has a fixed structure:
   - Task restatement
-  - Relevant files and areas (paths + one line each)
-  - Existing patterns and conventions
-  - Risks and unknowns
-  - Recommended councillors (id, reason)
-  - Recommended council effort (model) and why
+  - File map: relevant files and areas (paths + one line each)
+  - Shared findings: existing patterns, conventions, risks and unknowns
+  - **Field slices:** for each recommended councillor, what in this task touches its field (paths with line ranges, a short summary). Pointers, not file contents.
+  - Recommended councillors (id, reason) and effort: one for a round table, and one per councillor for separate chambers (level, reason)
   - Quick-quest verdict (yes/no + reason)
-- The raw research transcript is **not** carried into planning. The brief is the handoff.
+- The brief is written **before** the user chooses a quick quest or a sitting, and both kinds of sitting start from it, so the two differ only in how councillors work (§4.3).
+- The raw research transcript is **not** carried into planning. The brief is the handoff. It is kept in the campaign folder and reused by reviews (M5).
 
 ### 4.2 Choosing the council
-- UI: list of available councillors with checkboxes; recommended ones pre-checked with the elder's reason; one effort selector for the whole council; estimated relative cost.
+- UI: how the council sits (**Round table** / **Separate chambers**; asked each time while `ibitsa.council.mode` is `ask`, the default, else preselected); list of available councillors with checkboxes, recommended ones pre-checked with the elder's reason; effort (one selector for a round table, one per councillor in separate chambers, each set to the elder's pick with its reason); estimated cost.
+- **Effort levels** (models and caps configurable; starting defaults, tuned from tallies, §4.10):
+
+| Effort | Models | Round table cap | Per councillor in chambers |
+|---|---|---|---|
+| Light | Haiku | $0.50 | $0.10 |
+| Standard | Sonnet; Haiku for a councillor with nothing to add | $2 | $0.40 |
+| Deep | Opus for serious concerns, Sonnet otherwise | $6 | $1.20 |
+
+  In separate chambers the elder also keeps a $0.30 reserve for summing up. Reaching a cap is not an error: the councillor or sitting wraps up with what it has and says what it didn't check.
 - The last selection is remembered per project as the default for next time ("Reset to defaults" available).
 - Councillors can also be added during planning.
 
-### 4.3 Planning session
-- **One agent session, one model** (the chosen council effort). Councillors are loaded as skills/instructions and act as perspectives within that session.
-- Read-only tools plus the custom `ask_user` tool (§4.4).
-- Specialist councillors may read deeper into their own domain (e.g. Security reads auth code in full) but other code knowledge comes from the brief.
-- **Deferred option [OPEN, not v1]:** "specialist dives": the elder may dispatch a councillor as a subagent on its own model for a focused investigation that returns a short report. Only add if planning quality in specialist domains proves thin.
+### 4.3 The sitting: round table or separate chambers
+Both kinds of sitting are built, so they can be measured against each other on real tasks (§4.10). They share everything except how reports are produced:
+
+- **Shared:**
+  - The **roster** is fixed when the council convenes (the user can drop a councillor; adding one mid-sitting adds it to the roster).
+  - Each councillor files a **report** through a custom `report` tool, in a fixed short schema: concerns (each with severity and reason), questions for the user, recommendations, and **what it didn't check**.
+  - A councillor with nothing to add files a one-line report saying why ("nothing in my field, because …"). That still counts.
+  - The elder proposes the plan with `propose_plan` (§4.5), which is **rejected until every councillor on the roster has filed a report**.
+  - Every `ask_user` question names a councillor on the roster (§4.4).
+  - Read-only tools only.
+- **Round table:** one session on the chosen effort's model, starting from the whole brief. The councillors' skills are loaded as instructions and the session voices each of them, filing a report per councillor. Attribution is the model's word.
+- **Separate chambers:** the elder chairs a session and each councillor runs as an SDK **subagent** (`agents` option) with its own context, instructions (its skill, preloaded), tools, model and cap, from its effort.
+  - A councillor starts from the shared findings, its own field slice and the file map. Ibitsa adds the slice to the subagent's first message itself (a hook on the dispatch), not by trusting the elder to pass it on.
+  - The councillor reads more only when its slice isn't enough, within its cap and a turn limit (`maxTurns`).
+  - Attribution comes from the SDK: every message from a subagent carries the `parent_tool_use_id` of the call that started it, and permission requests carry an `agentID`.
+  - Subagents can't talk to the user mid-run; their questions go into their reports, and the elder asks them.
+  - A concern the elder marks serious can get a deeper pass on a stronger model (Deep effort only).
+- **Fallback if separate chambers proves unreliable:** Ibitsa runs each councillor as its own session in code-controlled rounds, which also lets prompts put the brief first so it can be a cache hit for every councillor.
 
 ### 4.4 Questions, "Why?" and voices
-- The council session asks the user questions only through a custom tool:
+- The sitting asks the user questions only through a custom tool (in separate chambers, only the elder calls it):
 
 ```ts
 ask_user({
-  councillor: string,          // id of the councillor asking; drives speaker, portrait, voice
+  councillor: string,          // id of a councillor on the roster; drives speaker, portrait, voice
+  report?: string,             // the report the question comes from (separate chambers)
   question: string,
   options: { id: string; label: string; tradeoff: string }[],
   recommendation?: { optionId: string; reason: string },
@@ -128,11 +154,11 @@ ask_user({
 })
 ```
 
-- Questions are **batched** where possible.
-- The dialogue box offers the options, free text, and **"Why?"**. "Why?" opens a short back-and-forth with that councillor (same session); other councillors may chime in when their concern is affected.
+- Questions are **batched** where possible. Ibitsa rejects a question whose councillor isn't on the roster.
+- The dialogue box shows the councillor's portrait and offers the options with their trade-offs, the recommendation, free text, and **"Why?"**. "Why?" opens a short back-and-forth with that councillor (in a round table, the same session; in separate chambers, the elder answers from the councillor's report and can consult it again); other councillors may chime in when their concern is affected.
 
 ### 4.5 Plan document and decision records
-- Saved at `.ibitsa/campaigns/<campaignId>/plan.md` (human-readable markdown with a machine-readable JSON block or sidecar `plan.json`; the game reads the JSON).
+- The elder proposes the plan by calling a custom `propose_plan` tool. Ibitsa validates it against a schema (and the every-councillor-reported rule, §4.3), then renders `.ibitsa/campaigns/<campaignId>/plan.json` (the game reads it) and `plan.md` (for people). Ibitsa writes campaign documents but never commits them; the user decides whether they belong in the repo.
 - Plan contents:
   - Goal and scope
   - Tasks (id, title, description, files likely touched, dependencies, suggested hero class, estimated effort, optional source ticket). A **ticket** is an item in an outside ticket system; it is not part of the game world. See `GLOSSARY.md`.
@@ -160,19 +186,23 @@ ask_user({
   - Changes **supersede**, never overwrite ("D7 supersedes D3", old record kept).
 
 ### 4.6 Plan approval
-- Approve, or "Change" with free-text context, which sends the council back to revise. Each approved version is saved; amendments later in the campaign create new versions with a visible diff.
+- **Approve**, **Change** with free-text context, or **Dismiss the council**.
+- A change goes to the elder, who revises. In separate chambers the elder consults again only the councillors the change affects; each consultation is recorded and costed, and the every-councillor-reported rule still holds. No cap on revisions; each shows what it cost.
+- Each approved version is saved; amendments later in the campaign create new versions with a visible diff.
+- **Until parties exist (M4)**, an approved plan is carried out by one hero who works its tasks in order on one branch (§14.2).
 
 ### 4.7 Councillor definitions
 - Each councillor is **one class with two modes**:
   - **Planning mode:** what concerns to raise, what to research, how to write acceptance criteria.
   - **Review mode:** how to review a diff against criteria, what counts as blocking vs suggestion, output format.
   - A councillor may be planning-only (e.g. Product).
-- Stored as Claude Code skill files (see §9.2 for locations and precedence). Defaults ship with the extension; users can **extend** (override some fields), **replace**, or **disable** them; users can create new ones.
-- Default roster (v1): Elder, Architect, Tester, Accessibility, Security, Designer. **[OPEN]** final names/personas.
-- Councillor skills must not be auto-invoked by the model in normal Claude Code use (`disable-model-invocation: true`; consider `user-invocable: false`). **[OPEN]** confirm best location so they don't clutter the user's normal `/` menu.
+- Stored as Claude Code skill files with Ibitsa's own frontmatter fields: `ibitsa-councillor: true`, and optionally `ibitsa-portrait`, `ibitsa-model` and `ibitsa-tools` (read-only by default). The body has a `## Planning` and/or `## Review` section.
+- Built-ins ship in Ibitsa's plugin (`ibitsa:architect`, …); users add their own in `~/.claude/skills/` and projects in `.claude/skills/` (§8.3), found the same way as actions (§6.2). A project councillor with a built-in's name **replaces** it; users can also **extend** (override some fields) or **disable** them.
+- Default roster (v1): Elder, Architect, Tester, Accessibility, Security, Designer, by role title, each with a one-line manner of speaking. Names and personas wait for the commissioned art (§9.5, phase 2).
+- Councillor skills must not be auto-invoked by the model in normal Claude Code use (`disable-model-invocation: true`). Running one by hand from the `/` menu (`/security`) is useful. **[OPEN]** confirm that `disable-model-invocation` doesn't also stop a skill being preloaded into a subagent.
 
 ### 4.8 Talking to the council mid-campaign
-- `@council` messages go to the council session (resumed). It does **not** stop heroes.
+- `@council` messages go to the sitting's lead session (the round table's session, or the elder's in separate chambers; resumed). It does **not** stop heroes.
 - The game master gives the council a **compact status report** (tasks done, current findings, blockers, PR states), never heroes' transcripts.
 - Plan changes become a **plan amendment** naming affected parties and potential rework. The user confirms. Affected parties receive it as a **queued** message (delivered after their current step).
 
@@ -184,6 +214,18 @@ ask_user({
   - **Empty**: next campaign starts fresh (the record file preserves knowledge).
 - On the next campaign, the elder compares the new task with any kept context and may suggest a different choice ("Unrelated to the accounts work. Start fresh?").
 - Hero sessions are task-scoped and end when their task's PR opens or the task is abandoned.
+
+### 4.10 Measuring sittings
+Built so round table and separate chambers, and later changes to either, can be compared on real tasks.
+- Each sitting records a **tally** in the event log (so it survives reloads and replays):
+  - **Cost:** the SDK's figures (total cost; input, output and cache tokens per model) and time taken; in separate chambers also per councillor (from subagent attribution).
+  - **Output:** reports and concerns, concerns that made it into the plan, questions asked, plan revisions.
+  - **Rating:** after approval, one optional prompt, "How useful was the council?" 1–5 plus a note.
+  - **Effort:** each councillor's effort and whether the user changed the elder's pick.
+  - **Council version:** the mode, a hash of the councillor skill files, and the prompt version; tallies group by it, so editing a councillor or prompt starts a new group.
+  - Quest outcomes (tasks redone, review findings, whether a raised concern mattered) are added once reviews exist (M5).
+- **Convene the other way:** after a sitting, the same quest's council can sit in the other mode for comparison only. It costs a second sitting, so it always asks first.
+- **"Ibitsa: Export council tallies"** (Command Palette) writes JSON or CSV. An in-game view can follow once there is data worth showing.
 
 ---
 
@@ -338,8 +380,8 @@ Shown in the same hover menu, visually distinct:
 ## 7. Screens and visuals
 
 ### 7.1 Screens
-1. **Elder's recommendation:** task input, research progress, brief summary, councillor checkboxes with reasons, council effort, quick-quest offer.
-2. **Council hut (interior):** side-on room (Alex Kidd shop style), councillors behind a long table, active speaker highlighted, "!" for who wants to speak, RPG dialogue box with portrait, options, "Why?", free text. Step tracker: Goal › Research › Questions › Plan › Dispatch. Book of Decisions on the table.
+1. **Elder's recommendation:** task input, research progress, brief summary, quick-quest offer or convening (§4.2): round table or separate chambers, councillor checkboxes with reasons, effort.
+2. **Council hut (interior):** side-on room (Alex Kidd shop style), councillors as **32×32** characters behind a long table (§9.2), active speaker highlighted, "!" for who wants to speak, RPG dialogue box with portrait, options, "Why?", free text. Step tracker: Goal › Research › Questions › Plan › Dispatch. Book of Decisions on the table. In separate chambers, councillors first **study** at the table (think animation, a small book, a progress mark above each) and look up when their report is in; then the dialogue starts. A round table skips the study stage.
 3. **Plan review:** plan, decisions, criteria; Approve / Change.
 4. **Party assembly:** per worktree: hero class, reviewing councillors (recommended pre-checked), estimated cost.
 5. **World map (overworld):** see §7.2.
@@ -419,6 +461,7 @@ Any item can be **extended**, **replaced** or **disabled**. The UI shows where e
 | Asset | Size | Contents |
 |---|---|---|
 | Character sprite sheet | 16×16 px per frame (settled in [#7](https://github.com/sandrofi84/ibitsa/issues/7): one tile per character keeps tokens on the 16px grid, a councillor fits beside a hero at a task point, more CC0 art exists; expression lives in portraits) | One row per animation; facing right, mirrored for left |
+| Council sheet (optional per character) | 32×32 px per frame | The council hut scene only, so the bigger size doesn't touch the 16px map grid. Animations: idle, talk, think, raiseHand, write (4 frames each). Without one, the 16×16 sheet is scaled up 2× (nearest neighbour). |
 | Portrait | 64×64 px | Neutral; optional 2-frame talking loop |
 | Map tileset | 16×16 tiles | Water (4-frame loop), shoreline, grass, path dots |
 | Island pieces | 96 px tall: left cap 48w, repeatable middle 32w, right cap 48w | Islands stretch to fit task count |
@@ -469,7 +512,7 @@ Character animations:
 
 1. **Game master is code, not an LLM.** State transitions are free and deterministic.
 2. **Research once.** The elder's brief is shared; heroes get the plan's "files likely touched" list instead of exploring.
-3. **Single council session**, one model; questions batched.
+3. **One brief, shared by the council.** The elder searches once; councillors start from their field's slice and read more only within a cap (§4.3). Councillors with nothing to add bow out in one line. Questions batched.
 4. **Fresh contexts over bloated ones.** Research transcript is dropped after the brief; new tasks start new sessions; low-HP "rest" may restart from a handoff summary.
 5. **Model tiering.** Cheap models for research, summaries, simple tasks and first-pass reviews; strong models for planning and hard tasks.
 6. **Lean sessions.** Per-role tool allowlists (reviewers read-only); load only equipped skills (never "all"); only needed MCP servers.
@@ -614,7 +657,7 @@ interface AgentCapabilities {
 }
 
 interface SessionOptions {
-  role: 'elder' | 'council' | 'hero' | 'reviewer';
+  role: 'elder' | 'council' | 'councillor' | 'hero' | 'reviewer';
   model: string;
   cwd: string;
   systemPrompt: string;
@@ -762,7 +805,7 @@ Settled in [#9](https://github.com/sandrofi84/ibitsa/issues/9); see [ADR 0001](a
 | M1 | One hero | Claude SDK adapter; one hero in one worktree, started as a hand-made quick quest (§14.1); live activity animations, HP bar, gold; stop and send message (queued/now); "Needs you" for permissions/questions. |
 | M1.5 | Playability | From playing M1 (#64): speech bubbles; a focus camera that zooms in on the working hero (16×16 art stays) and a large activity icon; hero pane docked right and collapsible; a hero journal; "Always allow" and auto mode (§11.6). |
 | M2 | Command bar & actions | `@` targets and files, `/` actions as skills, preview, controls, Command Palette entries. |
-| M3 | Elder & council | Research brief, council selection, single council session, `ask_user` with voices and "Why?", plan + decision records saved, approval loop, quick-quest path. |
+| M3 | Elder & council | Research brief with field slices, convening (round table or separate chambers, per-councillor effort), `report` and `ask_user` with voices and "Why?", plan + decision records saved, approval loop, quick-quest path, tallies and "convene the other way", council hut with 32×32 sheets (§14.2). |
 | M4 | Parties & map | Multiple worktrees, separate and stacked layouts, bridges, party assembly, blocked states. |
 | M5 | Review loop | Deterministic checks, concurrent reviewers, verdicts, loop limit, escalation, councillors walking on the map. |
 | M6 | PRs | Git-host adapter, PR per task, stacked bases, badges with polling. |
@@ -783,16 +826,23 @@ Settled in [#11](https://github.com/sandrofi84/ibitsa/issues/11).
 
 ---
 
+### 14.2 M3: elder and council
+Settled in M3 planning.
+- The New Quest description goes to the elder; its brief offers **Quick quest** (one hero, as in M1) or **Convene council** (§4.1–4.2).
+- Both kinds of sitting are built on one shared council (§4.3), in this order: round table first (the baseline), then separate chambers, then tallies and the comparison (§4.10).
+- An approved plan is carried out by **one hero working its tasks in order on one branch**, until M4 brings parties and islands.
+- Effort Light/Standard/Deep maps to Haiku/Sonnet/Opus (§4.2).
+
 ## 15. Open questions
 1. Name registration: domains (ibitsa.com, ibitsa.dev, questforibitsa.com), GitHub org, npm scope, Marketplace/Open VSX publisher; trademark search (EUIPO TMview, USPTO). Initial checks found no conflicting software use.
 2. Rogue = Haiku confirmed? Default class roster and names.
-3. ~~Character sprite size: 16×16 vs 32×32.~~ Settled: 16×16 (§9.2).
+3. ~~Character sprite size: 16×16 vs 32×32.~~ Settled: 16×16 on the map; 32×32 council sheets in the council hut (§9.2).
 4. ~~Game engine: Phaser vs PixiJS.~~ Settled: Phaser 4 (§9.1).
-5. Councillor skill location so they don't clutter the normal `/` menu.
+5. ~~Councillor skill location so they don't clutter the normal `/` menu.~~ Settled in M3 planning: the usual skill locations; running a councillor from `/` is useful (§4.7). Still to confirm: `disable-model-invocation` and subagent preloading.
 6. ~~Whether Claude Code tolerates extra frontmatter fields (for action `target`), else sidecar.~~ Settled in M2 planning: a skill with an extra flat field loads and is listed by `supportedCommands()`; Ibitsa uses `ibitsa-target` and reads it from the file.
 7. ~~Confirm SDK invocation of custom skills via `/name` prompts.~~ Settled (#84): a real session sent `/greet Wren` ran the project skill with its argument (opt-in smoke test).
 8. ACP capability coverage per agent.
 9. Subscription (claude.ai) sign-in for the published extension: possible only with Anthropic's approval; not requested yet (§11.6).
 10. Default max parallel parties.
-11. Specialist dives (planning subagents): add later or not.
+11. ~~Specialist dives (planning subagents): add later or not.~~ Settled in M3 planning: separate chambers (§4.3), measured against the round table (§4.10).
 12. Optional `@ibitsa` VS Code chat participant. Not in M2 (#88).
