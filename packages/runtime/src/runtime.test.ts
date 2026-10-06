@@ -2,7 +2,7 @@ import { appendFileSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { type GameMasterEvent, parseLog, SILENCE_MS, view } from '@ibitsa/core';
-import type { AgentEvent, Command, CoreMessage, RepoView } from '@ibitsa/protocol';
+import type { AgentEvent, Command, CoreMessage, RepoView, Snapshot } from '@ibitsa/protocol';
 import { afterEach, describe, expect, it } from 'vitest';
 import type {
   AgentAdapter,
@@ -420,6 +420,67 @@ describe('M1 effects', () => {
         },
       }),
     );
+  });
+});
+
+describe('always allow (#62)', () => {
+  const ask = (session: { emit: (e: AgentEvent) => void }, alwaysAllow: string[]) =>
+    session.emit({
+      type: 'permission',
+      requestId: 'r1',
+      tool: 'Bash',
+      input: { command: 'npm test' },
+      alwaysAllow,
+    });
+  const lastSnapshot = (received: CoreMessage[]) =>
+    (received.filter((m) => m.type === 'snapshot').at(-1) as { snapshot: Snapshot } | undefined)
+      ?.snapshot;
+
+  it('for the project: keeps the rules, shows them, and passes them to the next session', async () => {
+    const env = await arrived();
+    ask(env.session, ['Bash(npm test:*)']);
+    env.connection.receive({
+      type: 'answerPermission',
+      commandId: 'a',
+      itemId: 'n5',
+      decision: 'allow',
+      always: 'project',
+    });
+    expect(env.session.calls).toContainEqual([
+      'respondToPermission',
+      { requestId: 'r1', decision: 'allow', always: true },
+    ]);
+    env.clock.advance(SNAPSHOT_INTERVAL_MS);
+    expect(lastSnapshot(env.received)?.projectRules).toEqual(['Bash(npm test:*)']);
+
+    // A later campaign in the same workspace starts its session with the rule.
+    env.connection.receive({ type: 'abandonQuest', commandId: 'x' });
+    env.connection.receive({ ...startQuest, commandId: 'q2', description: 'Tidy the README' });
+    await flush();
+    expect(env.adapter.sessions.at(-1)?.start.allowRules).toEqual(['Bash(npm test:*)']);
+
+    env.connection.receive({ type: 'forgetProjectRule', rule: 'Bash(npm test:*)' });
+    env.clock.advance(SNAPSHOT_INTERVAL_MS);
+    expect(lastSnapshot(env.received)?.projectRules).toEqual([]);
+    expect(JSON.parse(readFileSync(join(env.storageDir, 'project-rules.json'), 'utf8'))).toEqual({
+      allow: [],
+    });
+  });
+
+  it('for this quest: a resumed session gets the quest rules with the project ones', async () => {
+    const first = await arrived();
+    ask(first.session, ['Bash(npm run lint:*)']);
+    first.connection.receive({
+      type: 'answerPermission',
+      commandId: 'a',
+      itemId: 'n5',
+      decision: 'allow',
+      always: 'quest',
+    });
+    first.runtime.dispose();
+    const second = setup(first.storageDir);
+    second.connection.receive({ type: 'resumeHero', commandId: 'r', heroId: 'h4' });
+    expect(second.adapter.resumed[0]?.allowRules).toEqual(['Bash(npm run lint:*)']);
   });
 });
 

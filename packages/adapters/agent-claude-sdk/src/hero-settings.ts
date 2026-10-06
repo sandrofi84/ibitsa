@@ -1,5 +1,11 @@
 import { execFileSync } from 'node:child_process';
-import type { HeroSettings, HeroSettingsInput } from './hero-settings.types';
+import { realpathSync } from 'node:fs';
+import type {
+  HeroSettings,
+  HeroSettingsInput,
+  OfferedRules,
+  PermissionRequest,
+} from './hero-settings.types';
 
 /** Test commands allowed without asking on native Windows, where there is no sandbox (spec §11.6). */
 const TEST_COMMANDS = [
@@ -28,6 +34,7 @@ export function heroSettings({
   platform,
   settingSources,
   testScripts,
+  allowRules,
 }: HeroSettingsInput): HeroSettings {
   const common: HeroSettings = {
     // Explicit: omitting it can start a session in auto mode (#11).
@@ -45,14 +52,23 @@ export function heroSettings({
         `yarn ${name}`,
       ]),
     ];
-    return { ...common, allowedTools: commands.flatMap((c) => [`Bash(${c})`, `Bash(${c} *)`]) };
+    return {
+      ...common,
+      allowedTools: [...commands.flatMap((c) => [`Bash(${c})`, `Bash(${c} *)`]), ...allowRules],
+    };
   }
   return {
     ...common,
     // failIfUnavailable: a missing sandbox is an error, never a silent unsandboxed run.
     sandbox: { enabled: true, autoAllowBashIfSandboxed: true, failIfUnavailable: true },
     // Flag-level settings, so a repository's own settings can't loosen it.
-    settings: { permissions: { ask: ['Bash(dangerouslyDisableSandbox:true)'] } },
+    // "Always allow" rules join them there; the escape stays an ask whatever they say.
+    settings: {
+      permissions: {
+        ask: ['Bash(dangerouslyDisableSandbox:true)'],
+        ...(allowRules.length > 0 ? { allow: [...allowRules] } : {}),
+      },
+    },
     allowedTools: [],
   };
 }
@@ -81,5 +97,54 @@ export function commandExists(name: string): boolean {
     return true;
   } catch {
     return false;
+  }
+}
+
+const FILE_TOOLS = new Set(['Edit', 'MultiEdit', 'Write', 'NotebookEdit']);
+
+/**
+ * What "Always allow" may offer for a request (#62): the SDK's own suggested allow rules, for this
+ * session only. Never for the two hard limits (spec §11.6): escaping the sandbox, or touching anything
+ * outside the worktree (a blocked path, an extra directory, a file tool aimed elsewhere).
+ */
+export function offeredRules({
+  toolName,
+  input,
+  cwd,
+  suggestions = [],
+  blockedPath,
+}: PermissionRequest): OfferedRules {
+  const none: OfferedRules = { rules: [], updates: [] };
+  if (input.dangerouslyDisableSandbox === true || blockedPath) return none;
+  if (suggestions.some((s) => s.type === 'addDirectories')) return none;
+  const file = input.file_path ?? input.notebook_path;
+  if (FILE_TOOLS.has(toolName) && (typeof file !== 'string' || !inside({ path: file, dir: cwd }))) {
+    return none;
+  }
+  const updates = suggestions.flatMap((s) =>
+    s.type === 'addRules' && s.behavior === 'allow'
+      ? [{ ...s, destination: 'session' as const }]
+      : [],
+  );
+  const rules = updates.flatMap((u) =>
+    u.type === 'addRules'
+      ? u.rules.map((r) => (r.ruleContent ? `${r.toolName}(${r.ruleContent})` : r.toolName))
+      : [],
+  );
+  return rules.length > 0 ? { rules, updates } : none;
+}
+
+/** Is `path` the worktree or inside it, as given or through symlinks (macOS /var → /private/var)? */
+function inside({ path, dir }: { path: string; dir: string }): boolean {
+  return [dir, resolved(dir)].some(
+    (d) => path === d || path.startsWith(`${d}/`) || path.startsWith(`${d}\\`),
+  );
+}
+
+function resolved(dir: string): string {
+  try {
+    return realpathSync(dir);
+  } catch {
+    return dir;
   }
 }

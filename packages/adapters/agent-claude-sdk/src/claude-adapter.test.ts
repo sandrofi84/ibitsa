@@ -302,6 +302,40 @@ describe('permissions and questions (#34)', () => {
     done();
   });
 
+  it('offers "Always allow" with the suggested rules, and sends them back for the session (#62)', async () => {
+    const { session, events, ask, done } = withCanUseTool();
+    const suggestion = {
+      type: 'addRules' as const,
+      rules: [{ toolName: 'Bash', ruleContent: 'npm run lint:*' }],
+      behavior: 'allow' as const,
+      destination: 'localSettings' as const,
+    };
+    const always = ask(
+      'Bash',
+      { command: 'npm run lint' },
+      opts('t1', { suggestions: [suggestion] }),
+    );
+    const once = ask(
+      'Bash',
+      { command: 'npm run lint' },
+      opts('t2', { suggestions: [suggestion] }),
+    );
+    await flush();
+    expect(events.at(-2)).toMatchObject({
+      type: 'permission',
+      alwaysAllow: ['Bash(npm run lint:*)'],
+    });
+    session.respondToPermission({ requestId: 't1', decision: 'allow', always: true });
+    session.respondToPermission({ requestId: 't2', decision: 'allow' });
+    expect(await always).toEqual({
+      behavior: 'allow',
+      updatedInput: { command: 'npm run lint' },
+      updatedPermissions: [{ ...suggestion, destination: 'session' }],
+    });
+    expect(await once).toEqual({ behavior: 'allow', updatedInput: { command: 'npm run lint' } });
+    done();
+  });
+
   it('denies with the note, or a default message', async () => {
     const { session, ask, done } = withCanUseTool();
     const first = ask('Bash', { command: 'rm -rf dist' }, opts('t1'));
@@ -543,6 +577,21 @@ describe('ClaudeAdapter on the real platform', () => {
     await flush();
     return fake.calls[0]?.options ?? {};
   }
+
+  it('starts and resumes sessions with their allow rules (#62)', async () => {
+    const fake = fakeSdk(async function* ({ input }) {
+      await input.next();
+      yield init;
+    });
+    const a = adapter(fake.sdk);
+    a.startSession({ ...start, allowRules: ['Bash(npm test:*)'] }, () => {});
+    a.resumeSession({ ...start, allowRules: ['WebFetch'] }, () => {});
+    await flush();
+    expect(fake.calls[0]?.options.settings).toMatchObject({
+      permissions: { allow: ['Bash(npm test:*)'] },
+    });
+    expect(fake.calls[1]?.options.settings).toMatchObject({ permissions: { allow: ['WebFetch'] } });
+  });
 
   it.runIf(process.platform === 'darwin')(
     'on macOS, confines the hero in the Seatbelt sandbox, which the OS provides',

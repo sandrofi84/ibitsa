@@ -16,7 +16,7 @@ import { TestDetector } from './activity';
 import type { SdkModule } from './claude-adapter.types';
 import type { ClaudeSessionInit, Pending, PermissionAnswer } from './claude-session.types';
 import { EventMapper } from './event-mapper';
-import { heroSettings, sandboxProblem } from './hero-settings';
+import { heroSettings, offeredRules, sandboxProblem } from './hero-settings';
 import type { HeroSettings } from './hero-settings.types';
 import { InputQueue } from './input-queue';
 
@@ -62,9 +62,11 @@ export class ClaudeSession implements AgentSession {
   private closed = false;
   private busy = false;
   private submitToolUseId: string | null = null;
+  private readonly cwd: string;
 
   constructor(init: ClaudeSessionInit) {
     this.onEvent = init.onEvent;
+    this.cwd = init.cwd;
     void this.run(init);
   }
 
@@ -89,11 +91,16 @@ export class ClaudeSession implements AgentSession {
     requestId,
     decision,
     note,
+    always,
   }: { requestId: string } & PermissionAnswer): void {
     const pending = this.pending.get(requestId);
     if (pending?.kind !== 'permission') return;
     this.pending.delete(requestId);
-    pending.resolve(note === undefined ? { decision } : { decision, note });
+    pending.resolve({
+      decision,
+      ...(note === undefined ? {} : { note }),
+      ...(always ? { always } : {}),
+    });
   }
 
   answerQuestion(requestId: string, answers: Record<string, string | string[]>): void {
@@ -155,6 +162,7 @@ export class ClaudeSession implements AgentSession {
         platform,
         settingSources: init.adapter.settingSources?.() ?? ['project'],
         testScripts: tests.scriptNames,
+        allowRules: init.allowRules,
       });
       const query = sdk.query({
         prompt: this.input,
@@ -246,7 +254,7 @@ export class ClaudeSession implements AgentSession {
   private readonly canUseTool: CanUseTool = (
     toolName,
     input,
-    { signal, toolUseID, title, description },
+    { signal, toolUseID, title, description, suggestions, blockedPath },
   ) =>
     new Promise<PermissionResult>((resolve) => {
       const onAbort = () => {
@@ -266,15 +274,19 @@ export class ClaudeSession implements AgentSession {
         this.emit({ type: 'question', requestId: toolUseID, questions: toQuestions(input) });
         return;
       }
+      const offered = offeredRules({ toolName, input, cwd: this.cwd, suggestions, blockedPath });
       this.pending.set(toolUseID, {
         kind: 'permission',
         input,
-        resolve: ({ decision, note }) => {
+        updates: offered.updates,
+        resolve: ({ decision, note, always }) => {
           signal.removeEventListener('abort', onAbort);
           resolve(
-            decision === 'allow'
-              ? { behavior: 'allow', updatedInput: input }
-              : { behavior: 'deny', message: note?.trim() || 'The user declined this.' },
+            decision !== 'allow'
+              ? { behavior: 'deny', message: note?.trim() || 'The user declined this.' }
+              : always && offered.updates.length > 0
+                ? { behavior: 'allow', updatedInput: input, updatedPermissions: offered.updates }
+                : { behavior: 'allow', updatedInput: input },
           );
         },
       });
@@ -285,6 +297,7 @@ export class ClaudeSession implements AgentSession {
         input,
         ...(title === undefined ? {} : { title }),
         ...(description === undefined ? {} : { description }),
+        ...(offered.rules.length > 0 ? { alwaysAllow: offered.rules } : {}),
       });
     });
 
