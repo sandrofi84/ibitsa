@@ -61,13 +61,24 @@ jobs:
         working-directory: packages/extension
         run: xvfb-run -a -s "-screen 0 1920x1080x24" pnpm test:integration
 
-      - name: Upload Playwright results
-        if: failure()
+      # Every run, not only failures: the screenshots are the visual evidence for a PR's changes.
+      - name: Upload Playwright screenshots and results
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: playwright-results
           path: packages/game/test-results/
           if-no-files-found: ignore
+          retention-days: 14
+
+      - name: List the screenshots in the run summary
+        if: always()
+        run: |
+          {
+            echo "### Screenshots"
+            echo "In the **playwright-results** artifact of this run:"
+            find packages/game/test-results -maxdepth 1 -name '*.png' -printf '- %f\n' | sort
+          } >> "$GITHUB_STEP_SUMMARY"
 
   platforms:
     # Unit and integration tests where hero sessions behave differently: the Seatbelt sandbox on macOS,
