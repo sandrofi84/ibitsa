@@ -19,6 +19,7 @@ import { EventMapper } from './event-mapper';
 import { boundaryOf, heroSettings, offeredRules, sandboxProblem } from './hero-settings';
 import type { HeroSettings } from './hero-settings.types';
 import { InputQueue } from './input-queue';
+import { Worktree } from './worktree';
 
 /** Hero classes → SDK model aliases (spec §5.2, §14.1). Unknown classes get Sonnet. */
 export const CLASS_MODELS: Record<string, string> = {
@@ -63,11 +64,14 @@ export class ClaudeSession implements AgentSession {
   private closed = false;
   private busy = false;
   private submitToolUseId: string | null = null;
-  private readonly cwd: string;
+  private readonly worktree: Worktree;
 
   constructor(init: ClaudeSessionInit) {
     this.onEvent = init.onEvent;
-    this.cwd = init.cwd;
+    this.worktree = new Worktree({
+      dir: init.cwd,
+      ...(init.adapter.platform ? { platform: init.adapter.platform } : {}),
+    });
     void this.run(init);
   }
 
@@ -157,7 +161,7 @@ export class ClaudeSession implements AgentSession {
       }
       const sdk = await (init.adapter.loadSdk ?? loadSdk)();
       const tests = new TestDetector(init.cwd);
-      const mapper = new EventMapper({ cwd: init.cwd, tests });
+      const mapper = new EventMapper({ worktree: this.worktree, tests });
       this.mapper = mapper;
       const hero = heroSettings({
         platform,
@@ -275,7 +279,7 @@ export class ClaudeSession implements AgentSession {
         this.emit({ type: 'question', requestId: toolUseID, questions: toQuestions(input) });
         return;
       }
-      const request = { toolName, input, cwd: this.cwd, suggestions, blockedPath };
+      const request = { toolName, input, worktree: this.worktree, suggestions, blockedPath };
       const offered = offeredRules(request);
       const boundary = boundaryOf(request);
       this.pending.set(toolUseID, {

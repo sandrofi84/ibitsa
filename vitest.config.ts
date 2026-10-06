@@ -40,7 +40,7 @@ export default defineConfig({
         },
         'packages/adapters/agent-claude-sdk/src/**': {
           lines: 97,
-          statements: 95,
+          statements: 96,
           branches: 85,
           functions: 97,
         },

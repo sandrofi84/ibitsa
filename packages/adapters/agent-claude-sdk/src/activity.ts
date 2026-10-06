@@ -1,6 +1,7 @@
-import { existsSync, readFileSync, realpathSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Activity } from './activity.types';
+import type { Worktree } from './worktree';
 
 /** Bash commands that count as running tests (spec §5.4), on top of the worktree's own `test*` scripts. */
 const DEFAULT_TEST_PATTERNS = [
@@ -43,12 +44,12 @@ export class TestDetector {
 export function classify({
   tool,
   input,
-  cwd,
+  worktree,
   tests,
 }: {
   tool: string;
   input: unknown;
-  cwd: string;
+  worktree: Worktree;
   tests: TestDetector;
 }): Activity {
   const field = (name: string) => {
@@ -58,12 +59,9 @@ export function classify({
   const path = (name: string) => {
     const value = field(name);
     if (value === undefined) return undefined;
-    // Tools may report the resolved path (on macOS /var is a symlink to /private/var), and on Windows
-    // either separator; the detail always uses `/`.
-    const root = [cwd, realpath(cwd)].find(
-      (dir) => value.startsWith(`${dir}/`) || value.startsWith(`${dir}\\`),
-    );
-    return shorten(root ? value.slice(root.length + 1).replaceAll('\\', '/') : value);
+    // Inside the worktree the detail is relative, with `/` (see Worktree for the spellings it accepts).
+    const inside = worktree.relative(value);
+    return shorten(inside === null ? value : inside || '.');
   };
   const withDetail = (kind: Activity['kind'], detail: string | undefined): Activity =>
     detail === undefined ? { kind } : { kind, detail };
@@ -97,14 +95,6 @@ export function classify({
 function shorten(text: string): string {
   const line = text.split('\n')[0] ?? '';
   return line.length > DETAIL_MAX ? `${line.slice(0, DETAIL_MAX - 1)}…` : line;
-}
-
-function realpath(dir: string): string {
-  try {
-    return realpathSync(dir);
-  } catch {
-    return dir;
-  }
 }
 
 function testScripts(cwd: string): string[] {

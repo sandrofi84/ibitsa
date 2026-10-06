@@ -6,6 +6,7 @@ import type {
 } from '@anthropic-ai/claude-agent-sdk';
 import type { AgentEvent } from '@ibitsa/protocol';
 import { classify, type TestDetector } from './activity';
+import type { Worktree } from './worktree';
 
 /**
  * Claude Agent SDK output → normalized `AgentEvent`s (spec §5.4, §7.3, §11.4; verified against
@@ -19,11 +20,11 @@ export class EventMapper {
   private contextUsed: number | undefined;
   /** Set by a stop: the SDK ends an interrupted turn with an error result, which is no error here. */
   private stopping = false;
-  private readonly cwd: string;
+  private readonly worktree: Worktree;
   private readonly tests: TestDetector;
 
-  constructor({ cwd, tests }: { cwd: string; tests: TestDetector }) {
-    this.cwd = cwd;
+  constructor({ worktree, tests }: { worktree: Worktree; tests: TestDetector }) {
+    this.worktree = worktree;
     this.tests = tests;
   }
 
@@ -100,7 +101,7 @@ export class EventMapper {
         ...classify({
           tool: input.tool_name,
           input: input.tool_input,
-          cwd: this.cwd,
+          worktree: this.worktree,
           tests: this.tests,
         }),
       },

@@ -1,4 +1,5 @@
 import type { Options, PermissionUpdate, SettingSource } from '@anthropic-ai/claude-agent-sdk';
+import type { Worktree } from './worktree';
 
 export interface HeroSettingsInput {
   platform: NodeJS.Platform;
@@ -13,7 +14,7 @@ export interface HeroSettingsInput {
 export interface PermissionRequest {
   toolName: string;
   input: Record<string, unknown>;
-  cwd: string;
+  worktree: Worktree;
   suggestions?: PermissionUpdate[] | undefined;
   blockedPath?: string | undefined;
 }

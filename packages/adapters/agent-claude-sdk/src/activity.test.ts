@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { classify, TestDetector } from './activity';
+import { Worktree } from './worktree';
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -73,37 +74,64 @@ describe('classify (spec §5.4)', () => {
       expected: { kind: 'other', detail: 'mcp__ibitsa__submit_task' },
     },
   ])('$tool → $expected.kind', ({ tool, input, expected }) => {
-    expect(classify({ tool, input, cwd, tests })).toEqual(expected);
+    expect(classify({ tool, input, worktree: new Worktree({ dir: cwd }), tests })).toEqual(
+      expected,
+    );
   });
 
   it('shows paths relative to the worktree even when the tool reports the resolved path', () => {
     const dir = worktree();
     const resolved = realpathSync(dir);
     expect(
-      classify({ tool: 'Read', input: { file_path: `${resolved}/notes.txt` }, cwd: dir, tests })
-        .detail,
+      classify({
+        tool: 'Read',
+        input: { file_path: `${resolved}/notes.txt` },
+        worktree: new Worktree({ dir }),
+        tests,
+      }).detail,
     ).toBe('notes.txt');
   });
 
   it('shortens Windows paths, with either separator, and shows them with /', () => {
     for (const file_path of ['C:\\wt\\src\\a.ts', 'C:\\wt/src\\a.ts']) {
-      expect(classify({ tool: 'Edit', input: { file_path }, cwd: 'C:\\wt', tests }).detail).toBe(
-        'src/a.ts',
-      );
+      expect(
+        classify({
+          tool: 'Edit',
+          input: { file_path },
+          worktree: new Worktree({ dir: 'C:\\wt', platform: 'win32' }),
+          tests,
+        }).detail,
+      ).toBe('src/a.ts');
     }
   });
 
   it('leaves the detail out when the input lacks the expected field', () => {
-    expect(classify({ tool: 'Read', input: {}, cwd, tests })).toEqual({ kind: 'read' });
-    expect(classify({ tool: 'Grep', input: null, cwd, tests })).toEqual({ kind: 'search' });
-    expect(classify({ tool: 'Edit', input: { file_path: 3 }, cwd, tests })).toEqual({
+    expect(
+      classify({ tool: 'Read', input: {}, worktree: new Worktree({ dir: cwd }), tests }),
+    ).toEqual({ kind: 'read' });
+    expect(
+      classify({ tool: 'Grep', input: null, worktree: new Worktree({ dir: cwd }), tests }),
+    ).toEqual({ kind: 'search' });
+    expect(
+      classify({
+        tool: 'Edit',
+        input: { file_path: 3 },
+        worktree: new Worktree({ dir: cwd }),
+        tests,
+      }),
+    ).toEqual({
       kind: 'edit',
     });
   });
 
   it('keeps details short and to one line', () => {
     const long = `echo ${'x'.repeat(200)}\nsecond line`;
-    const { detail } = classify({ tool: 'Bash', input: { command: long }, cwd, tests });
+    const { detail } = classify({
+      tool: 'Bash',
+      input: { command: long },
+      worktree: new Worktree({ dir: cwd }),
+      tests,
+    });
     expect(detail?.length).toBe(120);
     expect(detail).not.toContain('second line');
   });
