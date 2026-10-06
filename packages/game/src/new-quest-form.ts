@@ -3,12 +3,19 @@ import type { GameClient } from './client';
 import { button, el } from './dom';
 import { DEFAULT_CLASS, defaultHeroName, HERO_CLASSES } from './heroes';
 import type { Host } from './host.types';
+import type { NewQuestForm } from './new-quest-form.types';
 
 /**
  * The New Quest form (spec §14.1) and the first-run API-key card (§11.6). Plain DOM in a native
  * <dialog>, so it is keyboard-accessible. Credentials go over the host channel, never the protocol.
  */
-export function mountNewQuestForm({ client, host }: { client: GameClient; host: Host }): void {
+export function mountNewQuestForm({
+  client,
+  host,
+}: {
+  client: GameClient;
+  host: Host;
+}): NewQuestForm {
   const opener = button({ label: 'New quest', onClick: () => open() });
   opener.className = 'new-quest-button';
   opener.hidden = true;
@@ -207,7 +214,10 @@ export function mountNewQuestForm({ client, host }: { client: GameClient; host: 
     key.focus();
   }
 
-  function open(): void {
+  return { open: (prefill) => open(prefill) };
+
+  /** Opens the form, with the task already written when it comes from the command bar (#81). */
+  function open(prefill?: { description: string }): void {
     if (active() || dialog.open) return;
     renderOnboarding = null;
     pendingStart = null;
@@ -216,6 +226,7 @@ export function mountNewQuestForm({ client, host }: { client: GameClient; host: 
     fillSuggestions();
     refreshBranches();
     dialog.showModal();
+    if (prefill) description.value = prefill.description;
     description.focus();
   }
 }

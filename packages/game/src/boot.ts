@@ -2,6 +2,8 @@ import * as Phaser from 'phaser';
 import type { Started } from './boot.types';
 import { mountCameraControls } from './camera-controls';
 import { GameClient } from './client';
+import { mountCommandBar } from './command-bar';
+import { CommandHistory } from './command-history';
 import { mountHeroPane } from './hero-pane';
 import { reportDiagnostics } from './host';
 import type { Diagnostics, Host } from './host.types';
@@ -16,6 +18,18 @@ function hasWebGL(root: HTMLElement): boolean {
   if (root.dataset.forceNoWebgl === 'true') return false;
   const canvas = document.createElement('canvas');
   return Boolean(canvas.getContext('webgl2') ?? canvas.getContext('webgl'));
+}
+
+const HISTORY_KEY = 'commandHistory';
+
+/** The bar's saved history; anything unreadable is no history. */
+function savedHistory(view: ViewState): string[] {
+  try {
+    const parsed: unknown = JSON.parse(view.get(HISTORY_KEY, '[]'));
+    return Array.isArray(parsed) ? parsed.filter((e): e is string => typeof e === 'string') : [];
+  } catch {
+    return [];
+  }
 }
 
 const NO_HERO: Started['hero'] = {
@@ -53,9 +67,18 @@ export function startGame(root: HTMLElement, host: Host): Started {
   }
 
   mountNeedsYouPanel(client);
-  mountNewQuestForm({ client, host });
+  const newQuest = mountNewQuestForm({ client, host });
   const view = new ViewState(host.viewStorage);
-  const heroPane = mountHeroPane({ client, host, view });
+  // One ↑/↓ history for the bar and the pane's box, kept in view state (#81).
+  const history = new CommandHistory({ entries: savedHistory(view) });
+  const saveHistory = () => view.set(HISTORY_KEY, JSON.stringify(history.all));
+  const heroPane = mountHeroPane({ client, host, view, history, onHistoryChange: saveHistory });
+  mountCommandBar({
+    client,
+    history,
+    onHistoryChange: saveHistory,
+    startQuest: (description) => newQuest.open({ description }),
+  });
   const panel = () => ({ width: root.clientWidth || WIDTH, height: root.clientHeight || HEIGHT });
   const initial = fitViewport({ panel: panel(), world: { width: WIDTH, height: HEIGHT } });
   const game = new Phaser.Game({
