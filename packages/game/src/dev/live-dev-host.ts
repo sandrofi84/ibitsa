@@ -3,6 +3,8 @@ import {
   type CoreState,
   type Effect,
   initialState,
+  Journal,
+  type LogRecord,
   step,
   view,
 } from '@ibitsa/core';
@@ -29,6 +31,7 @@ export class LiveDevHost implements Host {
   readonly viewStorage = new MemoryViewStorage();
   readonly channel: FakeHostChannel;
   private state: CoreState = initialState();
+  private readonly journal = new Journal();
   private seq = 0;
   private readonly started = Date.now();
   private readonly listeners: ((m: CoreMessage) => void)[] = [];
@@ -53,6 +56,11 @@ export class LiveDevHost implements Host {
   }
 
   send(command: Command): void {
+    if (command.type === 'requestJournal') {
+      const page = this.journal.page({ before: command.before, limit: command.limit });
+      this.emit({ type: 'journal', seq: ++this.seq, ...page });
+      return;
+    }
     if (command.type === 'hello') {
       this.emit({ type: 'welcome', seq: ++this.seq, protocolVersion: PROTOCOL_VERSION });
       this.emitSnapshot();
@@ -69,6 +77,11 @@ export class LiveDevHost implements Host {
     const result = step(this.state, input);
     this.state = result.state;
     for (const cue of result.cues) this.emit({ type: 'cue', seq: ++this.seq, cue });
+    const lines = this.journal.add({ record: input as LogRecord, state: this.state });
+    if (lines.length > 0) {
+      const start = this.journal.entries.length - lines.length;
+      this.emit({ type: 'journalAppend', seq: ++this.seq, entries: lines, start });
+    }
     this.emitSnapshot();
     for (const effect of result.effects) this.perform(effect);
   }

@@ -226,3 +226,44 @@ test('speech bubbles: a message excerpt that fades, then "Ready for review!" unt
   await pane.getByRole('button', { name: 'Finish quest' }).click();
   await expect.poll(speech).toBeNull();
 });
+
+test('the journal lists what happened, newest last, and stays open across collapses (#58)', async ({
+  page,
+}) => {
+  await page.goto('/?fixture=live');
+  await page.getByRole('button', { name: 'New quest' }).click();
+  await page.getByLabel('Task').fill('Tidy the README');
+  await page.getByRole('button', { name: 'Start quest' }).click();
+  await expect.poll(() => heroState(page)).toBe('idle');
+
+  const pane = page.getByRole('region', { name: 'Hero' });
+  const toggle = pane.getByRole('button', { name: 'Journal' });
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  // Keyboard: the toggle opens it.
+  await toggle.focus();
+  await page.keyboard.press('Enter');
+  const journal = pane.getByRole('list', { name: 'Journal' });
+  await expect(journal).toBeVisible();
+  await expect(journal.getByRole('listitem').first()).toContainText(
+    'Quest started: Tidy the README',
+  );
+  await expect(journal).toContainText(
+    'Ranger Ilse: I looked around and made a first change. What next?',
+  );
+  await expect(journal).toContainText('edit · src/app.ts');
+
+  await pane.getByLabel('Message to the hero').fill('Add a test');
+  await pane.getByRole('button', { name: 'Send', exact: true }).click();
+  await pane.getByRole('button', { name: 'Stop' }).click();
+  await expect(journal.getByRole('listitem').last()).toContainText(
+    /You stopped the hero|Done: Add a test/,
+  );
+  await expect(journal).toContainText('You: Add a test');
+  await page.screenshot({ path: 'test-results/ui-journal.png' });
+
+  // Collapsing the pane and opening it again keeps the journal open.
+  const tab = pane.getByRole('button', { name: /hero pane/ });
+  await tab.click();
+  await tab.click();
+  await expect(journal).toBeVisible();
+});

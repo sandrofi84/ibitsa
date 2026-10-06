@@ -4,6 +4,7 @@ export { LOG_VERSION, LogFormatError, parseLog, serializeLine } from './event-lo
 export type { EventLog, LogHeader, LogRecord } from './event-log.types';
 export { CONTINUE_PROMPT, Hero, SILENCE_MS } from './hero';
 export type { CoreInput, GameMasterEvent } from './inputs.types';
+export { JOURNAL_PAGE, Journal } from './journal';
 export { describePermission } from './needs-you';
 export { Quest } from './quest';
 export { DEFAULT_SETTINGS, initialState } from './state';

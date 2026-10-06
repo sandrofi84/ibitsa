@@ -6,6 +6,7 @@ export type { ParseCommandResult } from './commands.types';
 export { parseHostRequest } from './host-channel';
 export { type HostRequest, HostRequestSchema } from './host-channel.schema';
 export type { HostEvent } from './host-channel.types';
+export type { JournalEntry, JournalEntryBody } from './journal.types';
 export { PROTOCOL_VERSION } from './messages';
 export type { CoreMessage, Cue } from './messages.types';
 export type {

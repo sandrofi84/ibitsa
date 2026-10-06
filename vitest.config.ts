@@ -30,7 +30,7 @@ export default defineConfig({
       // Floors at today's numbers, rounded down: coverage may rise, never quietly drop.
       // Raise a floor when a package's coverage goes up.
       thresholds: {
-        'packages/core/src/**': { lines: 95, statements: 95, branches: 88, functions: 100 },
+        'packages/core/src/**': { lines: 96, statements: 95, branches: 90, functions: 100 },
         'packages/protocol/src/**': { lines: 100, statements: 100, branches: 100, functions: 100 },
         'packages/adapters/agent-fake/src/**': {
           lines: 96,
@@ -45,7 +45,7 @@ export default defineConfig({
           functions: 97,
         },
         'packages/assets/src/**': { lines: 94, statements: 92, branches: 85, functions: 93 },
-        'packages/game/src/**': { lines: 97, statements: 96, branches: 94, functions: 97 },
+        'packages/game/src/**': { lines: 98, statements: 97, branches: 95, functions: 98 },
         'packages/runtime/src/**': { lines: 91, statements: 90, branches: 80, functions: 83 },
       },
     },

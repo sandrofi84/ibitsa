@@ -1,4 +1,4 @@
-import type { ExecutionState, HeroView, Reading, Snapshot } from '@ibitsa/protocol';
+import type { ExecutionState, HeroView, JournalEntry, Reading, Snapshot } from '@ibitsa/protocol';
 import type { GameClient } from './client';
 import { button, el } from './dom';
 import type { HeroPane } from './hero-pane.types';
@@ -21,6 +21,7 @@ const STATE_LABELS: Record<ExecutionState['kind'], string> = {
 };
 
 const OPEN_KEY = 'heroPaneOpen';
+const JOURNAL_KEY = 'journalOpen';
 
 /**
  * The hero pane (spec §14.1, §6.3): the quest's hero, its state, and the controls. Plain DOM docked on
@@ -75,7 +76,26 @@ export function mountHeroPane({
   const controls = el('div', { className: 'controls' });
   const status = el('p', { className: 'note' });
   status.setAttribute('role', 'status');
-  body.append(title, facts, summary, message, controls, status);
+  // The journal (#58): collapsible, newest last, following new lines unless you scrolled up.
+  const journal = el('section', { className: 'journal' });
+  const journalToggle = el('button', { className: 'journal-toggle', text: 'Journal' });
+  journalToggle.type = 'button';
+  journalToggle.setAttribute('aria-controls', 'hero-journal');
+  const earlier = button({ label: 'Load earlier', onClick: () => client.loadEarlierJournal() });
+  earlier.className = 'journal-earlier';
+  const lines = el('ol', { className: 'journal-lines' });
+  lines.id = 'hero-journal';
+  lines.tabIndex = 0;
+  lines.setAttribute('aria-label', 'Journal');
+  journal.append(journalToggle, earlier, lines);
+  let journalOpen: boolean = view.get(JOURNAL_KEY, false);
+  journalToggle.onclick = () => {
+    journalOpen = !journalOpen;
+    view.set(JOURNAL_KEY, journalOpen);
+    renderJournal({ follow: true });
+  };
+  client.onJournal(() => renderJournal({ follow: false }));
+  body.append(title, facts, summary, message, controls, status, journal);
 
   let confirmAbandon = false;
   client.onSnapshot((snapshot) => render(snapshot));
@@ -199,7 +219,26 @@ export function mountHeroPane({
       : worktree === 'removed'
         ? `Worktree removed. The branch ${island?.branch ?? ''} is kept.`
         : 'The quest has ended. Its branch is kept.';
+    // The first journal page can arrive before the snapshot naming the hero.
+    renderJournal({ follow: false });
   }
+
+  function renderJournal({ follow }: { follow: boolean }): void {
+    journalToggle.setAttribute('aria-expanded', String(journalOpen));
+    lines.hidden = !journalOpen;
+    earlier.hidden = !journalOpen || client.journalStart === 0;
+    if (!journalOpen) return;
+    const heroId = last?.heroes[0]?.id;
+    const atEnd = lines.scrollTop + lines.clientHeight >= lines.scrollHeight - 8;
+    lines.replaceChildren(
+      ...client.journal
+        .filter((e) => e.heroId === null || e.heroId === heroId)
+        .map((e) => journalLine({ entry: e, hero: last?.heroes[0]?.name ?? 'Hero' })),
+    );
+    if (follow || atEnd) lines.scrollTop = lines.scrollHeight;
+  }
+
+  renderJournal({ follow: true });
 
   return {
     open: () => {
@@ -233,4 +272,33 @@ function gold(reading: Reading<number>): string {
   if (reading.kind === 'unknown') return 'unknown';
   const dollars = `$${(reading.value / 1_000_000).toFixed(2)}`;
   return reading.kind === 'estimated' ? `~${dollars}` : dollars;
+}
+
+/** One journal line: when, who, and what, by kind. */
+function journalLine({ entry, hero }: { entry: JournalEntry; hero: string }): HTMLLIElement {
+  const li = el('li', { className: `journal-${entry.kind}` });
+  const time = el('time', { text: clock(entry.t) });
+  let text: string;
+  switch (entry.kind) {
+    case 'said':
+      text = `${hero}: ${entry.text}`;
+      break;
+    case 'tool':
+      text = `${entry.activity}${entry.detail ? ` · ${entry.detail}` : ''}${entry.outcome === 'failed' ? ' (failed)' : ''}`;
+      if (entry.outcome === 'failed') li.classList.add('failed');
+      break;
+    case 'you':
+      text = `You${entry.priority === 'now' ? ' (now)' : ''}: ${entry.text}`;
+      break;
+    default:
+      text = entry.text;
+  }
+  li.append(time, el('span', { text }));
+  return li;
+}
+
+/** Minutes and seconds since the campaign started. */
+function clock(t: number): string {
+  const s = Math.floor(t / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }

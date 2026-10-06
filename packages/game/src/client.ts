@@ -2,6 +2,7 @@ import {
   type Command,
   type CoreMessage,
   type Cue,
+  type JournalEntry,
   PROTOCOL_VERSION,
   type Snapshot,
 } from '@ibitsa/protocol';
@@ -19,6 +20,10 @@ export class GameClient {
   private nextCommand = 1;
   private readonly snapshotListeners: ((s: Snapshot) => void)[] = [];
   private readonly cueListeners: ((c: Cue) => void)[] = [];
+  /** The journal lines held so far (#58): a run of the campaign's journal starting at `journalStart`. */
+  journal: JournalEntry[] = [];
+  journalStart = 0;
+  private readonly journalListeners: (() => void)[] = [];
 
   constructor(private readonly host: Host) {
     host.onMessage((m) => this.receive(m));
@@ -44,10 +49,43 @@ export class GameClient {
     this.cueListeners.push(listener);
   }
 
+  /** Called whenever the held journal lines change. */
+  onJournal(listener: () => void): void {
+    this.journalListeners.push(listener);
+  }
+
+  /** Asks for the page before the earliest line held. */
+  loadEarlierJournal(): void {
+    if (this.journalStart > 0)
+      this.host.send({ type: 'requestJournal', before: this.journalStart });
+  }
+
   receive(message: CoreMessage): void {
     switch (message.type) {
       case 'welcome':
         this.versionMismatch = message.protocolVersion !== PROTOCOL_VERSION;
+        if (!this.versionMismatch) this.host.send({ type: 'requestJournal' });
+        return;
+      case 'journal':
+        // The latest page replaces what is held; an earlier one joins the front.
+        if (message.start + message.entries.length === message.total) {
+          this.setJournal({ entries: message.entries, start: message.start });
+        } else if (message.start + message.entries.length === this.journalStart) {
+          this.setJournal({ entries: [...message.entries, ...this.journal], start: message.start });
+        }
+        return;
+      case 'journalAppend':
+        if (message.start === 0) {
+          this.setJournal({ entries: message.entries, start: 0 });
+        } else if (message.start === this.journalStart + this.journal.length) {
+          this.setJournal({
+            entries: [...this.journal, ...message.entries],
+            start: this.journalStart,
+          });
+        } else {
+          // A gap (e.g. lines written before this view connected): fetch the latest page instead.
+          this.host.send({ type: 'requestJournal' });
+        }
         return;
       case 'snapshot':
         if (this.versionMismatch || message.seq <= this.snapshotSeq) return;
@@ -60,5 +98,11 @@ export class GameClient {
         for (const l of this.cueListeners) l(message.cue);
         return;
     }
+  }
+
+  private setJournal({ entries, start }: { entries: JournalEntry[]; start: number }): void {
+    this.journal = entries;
+    this.journalStart = start;
+    for (const l of this.journalListeners) l();
   }
 }
