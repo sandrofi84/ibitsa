@@ -3,7 +3,7 @@ import type {
   HostEvent,
   HostRequest,
   PackView,
-  RuleKey,
+  SettingKey,
   SettingView,
 } from '@ibitsa/protocol';
 
@@ -156,7 +156,7 @@ export class FakeHostChannel {
 }
 
 /** The Rule book as a fresh VS Code would show it: defaults everywhere, the loop limit set by you. */
-const rule = (r: Omit<SettingView, 'value' | 'layer'> & { key: RuleKey }): SettingView => ({
+const rule = (r: Omit<SettingView, 'value' | 'layer'> & { key: SettingKey }): SettingView => ({
   ...r,
   value: r.workspace ?? r.user ?? r.defaultValue,
   layer: r.workspace !== undefined ? 'workspace' : r.user !== undefined ? 'user' : 'default',
@@ -200,6 +200,23 @@ const DEMO_RULES: SettingView[] = [
     choices: ['ask', 'roundTable', 'chambers'],
     nullable: false,
     defaultValue: 'ask',
+  }),
+  ...(['master', 'alerts', 'voices', 'effects', 'music'] as const).map((k) =>
+    rule({
+      key: `sound.${k}`,
+      description: `${k} volume`,
+      kind: 'integer',
+      nullable: false,
+      minimum: 0,
+      defaultValue: k === 'master' ? 50 : k === 'music' ? 0 : 100,
+    }),
+  ),
+  rule({
+    key: 'sound.focus',
+    description: 'Only Needs you makes a sound.',
+    kind: 'toggle',
+    nullable: false,
+    defaultValue: false,
   }),
   rule({
     key: 'worktree.setup',

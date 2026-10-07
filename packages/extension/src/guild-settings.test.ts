@@ -43,6 +43,13 @@ describe('GuildSettings (#179)', () => {
       'council.consultBudgetUsd',
       'pullRequests.pollSeconds',
       'worktree.setup',
+      // Then the volumes (#184), for the Packs tab.
+      'sound.master',
+      'sound.alerts',
+      'sound.voices',
+      'sound.effects',
+      'sound.music',
+      'sound.focus',
     ]);
     expect(rules[0]).toEqual({
       key: 'review.loopLimit',

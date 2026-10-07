@@ -33,6 +33,7 @@ import {
 } from './pull-request-card';
 import { mountRestartNotice } from './restart-notice';
 import { isSitting, rememberCouncillors, SittingFeed } from './sitting-hut';
+import { mountSoundBoard } from './sound-board';
 import { mountTaskPanel } from './task-panel';
 import { ViewState } from './view-state';
 import { fitViewport } from './viewport';
@@ -116,6 +117,8 @@ export function startGame(root: HTMLElement, host: Host): Started {
       guildHallOnPage: () => null,
       guildHall: () => null,
       packLoads: () => 0,
+      sounds: () => [],
+      soundsLoaded: () => [],
       pullRequestPanel: () => null,
       pullRequestPreview: () => null,
       map: () => null,
@@ -337,10 +340,14 @@ export function startGame(root: HTMLElement, host: Host): Started {
       if (scenes.isActive(key) || scenes.isSleeping(key)) scenes.stop(key);
     }
     const keys = game.registry.get(PACK_KEYS) as
-      | { textures: string[]; anims: string[] }
+      | { textures: string[]; anims: string[]; sounds: string[] }
       | undefined;
     for (const k of keys?.anims ?? []) game.anims.remove(k);
     for (const k of keys?.textures ?? []) game.textures.remove(k);
+    for (const k of keys?.sounds ?? []) {
+      game.sound.removeByKey(k);
+      game.cache.audio.remove(k);
+    }
     game.cache.json.remove(PACK_KEY);
     scenes.start('pack');
   };
@@ -382,6 +389,8 @@ export function startGame(root: HTMLElement, host: Host): Started {
     if (chamberHut) chamberFeed();
   });
   game.events.on(HUT_SELECTED, () => chamber.open());
+  // The pack's sounds on what happens, at the user's volumes (#184).
+  const soundBoard = mountSoundBoard({ game, client, host });
   // The Guild Hall in Home Village opens Ibitsa's settings (#179).
   const guildHall = mountGuildHall({ client, host });
   game.events.on(GUILD_HALL_SELECTED, () => guildHall.open());
@@ -455,6 +464,8 @@ export function startGame(root: HTMLElement, host: Host): Started {
     guildHallOnPage,
     guildHall: () => guildHall.shown(),
     packLoads: () => (game.registry.get('packLoads') as number | undefined) ?? 0,
+    sounds: () => soundBoard.played(),
+    soundsLoaded: () => game.cache.audio.getKeys(),
     pullRequestPanel: () => prPanel.shown(),
     pullRequestPreview: () => pullRequests.preview.shown(),
   };

@@ -1,12 +1,12 @@
 import type { CouncillorOverrides } from './councillors.types';
-import type { RuleKey, SettingValue } from './host-channel.schema';
+import type { SettingKey, SettingValue } from './host-channel.schema';
 
 /** One rule in the Guild Hall's Rule book (#179): its value, where it comes from, and how to edit it. */
 export interface SettingView {
-  key: RuleKey;
+  key: SettingKey;
   /** From the extension's manifest. */
   description: string;
-  kind: 'integer' | 'number' | 'text' | 'choice' | 'list';
+  kind: 'integer' | 'number' | 'text' | 'choice' | 'list' | 'toggle';
   /** For a choice. */
   choices?: string[];
   /** "None" is a value of its own, e.g. no cap. */

@@ -317,5 +317,40 @@
       "size": 24,
       "inset": 8
     }
+  },
+  "sounds": {
+    "needsYou": {
+      "file": "sounds/needsYou.wav"
+    },
+    "councillorSpeaks": {
+      "file": "sounds/councillorSpeaks.wav"
+    },
+    "taskDone": {
+      "file": "sounds/taskDone.wav"
+    },
+    "reviewPassed": {
+      "file": "sounds/reviewPassed.wav"
+    },
+    "reviewFailed": {
+      "file": "sounds/reviewFailed.wav"
+    },
+    "prOpened": {
+      "file": "sounds/prOpened.wav"
+    },
+    "prMerged": {
+      "file": "sounds/prMerged.wav"
+    },
+    "hpLow": {
+      "file": "sounds/hpLow.wav"
+    },
+    "resting": {
+      "file": "sounds/resting.wav"
+    },
+    "campaignStart": {
+      "file": "sounds/campaignStart.wav"
+    },
+    "campaignEnd": {
+      "file": "sounds/campaignEnd.wav"
+    }
   }
 }

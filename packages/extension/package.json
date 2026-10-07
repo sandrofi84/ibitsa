@@ -214,6 +214,46 @@
           "type": "string",
           "default": "default",
           "markdownDescription": "The asset pack the game draws with: `default`, or `user:<folder>` (in `~/.ibitsa/packs/`) or `project:<folder>` (in `.ibitsa/packs/`). Choose it in the Guild Hall's Packs tab."
+        },
+        "ibitsa.sound.master": {
+          "type": "integer",
+          "default": 50,
+          "minimum": 0,
+          "maximum": 100,
+          "markdownDescription": "The game's volume, 0–100. Each category below is a share of it."
+        },
+        "ibitsa.sound.alerts": {
+          "type": "integer",
+          "default": 100,
+          "minimum": 0,
+          "maximum": 100,
+          "markdownDescription": "Alerts (\"Needs you\", HP low), 0–100."
+        },
+        "ibitsa.sound.voices": {
+          "type": "integer",
+          "default": 100,
+          "minimum": 0,
+          "maximum": 100,
+          "markdownDescription": "Councillors' voices, 0–100."
+        },
+        "ibitsa.sound.effects": {
+          "type": "integer",
+          "default": 100,
+          "minimum": 0,
+          "maximum": 100,
+          "markdownDescription": "Effects (task done, reviews, pull requests, campaign start and end), 0–100."
+        },
+        "ibitsa.sound.music": {
+          "type": "integer",
+          "default": 0,
+          "minimum": 0,
+          "maximum": 100,
+          "markdownDescription": "Scene music, when the pack has some, 0–100. Off by default."
+        },
+        "ibitsa.sound.focus": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Focus mode: only \"Needs you\" makes a sound."
         }
       }
     }

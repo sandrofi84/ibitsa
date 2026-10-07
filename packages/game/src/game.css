@@ -1888,3 +1888,15 @@ body.in-hut:has(.council-chamber:not([hidden])) .needs-you {
 .guild-hall .new-councillor .rule-problem {
   color: #a32020;
 }
+
+/* The volumes (#184), in the Packs tab. */
+.guild-hall .sound-levels .level {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+}
+
+.guild-hall .sound-levels label {
+  min-width: 60px;
+}

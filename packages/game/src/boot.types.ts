@@ -53,6 +53,10 @@ export interface Started {
   guildHall(): GuildTab | null;
   /** How many times a pack has loaded: 1, then one more per switch (#183). */
   packLoads(): number;
+  /** The sounds played so far, and how loud (#184). */
+  sounds(): { slot: string; volume: number }[];
+  /** The pack's sounds the game has loaded (#184). */
+  soundsLoaded(): string[];
   /** The island whose PR card is open on its own, or null (#153). */
   pullRequestPanel(): string | null;
   /** The island the PR preview is open for, or null (#153). */

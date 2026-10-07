@@ -1,12 +1,10 @@
 import type { NeedsYouItem, Snapshot } from '@ibitsa/protocol';
 import { CampaignRecord } from './campaign-record';
-import { Consultation } from './consultation';
 import { Elder } from './elder';
 import { Hero } from './hero';
 import { NeedsYou } from './needs-you';
 import { Outbox } from './outbox';
 import { PullRequest } from './pull-request';
-import { Quest } from './quest';
 import { Review } from './review';
 import { Sitting } from './sitting';
 import type { CoreState } from './state.types';

@@ -566,7 +566,7 @@ Character animations:
 
 - Formats: OGG, MP3, WAV; loop points for music; max length for cues.
 - Volume: master + per category (alerts, voices, effects, music). Focus mode (only "needs you").
-- (M8 planning:) Sounds come in the same pack format, in an optional `sounds` section filling these slots. The default sounds are generated in code (sfxr-style, deterministic), like the placeholder art. Effects are on at 50% by default; music is off.
+- (M8 planning:) Sounds come in the same pack format, in an optional `sounds` section filling these slots. The default sounds are generated in code (sfxr-style, deterministic), like the placeholder art. Effects are on at 50% by default; music is off. (#184:) The default sounds are 22 kHz mono WAVs from a small synthesiser in `packages/assets` (square, triangle, saw and seeded noise with envelopes and slides). The validator checks each sound is there, and that a WAV cue lasts at most 3 s (music 120 s). The game plays a sound when a snapshot shows it happened: something new in Needs you, a campaign starting or ending, a task done, a review passed or sent back, a PR opened or merged, a hero resting or crossing 80% HP, a councillor's new line (pitched per councillor). The volumes are `ibitsa.sound.*` (master 50, alerts, voices, effects 100, music 0, focus), on sliders in the Packs tab.
 
 ### 9.5 Producing assets
 1. **Phase 0 (now):** script-generated placeholder pack that matches the spec exactly; sfxr-style generated sounds (jsfxr/ChipTone); proves loader, manifest and validator.
