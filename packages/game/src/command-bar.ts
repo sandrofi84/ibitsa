@@ -4,14 +4,15 @@ import { atMenu, handles } from './at-menu';
 import type { CommandBar, CommandBarOptions } from './command-bar.types';
 import { createCommandInput } from './command-input';
 import { el } from './dom';
-import { ALL, heroHandle, parseMessage } from './mentions';
+import { messageTargets } from './mentions';
 import { slashMenu } from './slash-menu';
 
 /**
  * The command bar (spec §6.1, #81): one input along the bottom of the game, focused with / or ⌘K.
  * While a quest runs it messages the hero; with none, Enter offers to start one with what you typed.
  * The first @mention naming a recipient (#83) chooses who gets the message and is taken out of it;
- * file @mentions stay in the text as paths. Without one, the message goes to the only hero.
+ * file @mentions stay in the text as paths; `@all` reaches every hero with a session. Without one, the
+ * message goes to the selected hero (#125).
  */
 export function mountCommandBar({
   client,
@@ -19,12 +20,15 @@ export function mountCommandBar({
   onHistoryChange,
   startQuest,
   newAction,
+  selection,
 }: CommandBarOptions): CommandBar {
   const bar = el('section', { className: 'command-bar' });
   bar.setAttribute('aria-label', 'Command bar');
   let snapshot: Snapshot | null = null;
   const heroes = () => (snapshot?.campaign?.status === 'active' ? snapshot.heroes : []);
-  const hero = () => heroes()[0] ?? null;
+  const hero = () =>
+    heroes().length === 0 ? null : (selection?.selected(snapshot) ?? heroes()[0] ?? null);
+  const selected = () => hero()?.id ?? null;
 
   const input = createCommandInput({
     label: 'Command bar',
@@ -32,8 +36,8 @@ export function mountCommandBar({
     history,
     onHistoryChange,
     menus: [
-      atMenu({ client, recipients: true }),
-      slashMenu({ client, ...(newAction ? { newAction } : {}) }),
+      atMenu({ client, recipients: true, selected }),
+      slashMenu({ client, selected, ...(newAction ? { newAction } : {}) }),
     ],
     onSend: ({ text, priority }) => {
       const all = heroes();
@@ -41,16 +45,10 @@ export function mountCommandBar({
         startQuest(text);
         return;
       }
-      const parsed = parseMessage({ text, recipients: handles(all) });
-      if (!parsed.text) return;
-      const targets =
-        parsed.recipient === ALL
-          ? all
-          : all.filter((h) =>
-              parsed.recipient ? heroHandle(h.name) === parsed.recipient : h === all[0],
-            );
-      for (const target of targets) {
-        client.send({ type: 'sendMessage', heroId: target.id, text: parsed.text, priority });
+      const message = messageTargets({ text, heroes: all, selected: selected() });
+      if (!message.text) return;
+      for (const target of message.targets) {
+        client.send({ type: 'sendMessage', heroId: target.id, text: message.text, priority });
       }
     },
   });
@@ -63,11 +61,11 @@ export function mountCommandBar({
     client,
     input,
     recipients: () => handles(client.snapshot?.heroes ?? []),
+    selected,
   });
   document.body.appendChild(bar);
 
-  client.onSnapshot((s) => {
-    snapshot = s;
+  const refresh = () => {
     const target = hero();
     input.input.placeholder = target
       ? `Message ${target.name}, @ for files… (/ or ⌘K)`
@@ -76,7 +74,13 @@ export function mountCommandBar({
       target ? { next: 'Send', now: 'Send now' } : { next: 'Start a quest', now: null },
     );
     input.setHint(target ? null : 'Enter starts a quest with this as its task.');
+  };
+  client.onSnapshot((s) => {
+    snapshot = s;
+    refresh();
   });
+  // Choosing another hero changes whom the bar speaks to (#125).
+  selection?.onSelect(refresh);
 
   // / and ⌘K reach the bar from anywhere that isn't already a text field.
   document.addEventListener('keydown', (e) => {

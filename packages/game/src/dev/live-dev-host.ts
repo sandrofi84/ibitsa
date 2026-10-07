@@ -54,17 +54,24 @@ export class LiveDevHost implements Host {
   /** False acts like native Windows, where hero commands run without a sandbox (#63). */
   private readonly sandboxed: boolean;
 
+  /** Dev only (#125): this many heroes start on their own islands at the first hello. */
+  private readonly heroes: number;
+  /** True while that campaign is set up, so its council isn't also played by the script. */
+  private settingUp = false;
+
   constructor({
     credentialsReady,
     repo,
     sandboxed = true,
     campaignBudgetUsd,
+    heroes = 0,
   }: {
     credentialsReady: boolean;
     repo: RepoView | null;
     sandboxed?: boolean;
     /** A campaign cap, as `ibitsa.campaign.budgetUsd` would set it (#126). */
     campaignBudgetUsd?: number;
+    heroes?: number;
   }) {
     this.channel = new FakeHostChannel({ credentialsReady });
     this.repo = repo;
@@ -80,6 +87,7 @@ export class LiveDevHost implements Host {
         },
       }).state;
     }
+    this.heroes = heroes;
   }
 
   onMessage(listener: (m: CoreMessage) => void): void {
@@ -105,11 +113,21 @@ export class LiveDevHost implements Host {
       return;
     }
     if (command.type === 'requestPreview') {
-      this.emit({ type: 'preview', seq: ++this.seq, preview: devPreview(command) });
+      this.emit({
+        type: 'preview',
+        seq: ++this.seq,
+        preview: devPreview(command),
+        ...(command.heroId ? { heroId: command.heroId } : {}),
+      });
       return;
     }
     if (command.type === 'requestActions') {
-      this.emit({ type: 'actions', seq: ++this.seq, actions: this.devActions.list });
+      this.emit({
+        type: 'actions',
+        seq: ++this.seq,
+        actions: this.devActions.list,
+        ...(command.heroId ? { heroId: command.heroId } : {}),
+      });
       return;
     }
     if (command.type === 'createAction') {
@@ -126,10 +144,93 @@ export class LiveDevHost implements Host {
     }
     if (command.type === 'hello') {
       this.emit({ type: 'welcome', seq: ++this.seq, protocolVersion: PROTOCOL_VERSION });
+      if (this.heroes > 1 && !this.state.campaign) this.startParties(this.heroes);
       this.emitSnapshot();
       return;
     }
     this.input({ kind: 'command', t: this.t(), command });
+  }
+
+  /**
+   * Dev only (#125): a campaign with `count` heroes on their own islands, as if the council had planned
+   * it and party assembly started it, so several heroes can be played before those screens exist.
+   */
+  private startParties(count: number): void {
+    const names = PARTY_NAMES.slice(0, count);
+    this.settingUp = true;
+    this.input({
+      kind: 'gm',
+      t: this.t(),
+      event: { type: 'questSettings', ...DEFAULT_SETTINGS, maxParallel: count },
+    });
+    this.input({
+      kind: 'command',
+      t: this.t(),
+      command: {
+        type: 'conveneCouncil',
+        commandId: 'dev-1',
+        task: 'Fix the login redirect',
+        mode: 'roundTable',
+        roster: ['tester'],
+        effort: 'light',
+      },
+    });
+    const sittingId = this.state.sitting?.id ?? '';
+    const tasks = names.map((_, i) => ({
+      id: `T${i + 1}`,
+      title: `Part ${i + 1}`,
+      description: `Do part ${i + 1} of the fix.`,
+      files: [],
+      dependsOn: [],
+      criteria: [],
+      decisions: [],
+    }));
+    for (const event of [
+      {
+        type: 'reportFiled' as const,
+        toolUseId: 'dev-r',
+        councillorId: 'tester',
+        report: { concerns: [], questions: [], recommendations: [], notChecked: [] },
+      },
+      {
+        type: 'planProposed' as const,
+        toolUseId: 'dev-p',
+        plan: {
+          summary: `${count} parties fix the login redirect.`,
+          goal: 'Fix the login redirect.',
+          tasks,
+          decisions: [],
+          islands: tasks.map((t, i) => ({
+            id: `I${i + 1}`,
+            title: `Island ${i + 1}`,
+            tasks: [t.id],
+          })),
+          branching: 'separate' as const,
+        },
+      },
+    ]) {
+      this.input({ kind: 'council', t: this.t(), sittingId, event });
+    }
+    this.input({
+      kind: 'command',
+      t: this.t(),
+      command: { type: 'approvePlan', commandId: 'dev-2', version: 1 },
+    });
+    this.settingUp = false;
+    this.input({
+      kind: 'command',
+      t: this.t(),
+      command: {
+        type: 'startCampaign',
+        commandId: 'dev-3',
+        baseRef: 'main',
+        parties: names.map(([heroName, classId], i) => ({
+          islandId: `I${i + 1}`,
+          heroName,
+          classId,
+        })),
+      },
+    });
   }
 
   private t(): number {
@@ -285,6 +386,7 @@ export class LiveDevHost implements Host {
         );
         return;
       case 'startSitting': {
+        if (this.settingUp) return;
         const [first] = effect.roster;
         this.asker = first?.councillorId ?? 'tester';
         // In separate chambers the reports come in one by one, so the study stage can be watched (#105).
@@ -599,3 +701,11 @@ function livePlan({ summary, councillorId }: { summary: string; councillorId: st
     ],
   };
 }
+
+/** The dev campaign's heroes (#125): a name and a class each. */
+const PARTY_NAMES: [string, string][] = [
+  ['Ranger Ilse', 'ranger'],
+  ['Rogue Vex', 'rogue'],
+  ['Paladin Ada', 'paladin'],
+  ['Barbarian Bo', 'barbarian'],
+];

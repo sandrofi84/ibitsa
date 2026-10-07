@@ -1,5 +1,6 @@
 import type { CameraState } from './camera-director.types';
 import type { GameClient } from './client';
+import type { HeroSelection } from './hero-selection';
 import type { HutRendered } from './hut-scene.types';
 import type { HutFeed } from './hut-view.types';
 import type { MapProbe } from './world-scene.types';
@@ -33,4 +34,6 @@ export interface Started {
   selectHero(heroId: string | null): void;
   /** What the map shows, for tests: islands, bridges and blocked heroes; null before the game is ready. */
   map(): MapProbe | null;
+  /** Which hero the pane shows and the bar speaks to (#125); null without WebGL. */
+  selection: HeroSelection | null;
 }

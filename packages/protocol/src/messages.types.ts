@@ -15,10 +15,13 @@ export type CoreMessage =
   | { type: 'journalAppend'; seq: number; entries: JournalEntry[]; start: number }
   /** Answers `requestFiles` (#83): the worktree's files, tracked and untracked but not ignored. */
   | { type: 'files'; seq: number; islandId: string; paths: string[] }
-  /** The `/` menu's actions for the hero's folder (#84): answers `requestActions`, and again on change. */
-  | { type: 'actions'; seq: number; actions: ActionInfo[] }
-  /** Answers `requestPreview` (#85). */
-  | { type: 'preview'; seq: number; preview: ActionPreview }
+  /**
+   * The `/` menu's actions for a hero's folder (#84): answers `requestActions` (with its `heroId`, #125),
+   * and again, without one, whenever a skill changes.
+   */
+  | { type: 'actions'; seq: number; actions: ActionInfo[]; heroId?: string }
+  /** Answers `requestPreview` (#85), with its `heroId` (#125). */
+  | { type: 'preview'; seq: number; preview: ActionPreview; heroId?: string }
   /** Answers `createAction` (#86): written, or refused (`clash` when the name is taken). */
   | { type: 'actionCreated'; seq: number; name: string }
   | { type: 'actionRejected'; seq: number; name: string; reason: string; clash: boolean };

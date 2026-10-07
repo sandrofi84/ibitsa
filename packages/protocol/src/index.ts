@@ -20,6 +20,7 @@ export {
   ResearchBriefSchema,
 } from './elder.schema';
 export type { ElderEvent, ElderStatus, ElderView } from './elder.types';
+export { heroHandle } from './heroes';
 export { parseHostRequest } from './host-channel';
 export { type HostRequest, HostRequestSchema } from './host-channel.schema';
 export type { HostEvent } from './host-channel.types';

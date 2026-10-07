@@ -92,6 +92,8 @@ export const CommandSchema = v.variant('type', [
     type: v.literal('requestPreview'),
     name: v.pipe(v.string(), v.nonEmpty()),
     args: v.string(),
+    /** Whose worktree to expand it in (#125); the first hero's without one. */
+    heroId: v.optional(id),
   }),
   /** Writes a new action as a Claude Code skill (#86). Runtime-only, never logged. */
   v.strictObject({
@@ -104,8 +106,8 @@ export const CommandSchema = v.variant('type', [
     scope: v.picklist(['personal', 'project']),
     overwrite: v.optional(v.boolean()),
   }),
-  /** The `/` menu's actions (#84). Runtime-only, never logged. */
-  v.strictObject({ type: v.literal('requestActions') }),
+  /** The `/` menu's actions (#84), for a hero's worktree (#125). Runtime-only, never logged. */
+  v.strictObject({ type: v.literal('requestActions'), heroId: v.optional(id) }),
   /** Removes an "Always allow in this project" rule. Runtime-only, never logged (#62). */
   v.strictObject({ type: v.literal('forgetProjectRule'), rule: v.pipe(v.string(), v.nonEmpty()) }),
   v.strictObject({

@@ -31,9 +31,13 @@ export class GameClient {
   actions: ActionInfo[] = [];
   private readonly actionListeners: ((actions: ActionInfo[]) => void)[] = [];
   private readonly actionResultListeners: ((result: ActionResult) => void)[] = [];
+  /** The campaign the held lists are for; a new one starts afresh. */
   private actionsFor: string | null = null;
-  private actionsWaiting: Promise<ActionInfo[]> | null = null;
-  private actionResolvers: ((actions: ActionInfo[]) => void)[] = [];
+  /** Per hero (#125; `''` for the default): the list, or the ones waiting for it. */
+  private readonly actionLists = new Map<
+    string,
+    { list: Promise<ActionInfo[]>; waiting: ((actions: ActionInfo[]) => void)[] }
+  >();
   private readonly previewWaiters = new Map<string, ((preview: ActionPreview) => void)[]>();
 
   constructor(private readonly host: Host) {
@@ -61,27 +65,45 @@ export class GameClient {
   }
 
   /** Asks the runtime for the `/` menu's actions; the answer, and any later change, arrive as `actions`. */
-  requestActions(): void {
-    this.host.send({ type: 'requestActions' });
+  requestActions(heroId?: string): void {
+    this.host.send({ type: 'requestActions', ...(heroId ? { heroId } : {}) });
   }
 
   /**
-   * The `/` menu's actions for the running quest: asked for once, then kept up to date by the runtime's
-   * pushes. A new quest (another worktree) asks again.
+   * The `/` menu's actions for a hero's worktree (#84, #125; the first hero's without one): asked for
+   * once per hero, then kept until a skill changes (the runtime's push drops them all). A new campaign
+   * asks again.
    */
-  actionsReady(): Promise<ActionInfo[]> {
+  actionsReady(heroId?: string | null): Promise<ActionInfo[]> {
     const campaign = this.snapshot?.campaign?.id ?? null;
-    if (this.actionsFor !== campaign || !this.actionsWaiting) {
+    if (this.actionsFor !== campaign) {
       this.actionsFor = campaign;
-      this.actionsWaiting = new Promise((resolve) => this.actionResolvers.push(resolve));
-      this.requestActions();
+      this.actionLists.clear();
     }
-    return this.actionsWaiting;
+    const key = heroId ?? '';
+    const held = this.actionLists.get(key);
+    if (held) return held.list;
+    const entry = {
+      list: Promise.resolve<ActionInfo[]>([]),
+      waiting: [] as ((a: ActionInfo[]) => void)[],
+    };
+    entry.list = new Promise((resolve) => entry.waiting.push(resolve));
+    this.actionLists.set(key, entry);
+    this.requestActions(heroId ?? undefined);
+    return entry.list;
   }
 
-  /** An action's expanded prompt for the preview (#85), from the runtime. */
-  preview({ name, args }: { name: string; args: string }): Promise<ActionPreview> {
-    const key = `${name}\u0000${args}`;
+  /** An action's expanded prompt for the preview (#85), in a hero's worktree (#125), from the runtime. */
+  preview({
+    name,
+    args,
+    heroId,
+  }: {
+    name: string;
+    args: string;
+    heroId?: string | null;
+  }): Promise<ActionPreview> {
+    const key = `${name}\u0000${args}\u0000${heroId ?? ''}`;
     return new Promise((resolve) => {
       const waiting = this.previewWaiters.get(key);
       if (waiting) {
@@ -89,7 +111,7 @@ export class GameClient {
         return;
       }
       this.previewWaiters.set(key, [resolve]);
-      this.host.send({ type: 'requestPreview', name, args });
+      this.host.send({ type: 'requestPreview', name, args, ...(heroId ? { heroId } : {}) });
     });
   }
 
@@ -169,14 +191,24 @@ export class GameClient {
           l({ ok: false, name: message.name, reason: message.reason, clash: message.clash });
         }
         return;
-      case 'actions':
+      case 'actions': {
         this.actions = message.actions;
-        this.actionsWaiting = Promise.resolve(message.actions);
-        for (const resolve of this.actionResolvers.splice(0)) resolve(message.actions);
+        const key = message.heroId ?? '';
+        const entry = this.actionLists.get(key);
+        const answering = entry !== undefined && entry.waiting.length > 0;
+        // Not an answer: a skill changed, so every held list is stale (a request still out keeps its place).
+        if (!answering) {
+          for (const [k, held] of this.actionLists) {
+            if (held.waiting.length === 0) this.actionLists.delete(k);
+          }
+        }
+        for (const resolve of entry?.waiting.splice(0) ?? []) resolve(message.actions);
+        this.actionLists.set(key, { list: Promise.resolve(message.actions), waiting: [] });
         for (const l of this.actionListeners) l(message.actions);
         return;
+      }
       case 'preview': {
-        const key = `${message.preview.name}\u0000${message.preview.args}`;
+        const key = `${message.preview.name}\u0000${message.preview.args}\u0000${message.heroId ?? ''}`;
         for (const resolve of this.previewWaiters.get(key) ?? []) resolve(message.preview);
         this.previewWaiters.delete(key);
         return;

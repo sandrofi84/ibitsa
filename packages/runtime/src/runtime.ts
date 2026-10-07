@@ -78,7 +78,7 @@ export class Runtime {
           watch: options.watchFolder ?? watchFolder,
           // A skill changed: every front end gets the fresh list for the hero's folder.
           onChange: () => {
-            for (const frontEnd of this.frontEnds) this.postActions(frontEnd);
+            for (const frontEnd of this.frontEnds) this.postActions({ frontEnd });
           },
         })
       : null;
@@ -161,7 +161,12 @@ export class Runtime {
       return;
     }
     if (command.type === 'requestPreview') {
-      this.postPreview({ frontEnd, name: command.name, args: command.args });
+      this.postPreview({
+        frontEnd,
+        name: command.name,
+        args: command.args,
+        ...(command.heroId ? { heroId: command.heroId } : {}),
+      });
       return;
     }
     if (command.type === 'createAction') {
@@ -169,7 +174,7 @@ export class Runtime {
       return;
     }
     if (command.type === 'requestActions') {
-      this.postActions(frontEnd);
+      this.postActions({ frontEnd, ...(command.heroId ? { heroId: command.heroId } : {}) });
       return;
     }
     if (command.type === 'forgetProjectRule') {
@@ -647,17 +652,20 @@ export class Runtime {
     frontEnd,
     name,
     args,
+    heroId,
   }: {
     frontEnd: FrontEnd;
     name: string;
     args: string;
+    heroId?: string;
   }): void {
-    const cwd = this.state.islands.find((i) => i.worktreePath)?.worktreePath;
+    const cwd = this.worktreeOf(heroId);
     const send = (found: { text: string; notes: string[] } | null) =>
       frontEnd.post({
         type: 'preview',
         seq: ++this.seq,
         preview: { name, args, text: found?.text ?? null, notes: found?.notes ?? [] },
+        ...(heroId ? { heroId } : {}),
       });
     const preview = this.options.adapter.previewAction;
     if (!cwd || !preview || this.state.campaign?.status !== 'active') {
@@ -705,18 +713,28 @@ export class Runtime {
     );
   }
 
-  private postActions(frontEnd: FrontEnd): void {
-    void this.currentActions().then((actions) =>
-      frontEnd.post({ type: 'actions', seq: ++this.seq, actions }),
+  private postActions({ frontEnd, heroId }: { frontEnd: FrontEnd; heroId?: string }): void {
+    void this.currentActions(heroId).then((actions) =>
+      frontEnd.post({ type: 'actions', seq: ++this.seq, actions, ...(heroId ? { heroId } : {}) }),
     );
   }
 
-  /** The `/` menu's actions for the running quest's worktree; none without one or on failure (#84, #87). */
-  currentActions(): Promise<ActionInfo[]> {
-    const cwd = this.state.islands.find((i) => i.worktreePath)?.worktreePath;
+  /**
+   * The `/` menu's actions for a hero's worktree (#84, #87, #125): that hero's, else the first one
+   * there is; none without one or on failure.
+   */
+  currentActions(heroId?: string): Promise<ActionInfo[]> {
+    const cwd = this.worktreeOf(heroId);
     if (!cwd || !this.actions || this.state.campaign?.status !== 'active')
       return Promise.resolve([]);
     return this.actions.list(cwd).catch(() => []);
+  }
+
+  /** A hero's worktree, else the first island's that exists (#125). */
+  private worktreeOf(heroId: string | undefined): string | null {
+    const hero = this.state.heroes.find((h) => h.id === heroId);
+    const own = this.state.islands.find((i) => i.id === hero?.islandId)?.worktreePath;
+    return own ?? this.state.islands.find((i) => i.worktreePath)?.worktreePath ?? null;
   }
 
   /**

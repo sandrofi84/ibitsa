@@ -108,7 +108,9 @@ describe('slashMenu (#84)', () => {
       needsYou: [],
     } as Snapshot;
     deliver({ type: 'snapshot', seq: 1, snapshot });
-    const answer = () => deliver({ type: 'actions', seq: 2, actions: [action({ name: 'pr' })] });
+    // As the runtime answers: for the hero the menu asked about (#125), the only one here.
+    const answer = () =>
+      deliver({ type: 'actions', seq: 2, actions: [action({ name: 'pr' })], heroId: 'h4' });
     const opened: string[] = [];
     return {
       menu: slashMenu({ client: c }),
@@ -121,10 +123,11 @@ describe('slashMenu (#84)', () => {
   const query = (before: string) => ({ text: `${before}/`, token: '/', query: '', before });
 
   it('offers actions for the first word, or right after the recipient', async () => {
-    const { menu, answer } = client('active');
+    const { menu, answer, sent } = client('active');
     const first = menu.suggest(query(''));
     answer();
     expect((await first).map((i) => i.insert)).toEqual(['/pr']);
+    expect(sent).toEqual([{ type: 'requestActions', heroId: 'h4' }]);
     expect((await menu.suggest(query('@ranger-ilse '))).map((i) => i.insert)).toEqual(['/pr']);
   });
 

@@ -6,7 +6,8 @@ import type { CommandHistory } from './command-history';
 import { createCommandInput } from './command-input';
 import { button, el } from './dom';
 import type { HeroPane } from './hero-pane.types';
-import { HERO_CLASSES, STATE_LABELS } from './heroes';
+import type { HeroSelection } from './hero-selection';
+import { BLOCKED_REASONS, HERO_CLASSES, STATE_LABELS } from './heroes';
 import type { Host } from './host.types';
 import { slashMenu } from './slash-menu';
 import type { ViewState } from './view-state';
@@ -26,6 +27,7 @@ export function mountHeroPane({
   history,
   onHistoryChange,
   newAction,
+  selection,
 }: {
   client: GameClient;
   host: Host;
@@ -35,6 +37,8 @@ export function mountHeroPane({
   onHistoryChange: () => void;
   /** Opens the New action form from the / menu (#86). */
   newAction?: () => void;
+  /** Which hero the pane shows (#125); the first hero without one. */
+  selection?: HeroSelection;
 }): HeroPane {
   const pane = el('section', { className: 'hero-pane' });
   pane.setAttribute('aria-label', 'Hero');
@@ -53,7 +57,15 @@ export function mountHeroPane({
   tab.append(dot, tabName, autoBadge, badge);
   const body = el('div', { className: 'hero-pane-body' });
   body.id = 'hero-pane-body';
-  pane.append(tab, body);
+  // With several heroes (#125): one button each, open or collapsed, to choose whom the pane shows.
+  const heroList = el('nav', { className: 'hero-list' });
+  heroList.setAttribute('aria-label', 'Heroes');
+  pane.append(tab, heroList, body);
+  const shown = (snapshot: Snapshot | null) =>
+    selection?.selected(snapshot) ?? snapshot?.heroes[0] ?? null;
+  selection?.onSelect(() => {
+    if (last) render(last);
+  });
 
   let open: boolean = view.get(OPEN_KEY, true);
   let last: Snapshot | null = null;
@@ -69,6 +81,7 @@ export function mountHeroPane({
   const facts = el('dl');
   // The command bar's input, aimed at this hero (#81): same keys, same history.
   let heroId: string | null = null;
+  const paneHero = () => heroId;
   const message = createCommandInput({
     label: 'Message to the hero',
     placeholder: 'Message the hero…',
@@ -76,15 +89,15 @@ export function mountHeroPane({
     onHistoryChange,
     // Files only: this box always speaks to its hero (#83).
     menus: [
-      atMenu({ client, recipients: false }),
-      slashMenu({ client, ...(newAction ? { newAction } : {}) }),
+      atMenu({ client, recipients: false, selected: paneHero }),
+      slashMenu({ client, selected: paneHero, ...(newAction ? { newAction } : {}) }),
     ],
     onSend: ({ text, priority }) => {
       if (heroId) client.send({ type: 'sendMessage', heroId, text, priority });
     },
   });
   // The pane's box speaks to its hero, so a message here never starts with a recipient.
-  attachActionPreview({ client, input: message, recipients: () => [] });
+  attachActionPreview({ client, input: message, recipients: () => [], selected: paneHero });
   // The hero's own summary once it submits: what the "Ready for review!" bubble leads to (#57).
   const summary = el('p', { className: 'summary' });
   summary.hidden = true;
@@ -124,7 +137,8 @@ export function mountHeroPane({
 
   function render(snapshot: Snapshot): void {
     last = snapshot;
-    const hero = snapshot.heroes[0];
+    const hero = shown(snapshot);
+    renderHeroList(snapshot, hero);
     const campaign = snapshot.campaign;
     pane.hidden = !hero || !campaign;
     body.hidden = !open;
@@ -175,7 +189,7 @@ export function mountHeroPane({
     summary.textContent = hero.state.kind === 'submitted' ? hero.state.summary : '';
 
     const active = campaign.status === 'active';
-    const island = snapshot.islands[0];
+    const island = snapshot.islands.find((i) => i.id === hero.islandId);
     message.element.hidden = !active;
     heroId = hero.id;
     const items: HTMLButtonElement[] = [];
@@ -304,14 +318,45 @@ export function mountHeroPane({
     lines.hidden = !journalOpen;
     earlier.hidden = !journalOpen || client.journalStart === 0;
     if (!journalOpen) return;
-    const heroId = last?.heroes[0]?.id;
+    const current = shown(last);
     const atEnd = lines.scrollTop + lines.clientHeight >= lines.scrollHeight - 8;
     lines.replaceChildren(
       ...client.journal
-        .filter((e) => e.heroId === null || e.heroId === heroId)
-        .map((e) => journalLine({ entry: e, hero: last?.heroes[0]?.name ?? 'Hero' })),
+        .filter((e) => e.heroId === null || e.heroId === current?.id)
+        .map((e) => journalLine({ entry: e, hero: current?.name ?? 'Hero' })),
     );
     if (follow || atEnd) lines.scrollTop = lines.scrollHeight;
+  }
+
+  /** One button per hero, with its state and what it waits on you for; shown with two or more. */
+  function renderHeroList(snapshot: Snapshot, current: HeroView | null): void {
+    heroList.hidden = snapshot.heroes.length < 2;
+    if (heroList.hidden) {
+      heroList.replaceChildren();
+      return;
+    }
+    heroList.replaceChildren(
+      ...snapshot.heroes.map((h) => {
+        const waiting = snapshot.needsYou.filter((i) => i.heroId === h.id).length;
+        const b = el('button', { className: 'hero-choice' });
+        b.type = 'button';
+        b.setAttribute('aria-pressed', String(h.id === current?.id));
+        b.setAttribute(
+          'aria-label',
+          `${h.name}, ${stateText(h)}${waiting > 0 ? `, ${waiting} waiting on you` : ''}`,
+        );
+        const choiceDot = el('span', { className: 'state-dot' });
+        choiceDot.dataset.state = h.state.kind;
+        choiceDot.setAttribute('aria-hidden', 'true');
+        b.append(choiceDot, el('span', { className: 'name', text: h.name }));
+        if (waiting > 0) b.append(el('span', { className: 'badge', text: String(waiting) }));
+        b.onclick = () => {
+          selection?.select(h.id);
+          if (!open) setOpen(true);
+        };
+        return b;
+      }),
+    );
   }
 
   renderJournal({ follow: true });
@@ -335,6 +380,7 @@ function stateText(hero: HeroView): string {
   }
   if (s.kind === 'unknown' || s.kind === 'stalled') return `${label}: ${s.reason}`;
   if (s.kind === 'error') return `${label}: ${s.message}`;
+  if (s.kind === 'blocked') return BLOCKED_REASONS[s.reason];
   return label;
 }
 

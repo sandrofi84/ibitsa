@@ -41,13 +41,15 @@ if (name === 'live') {
   const host = new LiveDevHost({
     credentialsReady: params.get('credentials') !== 'none',
     sandboxed: params.get('sandbox') !== 'none',
+    // Dev only (#125): `heroes=2` starts a campaign with that many heroes on their own islands.
+    heroes: Number(params.get('heroes') ?? 0),
     repo:
       params.get('repo') === 'none'
         ? null
         : { defaultBranch: 'main', branches: ['main', 'feature/x'], uncommittedChanges: 2 },
     ...(params.get('campaignCap') ? { campaignBudgetUsd: Number(params.get('campaignCap')) } : {}),
   });
-  const { client, zoom, hero, camera, hut, selectHero, map } = startGame(root, host);
+  const { client, zoom, hero, camera, hut, selectHero, map, selection } = startGame(root, host);
   w.__ibitsa = {
     snapshot: () => client.snapshot,
     // Lets a test act for a hero the UI can't select yet.
@@ -60,6 +62,8 @@ if (name === 'live') {
     hut,
     selectHero,
     map,
+    // The selected hero's id (#125).
+    selected: () => selection?.selected(client.snapshot)?.id ?? null,
   };
   // `&campaign=separate|stacked`: straight into a three-island campaign, to see the map (#124).
   const campaign = params.get('campaign');

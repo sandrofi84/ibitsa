@@ -1,5 +1,8 @@
+import { heroHandle } from '@ibitsa/protocol';
 import * as vscode from 'vscode';
 import { GamePanel } from './game-panel';
+import { chooseHero } from './hero-choice';
+import type { HeroOption } from './hero-choice.types';
 import type { RunActionOptions } from './run-action.types';
 
 /**
@@ -8,8 +11,13 @@ import type { RunActionOptions } from './run-action.types';
  */
 export async function runAction({ host, picked, open }: RunActionOptions): Promise<void> {
   let choice = picked;
+  // With several heroes, the action is for one of them: its worktree's actions, its @ in the bar (#125).
+  const state = host ? await host.state() : null;
+  const several = (state?.heroes.length ?? 0) > 1;
+  const hero = several ? await chooseHero({ state, pick: pickHero }) : null;
+  if (several && !hero) return;
   if (!choice) {
-    const actions = host ? await host.actions() : [];
+    const actions = host ? await host.actions(hero?.id) : [];
     if (actions.length === 0) {
       void vscode.window.showInformationMessage('No actions yet: start a quest first.');
       return;
@@ -34,6 +42,11 @@ export async function runAction({ host, picked, open }: RunActionOptions): Promi
   GamePanel.postHost({
     channel: 'host',
     type: 'fillCommandBar',
-    text: `/${choice.name} ${choice.args}`.trim(),
+    text: `${hero ? `@${heroHandle(hero.name)} ` : ''}/${choice.name} ${choice.args}`.trim(),
   });
+}
+
+/** The Command Palette's hero pick (#125). */
+export function pickHero(options: HeroOption[]): Promise<HeroOption | undefined> {
+  return Promise.resolve(vscode.window.showQuickPick(options, { title: 'Which hero?' }));
 }

@@ -1,6 +1,7 @@
 import type { ActionInfo } from '@ibitsa/protocol';
 import type { ActionPreviewOptions } from './action-preview.types';
 import { button, el } from './dom';
+import { addressedHero } from './mentions';
 
 /** How long typing pauses before the preview is asked for. */
 const DEBOUNCE_MS = 200;
@@ -11,7 +12,12 @@ const DEBOUNCE_MS = 200;
  * as `/action args`, so Claude Code applies the skill's own settings; "Edit this message" puts the
  * expanded prompt in the input instead, to change and send as plain text.
  */
-export function attachActionPreview({ client, input, recipients }: ActionPreviewOptions): void {
+export function attachActionPreview({
+  client,
+  input,
+  recipients,
+  selected = () => null,
+}: ActionPreviewOptions): void {
   const panel = el('section', { className: 'action-preview' });
   panel.setAttribute('aria-label', 'Action preview');
   panel.setAttribute('aria-live', 'polite');
@@ -27,12 +33,18 @@ export function attachActionPreview({ client, input, recipients }: ActionPreview
       panel.hidden = true;
       return;
     }
-    const action = findAction({ actions: await client.actionsReady(), name: parsed.name });
+    const heroId =
+      addressedHero({
+        text: input.input.value,
+        heroes: client.snapshot.heroes,
+        selected: selected(),
+      })?.id ?? null;
+    const action = findAction({ actions: await client.actionsReady(heroId), name: parsed.name });
     if (!action || ticket !== asked) {
       if (!action) panel.hidden = true;
       return;
     }
-    const preview = await client.preview({ name: action.name, args: parsed.args });
+    const preview = await client.preview({ name: action.name, args: parsed.args, heroId });
     if (ticket !== asked) return;
     const heading = el('h3', { text: `Preview of /${parsed.name}`, className: 'preview-title' });
     if (preview.text === null) {

@@ -10,6 +10,7 @@ import { mountConveneForm } from './convene-form';
 import { mountCouncilDialogue } from './council-dialogue-box';
 import { mountElderPanel } from './elder-panel';
 import { mountHeroPane } from './hero-pane';
+import { HeroSelection } from './hero-selection';
 import { reportDiagnostics } from './host';
 import type { Diagnostics, Host } from './host.types';
 import { HutScene } from './hut-scene';
@@ -86,6 +87,7 @@ export function startGame(root: HTMLElement, host: Host): Started {
       hut: () => null,
       selectHero: () => {},
       map: () => null,
+      selection: null,
     };
   }
 
@@ -107,11 +109,18 @@ export function startGame(root: HTMLElement, host: Host): Started {
       if (sitting) sittingFeed.update({ sitting, focus });
     },
   });
-  mountNeedsYouPanel({ client, openCouncil: () => councilDialogue.focus() });
+  const view = new ViewState(host.viewStorage);
+  // Which hero the pane shows and the bar speaks to (#125); the map follows it too.
+  const selection = new HeroSelection(view);
+  client.onSnapshot((snapshot) => selection.update(snapshot));
+  mountNeedsYouPanel({
+    client,
+    openCouncil: () => councilDialogue.focus(),
+    selectHero: (heroId) => selection.select(heroId),
+  });
   const newQuest = mountNewQuestForm({ client, host });
   const newActionForm = mountNewActionForm({ client });
   const newAction = () => newActionForm.open();
-  const view = new ViewState(host.viewStorage);
   const conveneForm = mountConveneForm({ client, view });
   const partyAssembly = mountPartyAssembly({
     client,
@@ -136,6 +145,7 @@ export function startGame(root: HTMLElement, host: Host): Started {
     history,
     onHistoryChange: saveHistory,
     newAction,
+    selection,
   });
   const commandBar = mountCommandBar({
     client,
@@ -143,6 +153,7 @@ export function startGame(root: HTMLElement, host: Host): Started {
     onHistoryChange: saveHistory,
     startQuest: (description) => newQuest.open({ description }),
     newAction,
+    selection,
   });
   // The Command Palette's Message Hero… and Run Action… (#87).
   host.onHostEvent((event) => {
@@ -182,7 +193,10 @@ export function startGame(root: HTMLElement, host: Host): Started {
     const covered = rect.width > 0 ? Math.max(0, window.innerWidth - rect.left) : 0;
     game.registry.set(RIGHT_INSET, covered);
   }).observe(heroPane.element);
-  game.events.on(HERO_SELECTED, () => heroPane.open());
+  game.events.on(HERO_SELECTED, (heroId: string) => {
+    selection.select(heroId);
+    heroPane.open();
+  });
 
   const report = () => {
     diagnostics = {
@@ -272,6 +286,18 @@ export function startGame(root: HTMLElement, host: Host): Started {
   const hut = () => (hutScene()?.sys.isActive() ? (hutScene()?.rendered() ?? null) : null);
   // The scene keeps a selection made before the map is up and uses it from its first snapshot.
   const selectHero = (heroId: string | null) => world()?.selectHero(heroId);
+  // Choosing a hero in the pane, on the map or in "Needs you" (#125) points the map camera at it (#124).
+  selection.onSelect((heroId) => selectHero(heroId));
   const map = () => world()?.mapProbe() ?? null;
-  return { client, zoom: () => diagnostics.zoom, hero, camera, showHut, hut, selectHero, map };
+  return {
+    client,
+    zoom: () => diagnostics.zoom,
+    hero,
+    camera,
+    showHut,
+    hut,
+    selectHero,
+    map,
+    selection,
+  };
 }
