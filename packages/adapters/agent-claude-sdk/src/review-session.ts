@@ -1,4 +1,3 @@
-import { homedir } from 'node:os';
 import type { Options, Query, SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 import type { ReviewEvent, Verdict } from '@ibitsa/protocol';
 import type { ReviewSession as Session } from '@ibitsa/runtime';
@@ -181,11 +180,7 @@ export class ReviewSession implements Session {
   /** The first message: who reviews, against what, and the work itself. */
   private prompt(): string {
     const { start, adapter } = this.init;
-    const found = new CouncillorSkills({
-      cwd: start.cwd,
-      home: adapter.home ?? homedir(),
-      pluginDirs: adapter.pluginDirs?.() ?? [],
-    }).review(start.councillorId);
+    const found = CouncillorSkills.of({ cwd: start.cwd, adapter }).review(start.councillorId);
     const list = (items: string[], empty: string) =>
       items.length > 0 ? items.map((i) => `- ${i}`).join('\n') : empty;
     const parts = [

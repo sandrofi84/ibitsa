@@ -1,5 +1,6 @@
 import type { HostEvent } from '@ibitsa/protocol';
 import type { Credentials } from './credentials.types';
+import type { GuildCouncil } from './guild-council';
 import type { GuildSettings } from './guild-settings';
 import type { KeyValidator } from './key-validator.types';
 import type { PackLibrary } from './packs';
@@ -16,6 +17,8 @@ export interface HostChannelDeps {
   post(event: HostEvent): void;
   /** The Guild Hall's rules (#179). */
   settings: GuildSettings;
+  /** The Guild Hall's Roster (#181). */
+  council: GuildCouncil;
   /** VS Code's settings, filtered to Ibitsa. */
   openSettings(): void;
   /** Opens a file in the editor; `openable` already checked it's one the webview may open. */

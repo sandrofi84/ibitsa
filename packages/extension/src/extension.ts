@@ -1,5 +1,6 @@
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { ClaudeAdapter } from '@ibitsa/agent-claude-sdk';
 import { GitHubHost } from '@ibitsa/githost-github';
 import { heroHandle } from '@ibitsa/protocol';
@@ -14,6 +15,7 @@ import type { ExportTalliesArgs } from './export-tallies.types';
 import type { IbitsaApi } from './extension.types';
 import { GAME_VIEW_TYPE, GamePanel } from './game-panel';
 import { githubToken } from './github-sign-in';
+import { GuildCouncil } from './guild-council';
 import { GuildSettings } from './guild-settings';
 import type { ExtensionManifest } from './guild-settings.types';
 import { chooseHero } from './hero-choice';
@@ -28,6 +30,7 @@ import { RuntimeHost } from './runtime-host';
 import type { DependencyFactory, Notifier } from './runtime-host.types';
 import {
   readChecks,
+  readCouncillorOverrides,
   readCouncilMode,
   readDisabledCouncillors,
   readElderSettings,
@@ -50,6 +53,7 @@ export function activate(context: vscode.ExtensionContext): IbitsaApi {
             settingSources: () =>
               config().get<('project' | 'user' | 'local')[]>('hero.settingSources') ?? ['project'],
             pluginDirs: () => [vscode.Uri.joinPath(context.extensionUri, 'dist', 'plugin').fsPath],
+            councillorOverrides: () => readCouncillorOverrides(config()),
           })
         : missingCredentialsAdapter,
       gameMaster: new GitGameMaster({
@@ -134,6 +138,32 @@ export function activate(context: vscode.ExtensionContext): IbitsaApi {
     activePack: () => config().get<string>('pack') ?? 'default',
     setActivePack: (id) => config().update('pack', id, vscode.ConfigurationTarget.Global),
     packBase: (dir) => `${GamePanel.url(dir) ?? ''}/`,
+    // The Roster (#181): councillors on or off, their overrides, customising and new ones.
+    council: new GuildCouncil({
+      inspect: (key) => config().inspect(key),
+      update: ({ key, value, layer }) =>
+        config().update(
+          key,
+          value,
+          layer === 'user'
+            ? vscode.ConfigurationTarget.Global
+            : vscode.ConfigurationTarget.Workspace,
+        ),
+      files: {
+        exists: (path) => existsSync(path),
+        read: (path) => readFileSync(path, 'utf8'),
+        write: ({ path, text }) => {
+          mkdirSync(dirname(path), { recursive: true });
+          writeFileSync(path, text);
+        },
+      },
+      roots: {
+        home: homedir(),
+        workspace: workspaceDir,
+        plugin: vscode.Uri.joinPath(context.extensionUri, 'dist', 'plugin').fsPath,
+      },
+      open: (path) => void vscode.window.showTextDocument(vscode.Uri.file(path)),
+    }),
     openable: {
       workspace: workspaceDir,
       roots: [
@@ -149,6 +179,14 @@ export function activate(context: vscode.ExtensionContext): IbitsaApi {
 
   context.subscriptions.push(
     { dispose: () => host?.dispose() },
+    // Turning a councillor off or extending one changes who the council can seat (#181).
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (
+        e.affectsConfiguration('ibitsa.council.disabled') ||
+        e.affectsConfiguration('ibitsa.councillors')
+      )
+        host?.refreshCouncillors();
+    }),
     vscode.commands.registerCommand('ibitsa.openGame', openGame),
     vscode.commands.registerCommand('ibitsa.messageHero', async () => {
       // With several heroes, pick one: the bar opens addressed to it (#125).

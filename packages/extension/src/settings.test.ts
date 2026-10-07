@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   readChecks,
+  readCouncillorOverrides,
   readCouncilMode,
   readDisabledCouncillors,
   readElderSettings,
@@ -10,6 +11,23 @@ import {
 
 const config = (values: Record<string, unknown>) => ({
   get: <T>(key: string) => values[key] as T | undefined,
+});
+
+describe('readCouncillorOverrides (#181)', () => {
+  it('keeps text fields and a list of tools for each councillor, dropping the rest', () => {
+    expect(
+      readCouncillorOverrides(
+        config({
+          councillors: {
+            security: { title: ' Guardian ', model: '', tools: ['Read', 3], extra: 'x' },
+            tester: 'not an object',
+          },
+        }),
+      ),
+    ).toEqual({ security: { title: 'Guardian', tools: ['Read'] } });
+    expect(readCouncillorOverrides(config({ councillors: ['nope'] }))).toEqual({});
+    expect(readCouncillorOverrides(config({}))).toEqual({});
+  });
 });
 
 describe('readUserSettings', () => {

@@ -37,6 +37,18 @@ export type SettingValue = v.InferOutput<typeof SettingValueSchema>;
 /** Where a setting is written (§8.1): your settings, or this project's (`.vscode/settings.json`). */
 export const SettingLayerSchema = v.picklist(['user', 'workspace']);
 
+/** A councillor's id as a skill folder may be named (#181): lowercase words joined by hyphens. */
+export const CouncillorIdSchema = v.pipe(v.string(), v.regex(/^[a-z0-9][a-z0-9-]{0,40}$/));
+
+const field = v.pipe(v.string(), v.trim(), v.maxLength(100));
+/** `ibitsa.councillors.<id>` (#181): the fields a councillor's skill can be extended with. */
+export const CouncillorOverrideSchema = v.strictObject({
+  title: v.optional(field),
+  model: v.optional(field),
+  tools: v.optional(v.pipe(v.array(field), v.maxLength(10))),
+  portrait: v.optional(field),
+});
+
 export const HostRequestSchema = v.variant('type', [
   v.strictObject({ channel: v.literal('host'), type: v.literal('credentialsStatus') }),
   v.strictObject({ channel: v.literal('host'), type: v.literal('openApiKeyPage') }),
@@ -74,6 +86,40 @@ export const HostRequestSchema = v.variant('type', [
     channel: v.literal('host'),
     type: v.literal('openFile'),
     path: v.pipe(v.string(), v.nonEmpty(), v.maxLength(1024)),
+  }),
+  // The Roster (#181): councillors on or off, their field overrides, customising and new ones.
+  v.strictObject({ channel: v.literal('host'), type: v.literal('readCouncilSettings') }),
+  v.strictObject({
+    channel: v.literal('host'),
+    type: v.literal('setCouncillorEnabled'),
+    id: CouncillorIdSchema,
+    enabled: v.boolean(),
+    layer: SettingLayerSchema,
+  }),
+  /** `override` null removes the councillor's overrides from that layer. */
+  v.strictObject({
+    channel: v.literal('host'),
+    type: v.literal('setCouncillorOverride'),
+    id: CouncillorIdSchema,
+    override: v.nullable(CouncillorOverrideSchema),
+    layer: SettingLayerSchema,
+  }),
+  /** Copy a councillor's skill to your skills or the project's, and open it (replace, §4.7). */
+  v.strictObject({
+    channel: v.literal('host'),
+    type: v.literal('customiseCouncillor'),
+    id: CouncillorIdSchema,
+    path: v.pipe(v.string(), v.nonEmpty(), v.maxLength(1024)),
+    layer: SettingLayerSchema,
+  }),
+  /** Write a new councillor's skill from the template, and open it. */
+  v.strictObject({
+    channel: v.literal('host'),
+    type: v.literal('newCouncillor'),
+    id: CouncillorIdSchema,
+    title: v.pipe(v.string(), v.trim(), v.nonEmpty(), v.maxLength(60)),
+    description: v.pipe(v.string(), v.trim(), v.nonEmpty(), v.maxLength(300)),
+    layer: SettingLayerSchema,
   }),
 ]);
 

@@ -184,11 +184,7 @@ export class ClaudeAdapter implements AgentAdapter {
 
   /** The councillors a folder can seat (§4.7, #98), read from the skill files; no session needed. */
   async listCouncillors({ cwd }: { cwd: string }): Promise<CouncillorInfo[]> {
-    return new CouncillorSkills({
-      cwd,
-      home: this.options.home ?? homedir(),
-      pluginDirs: this.options.pluginDirs?.() ?? [],
-    }).list();
+    return CouncillorSkills.of({ cwd, adapter: this.options }).list();
   }
 
   /** Writes a new action as a skill (#86): in the user's home, or the workspace repo for the project. */

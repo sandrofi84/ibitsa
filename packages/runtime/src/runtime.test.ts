@@ -1377,6 +1377,7 @@ describe('the round table (#103)', () => {
     const home = mkdtempSync(join(tmpdir(), 'ibitsa-home-'));
     dirs.push(storageDir, home);
     const calls: Call[] = [];
+    let disabled: string[] = [];
     const adapter = new FakeAdapter();
     Object.assign(adapter, {
       listCouncillors: async () => [
@@ -1420,6 +1421,7 @@ describe('the round table (#103)', () => {
       councilMode: () => 'roundTable',
       watchFolder: () => ({ close: () => {} }),
       ...(repoDir ? { repoDir } : {}),
+      disabledCouncillors: () => disabled,
     });
     runtime.start();
     const received: CoreMessage[] = [];
@@ -1430,7 +1432,10 @@ describe('the round table (#103)', () => {
       await flush();
       clock.advance(SNAPSHOT_INTERVAL_MS);
     };
-    return { storageDir, runtime, connection, calls, snapshot, settle };
+    const disable = (ids: string[]) => {
+      disabled = ids;
+    };
+    return { storageDir, runtime, connection, calls, snapshot, settle, disable };
   }
   const convene = {
     type: 'conveneCouncil',
@@ -1440,6 +1445,17 @@ describe('the round table (#103)', () => {
     roster: ['security'],
     effort: 'standard',
   } as const;
+
+  it('keeps a turned-off councillor in the roster but not among those who can sit (#181)', async () => {
+    const env = withSitting();
+    await env.settle();
+    env.disable(['security']);
+    env.runtime.refreshCouncillors();
+    await env.settle();
+    env.connection.receive({ type: 'hello', protocolVersion: 1 });
+    expect(env.snapshot()?.councillors).toEqual([]);
+    expect(env.snapshot()?.roster?.map((c) => c.id)).toEqual(['security']);
+  });
 
   it('puts the councillors and the council mode in the snapshot', async () => {
     const env = withSitting();

@@ -1,10 +1,11 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { join } from 'node:path';
-import type { CouncillorInfo } from '@ibitsa/protocol';
-import type { SkillRoot } from './councillor-skills.types';
+import type { CouncillorInfo, CouncillorOverride } from '@ibitsa/protocol';
+import type { ClaudeAdapterOptions } from './claude-adapter.types';
+import type { CouncillorSkillsOptions, SkillRoot } from './councillor-skills.types';
 import { pluginName, readSkillFile } from './skill-files';
-import type { SkillFilesOptions } from './skill-files.types';
 
 /** Tools a councillor may have: a sitting only reads (§4.3). */
 const READ_ONLY_TOOLS = ['Read', 'Grep', 'Glob', 'WebFetch', 'WebSearch'];
@@ -16,7 +17,18 @@ const DEFAULT_TOOLS = ['Read', 'Grep', 'Glob'];
  * prefix, and a later source replaces an earlier one with the same id: project over user over built-in.
  */
 export class CouncillorSkills {
-  constructor(private readonly options: SkillFilesOptions) {}
+  constructor(private readonly options: CouncillorSkillsOptions) {}
+
+  /** The councillors a folder can seat, as the adapter's options find them, overrides included. */
+  static of({ cwd, adapter }: { cwd: string; adapter: ClaudeAdapterOptions }): CouncillorSkills {
+    const overrides = adapter.councillorOverrides?.();
+    return new CouncillorSkills({
+      cwd,
+      home: adapter.home ?? homedir(),
+      pluginDirs: adapter.pluginDirs?.() ?? [],
+      ...(overrides ? { overrides } : {}),
+    });
+  }
 
   list(): CouncillorInfo[] {
     return [...this.byId().values()]
@@ -57,6 +69,11 @@ export class CouncillorSkills {
     const byId = new Map<string, { info: CouncillorInfo; path: string }>();
     for (const root of this.roots()) {
       for (const found of councillorsIn(root)) byId.set(found.info.id, found);
+    }
+    const overrides = this.options.overrides ?? {};
+    for (const [id, found] of byId) {
+      const override = overrides[id];
+      if (override) byId.set(id, { ...found, info: extended({ info: found.info, override }) });
     }
     return byId;
   }
@@ -106,6 +123,32 @@ function toCouncillor({ path, root }: { path: string; root: SkillRoot }): Counci
     // A skill without either section is all planning advice.
     modes: { planning: planning || !review, review },
     hash: createHash('sha256').update(readFileSync(path)).digest('hex').slice(0, 12),
+    path,
+  };
+}
+
+/**
+ * A councillor with the user's overrides (#181): title, model, portrait and tools, the tools kept to
+ * read-only ones. A changed override gives a new hash, so a new council version (§4.10).
+ */
+function extended({
+  info,
+  override,
+}: {
+  info: CouncillorInfo;
+  override: CouncillorOverride;
+}): CouncillorInfo {
+  const tools = override.tools?.filter((t) => READ_ONLY_TOOLS.includes(t)) ?? [];
+  return {
+    ...info,
+    ...(override.title?.trim() ? { title: override.title.trim() } : {}),
+    ...(override.model?.trim() ? { model: override.model.trim() } : {}),
+    ...(override.portrait?.trim() ? { portrait: override.portrait.trim() } : {}),
+    ...(tools.length > 0 ? { tools: [...new Set(tools)] } : {}),
+    hash: createHash('sha256')
+      .update(`${info.hash}${JSON.stringify(override)}`)
+      .digest('hex')
+      .slice(0, 12),
   };
 }
 

@@ -1,4 +1,3 @@
-import { homedir } from 'node:os';
 import type {
   Options,
   PreToolUseHookInput,
@@ -157,11 +156,7 @@ export class RoundTableSession implements SittingSession {
 
   constructor(init: RoundTableInit) {
     this.init = init;
-    const skills = new CouncillorSkills({
-      cwd: init.start.cwd,
-      home: init.adapter.home ?? homedir(),
-      pluginDirs: init.adapter.pluginDirs?.() ?? [],
-    });
+    const skills = CouncillorSkills.of({ cwd: init.start.cwd, adapter: init.adapter });
     this.seats = init.start.roster.map(({ councillorId }) => seat({ skills, councillorId }));
     void this.run();
   }
@@ -508,11 +503,7 @@ export class RoundTableSession implements SittingSession {
   }
 
   protected skills(): CouncillorSkills {
-    return new CouncillorSkills({
-      cwd: this.init.start.cwd,
-      home: this.init.adapter.home ?? homedir(),
-      pluginDirs: this.init.adapter.pluginDirs?.() ?? [],
-    });
+    return CouncillorSkills.of({ cwd: this.init.start.cwd, adapter: this.init.adapter });
   }
 
   protected emit(event: CouncilEvent): void {

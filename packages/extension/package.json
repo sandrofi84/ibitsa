@@ -179,6 +179,32 @@
           "uniqueItems": true,
           "markdownDescription": "Councillors the council never seats, by id (a councillor skill's name, e.g. `designer`). Ibitsa's built-ins are `architect`, `tester`, `accessibility`, `security` and `designer`."
         },
+        "ibitsa.councillors": {
+          "type": "object",
+          "default": {},
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              },
+              "tools": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "portrait": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "markdownDescription": "Overrides for councillors, by id: `title`, `model`, `tools` (read-only ones only) and `portrait`. The skill file stays as it is. Edit them in the Guild Hall's Roster."
+        },
         "ibitsa.claudeCodePath": {
           "type": "string",
           "default": "",
