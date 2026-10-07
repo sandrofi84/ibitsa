@@ -20,6 +20,7 @@ import {
   type CouncillorInfo,
   type Cue,
   type ElderEvent,
+  type GitHostView,
   PROTOCOL_VERSION,
   parseCommand,
   type RepoView,
@@ -50,6 +51,8 @@ export class Runtime {
   private state: CoreState = initialState();
   /** The latest repo scan; undefined until the first one finishes. */
   private repo: RepoView | null | undefined;
+  /** What the git host allows here (#162), refreshed with the repo scan and after each PR result. */
+  private gitHost: GitHostView | undefined;
   private log: CampaignLog | null = null;
   /** The running campaign's journal, built from its log (#58); front ends page through it. */
   private journal = new Journal();
@@ -103,7 +106,11 @@ export class Runtime {
       gitHost: options.gitHost,
       clock: options.clock,
       pollSeconds: options.pullRequestPollSeconds ?? (() => 60),
-      report: (event) => this.input({ kind: 'gm', t: this.t(), event }),
+      report: (event) => {
+        this.input({ kind: 'gm', t: this.t(), event });
+        // A push or PR action may have signed the user in, or shown the remote is gone.
+        if (event.type !== 'pullRequestsPolled') this.checkGitHost();
+      },
     });
   }
 
@@ -875,10 +882,15 @@ export class Runtime {
       councillors: this.councillorList,
       councilMode: this.options.councilMode?.() ?? 'ask',
     };
-    return this.repo === undefined ? snapshot : { ...snapshot, repo: this.repo };
+    return {
+      ...snapshot,
+      ...(this.repo === undefined ? {} : { repo: this.repo }),
+      ...(this.gitHost ? { gitHost: this.gitHost } : {}),
+    };
   }
 
   private rescanRepo(): void {
+    this.checkGitHost();
     this.options.gameMaster
       .scanRepo()
       .then((repo) => {
@@ -887,6 +899,20 @@ export class Runtime {
       })
       .catch(() => {
         // No scan, no repo field: the form shows what it knows.
+      });
+  }
+
+  /** What stands in the way of pushing and PRs here, before any click (#162). */
+  private checkGitHost(): void {
+    void this.pullRequests
+      .status()
+      .then((gitHost) => {
+        if (JSON.stringify(gitHost) === JSON.stringify(this.gitHost)) return;
+        this.gitHost = gitHost;
+        this.scheduleSnapshot();
+      })
+      .catch(() => {
+        // Unknown: the card says what went wrong after a click instead.
       });
   }
 

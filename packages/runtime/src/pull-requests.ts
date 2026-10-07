@@ -1,6 +1,7 @@
-import type { PullRequestState } from '@ibitsa/protocol';
+import type { GitHostView, PullRequestState } from '@ibitsa/protocol';
 import type { PullRequestEffect, PullRequestsOptions } from './pull-requests.types';
 
+const NO_HOST = 'Pull requests need a git host; only Push branch works.';
 /** Polling never runs more often than this, whatever the setting says. */
 const MIN_POLL_SECONDS = 15;
 
@@ -83,6 +84,22 @@ export class PullRequests {
     this.options.report({ type: 'restacked', islandId: effect.islandId, outcome, head });
   }
 
+  /**
+   * What stands in the way here (#162): no origin stops everything; a remote the host doesn't serve,
+   * or no host at all, stops only PRs. Signing in is never asked for here.
+   */
+  async status(): Promise<GitHostView> {
+    const remoteUrl = await this.options.gameMaster.remoteUrl?.();
+    if (!remoteUrl) {
+      const why = 'The repository has no origin remote.';
+      return { push: why, pullRequests: why, signedIn: false };
+    }
+    const host = this.options.gitHost;
+    if (!host) return { push: null, pullRequests: NO_HOST, signedIn: false };
+    const { unsupported, signedIn } = await host.status({ remoteUrl });
+    return { push: null, pullRequests: unsupported, signedIn };
+  }
+
   dispose(): void {
     this.stopTimer();
     this.watched = [];
@@ -142,7 +159,7 @@ export class PullRequests {
 
   private async host() {
     const host = this.options.gitHost;
-    if (!host) throw new Error('Pull requests need a git host; only Push branch works.');
+    if (!host) throw new Error(NO_HOST);
     const remoteUrl = await this.options.gameMaster.remoteUrl?.();
     if (!remoteUrl) throw new Error('The repository has no origin remote.');
     return { host, remoteUrl };

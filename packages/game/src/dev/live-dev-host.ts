@@ -18,6 +18,7 @@ import {
   type CouncillorInfo,
   type ElderEvent,
   type Finding,
+  type GitHostView,
   type HostEvent,
   type HostRequest,
   type Plan,
@@ -52,6 +53,7 @@ export class LiveDevHost implements Host {
   private readonly started = Date.now();
   private readonly listeners: ((m: CoreMessage) => void)[] = [];
   private readonly repo: RepoView | null;
+  private readonly gitHost: GitHostView | undefined;
   private diffs = 0;
   /** Every command the game sent, oldest first. */
   readonly sent: Command[] = [];
@@ -85,6 +87,7 @@ export class LiveDevHost implements Host {
     review,
     reviews = false,
     pullRequestPollMs = null,
+    gitHost,
   }: {
     credentialsReady: boolean;
     repo: RepoView | null;
@@ -98,9 +101,12 @@ export class LiveDevHost implements Host {
     reviews?: boolean;
     /** Dev only (#153): how often the fake GitHub polls watched PRs; null polls only on Refresh. */
     pullRequestPollMs?: number | null;
+    /** Dev only (#162): what the git host allows, as the runtime would report it. */
+    gitHost?: GitHostView;
   }) {
     this.channel = new FakeHostChannel({ credentialsReady });
     this.repo = repo;
+    this.gitHost = gitHost;
     this.sandboxed = sandboxed;
     this.demoReview =
       review === 'demo'
@@ -742,6 +748,7 @@ export class LiveDevHost implements Host {
       snapshot: {
         ...view(this.state),
         repo: this.repo,
+        ...(this.gitHost ? { gitHost: this.gitHost } : {}),
         projectRules: this.projectRules,
         sandboxed: this.sandboxed,
         councillors: LIVE_COUNCILLORS,

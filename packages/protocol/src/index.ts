@@ -41,6 +41,7 @@ export {
   PlanTaskSchema,
 } from './plan.schema';
 export type {
+  GitHostView,
   IslandRemoteView,
   PolledPullRequest,
   PullRequestComment,

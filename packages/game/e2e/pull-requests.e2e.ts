@@ -270,3 +270,21 @@ test('stacked: once the first PR merges, the second is retargeted and restacked 
   await expect(card.getByRole('button', { name: /Restack/ })).toHaveCount(0);
   expect(errors).toEqual([]);
 });
+
+test("the card says what the git host won't allow before any click (#162)", async ({ page }) => {
+  await page.goto('/?fixture=live&pr=demo&prPoll=off&gitHost=gitlab');
+  await expect.poll(() => badge(page), { timeout: 15_000 }).toBe('none');
+  await clickBadge(page);
+  const card = page.getByRole('region', { name: 'Pull request card' });
+  await expect(card.getByRole('button', { name: 'Open PR' })).toBeDisabled();
+  await expect(card.getByRole('button', { name: 'Push branch only' })).toBeEnabled();
+  await expect(
+    card.getByText("Pull requests need a GitHub remote, and origin isn't on github.com."),
+  ).toBeVisible();
+
+  await page.goto('/?fixture=live&pr=demo&prPoll=off&gitHost=signedOut');
+  await expect.poll(() => badge(page), { timeout: 15_000 }).toBe('none');
+  await clickBadge(page);
+  await expect(card.getByRole('button', { name: 'Open PR' })).toBeEnabled();
+  await expect(card.getByText("You'll be asked to sign in to GitHub.")).toBeVisible();
+});

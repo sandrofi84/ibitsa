@@ -3,6 +3,7 @@ import type { GitHost } from '@ibitsa/runtime';
 import type { GitHubHostOptions, GitHubRepository, PolledNode } from './github-host.types';
 
 const API_VERSION = '2022-11-28';
+const NOT_GITHUB = "Pull requests need a GitHub remote, and origin isn't on github.com.";
 /** Check rollups that mean the PR's checks are failing. */
 const FAILING = new Set(['FAILURE', 'ERROR']);
 
@@ -64,6 +65,19 @@ export class GitHubHost implements GitHost {
       number: created.number,
       url: created.html_url,
       state: created.draft ? 'draft' : 'open',
+    };
+  }
+
+  /** Whether origin is on GitHub, and whether the user is signed in (without asking them to). */
+  async status({
+    remoteUrl,
+  }: {
+    remoteUrl: string;
+  }): Promise<{ unsupported: string | null; signedIn: boolean }> {
+    if (!GitHubHost.repository(remoteUrl)) return { unsupported: NOT_GITHUB, signedIn: false };
+    return {
+      unsupported: null,
+      signedIn: (await this.options.token({ interactive: false })) !== null,
     };
   }
 
@@ -163,8 +177,7 @@ export class GitHubHost implements GitHost {
   private repo(remoteUrl: string): GitHubRepository {
     const repo = GitHubHost.repository(remoteUrl);
     // The URL itself isn't repeated: an HTTPS remote can carry a token.
-    if (!repo)
-      throw new Error("Pull requests need a GitHub remote, and origin isn't on github.com.");
+    if (!repo) throw new Error(NOT_GITHUB);
     return repo;
   }
 

@@ -16,8 +16,8 @@ import type { PullRequestAction } from './pull-requests.types';
  * and a button for each thing that can be done now, disabled with the reason when it can't. Every push
  * and PR change is a click here; core checks the rules again.
  */
-export function pullRequestCard({ island, onAction }: PullRequestCardOptions): HTMLElement {
-  const model = cardOf(island);
+export function pullRequestCard({ island, host, onAction }: PullRequestCardOptions): HTMLElement {
+  const model = cardOf({ island, host });
   const card = el('section', { className: 'pr-card' });
   card.setAttribute('aria-label', 'Pull request');
   card.append(el('h3', { text: model.heading }));
@@ -35,6 +35,7 @@ export function pullRequestCard({ island, onAction }: PullRequestCardOptions): H
   }
   if (model.busy) card.append(el('p', { className: 'note pr-busy', text: model.busy }));
   if (model.restack) card.append(el('p', { className: 'note pr-restack', text: model.restack }));
+  if (model.signIn) card.append(el('p', { className: 'note pr-sign-in', text: model.signIn }));
   if (model.error) {
     const error = el('p', { className: 'pr-error', text: model.error });
     error.setAttribute('role', 'alert');
@@ -227,12 +228,16 @@ export function mountPullRequestPanel(actions: PullRequestActions): PullRequestP
       close();
       return;
     }
-    const key = JSON.stringify(island);
+    const key = JSON.stringify([island, snapshot.gitHost]);
     if (key === shownKey) return;
     shownKey = key;
     panel.replaceChildren(
       el('h2', { text: island.name }),
-      pullRequestCard({ island, onAction: actOn({ actions, islandId: island.id }) }),
+      pullRequestCard({
+        island,
+        host: snapshot.gitHost,
+        onAction: actOn({ actions, islandId: island.id }),
+      }),
       button({ label: 'Close', onClick: close }),
     );
   };
@@ -263,7 +268,7 @@ export function mountPullRequestHover({ client }: { client: GameClient }): PullR
     show: ({ islandId, x, y }) => {
       const island = client.snapshot && islandOf(client.snapshot, islandId);
       if (!island) return;
-      const model = cardOf(island);
+      const model = cardOf({ island, host: client.snapshot?.gitHost });
       tip.replaceChildren(
         el('strong', { text: model.heading }),
         el('span', { text: ` · ${model.busy ?? model.status}` }),
