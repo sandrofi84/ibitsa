@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { openWelcome } from './home';
 
 interface Probe {
   sounds(): { slot: string; volume: number }[];
@@ -14,9 +15,10 @@ const probe = <T>(page: Page, read: (p: Probe) => T) =>
   }, read.toString()) as Promise<T>;
 
 const startQuest = async (page: Page, task: string) => {
-  await page.getByRole('button', { name: 'New quest' }).click();
+  // Through the council hut's welcome (#180).
+  await openWelcome(page);
   await page.getByLabel('Task').fill(task);
-  await page.getByRole('button', { name: 'Skip the elder' }).click();
+  await page.getByRole('button', { name: 'I know the way' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
 };
 
