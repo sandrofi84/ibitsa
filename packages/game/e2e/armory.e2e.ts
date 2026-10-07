@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { openWelcome } from './home';
 
 interface Probe {
   guildHallOnPage(): { x: number; y: number } | null;
@@ -60,9 +61,9 @@ test('the Armory: a new class used in party assembly, and a recolored hero (#182
   await hall.press('Escape');
 
   // Party assembly offers the new class.
-  await page.getByRole('button', { name: 'New quest' }).click();
+  await openWelcome(page);
   await page.getByLabel('Task').fill('Fix the login redirect');
-  await page.getByRole('button', { name: 'Ask the elder' }).click();
+  await page.getByRole('button', { name: 'Help me find it' }).click();
   const elder = page.getByRole('region', { name: 'Elder' });
   await elder.getByRole('button', { name: 'Convene council' }).click();
   await page
