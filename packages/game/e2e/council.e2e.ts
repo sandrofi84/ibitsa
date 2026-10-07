@@ -62,7 +62,9 @@ test('asks the council mid-campaign with @council and @tester, and in its chambe
   const lines = await probe(page, (p) => p.snapshot()?.sitting?.dialogue.map((d) => d.speaker));
   expect(lines?.slice(-4)).toEqual(['you', 'elder', 'you', 'tester']);
 
-  // The hut on the map opens the chamber: the lines so far and a box to ask.
+  // The hut on the map opens the chamber: the lines so far and a box to ask. The bar still has focus
+  // from the question, so it lets go first, or "0" is typed into it instead of showing the whole map.
+  await bar.blur();
   await page.locator('body').press('0');
   await page.evaluate(() => {
     for (const panel of document.querySelectorAll<HTMLElement>('.needs-you, .hero-pane')) {
