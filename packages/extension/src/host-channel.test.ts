@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import type { HostEvent } from '@ibitsa/protocol';
 import { describe, expect, it, vi } from 'vitest';
 import type { Credentials } from './credentials.types';
@@ -141,14 +142,15 @@ describe('the Guild Hall on the host channel (#179)', () => {
     await channel.receive({ channel: 'host', type: 'openFile', path: '/etc/passwd' });
     expect(deps.openSettings).toHaveBeenCalledOnce();
     expect(deps.openFile).toHaveBeenCalledTimes(1);
-    expect(deps.openFile).toHaveBeenCalledWith('/ws/.ibitsa/campaigns/c1/record.md');
+    expect(deps.openFile).toHaveBeenCalledWith(resolve('/ws', '.ibitsa/campaigns/c1/record.md'));
   });
 
   it('checks paths against every allowed folder', () => {
     const roots = ['/home/me/.claude/skills'];
     expect(
       openablePath({ path: '/home/me/.claude/skills/x/SKILL.md', workspace: '/ws', roots }),
-    ).toBe('/home/me/.claude/skills/x/SKILL.md');
+      // Resolved for the platform: a drive letter on Windows.
+    ).toBe(resolve('/home/me/.claude/skills/x/SKILL.md'));
     expect(openablePath({ path: '/home/me/.claude/skills', workspace: '/ws', roots })).toBeNull();
     expect(openablePath({ path: 'a.md', workspace: undefined, roots })).toBeNull();
     expect(openablePath({ path: '/ws/../ws2/a.md', workspace: '/ws', roots })).toBeNull();
