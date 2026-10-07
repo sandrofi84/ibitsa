@@ -255,17 +255,15 @@ suite('extension wiring (#36)', () => {
     );
   });
 
-  test('a reload rebuilds the quest from the log and offers to resume', async () => {
+  test('a reload rebuilds the quest from the log; a hero you had stopped stays stopped (#166)', async () => {
+    // The previous test stopped the hero, so the reload doesn't resume it; nothing goes to Needs you.
     await api.restartRuntime();
     api.receive({ type: 'hello', protocolVersion: 1 });
     await until(
-      () => lastSnapshot()?.heroes[0]?.state.kind === 'unknown',
-      'the hero to show as not resumed',
-    );
-    assert.deepEqual(
-      lastSnapshot()?.needsYou.map((i) => i.kind),
-      ['error'],
-      'the question from the old process is dropped; an error item offers resume',
+      () =>
+        lastSnapshot()?.needsYou.length === 0 &&
+        lastSnapshot()?.heroes[0]?.state.kind !== 'unknown',
+      'the question from the old process to be dropped, with nothing to resume by hand',
     );
   });
 });
