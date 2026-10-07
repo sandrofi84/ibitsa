@@ -53,6 +53,7 @@ function connected({
         capMicroUsd: null,
         maxParallel: 2,
         shipped: false,
+        ending: null,
       },
       elder: null,
       sitting: null,

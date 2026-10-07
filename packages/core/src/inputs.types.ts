@@ -4,6 +4,7 @@ import type {
   Command,
   CouncilEvent,
   ElderEvent,
+  LessonsEvent,
   PolledPullRequest,
   PullRequestComment,
   PullRequestState,
@@ -62,6 +63,9 @@ export type GameMasterEvent =
     }
   /** The git host's answer for the PRs being watched. */
   | { type: 'pullRequestsPolled'; pullRequests: PolledPullRequest[] }
+  /** `record.md` was saved (§4.9, #167), or couldn't be. */
+  | { type: 'recordWritten'; path: string }
+  | { type: 'recordFailed'; message: string }
   /** The runtime rebuilt state after a restart; every live session is gone (spec §12). */
   | { type: 'runtimeRestarted' };
 
@@ -77,6 +81,8 @@ export type CoreInput =
   | { kind: 'elder'; t: number; elderId: string; event: ElderEvent }
   /** From a sitting's lead session; ignored unless `sittingId` is the current sitting. */
   | { kind: 'council'; t: number; sittingId: string; event: CouncilEvent }
+  /** From the elder's lessons session at the campaign's end (§4.9); ignored unless it's the current one. */
+  | { kind: 'lessons'; t: number; lessonsId: string; event: LessonsEvent }
   | { kind: 'command'; t: number; command: Command }
   | { kind: 'gm'; t: number; event: GameMasterEvent }
   | { kind: 'timer'; t: number; timerId: string };

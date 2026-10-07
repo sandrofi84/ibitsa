@@ -1,6 +1,7 @@
+import type { CampaignRecordData } from '@ibitsa/core';
 import type { Plan } from '@ibitsa/protocol';
 import { describe, expect, it } from 'vitest';
-import { planMarkdown } from './campaign-documents';
+import { planMarkdown, recordMarkdown } from './campaign-documents';
 
 const plan: Plan = {
   summary: 'Sign-in',
@@ -72,5 +73,139 @@ describe('planMarkdown (#104, #120)', () => {
     });
     expect(md).toContain('## Book of Decisions\n\n(none)');
     expect(md).not.toContain('## Islands');
+  });
+});
+
+const RECORD: CampaignRecordData = {
+  title: 'Sign-in',
+  status: 'finished',
+  summary: 'Email sign-in.',
+  decisions: [
+    {
+      id: 'D1',
+      title: 'Methods',
+      raisedBy: 'security',
+      chosen: 'Email',
+      alternatives: [],
+      why: 'Simple',
+      affects: ['T1'],
+    },
+  ],
+  islands: [
+    {
+      name: 'Backend',
+      branch: 'ibitsa/backend',
+      tasks: [
+        { title: 'Auth', state: 'done' },
+        { title: 'Form', state: 'active' },
+      ],
+      pullRequest: { number: 12, url: 'https://github.com/o/r/pull/12', state: 'merged' },
+    },
+    { name: 'Docs', branch: 'ibitsa/docs', tasks: [], pullRequest: null },
+  ],
+  deferred: {
+    unfinished: ['Backend: Form'],
+    suggestions: [
+      { councillorId: 'tester', message: 'Add a fuzz test', file: 'src/a.ts', line: 4 },
+    ],
+    revisits: [{ councillorId: 'security', decisionId: 'D1', message: 'Consider passkeys' }],
+  },
+  gold: { kind: 'exact', value: 1_234_567 },
+  tallies: [
+    {
+      sittingId: 's1',
+      mode: 'roundTable',
+      councilVersion: null,
+      comparisonOf: null,
+      outcome: 'approved',
+      startedAt: 0,
+      durationMs: 180_000,
+      cost: { totalMicroUsd: 400_000, byModel: [], byCouncillor: [] },
+      effort: 'standard',
+      elderEffort: null,
+      roster: [
+        { councillorId: 'security', effort: 'standard', elderEffort: null, recommended: true },
+      ],
+      changedElderPicks: null,
+    } as unknown as CampaignRecordData['tallies'][number],
+  ],
+  lessons: ['Brief the hero on hashing.'],
+};
+
+describe('the campaign record (#167)', () => {
+  it('says what shipped, what was decided and deferred, the gold, the council and the lessons', () => {
+    expect(recordMarkdown(RECORD)).toBe(
+      [
+        '# Campaign record: Sign-in',
+        '',
+        '**Finished.**',
+        '',
+        'Email sign-in.',
+        '',
+        '## What shipped',
+        '',
+        '### Backend (`ibitsa/backend`)',
+        '',
+        'Pull request [#12](https://github.com/o/r/pull/12): merged.',
+        '- [x] Auth',
+        '- [ ] Form',
+        '',
+        '### Docs (`ibitsa/docs`)',
+        '',
+        'No pull request.',
+        '',
+        '## Decisions',
+        '',
+        '- **D1 Methods:** Email. Simple',
+        '',
+        '## Deferred',
+        '',
+        '**Unfinished tasks:**',
+        '- Backend: Form',
+        '',
+        '**Suggestions kept for later:**',
+        '- tester (`src/a.ts:4`): Add a fuzz test',
+        '',
+        '**Decisions a reviewer asked to revisit (dismissed):**',
+        '- D1, security: Consider passkeys',
+        '',
+        '## Gold',
+        '',
+        '$1.23',
+        '',
+        '## The council',
+        '',
+        '- Round table, standard effort: approved, $0.40, 3 min; security.',
+        '',
+        '## Lessons',
+        '',
+        '- Brief the hero on hashing.',
+        '',
+      ].join('\n'),
+    );
+  });
+
+  it('marks an abandoned campaign, and says when there was nothing, or the gold is unknown', () => {
+    const md = recordMarkdown({
+      ...RECORD,
+      status: 'abandoned',
+      summary: null,
+      decisions: [],
+      islands: [],
+      deferred: { unfinished: [], suggestions: [], revisits: [] },
+      gold: { kind: 'unknown' },
+      tallies: [],
+      lessons: null,
+    });
+    expect(md).toContain('**Abandoned.**');
+    expect(md).toContain('(nothing: no island was started)');
+    expect(md).toContain('## Decisions\n\n(none)');
+    expect(md).toContain('## Deferred\n\n(nothing)');
+    expect(md).toContain('Unknown: some of the work never reported its cost.');
+    expect(md).not.toContain('## The council');
+    expect(md).not.toContain('## Lessons');
+    expect(
+      recordMarkdown({ ...RECORD, gold: { kind: 'estimated', value: 500_000, basis: 'x' } }),
+    ).toContain('$0.50 (estimated)');
   });
 });

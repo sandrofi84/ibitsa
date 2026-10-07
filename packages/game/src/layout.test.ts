@@ -57,6 +57,7 @@ const snapshot = ({
     capMicroUsd: null,
     maxParallel: 2,
     shipped: false,
+    ending: null,
   },
   heroes,
   needsYou: [],

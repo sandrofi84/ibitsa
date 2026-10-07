@@ -238,6 +238,7 @@ Settled in M7 planning (it changes the earlier draft: the record is built, not w
   - **Compact**: the lead session is resumed and compacted there and then, so the next campaign starts quickly.
   - **Keep**: the lead session's id is kept in workspace storage, and the next campaign's first sitting resumes it.
 - **Abandon** writes the record and empties the context without asking.
+- (#167:) A dialog follows the end: the record being written ("The elder is writing the lessons…", then where `record.md` is), then, after Finish with a council that sat, Empty / Compact / Keep with Empty focused and the context's rough size (what was written into it, not each turn's re-reads). The lessons run only when something was reviewed; they get the reviews' rounds, blocking findings, failed reviews, dropped findings and PR comments, and nothing else (no tools). Their cost counts in the campaign's gold, and the record waits for it. Compact runs Claude Code's `/compact` on the resumed lead session. The kept session id lives in workspace storage (`council.json`) and is taken once, by the next campaign's first sitting.
 - A hero's session ends when its island's PR is marked ready for review (or the work is abandoned). Bringing PR comments to the hero resumes that session (§5.6).
 
 ### 4.10 Measuring sittings

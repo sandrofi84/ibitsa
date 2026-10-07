@@ -21,6 +21,7 @@ import {
   type GitHostView,
   type HostEvent,
   type HostRequest,
+  type LessonsEvent,
   type Plan,
   PROTOCOL_VERSION,
   type RepoView,
@@ -377,6 +378,8 @@ export class LiveDevHost implements Host {
     });
     const sittingId = this.state.sitting?.id ?? '';
     const council = (event: CouncilEvent) => quietly({ kind: 'council', t, sittingId, event });
+    // A council that sat has a context to keep or empty at the end (#167).
+    council({ type: 'sessionStarted', sessionId: 'demo-council' });
     for (const councillorId of roster) {
       council({
         type: 'reportFiled',
@@ -728,6 +731,25 @@ export class LiveDevHost implements Host {
         this.reviewer(effect.reviewId, scriptedReview({ effect, first: started === 0 }));
         return;
       }
+      // The end of a campaign (#167): scripted lessons, and the record "written".
+      case 'startLessons':
+        setTimeout(() => {
+          const lessons = (event: LessonsEvent) =>
+            this.input({ kind: 'lessons', t: this.t(), lessonsId: effect.lessonsId, event });
+          lessons({
+            type: 'lessonsSubmitted',
+            lessons: ['Brief the hero on what the reviewers check.'],
+          });
+          lessons({ type: 'usage', totalCost: 20_000 });
+        }, STEP_MS);
+        return;
+      case 'writeRecord':
+        this.input({
+          kind: 'gm',
+          t: this.t(),
+          event: { type: 'recordWritten', path: '.ibitsa/campaigns/demo/record.md' },
+        });
+        return;
       case 'removeWorktree':
         this.input({
           kind: 'gm',

@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import type { CampaignRecordData } from '@ibitsa/core';
 import { type CodePointer, type Plan, planIslands, type ResearchBrief } from '@ibitsa/protocol';
 
 /**
@@ -36,6 +37,12 @@ export class CampaignDocuments {
     writeFileSync(join(dir, `plan-v${version}.json`), json);
     writeFileSync(join(dir, 'plan.md'), planMarkdown({ version, plan }));
     return dir;
+  }
+
+  /** `record.md` at the campaign's end (§4.9, #167). Returns its path, relative to the repository. */
+  saveRecord({ campaignId, record }: { campaignId: string; record: CampaignRecordData }): string {
+    writeFileSync(join(this.folder(campaignId), 'record.md'), recordMarkdown(record));
+    return ['.ibitsa', 'campaigns', campaignId, 'record.md'].join('/');
   }
 
   private folder(campaignId: string): string {
@@ -123,6 +130,83 @@ export function planMarkdown({ version, plan }: { version: number; plan: Plan })
     if (d.discussion) lines.push(`**Discussion:** ${d.discussion}`);
     if (d.affects.length > 0) lines.push(`**Affects tasks:** ${d.affects.join(', ')}`);
     if (d.supersedes) lines.push(`**Supersedes:** ${d.supersedes}`);
+  }
+  lines.push('');
+  return lines.join('\n');
+}
+
+/** Micro-dollars as dollars, e.g. `$1.23`. */
+function dollars(microUsd: number): string {
+  return `$${(microUsd / 1_000_000).toFixed(2)}`;
+}
+
+/**
+ * The campaign record as markdown (§4.9, #167): what was decided and shipped, what was deferred, what
+ * it cost, how the council sat, and the elder's lessons.
+ */
+export function recordMarkdown(record: CampaignRecordData): string {
+  const lines = [`# Campaign record: ${record.title}`, ''];
+  lines.push(record.status === 'abandoned' ? '**Abandoned.**' : '**Finished.**');
+  if (record.summary) lines.push('', record.summary);
+  lines.push('', '## What shipped');
+  for (const island of record.islands) {
+    const pr = island.pullRequest;
+    const done = island.tasks.filter((t) => t.state === 'done' || t.state === 'doneUnreviewed');
+    lines.push(
+      '',
+      `### ${island.name} (\`${island.branch}\`)`,
+      '',
+      pr ? `Pull request [#${pr.number}](${pr.url}): ${pr.state}.` : 'No pull request.',
+      ...island.tasks.map((t) => `- [${done.includes(t) ? 'x' : ' '}] ${t.title}`),
+    );
+  }
+  if (record.islands.length === 0) lines.push('', '(nothing: no island was started)');
+  lines.push('', '## Decisions');
+  if (record.decisions.length === 0) lines.push('', '(none)');
+  for (const d of record.decisions)
+    lines.push('', `- **${d.id} ${d.title}:** ${d.chosen}. ${d.why}`);
+  const { unfinished, suggestions, revisits } = record.deferred;
+  lines.push('', '## Deferred');
+  if (unfinished.length + suggestions.length + revisits.length === 0) lines.push('', '(nothing)');
+  if (unfinished.length > 0)
+    lines.push('', '**Unfinished tasks:**', ...unfinished.map((t) => `- ${t}`));
+  if (suggestions.length > 0) {
+    lines.push(
+      '',
+      '**Suggestions kept for later:**',
+      ...suggestions.map((f) => {
+        const where = f.file ? ` (\`${f.file}${f.line ? `:${f.line}` : ''}\`)` : '';
+        return `- ${f.councillorId}${where}: ${f.message}`;
+      }),
+    );
+  }
+  if (revisits.length > 0) {
+    lines.push(
+      '',
+      '**Decisions a reviewer asked to revisit (dismissed):**',
+      ...revisits.map((r) => `- ${r.decisionId}, ${r.councillorId}: ${r.message}`),
+    );
+  }
+  lines.push('', '## Gold', '');
+  lines.push(
+    record.gold.kind === 'unknown'
+      ? 'Unknown: some of the work never reported its cost.'
+      : `${dollars(record.gold.value)}${record.gold.kind === 'estimated' ? ' (estimated)' : ''}`,
+  );
+  if (record.tallies.length > 0) {
+    lines.push('', '## The council');
+    for (const t of record.tallies) {
+      const cost = t.cost.totalMicroUsd === null ? 'cost unknown' : dollars(t.cost.totalMicroUsd);
+      const minutes = t.durationMs === null ? '' : `, ${Math.round(t.durationMs / 60_000)} min`;
+      const mode = t.mode === 'roundTable' ? 'Round table' : 'Separate chambers';
+      lines.push(
+        '',
+        `- ${mode}, ${t.effort} effort: ${t.outcome}, ${cost}${minutes}; ${t.roster.map((r) => r.councillorId).join(', ')}.`,
+      );
+    }
+  }
+  if (record.lessons && record.lessons.length > 0) {
+    lines.push('', '## Lessons', '', ...record.lessons.map((l) => `- ${l}`));
   }
   lines.push('');
   return lines.join('\n');

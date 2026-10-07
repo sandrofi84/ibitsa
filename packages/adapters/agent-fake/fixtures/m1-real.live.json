@@ -9,6 +9,17 @@
     "capMicroUsd": null,
     "maxParallel": 2,
     "shipped": false,
+    "ending": {
+      "record": "writing",
+      "recordPath": null,
+      "recordError": null,
+      "councilContext": null,
+      "councilTokens": null,
+      "lessonsGold": {
+        "kind": "exact",
+        "value": 0
+      }
+    },
     "gold": {
       "kind": "exact",
       "value": 117863

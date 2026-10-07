@@ -1,5 +1,6 @@
 import type { Command } from '@ibitsa/protocol';
 import { Campaign } from './campaign';
+import { CampaignRecord } from './campaign-record';
 import { Elder } from './elder';
 import { Hero } from './hero';
 import type { CoreInput, GameMasterEvent } from './inputs.types';
@@ -38,6 +39,9 @@ export function step(state: CoreState, input: CoreInput): StepResult {
       break;
     case 'council':
       new Sitting(ctx).handle(input);
+      break;
+    case 'lessons':
+      new CampaignRecord(ctx).handle(input);
       break;
     case 'gm':
       gameMaster(ctx, input.event);
@@ -94,11 +98,23 @@ function command(ctx: StepContext, command: Command): void {
       return;
     case 'dismissItem': {
       const item = ctx.state.needsYou.find((i) => i.id === command.itemId);
-      if (item?.kind !== 'revisitDecision')
+      if (item?.kind !== 'revisitDecision') {
         ctx.outbox.reject(command.commandId, "That item can't be dismissed.");
-      else ctx.state.needsYou = ctx.state.needsYou.filter((i) => i.id !== item.id);
+        return;
+      }
+      ctx.state.needsYou = ctx.state.needsYou.filter((i) => i.id !== item.id);
+      // The decision stands; the record lists the request as deferred (#167).
+      if (ctx.state.campaign) {
+        ctx.state.campaign.revisitsDismissed = [
+          ...(ctx.state.campaign.revisitsDismissed ?? []),
+          { councillorId: item.councillorId, decisionId: item.decisionId, message: item.message },
+        ];
+      }
       return;
     }
+    case 'chooseCouncilContext':
+      new CampaignRecord(ctx).chooseContext(command);
+      return;
     case 'finishQuest':
       quest.finish(command.commandId);
       return;
@@ -231,6 +247,10 @@ function gameMaster(ctx: StepContext, event: GameMasterEvent): void {
       return;
     case 'councilVersionNoted':
       new Sitting(ctx).versionNoted(event);
+      return;
+    case 'recordWritten':
+    case 'recordFailed':
+      new CampaignRecord(ctx).written(event);
       return;
     case 'branchPushed':
     case 'pullRequestOpened':

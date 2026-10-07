@@ -8,6 +8,7 @@ import type {
   CouncilEvent,
   CouncillorInfo,
   ElderEvent,
+  LessonsEvent,
   ReviewEvent,
 } from '@ibitsa/protocol';
 import type {
@@ -16,6 +17,7 @@ import type {
   CreateActionRequest,
   CreateActionResult,
   ElderStart,
+  LessonsStart,
   ReviewSession as ReviewSessionPort,
   ReviewStart,
   SessionResume,
@@ -28,6 +30,7 @@ import type { ClaudeAdapterOptions } from './claude-adapter.types';
 import { ClaudeSession, loadSdk, plugins } from './claude-session';
 import { CouncillorSkills } from './councillor-skills';
 import { ElderSession } from './elder-session';
+import { LessonsSession } from './lessons-session';
 import { ReviewSession } from './review-session';
 import { ROUND_TABLE_INSTRUCTIONS, RoundTableSession } from './round-table-session';
 import { expandSkill } from './skill-expansion';
@@ -139,6 +142,33 @@ export class ClaudeAdapter implements AgentAdapter {
   /** A councillor's review of one task (§5.5, #138): read-only, capped, ending with `submit_verdict`. */
   startReview(start: ReviewStart, onEvent: (event: ReviewEvent) => void): ReviewSessionPort {
     return new ReviewSession({ adapter: this.options, start, onEvent });
+  }
+
+  /** The elder's lessons at a campaign's end (§4.9, #167): no tools but `submit_lessons`, capped. */
+  startLessons(start: LessonsStart, onEvent: (event: LessonsEvent) => void): { close(): void } {
+    return new LessonsSession({ adapter: this.options, start, onEvent });
+  }
+
+  /**
+   * Compacts a council's lead session after Finish (§4.9, #167): resumes it with Claude Code's
+   * `/compact` and waits for it to end, so the next campaign resumes a lighter context.
+   */
+  async compactCouncil({ cwd, sessionId }: { cwd: string; sessionId: string }): Promise<void> {
+    const sdk = await (this.options.loadSdk ?? loadSdk)();
+    const claudeCodePath = this.options.claudeCodePath?.()?.trim();
+    const query = sdk.query({
+      prompt: '/compact',
+      options: {
+        cwd,
+        resume: sessionId,
+        env: this.options.env(),
+        settingSources: ['project'],
+        tools: [],
+        maxTurns: 1,
+        ...(claudeCodePath ? { pathToClaudeCodeExecutable: claudeCodePath } : {}),
+      },
+    });
+    for await (const message of query) if (message.type === 'result') break;
   }
 
   /** The elder's research (spec §4.1, #101): read-only, capped, ending with `submit_brief`. */

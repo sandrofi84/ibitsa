@@ -2,6 +2,11 @@
 
 export type { ActionDraft, ActionInfo, ActionPreview } from './actions.types';
 export type { AgentEvent } from './agent-events.types';
+export type {
+  CampaignEndView,
+  CouncilContextChoice,
+  LessonsEvent,
+} from './campaign-record.types';
 export { parseCommand } from './commands';
 export {
   type Command,

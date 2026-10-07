@@ -100,6 +100,7 @@ describe('starting a quest', () => {
       capMicroUsd: null,
       maxParallel: 2,
       shipped: false,
+      ending: null,
     });
     expect(snap.islands).toEqual([
       {

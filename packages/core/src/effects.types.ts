@@ -1,6 +1,7 @@
 import type {
   CheckResult,
   CouncilAnswer,
+  CouncilContextChoice,
   Decision,
   Effort,
   Plan,
@@ -8,6 +9,7 @@ import type {
   SittingMessage,
   SittingMode,
 } from '@ibitsa/protocol';
+import type { CampaignRecordData } from './campaign-record.types';
 
 /** Requests core makes of the runtime. Core never performs them itself (ADR 0001). */
 export type Effect =
@@ -45,6 +47,12 @@ export type Effect =
       branch?: string;
     }
   | { type: 'sendMessage'; heroId: string; text: string; priority: 'now' | 'next' }
+  /** The elder's short lessons session at the campaign's end (§4.9, #167), from `material`. */
+  | { type: 'startLessons'; lessonsId: string; material: string }
+  /** Save `record.md` (§4.9); `recordWritten` or `recordFailed` comes back. */
+  | { type: 'writeRecord'; record: CampaignRecordData }
+  /** After Finish: keep the council's lead session for the next campaign, compact it first, or forget it. */
+  | { type: 'councilContext'; choice: CouncilContextChoice; sessionId: string | null }
   /** Push the island's branch (§5.6); `branchPushed` or `remoteFailed` comes back. */
   | {
       type: 'pushBranch';

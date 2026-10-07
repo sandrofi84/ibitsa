@@ -16,6 +16,7 @@ import type {
 } from '@ibitsa/protocol';
 import { afterEach, describe, expect, it } from 'vitest';
 import { councilVersion } from './council';
+import { KeptCouncil } from './kept-council';
 import type {
   AgentAdapter,
   AgentSession,
@@ -1863,5 +1864,81 @@ describe('the review loop (M5, #136)', () => {
       .records.filter((r) => r.kind === 'gm' && r.event.type === 'checksRan')
       .at(-1);
     expect(failed).toMatchObject({ event: { results: [{ command: 'checks', ok: false }] } });
+  });
+});
+
+describe('the campaign record and the council context (#167)', () => {
+  function councilRuntime() {
+    const storageDir = mkdtempSync(join(tmpdir(), 'ibitsa-runtime-'));
+    const repoDir = mkdtempSync(join(tmpdir(), 'ibitsa-repo-'));
+    dirs.push(storageDir, repoDir);
+    const starts: SittingStart[] = [];
+    let emit: (e: CouncilEvent) => void = () => {};
+    const adapter = Object.assign(new FakeAdapter(), {
+      startSitting: (start: SittingStart, onEvent: (e: CouncilEvent) => void) => {
+        starts.push(start);
+        emit = onEvent;
+        return { message: () => {}, completeTool: () => {}, answer: () => {}, close: () => {} };
+      },
+    });
+    const runtime = new Runtime({
+      storageDir,
+      adapter,
+      gameMaster: new FakeGameMaster(),
+      clock: new ManualClock(),
+      newId: () => 'camp-1',
+      repoDir,
+      watchFolder: () => ({ close: () => {} }),
+    });
+    runtime.start();
+    const received: CoreMessage[] = [];
+    const connection = runtime.connect({ post: (m) => received.push(m) });
+    const convene = () =>
+      connection.receive({
+        type: 'conveneCouncil',
+        commandId: 'k',
+        task: 'Add sign-in',
+        mode: 'roundTable',
+        roster: ['security'],
+        effort: 'light',
+      });
+    return {
+      storageDir,
+      repoDir,
+      runtime,
+      connection,
+      starts,
+      convene,
+      emit: (e: CouncilEvent) => emit(e),
+    };
+  }
+
+  it("resumes the council's kept session in the next campaign's first sitting, once", async () => {
+    const { storageDir, runtime, starts, convene } = councilRuntime();
+    new KeptCouncil(storageDir).keep('council-old');
+    convene();
+    await flush();
+    expect(starts[0]?.resume).toEqual({ sessionId: 'council-old', kept: true });
+    expect(new KeptCouncil(storageDir).peek()).toBeNull();
+    runtime.dispose();
+  });
+
+  it('writes record.md when the campaign is abandoned, and forgets a kept council', async () => {
+    const { storageDir, repoDir, runtime, connection, convene, emit } = councilRuntime();
+    convene();
+    await flush();
+    emit({ type: 'sessionStarted', sessionId: 'council-1' });
+    new KeptCouncil(storageDir).keep('council-older');
+    connection.receive({ type: 'abandonQuest', commandId: 'a' });
+    await flush();
+    const md = readFileSync(join(repoDir, '.ibitsa', 'campaigns', 'camp-1', 'record.md'), 'utf8');
+    expect(md).toContain('# Campaign record: Add sign-in');
+    expect(md).toContain('**Abandoned.**');
+    expect(runtime.snapshotState.campaign?.ending).toMatchObject({
+      record: 'written',
+      recordPath: '.ibitsa/campaigns/camp-1/record.md',
+    });
+    expect(new KeptCouncil(storageDir).peek()).toBeNull();
+    runtime.dispose();
   });
 });

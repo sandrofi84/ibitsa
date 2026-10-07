@@ -1561,3 +1561,36 @@ body.in-hut:has(.council-dialogue:not([hidden])) .needs-you {
   pointer-events: none;
   z-index: 6;
 }
+
+/* The end of a campaign (#167): the record, then what happens to the council's context. */
+.campaign-end:not([hidden]) {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 6;
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  padding: 14px 16px;
+  box-sizing: border-box;
+  background: rgba(239, 224, 184, 0.98);
+  color: #1a1420;
+  border: 2px solid #8a6a3a;
+  border-radius: 4px;
+  font:
+    13px / 1.45 system-ui,
+    sans-serif;
+}
+
+.campaign-end h2 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.campaign-end .campaign-choice {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 6px 0;
+}

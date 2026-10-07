@@ -3,6 +3,7 @@ import type { SittingView } from '@ibitsa/protocol';
 import * as Phaser from 'phaser';
 import type { Started } from './boot.types';
 import { mountCameraControls } from './camera-controls';
+import { mountCampaignEnd } from './campaign-end';
 import { GameClient } from './client';
 import { mountCommandBar } from './command-bar';
 import { CommandHistory } from './command-history';
@@ -154,6 +155,7 @@ export function startGame(root: HTMLElement, host: Host): Started {
     options: { withCredentials: (then) => newQuest.withCredentials(then) },
   });
   mountPlanReview({ client });
+  mountCampaignEnd({ client });
   mountElderPanel({
     client,
     options: {
