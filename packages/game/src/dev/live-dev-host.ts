@@ -29,6 +29,7 @@ import type { Host } from '../host.types';
 import { MemoryViewStorage } from '../view-state';
 import { DemoReview } from './demo-review';
 import { DevActions, devPreview } from './dev-actions';
+import { FakeGitHub } from './fake-github';
 import { DEMO_FILES, FakeHostChannel } from './fake-host-channel';
 
 const STEP_MS = 120;
@@ -66,6 +67,8 @@ export class LiveDevHost implements Host {
   private settingUp = false;
   /** Dev only (#140): paced checks and verdicts for watching councillors walk out (`review=demo`). */
   private readonly demoReview: DemoReview | null;
+  /** Dev only (#153): pushes and PRs answered as GitHub would; polls on a timer with `pr=demo`. */
+  private readonly github: FakeGitHub;
   /** The settings every dev campaign starts from: the defaults plus the page's params. */
   private readonly settings: QuestSettings;
   /** Task points whose "failing check" already failed once (#141). */
@@ -81,6 +84,7 @@ export class LiveDevHost implements Host {
     heroes = 0,
     review,
     reviews = false,
+    pullRequestPollMs = null,
   }: {
     credentialsReady: boolean;
     repo: RepoView | null;
@@ -92,6 +96,8 @@ export class LiveDevHost implements Host {
     review?: 'demo';
     /** Reviews on (#141): submitted tasks are checked and reviewed by scripted councillors. */
     reviews?: boolean;
+    /** Dev only (#153): how often the fake GitHub polls watched PRs; null polls only on Refresh. */
+    pullRequestPollMs?: number | null;
   }) {
     this.channel = new FakeHostChannel({ credentialsReady });
     this.repo = repo;
@@ -100,6 +106,11 @@ export class LiveDevHost implements Host {
       review === 'demo'
         ? new DemoReview({ input: (input) => this.input(input), t: () => this.t() })
         : null;
+    this.github = new FakeGitHub({
+      input: (input) => this.input(input),
+      t: () => this.t(),
+      pollMs: pullRequestPollMs,
+    });
     this.settings = {
       ...DEFAULT_SETTINGS,
       reviews: reviews || this.demoReview !== null,
@@ -307,6 +318,18 @@ export class LiveDevHost implements Host {
   }
 
   /**
+   * Dev only (#153): straight into a one-island campaign of two tasks, no reviews, for playing a PR from
+   * draft to merged (`pr=demo`). Tell the hero to submit to clear each task.
+   */
+  pullRequestDemo(): void {
+    this.approvedCampaign({
+      settings: { ...this.settings, maxParallel: 1 },
+      plan: pullRequestPlan(),
+      parties: [{ islandId: 'I1', heroName: 'Ranger Ilse', classId: 'ranger' }],
+    });
+  }
+
+  /**
    * An approved plan stepped into core without carrying out its effects (no scripted sitting), then the
    * campaign started for real.
    */
@@ -461,6 +484,7 @@ export class LiveDevHost implements Host {
 
   private perform(effect: Effect): void {
     if (this.demoReview?.perform(effect)) return;
+    if (this.github.perform(effect)) return;
     switch (effect.type) {
       case 'createWorktree':
         setTimeout(
@@ -873,6 +897,37 @@ const REVIEW_TITLES: Record<string, string> = {
 };
 
 /** One task on one island (#141), with criteria for two councillors and a decision on it. */
+/** The PR demo's plan (#153): one island, two tasks, a decision, so the PR body has something in it. */
+function pullRequestPlan(): Plan {
+  const task = (id: string, title: string) => ({
+    id,
+    title,
+    description: `${title}.`,
+    files: ['src/slug.ts'],
+    dependsOn: [],
+    criteria: [],
+    decisions: ['D1'],
+  });
+  return {
+    summary: 'Slugs without accents.',
+    goal: 'Make slugify strip accents.',
+    tasks: [task('T1', 'Strip accents in slugify'), task('T2', 'Test the accented slugs')],
+    islands: [{ id: 'I1', title: 'Accent-free slugs', tasks: ['T1', 'T2'] }],
+    branching: 'separate',
+    decisions: [
+      {
+        id: 'D1',
+        title: 'How to strip',
+        raisedBy: 'tester',
+        chosen: 'Unicode normalisation',
+        alternatives: [{ option: 'A lookup table', rejectedBecause: 'It misses letters.' }],
+        why: 'It covers every accent.',
+        affects: ['T1', 'T2'],
+      },
+    ],
+  };
+}
+
 function reviewPlan(title: string): Plan {
   return {
     summary: 'One task, reviewed by the tester and security.',

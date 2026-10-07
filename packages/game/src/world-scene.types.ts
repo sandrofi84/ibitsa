@@ -4,7 +4,15 @@ import type { ReviewerProbe } from './councillor-token.types';
 export interface MapProbe {
   /** The part of the map with something on it. */
   bounds: { x: number; y: number; width: number; height: number };
-  islands: { id: string; x: number; y: number; row: 'top' | 'bottom'; dim: boolean }[];
+  islands: {
+    id: string;
+    x: number;
+    y: number;
+    row: 'top' | 'bottom';
+    dim: boolean;
+    /** Its PR badge (#153): the PR's state, `none` while it could open one, or null. */
+    pr?: string | null;
+  }[];
   bridges: { from: string; to: string; vertical: boolean; lowered: boolean; behind: boolean }[];
   /** Heroes showing the padlock, and what they wait for. */
   blocked?: { heroId: string; reason: 'slot' | 'previousIsland' | 'dependency' }[];
@@ -14,4 +22,8 @@ export interface MapProbe {
   underReview?: string[];
   /** The councillors out reviewing (#140): where they are and what they show. */
   reviewers?: ReviewerProbe[];
+  /** Every island's PR is merged (#153). */
+  shipped?: boolean;
+  /** Heroes at (or walking to) Ibitsa. */
+  atIbitsa?: string[];
 }

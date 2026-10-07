@@ -22,6 +22,11 @@ import { mountNewQuestForm } from './new-quest-form';
 import { PACK_KEY, PackScene } from './pack-scene';
 import { mountPartyAssembly } from './party-assembly';
 import { mountPlanReview } from './plan-review';
+import {
+  mountPullRequestHover,
+  mountPullRequestPanel,
+  mountPullRequestPreview,
+} from './pull-request-card';
 import { isSitting, rememberCouncillors, SittingFeed } from './sitting-hut';
 import { mountTaskPanel } from './task-panel';
 import { ViewState } from './view-state';
@@ -29,6 +34,8 @@ import { fitViewport } from './viewport';
 import {
   HEIGHT,
   HERO_SELECTED,
+  PULL_REQUEST_HOVERED,
+  PULL_REQUEST_SELECTED,
   RIGHT_INSET,
   TASK_SELECTED,
   WIDTH,
@@ -96,6 +103,9 @@ export function startGame(root: HTMLElement, host: Host): Started {
       selectHero: () => {},
       taskOnPage: () => null,
       taskPanel: () => null,
+      pullRequestOnPage: () => null,
+      pullRequestPanel: () => null,
+      pullRequestPreview: () => null,
       map: () => null,
       selection: null,
     };
@@ -124,7 +134,11 @@ export function startGame(root: HTMLElement, host: Host): Started {
   const selection = new HeroSelection(view);
   client.onSnapshot((snapshot) => selection.update(snapshot));
   // A task's checks and reviews (#141): from the map, the hero pane and Needs you.
-  const taskPanel = mountTaskPanel({ client });
+  // An island's PR (#153): the preview before opening, its card from the badge, and the badge's hover.
+  const pullRequests = { client, preview: mountPullRequestPreview({ client }) };
+  const prPanel = mountPullRequestPanel(pullRequests);
+  const prHover = mountPullRequestHover({ client });
+  const taskPanel = mountTaskPanel({ client, pullRequests });
   mountNeedsYouPanel({
     client,
     openCouncil: () => councilDialogue.focus(),
@@ -207,7 +221,28 @@ export function startGame(root: HTMLElement, host: Host): Started {
     const covered = rect.width > 0 ? Math.max(0, window.innerWidth - rect.left) : 0;
     game.registry.set(RIGHT_INSET, covered);
   }).observe(heroPane.element);
-  game.events.on(TASK_SELECTED, (taskPointId: string) => taskPanel.open(taskPointId));
+  game.events.on(TASK_SELECTED, (taskPointId: string) => {
+    prPanel.close();
+    taskPanel.open(taskPointId);
+  });
+  // The PR card and the task panel take the same place: one at a time.
+  game.events.on(PULL_REQUEST_SELECTED, (islandId: string) => {
+    prHover.hide();
+    taskPanel.close();
+    prPanel.open(islandId);
+  });
+  game.events.on(PULL_REQUEST_HOVERED, (at: { islandId: string; x: number; y: number } | null) => {
+    if (!at) {
+      prHover.hide();
+      return;
+    }
+    const rect = game.canvas.getBoundingClientRect();
+    prHover.show({
+      islandId: at.islandId,
+      x: rect.left + at.x * game.scale.zoom,
+      y: rect.top + at.y * game.scale.zoom,
+    });
+  });
   game.events.on(HERO_SELECTED, (heroId: string) => {
     selection.select(heroId);
     heroPane.open();
@@ -312,6 +347,14 @@ export function startGame(root: HTMLElement, host: Host): Started {
     const rect = game.canvas.getBoundingClientRect();
     return { x: rect.left + at.x * game.scale.zoom, y: rect.top + at.y * game.scale.zoom };
   };
+  const pullRequestOnPage = (islandId: string) => {
+    const scene = world();
+    const spot = scene?.pullRequestSpot(islandId);
+    if (!scene || !spot) return null;
+    const at = scene.toCanvas(spot);
+    const rect = game.canvas.getBoundingClientRect();
+    return { x: rect.left + at.x * game.scale.zoom, y: rect.top + at.y * game.scale.zoom };
+  };
   return {
     client,
     zoom: () => diagnostics.zoom,
@@ -324,5 +367,8 @@ export function startGame(root: HTMLElement, host: Host): Started {
     selection,
     taskOnPage,
     taskPanel: () => taskPanel.shown(),
+    pullRequestOnPage,
+    pullRequestPanel: () => prPanel.shown(),
+    pullRequestPreview: () => pullRequests.preview.shown(),
   };
 }
