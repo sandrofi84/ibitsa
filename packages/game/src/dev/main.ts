@@ -45,10 +45,13 @@ if (name === 'live') {
       params.get('repo') === 'none'
         ? null
         : { defaultBranch: 'main', branches: ['main', 'feature/x'], uncommittedChanges: 2 },
+    ...(params.get('campaignCap') ? { campaignBudgetUsd: Number(params.get('campaignCap')) } : {}),
   });
   const { client, zoom, hero, camera, hut } = startGame(root, host);
   w.__ibitsa = {
     snapshot: () => client.snapshot,
+    // Lets a test act for a hero the UI can't select yet.
+    send: (intent: Parameters<typeof client.send>[0]) => client.send(intent),
     hostRequests: () => host.channel.requests,
     hostEvent: (event: Parameters<typeof host.channel.send>[0]) => host.channel.send(event),
     zoom,

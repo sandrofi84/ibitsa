@@ -209,13 +209,27 @@ function renderItem({
       );
       break;
     case 'outOfGold':
-      box.append(el('p', { text: `${hero} is out of gold.` }));
-      actions.append(
-        intentButton({
-          label: 'Raise the cap by $1',
-          intent: () => ({ type: 'raiseBudget', heroId: item.heroId, addMicroUsd: 1_000_000 }),
-          client,
+      // The campaign's cap stops every hero; raising it lets them all carry on (#126).
+      box.append(
+        el('p', {
+          text:
+            item.scope === 'campaign'
+              ? `${hero} stopped: the campaign reached its cap of $${(item.cap / 1_000_000).toFixed(2)}.`
+              : `${hero} is out of gold.`,
         }),
+      );
+      actions.append(
+        item.scope === 'campaign'
+          ? intentButton({
+              label: 'Raise the campaign cap by $5',
+              intent: () => ({ type: 'raiseCampaignBudget', addMicroUsd: 5_000_000 }),
+              client,
+            })
+          : intentButton({
+              label: 'Raise the cap by $1',
+              intent: () => ({ type: 'raiseBudget', heroId: item.heroId, addMicroUsd: 1_000_000 }),
+              client,
+            }),
         intentButton({
           label: 'Stop',
           intent: () => ({ type: 'stopHero', heroId: item.heroId }),

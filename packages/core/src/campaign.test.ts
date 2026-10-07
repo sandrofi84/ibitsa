@@ -378,3 +378,29 @@ describe('a campaign with several parties (#121)', () => {
     expect(run.states()).toEqual(['unknown', 'blocked:slot', 'blocked:slot']);
   });
 });
+
+describe('ending a campaign with several parties (#126)', () => {
+  it('finishes only once every island is submitted, naming the open ones', () => {
+    const run = new Run().approved(three, { maxParallel: 3 }).start().ready(0).ready(1).ready(2);
+    run.submit(0);
+    run.do({ type: 'finishQuest' });
+    expect(run.rejections()).toEqual(['Not every island is submitted yet: Frontend, Docs.']);
+    run.submit(1).submit(2).do({ type: 'finishQuest' });
+    expect(view(run.state).campaign?.status).toBe('finished');
+    expect(run.effects.filter((e) => e.type === 'closeSession')).toHaveLength(3);
+  });
+
+  it('abandons every party, started or not, and keeps the worktrees to remove one by one', () => {
+    const run = new Run().approved(three, { maxParallel: 1 }).start().ready(0);
+    run.do({ type: 'abandonQuest' });
+    expect(view(run.state).campaign?.status).toBe('abandoned');
+    expect(view(run.state).islands.map((i) => i.worktree)).toEqual(['ready', 'waiting', 'waiting']);
+    // Nothing more starts after the end.
+    expect(run.worktrees()).toHaveLength(1);
+    run.do({ type: 'removeWorktree', islandId: run.island(0).id });
+    expect(run.effects.at(-1)).toMatchObject({
+      type: 'removeWorktree',
+      islandId: run.island(0).id,
+    });
+  });
+});

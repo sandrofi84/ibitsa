@@ -1,6 +1,7 @@
 import {
   type CoreInput,
   type CoreState,
+  DEFAULT_SETTINGS,
   type Effect,
   initialState,
   Journal,
@@ -57,14 +58,28 @@ export class LiveDevHost implements Host {
     credentialsReady,
     repo,
     sandboxed = true,
+    campaignBudgetUsd,
   }: {
     credentialsReady: boolean;
     repo: RepoView | null;
     sandboxed?: boolean;
+    /** A campaign cap, as `ibitsa.campaign.budgetUsd` would set it (#126). */
+    campaignBudgetUsd?: number;
   }) {
     this.channel = new FakeHostChannel({ credentialsReady });
     this.repo = repo;
     this.sandboxed = sandboxed;
+    if (campaignBudgetUsd !== undefined) {
+      this.state = step(this.state, {
+        kind: 'gm',
+        t: 0,
+        event: {
+          type: 'questSettings',
+          ...DEFAULT_SETTINGS,
+          campaignBudgetMicroUsd: Math.round(campaignBudgetUsd * 1_000_000),
+        },
+      }).state;
+    }
   }
 
   onMessage(listener: (m: CoreMessage) => void): void {
