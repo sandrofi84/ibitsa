@@ -41,6 +41,8 @@ export type AgentEvent =
   | { type: 'compacted'; trigger: 'manual' | 'auto'; preTokens: number; postTokens?: number }
   /** The hero called `submit_task`; core runs the submit check before accepting it (§5.5). */
   | { type: 'taskSubmitted'; toolUseId: string; summary: string }
+  /** The hero says two findings contradict each other or a recorded decision (`dispute_finding`, #136). */
+  | { type: 'findingDisputed'; reviewIds: string[]; reason: string }
   /** The adapter's native budget cap stopped the turn (Claude SDK: `error_max_budget_usd`). */
   | { type: 'budgetExhausted' }
   /** A retryable API error; the session keeps its state. */

@@ -1,4 +1,11 @@
-import type { AgentEvent, Command, CouncilEvent, ElderEvent } from '@ibitsa/protocol';
+import type {
+  AgentEvent,
+  CheckResult,
+  Command,
+  CouncilEvent,
+  ElderEvent,
+  ReviewEvent,
+} from '@ibitsa/protocol';
 import type { QuestSettings } from './state.types';
 
 /** Results of the game master's own work, reported by the runtime (spec §11.2). */
@@ -6,7 +13,17 @@ export type GameMasterEvent =
   | { type: 'worktreeCreated'; islandId: string; path: string; branch: string }
   | { type: 'worktreeFailed'; islandId: string; message: string }
   /** Outcome of the submit check (§5.5): clean worktree with at least one commit beyond its base. */
-  | { type: 'submitChecked'; heroId: string; toolUseId: string; ok: boolean; reason?: string }
+  | {
+      type: 'submitChecked';
+      heroId: string;
+      toolUseId: string;
+      ok: boolean;
+      reason?: string;
+      /** The branch head that was submitted (M5): reviewers review up to it. */
+      head?: string;
+    }
+  /** The checks for a submitted task (§5.5), in the order run; it stops at the first failure. */
+  | { type: 'checksRan'; taskPointId: string; results: CheckResult[] }
   /** Settings for the next quest, logged right before `startQuest`. */
   | ({ type: 'questSettings' } & QuestSettings)
   /** Hash of the worktree diff after a turn, for the no-progress rule. */
@@ -26,6 +43,8 @@ export type GameMasterEvent =
  */
 export type CoreInput =
   | { kind: 'agent'; t: number; heroId: string; event: AgentEvent }
+  /** From a reviewer's session (§5.5); ignored unless `reviewId` is a running review. */
+  | { kind: 'review'; t: number; reviewId: string; event: ReviewEvent }
   /** From the elder's research session; ignored unless `elderId` is the current research. */
   | { kind: 'elder'; t: number; elderId: string; event: ElderEvent }
   /** From a sitting's lead session; ignored unless `sittingId` is the current sitting. */

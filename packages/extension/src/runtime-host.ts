@@ -137,5 +137,13 @@ function describe(
       return `${name} needs you: ${item.message}`;
     case 'reply':
       return `${name} is waiting for orders.`;
+    case 'reviewEscalation':
+      return item.reason === 'loopLimit'
+        ? `${name}'s review went round too many times: over to you.`
+        : `A reviewer of ${name}'s task couldn't finish: over to you.`;
+    case 'revisitDecision':
+      return `${item.councillorId} asks to revisit ${item.decisionId}.`;
+    case 'dispute':
+      return `${name} disputes the review: ${item.reason}`;
   }
 }

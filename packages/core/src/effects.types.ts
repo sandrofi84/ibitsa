@@ -1,5 +1,7 @@
 import type {
+  CheckResult,
   CouncilAnswer,
+  Decision,
   Effort,
   Plan,
   ResearchBrief,
@@ -104,6 +106,36 @@ export type Effect =
       answers: CouncilAnswer[];
     }
   | { type: 'closeSitting'; sittingId: string }
+  /** Run the checks for a submitted task (§5.5); the result comes back as `checksRan`. */
+  | { type: 'runChecks'; taskPointId: string; worktreePath: string }
+  /**
+   * Start a reviewer (§5.5): one councillor, one task, one round. It reviews `from..to` (the task's
+   * commits), or only `since..to` on a re-review; its output comes back as `review` inputs.
+   */
+  | {
+      type: 'startReview';
+      reviewId: string;
+      taskPointId: string;
+      councillorId: string;
+      effort: Effort;
+      round: number;
+      worktreePath: string;
+      from: string;
+      to: string | null;
+      since: string | null;
+      task: { title: string; description: string };
+      criteria: string[];
+      decisions: Decision[];
+      checks: CheckResult[];
+    }
+  | {
+      type: 'completeReviewTool';
+      reviewId: string;
+      toolUseId: string;
+      accepted: boolean;
+      reason?: string;
+    }
+  | { type: 'closeReview'; reviewId: string }
   /** Stacked, all at once (#121): rebase the island's worktree onto the branch it builds on. */
   | { type: 'rebaseWorktree'; islandId: string; worktreePath: string; onto: string }
   | { type: 'setTimer'; timerId: string; at: number }

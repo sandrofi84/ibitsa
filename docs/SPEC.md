@@ -338,6 +338,8 @@ On the map, councillors walk out of the council hut to the task point, show a ma
 - **"Done" means passed review** (M5): dependencies between tasks and stacked bridges wait for it; until M5 it meant submitted.
 - **Quick quests** have no councillors: checks run, and the task is done once they pass.
 
+**Turning it on** (#136): reviews are a campaign setting (`reviews`, logged with the quest settings). The runtime turns them on once the game master can run checks and the agent can start reviewers; logs from before M5 replay without them, a submitted task going straight to done (unreviewed).
+
 ### 5.6 Pull requests
 - PRs are opened per task point (or per branch, as the plan defines) via the git-host adapter.
 - Stacked: each PR's base is the previous branch.

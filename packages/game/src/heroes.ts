@@ -65,6 +65,7 @@ export const STATE_LABELS: Record<ExecutionState['kind'], string> = {
   resting: 'Resting',
   working: 'Working',
   blocked: 'Blocked',
+  underReview: 'Under review',
   submitted: 'Submitted',
   idle: 'Waiting for orders',
   traveling: 'Traveling',

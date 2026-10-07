@@ -40,6 +40,9 @@ export {
   type PlanTask,
   PlanTaskSchema,
 } from './plan.schema';
+export { checkVerdict } from './review';
+export { type Finding, FindingSchema, type Verdict, VerdictSchema } from './review.schema';
+export type { CheckResult, ReviewEvent, ReviewView, TaskReviewView } from './review.types';
 export type {
   Concern,
   CouncilEvent,

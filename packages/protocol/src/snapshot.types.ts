@@ -1,5 +1,7 @@
 import type { CouncillorInfo } from './councillors.types';
 import type { ElderView } from './elder.types';
+import type { Finding } from './review.schema';
+import type { TaskReviewView } from './review.types';
 import type { SittingView } from './sitting.types';
 import type { MicroUsd, Reading } from './values.types';
 
@@ -73,6 +75,8 @@ export interface TaskPointView {
   id: string;
   title: string;
   state: TaskPointState;
+  /** Its checks and reviews, once submitted (M5). */
+  review?: TaskReviewView | null;
 }
 
 /** Exactly one per hero, derived from real agent events (§5.4). */
@@ -85,6 +89,8 @@ export type ExecutionState =
   | { kind: 'resting' }
   /** What the hero is doing is in `HeroView.activity`. */
   | { kind: 'working' }
+  /** Its task is being checked or reviewed (M5): it waits for the verdicts. */
+  | { kind: 'underReview' }
   /**
    * Can't start yet (#121): every parallel slot is taken, the island before it (stacked) isn't cleared,
    * or its next task depends on a task on another island that isn't done.
@@ -136,6 +142,34 @@ export type NeedsYouItem =
   | { kind: 'reply'; id: string; heroId: string; text: string }
   /** resumeHero, sendMessage or stopHero */
   | { kind: 'stalled'; id: string; heroId: string; reason: string }
+  /** resolveReview: the loop limit, or a reviewer that couldn't finish (§5.5, #136). */
+  | {
+      kind: 'reviewEscalation';
+      id: string;
+      heroId: string;
+      taskPointId: string;
+      reason: 'loopLimit' | 'reviewFailed';
+      /** The open blocking findings, by councillor. */
+      findings: (Finding & { councillorId: string })[];
+    }
+  /** dismiss: "Revisit D3?" from a reviewer; a recorded decision is the user's to reopen (§4.5). */
+  | {
+      kind: 'revisitDecision';
+      id: string;
+      heroId: string;
+      councillorId: string;
+      decisionId: string;
+      message: string;
+    }
+  /** resolveDispute: the hero says findings contradict each other or a decision. */
+  | {
+      kind: 'dispute';
+      id: string;
+      heroId: string;
+      taskPointId: string;
+      reason: string;
+      findings: (Finding & { councillorId: string })[];
+    }
   /** raiseBudget or stopHero */
   | {
       kind: 'outOfGold';

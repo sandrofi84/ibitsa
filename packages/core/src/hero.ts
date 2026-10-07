@@ -2,6 +2,7 @@ import type { AgentEvent, ExecutionState, HeroView } from '@ibitsa/protocol';
 import { Campaign } from './campaign';
 import type { NewHero } from './hero.types';
 import { describePermission } from './needs-you';
+import { Review } from './review';
 import type { HeroRecord, QuestSettings, StallWatch } from './state.types';
 import type { StepContext } from './step.types';
 
@@ -83,6 +84,7 @@ export class Hero {
     if (this.ctx.needsYou.isAsking(r.id)) return { kind: 'waitingOnYou' };
     if (r.resting) return { kind: 'resting' };
     if (r.inTurn || r.runningTools.length > 0) return { kind: 'working' };
+    if (this.task()?.state === 'underReview') return { kind: 'underReview' };
     const island = this.island();
     if (island && !island.launched) {
       return { kind: 'blocked', reason: Campaign.blockReason(this.ctx.state, island) };
@@ -215,7 +217,7 @@ export class Hero {
       this.ctx.outbox.reject(commandId, 'The hero is still working.');
       return;
     }
-    this.submit('');
+    this.submit({ summary: '', head: null });
   }
 
   // ---------- game master results ----------
@@ -241,16 +243,18 @@ export class Hero {
     toolUseId,
     ok,
     reason,
+    head,
   }: {
     toolUseId: string;
     ok: boolean;
     reason?: string;
+    head?: string;
   }): void {
     const r = this.record;
     if (r.pendingSubmit?.toolUseId !== toolUseId) return;
     const { summary } = r.pendingSubmit;
     r.pendingSubmit = null;
-    if (ok) this.submit(summary);
+    if (ok) this.submit({ summary, head: head ?? null });
     this.ctx.outbox.effect({
       type: 'completeSubmit',
       heroId: r.id,
@@ -376,6 +380,9 @@ export class Hero {
           r.hp = { kind: 'exact', value: { used: event.postTokens, max: r.hp.value.max } };
         }
         break;
+      case 'findingDisputed':
+        new Review(this.ctx).disputed({ hero: r, event });
+        break;
       case 'taskSubmitted':
         r.pendingSubmit = { toolUseId: event.toolUseId, summary: event.summary };
         this.ctx.outbox.effect({ type: 'checkSubmit', heroId: r.id, toolUseId: event.toolUseId });
@@ -405,10 +412,22 @@ export class Hero {
    * A task handed in. In a planned quest the hero moves on to the next task, told as a message on the
    * same session (spec §14.2); after the last one, the hero is submitted.
    */
-  submit(summary: string): void {
+  /** A task handed in: checked and reviewed first when the campaign reviews (M5), else done at once. */
+  submit({ summary, head }: { summary: string; head: string | null }): void {
     this.ctx.needsYou.removeFor(this.id, ['reply']);
+    if (this.ctx.state.settings.reviews)
+      new Review(this.ctx).begin({ hero: this.record, summary, head });
+    else this.taskDone({ summary, state: 'doneUnreviewed' });
+  }
+
+  /**
+   * A task finished: done (passed review) or, without reviews, done unreviewed. In a planned quest the
+   * hero moves on to the next task, told as a message on the same session (spec §14.2); after the last,
+   * the hero is submitted.
+   */
+  taskDone({ summary, state }: { summary: string; state: 'done' | 'doneUnreviewed' }): void {
     const task = this.task();
-    if (task) task.state = 'doneUnreviewed';
+    if (task) task.state = state;
     const next = this.island()?.taskPoints.find((tp) => tp.state === 'locked');
     if (!next) {
       this.record.submitted = { summary };

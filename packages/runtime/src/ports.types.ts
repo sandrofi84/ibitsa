@@ -3,14 +3,17 @@ import type {
   ActionDraft,
   ActionInfo,
   AgentEvent,
+  CheckResult,
   CoreMessage,
   CouncilAnswer,
   CouncilEvent,
   CouncillorInfo,
+  Decision,
   Effort,
   ElderEvent,
   RepoView,
   ResearchBrief,
+  ReviewEvent,
   SittingMessage,
   SittingMode,
 } from '@ibitsa/protocol';
@@ -73,6 +76,8 @@ export interface AgentAdapter {
   }): Promise<{ text: string; notes: string[] } | null>;
   /** The elder's research session (spec §4.1, #101); adapters that can't run it leave it out. */
   startElder?(start: ElderStart, onEvent: (event: ElderEvent) => void): { close(): void };
+  /** A reviewer's session (§5.5, M5); #138 adds it to the Claude adapter. */
+  startReview?(start: ReviewStart, onEvent: (event: ReviewEvent) => void): ReviewSession;
   /** A short hash of the adapter's council prompts, part of the council version (§4.10, #106). */
   councilPromptVersion?: string;
   /** A sitting's lead session (spec §4.3, #103); adapters that can't run one leave it out. */
@@ -121,6 +126,27 @@ export interface SittingSession {
   close(): void;
 }
 
+/** Starting a reviewer (§5.5): what it reviews and against what; its diff comes from the game master. */
+export interface ReviewStart {
+  cwd: string;
+  councillorId: string;
+  model: string;
+  maxBudgetMicroUsd: number;
+  round: number;
+  /** The task's commits, or only what changed since this councillor's last review. */
+  diff: string;
+  task: { title: string; description: string };
+  criteria: string[];
+  decisions: Decision[];
+  checks: CheckResult[];
+}
+
+/** A running review: core's verdict on `submit_verdict` goes back through it. */
+export interface ReviewSession {
+  completeTool(result: { toolUseId: string; accepted: boolean; reason?: string }): void;
+  close(): void;
+}
+
 /** A new action to write, and where each scope keeps its skills. */
 export interface CreateActionRequest {
   draft: ActionDraft;
@@ -161,6 +187,15 @@ export interface GameMaster {
     worktreePath: string;
     onto: string;
   }): Promise<'upToDate' | 'rebased' | 'conflict'>;
+  /** Runs a submitted task's checks (§5.5, M5); #137 adds it to the git game master. */
+  runChecks?(request: { worktreePath: string }): Promise<CheckResult[]>;
+  /** A task's diff `from..to`, or only `since..to` on a re-review (M5); `to` null is the worktree's HEAD. */
+  taskDiff?(request: {
+    worktreePath: string;
+    from: string;
+    to: string | null;
+    since: string | null;
+  }): Promise<string>;
   /** The worktree's files, tracked and untracked but not ignored, for @ references (#83). */
   listFiles(request: { worktreePath: string }): Promise<string[]>;
 }
@@ -185,4 +220,6 @@ export interface UserSettings {
   maxParallel?: number;
   /** `ibitsa.campaign.budgetUsd` in micro-dollars (#121); null for none. */
   campaignBudgetMicroUsd?: number | null;
+  /** `ibitsa.review.loopLimit` (M5). */
+  loopLimit?: number;
 }

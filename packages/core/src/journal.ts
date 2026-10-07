@@ -219,6 +219,21 @@ function itemText(
       return { kind: 'event', text: 'Out of gold.' };
     case 'error':
       return { kind: 'event', text: `Error: ${item.message}` };
+    case 'reviewEscalation':
+      return {
+        kind: 'event',
+        text:
+          item.reason === 'loopLimit'
+            ? 'The review went round too many times: over to you.'
+            : "A reviewer couldn't finish: over to you.",
+      };
+    case 'revisitDecision':
+      return {
+        kind: 'event',
+        text: `${item.councillorId} asks to revisit ${item.decisionId}: ${item.message}`,
+      };
+    case 'dispute':
+      return { kind: 'event', text: `The hero disputes findings: ${item.reason}` };
     case 'reply':
       return null;
   }

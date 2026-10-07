@@ -4,6 +4,7 @@ import { Hero } from './hero';
 import { NeedsYou } from './needs-you';
 import { Outbox } from './outbox';
 import { Quest } from './quest';
+import { Review } from './review';
 import { Sitting } from './sitting';
 import type { CoreState } from './state.types';
 
@@ -24,6 +25,7 @@ export function view(state: CoreState): Snapshot {
       gold: Quest.totalGold([
         ...(state.elder && state.elder.gold.kind !== 'unknown' ? [state.elder] : []),
         ...state.heroes,
+        ...Review.spenders(state.islands).filter((r) => r.gold.kind !== 'unknown'),
       ]),
     },
     elder: state.elder && Elder.view(state.elder),
@@ -41,7 +43,9 @@ export function view(state: CoreState): Snapshot {
             : 'waiting',
       basedOn: i.basedOn,
       behind: i.behind,
-      taskPoints: i.taskPoints.map(({ id, title, state }) => ({ id, title, state })),
+      taskPoints: i.taskPoints.map(({ id, title, state, review }) =>
+        review ? { id, title, state, review: Review.view(review) } : { id, title, state },
+      ),
     })),
     heroes: state.heroes.map((record) => new Hero({ record, ctx }).view()),
     needsYou: state.needsYou.map((item): NeedsYouItem => {

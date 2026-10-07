@@ -46,11 +46,34 @@ export const CommandSchema = v.variant('type', [
           classId: id,
           /** Overrides the default gold pouch; null for none. */
           budgetMicroUsd: v.optional(v.nullable(positiveInt)),
+          /** Review effort per reviewing councillor (§5.5, M5); Light when absent. */
+          reviewEfforts: v.optional(v.record(id, EffortSchema)),
         }),
       ),
       v.minLength(1),
     ),
   }),
+  /**
+   * Settles an escalated review (§5.5, #136): accept the task anyway, send it back with a note, or stop
+   * the hero.
+   */
+  v.strictObject({
+    type: v.literal('resolveReview'),
+    commandId: id,
+    itemId: id,
+    decision: v.picklist(['accept', 'sendBack', 'stop']),
+    note: v.optional(v.pipe(v.string(), v.trim(), v.nonEmpty())),
+  }),
+  /** Settles the hero's dispute: drop the disputed findings, or keep them (with an optional note). */
+  v.strictObject({
+    type: v.literal('resolveDispute'),
+    commandId: id,
+    itemId: id,
+    decision: v.picklist(['drop', 'keep']),
+    note: v.optional(v.pipe(v.string(), v.trim(), v.nonEmpty())),
+  }),
+  /** Clears a "Revisit D…?" item: the decision stands (to change it, talk to the council). */
+  v.strictObject({ type: v.literal('dismissItem'), commandId: id, itemId: id }),
   /** Raise the campaign's cap (§14.3): heroes it stopped carry on if the total is below it again. */
   v.strictObject({
     type: v.literal('raiseCampaignBudget'),

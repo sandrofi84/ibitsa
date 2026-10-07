@@ -17,6 +17,8 @@ export type {
   ElderStart,
   FrontEnd,
   GameMaster,
+  ReviewSession,
+  ReviewStart,
   SessionResume,
   SessionStart,
   SittingSession,

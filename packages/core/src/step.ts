@@ -6,6 +6,7 @@ import type { CoreInput, GameMasterEvent } from './inputs.types';
 import { NeedsYou } from './needs-you';
 import { Outbox } from './outbox';
 import { Quest } from './quest';
+import { Review } from './review';
 import { Sitting } from './sitting';
 import { DEFAULT_SETTINGS } from './state';
 import type { CoreState } from './state.types';
@@ -30,6 +31,9 @@ export function step(state: CoreState, input: CoreInput): StepResult {
       break;
     case 'elder':
       new Elder(ctx).handle(input);
+      break;
+    case 'review':
+      new Review(ctx).handle(input);
       break;
     case 'council':
       new Sitting(ctx).handle(input);
@@ -81,6 +85,19 @@ function command(ctx: StepContext, command: Command): void {
     case 'raiseCampaignBudget':
       new Campaign(ctx).raiseCap(command);
       return;
+    case 'resolveReview':
+      new Review(ctx).resolve(command);
+      return;
+    case 'resolveDispute':
+      new Review(ctx).resolveDispute(command);
+      return;
+    case 'dismissItem': {
+      const item = ctx.state.needsYou.find((i) => i.id === command.itemId);
+      if (item?.kind !== 'revisitDecision')
+        ctx.outbox.reject(command.commandId, "That item can't be dismissed.");
+      else ctx.state.needsYou = ctx.state.needsYou.filter((i) => i.id !== item.id);
+      return;
+    }
     case 'finishQuest':
       quest.finish(command.commandId);
       return;
@@ -173,6 +190,9 @@ function gameMaster(ctx: StepContext, event: GameMasterEvent): void {
       for (const h of heroes(ctx).filter((h) => h.record.islandId === event.islandId)) {
         h.worktreeFailed(event.message);
       }
+      return;
+    case 'checksRan':
+      new Review(ctx).checksRan(event);
       return;
     case 'submitChecked':
       hero(ctx, event.heroId)?.submitChecked(event);
