@@ -189,6 +189,8 @@ describe('the review loop (spec §5.5, M5)', () => {
     expect(run.task().state).toBe('underReview');
     expect(run.task().submitHead).toBe('abc123');
     expect(run.state_()).toBe('underReview');
+    // The turn that handed it in ends under review: the hero isn't waiting for orders (#141).
+    expect(run.state.needsYou.map((i) => i.kind)).not.toContain('reply');
     expect(run.effects).toContainEqual({
       type: 'runChecks',
       taskPointId: run.task().id,

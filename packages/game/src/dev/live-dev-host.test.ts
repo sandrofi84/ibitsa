@@ -1,6 +1,6 @@
 import type { CoreMessage, Snapshot } from '@ibitsa/protocol';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { LiveDevHost } from './live-dev-host';
+import { LiveDevHost, scriptedChecks, scriptedReview } from './live-dev-host';
 
 const repo = { defaultBranch: 'main', branches: ['main'], uncommittedChanges: 0 };
 
@@ -436,5 +436,171 @@ describe('LiveDevHost: several heroes (#125)', () => {
     const again = (messages.filter((m) => m.type === 'snapshot').at(-1) as { snapshot: Snapshot })
       .snapshot;
     expect(again.heroes).toHaveLength(2);
+  });
+});
+
+describe('LiveDevHost: scripted reviews (#141)', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  /** A reviewed task from the dev shortcut, handed in once. */
+  async function submitted(scenario: string) {
+    const { host, snapshot, settle } = setup();
+    host.scriptedReviews(scenario);
+    await settle();
+    const heroId = snapshot()?.heroes[0]?.id ?? '';
+    host.send({ type: 'sendMessage', commandId: 'm', heroId, text: 'submit it', priority: 'now' });
+    await settle();
+    await settle();
+    const task = () => snapshot()?.islands[0]?.taskPoints[0];
+    return { host, snapshot, settle, task };
+  }
+
+  it('changes once, then a pass: the hero fixes it and the asking councillor passes round 2', async () => {
+    const { snapshot, task } = await submitted('pass');
+    expect(task()?.state).toBe('done');
+    const review = task()?.review;
+    expect(review?.phase).toBe('passed');
+    expect(review?.checks?.map((c) => [c.command, c.ok])).toEqual([
+      ['pnpm test', true],
+      ['pnpm lint', true],
+    ]);
+    expect(review?.reviews.map((r) => [r.round, r.councillorId, r.verdict?.verdict])).toEqual([
+      [1, 'tester', 'changes'],
+      [1, 'security', 'pass'],
+      [2, 'tester', 'pass'],
+    ]);
+    expect(review?.reviews[0]?.verdict?.findings[0]).toMatchObject({
+      severity: 'blocking',
+      criterion: 'Signing in lands on the page you asked for.',
+      file: 'src/app.ts',
+      line: 12,
+    });
+    expect(review?.suggestions).toEqual([
+      expect.objectContaining({ councillorId: 'tester', severity: 'suggestion' }),
+    ]);
+    expect(snapshot()?.needsYou.map((i) => i.kind)).not.toContain('reviewEscalation');
+  });
+
+  it('stubborn: keeps asking until the loop limit of 2, then asks you; Accept anyway passes it', async () => {
+    const { host, snapshot, settle, task } = await submitted('stubborn');
+    expect(task()?.review?.phase).toBe('escalated');
+    expect(task()?.review?.round).toBe(2);
+    const item = snapshot()?.needsYou.find((i) => i.kind === 'reviewEscalation');
+    expect(item).toMatchObject({ reason: 'loopLimit' });
+    host.send({
+      type: 'resolveReview',
+      commandId: 'r',
+      itemId: item?.id ?? '',
+      decision: 'accept',
+    });
+    await settle();
+    expect(task()?.state).toBe('done');
+  });
+
+  it('revisit: a suggestion asks to revisit D1, which goes to you and can be dismissed', async () => {
+    const { host, snapshot, settle } = await submitted('revisit');
+    const item = snapshot()?.needsYou.find((i) => i.kind === 'revisitDecision');
+    expect(item).toMatchObject({ councillorId: 'tester', decisionId: 'D1' });
+    host.send({ type: 'dismissItem', commandId: 'd', itemId: item?.id ?? '' });
+    await settle();
+    expect(snapshot()?.needsYou.some((i) => i.kind === 'revisitDecision')).toBe(false);
+  });
+
+  it('dispute: the hero disputes the findings; dropping them lets the task pass', async () => {
+    const { host, snapshot, settle, task } = await submitted('dispute');
+    const item = snapshot()?.needsYou.find((i) => i.kind === 'dispute');
+    expect(item).toMatchObject({ reason: expect.stringContaining('D1') });
+    expect(item?.kind === 'dispute' && item.findings.map((f) => f.councillorId)).toEqual([
+      'tester',
+    ]);
+    host.send({ type: 'resolveDispute', commandId: 'x', itemId: item?.id ?? '', decision: 'drop' });
+    await settle();
+    await settle();
+    expect(task()?.state).toBe('done');
+    // Only the first round ran: the dropped findings needed no second look.
+    expect(task()?.review?.reviews.every((r) => r.round === 1)).toBe(true);
+  });
+
+  it('failing: the tests fail once and the hero waits; handed in again, the second run passes', async () => {
+    const { host, snapshot, settle, task } = await submitted('failing');
+    expect(task()?.state).toBe('active');
+    expect(task()?.review?.phase).toBe('changes');
+    expect(task()?.review?.checks?.map((c) => c.ok)).toEqual([false, true]);
+    expect(snapshot()?.heroes[0]?.state.kind).toBe('idle');
+    const heroId = snapshot()?.heroes[0]?.id ?? '';
+    host.send({ type: 'sendMessage', commandId: 'm2', heroId, text: 'submit it', priority: 'now' });
+    await settle();
+    await settle();
+    expect(task()?.review?.checks?.every((c) => c.ok)).toBe(true);
+    expect(task()?.state).toBe('done');
+    expect(scriptedChecks(true)[0]).toMatchObject({
+      ok: false,
+      output: expect.stringContaining('FAIL'),
+    });
+  });
+
+  it('broken: a reviewer that can not finish goes to you with its error', async () => {
+    const { snapshot, task } = await submitted('broken');
+    expect(snapshot()?.needsYou.find((i) => i.kind === 'reviewEscalation')).toMatchObject({
+      reason: 'reviewFailed',
+    });
+    expect(task()?.review?.reviews.find((r) => r.status === 'failed')?.error).toBe(
+      'The reviewer ran out of gold before finishing.',
+    );
+  });
+
+  it('reviews=1 checks the demo campaign too, and keeps the other settings', async () => {
+    const host = new LiveDevHost({
+      credentialsReady: true,
+      repo,
+      reviews: true,
+      campaignBudgetUsd: 2,
+    });
+    const messages: CoreMessage[] = [];
+    host.onMessage((m) => messages.push(m));
+    host.demoCampaign('separate');
+    await vi.advanceTimersByTimeAsync(5_000);
+    const snapshot = () =>
+      (messages.filter((m) => m.type === 'snapshot').at(-1) as { snapshot: Snapshot }).snapshot;
+    const heroId = snapshot().heroes[0]?.id ?? '';
+    host.send({ type: 'sendMessage', commandId: 'm', heroId, text: 'submit it', priority: 'now' });
+    await vi.advanceTimersByTimeAsync(5_000);
+    // The demo plan has no criteria, so the checks are all its review.
+    const task = snapshot().islands[0]?.taskPoints[0];
+    expect(task?.review).toMatchObject({ phase: 'passed', reviews: [] });
+    expect(task?.review?.checks).toHaveLength(2);
+    expect(snapshot().campaign).toMatchObject({ capMicroUsd: 2_000_000, maxParallel: 2 });
+  });
+
+  it('a reviewer without criteria blocks on a bug, and nobody asks after round 1 unless stubborn', () => {
+    const effect = {
+      type: 'startReview' as const,
+      reviewId: 'r9',
+      taskPointId: 'tp',
+      councillorId: 'architect',
+      effort: 'light' as const,
+      round: 1,
+      worktreePath: '/w',
+      from: 'main',
+      to: 'head',
+      since: null,
+      task: { title: 'Plain', description: '' },
+      criteria: [],
+      decisions: [],
+      checks: [],
+    };
+    const verdict = (events: ReturnType<typeof scriptedReview>) =>
+      events.find((e) => e.type === 'verdictSubmitted');
+    expect(verdict(scriptedReview({ effect, first: true }))).toMatchObject({
+      toolUseId: 'v-r9',
+      verdict: { verdict: 'changes', findings: [{ kind: 'bug' }, { severity: 'suggestion' }] },
+    });
+    expect(verdict(scriptedReview({ effect: { ...effect, round: 2 }, first: true }))).toMatchObject(
+      { verdict: { verdict: 'pass', findings: [] } },
+    );
+    expect(verdict(scriptedReview({ effect, first: false }))).toMatchObject({
+      verdict: { verdict: 'pass', findings: [] },
+    });
   });
 });

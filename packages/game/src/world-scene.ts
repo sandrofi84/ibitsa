@@ -145,6 +145,14 @@ export class WorldScene extends Phaser.Scene {
     };
   }
 
+  /** Where each task point's middle is on the map (#141), for tests. */
+  private readonly taskSpots = new Map<string, { x: number; y: number }>();
+
+  /** Where a click reaches a task point on the map (below a hero on it), or null if it isn't drawn. */
+  taskSpot(taskPointId: string): { x: number; y: number } | null {
+    return this.taskSpots.get(taskPointId) ?? null;
+  }
+
   /** A point on the map in canvas pixels, through the camera's scroll and zoom. */
   toCanvas(point: { x: number; y: number }): { x: number; y: number } {
     const cam = this.cameras.main;
@@ -469,7 +477,26 @@ export class WorldScene extends Phaser.Scene {
             { x: p.x + 16, y: p.y + 8 },
             { x: next.x, y: next.y + 8 },
           ]);
-        c.add(this.add.sprite(p.x, p.y, 'taskPoints', TASK_FRAME[tp.state]).setOrigin(0));
+        // Clicking a task point opens its checks and reviews in the task panel (#141). A hero standing
+        // on it covers most of it, so it also answers a little below, under the hero's feet; a click on
+        // the hero itself still selects the hero (Phaser can't order the two, as they're in different layers).
+        c.add(
+          this.add
+            .sprite(p.x, p.y, 'taskPoints', TASK_FRAME[tp.state])
+            .setOrigin(0)
+            .setInteractive({
+              hitArea: new Phaser.Geom.Rectangle(0, 0, 16, 16 + TASK_HIT_BELOW),
+              hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+              useHandCursor: true,
+            })
+            .on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+              const at = { x: pointer.worldX, y: pointer.worldY };
+              const hero = [...this.heroes].find(([, token]) => token.covers(at));
+              if (hero) this.game.events.emit(HERO_SELECTED, hero[0]);
+              else this.game.events.emit(TASK_SELECTED, tp.id);
+            }),
+        );
+        this.taskSpots.set(tp.id, { x: p.x + 8, y: p.y + 16 + TASK_HIT_BELOW / 2 });
         if (tp.state === 'doneUnreviewed') {
           // done, but no councillor has reviewed it yet (M1): a small marker, not colour alone
           c.add(this.add.rectangle(p.x + 12, p.y + 1, 3, 3, 0xffffff).setOrigin(0));
@@ -566,6 +593,11 @@ const SPEECH_MS = 4000;
 
 /** Emitted on `game.events` with the hero's id when the hero is clicked on the map (#61). */
 export const HERO_SELECTED = 'heroSelected';
+
+/** Emitted on `game.events` with the task point's id when it is clicked on the map (#141). */
+export const TASK_SELECTED = 'taskSelected';
+/** How far below a task point a click still reaches it, clear of a hero standing on it. */
+const TASK_HIT_BELOW = 6;
 
 /** A hero on the map: round token base, sprite, HP bar and status bubble (spec §7.2). */
 export class HeroToken {
@@ -680,6 +712,11 @@ export class HeroToken {
   /** What the camera follows. */
   target(): Phaser.GameObjects.Container {
     return this.container;
+  }
+
+  /** Whether a point on the map falls on the hero's sprite. */
+  covers(point: { x: number; y: number }): boolean {
+    return this.sprite.getBounds().contains(point.x, point.y);
   }
 
   /** The middle of the sprite, on the map. */

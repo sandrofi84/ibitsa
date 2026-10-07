@@ -40,6 +40,7 @@ export default defineConfig({
         'packages/game/src/viewport.ts',
         'packages/game/src/camera-director.ts',
         'packages/game/src/hero-selection.ts',
+        'packages/game/src/task-review.ts',
         'packages/game/src/dev/dev-host.ts',
         'packages/game/src/dev/live-dev-host.ts',
         'packages/game/src/dev/demo-review.ts',

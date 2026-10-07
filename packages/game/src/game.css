@@ -110,6 +110,137 @@ body {
   opacity: 1;
 }
 
+/*
+ * The task panel (§5.5, #141): a task's checks, reviews by round, and suggestions. Top left, beside the
+ * camera controls; Needs you stays on top of it, since that's where you act.
+ */
+.task-panel:not([hidden]) {
+  position: fixed;
+  top: 48px;
+  left: 112px;
+  width: min(420px, calc(100vw - 124px));
+  max-height: calc(100vh - var(--command-bar-height, 52px) - 72px);
+  overflow: auto;
+  box-sizing: border-box;
+  background: rgba(239, 224, 184, 0.97);
+  border: 2px solid #8a6a3a;
+  border-radius: 4px;
+  padding: 10px 12px;
+  color: #1a1420;
+  font:
+    13px / 1.45 system-ui,
+    sans-serif;
+}
+
+.task-panel:focus-visible {
+  outline: 2px solid #1a1420;
+}
+
+.task-panel h2 {
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+
+.task-panel h3 {
+  margin: 10px 0 4px;
+  font-size: 13px;
+}
+
+.task-panel h4 {
+  margin: 6px 0 2px;
+  font-size: 12px;
+  color: #5e4a2a;
+}
+
+.task-panel .task-state {
+  margin: 0 0 6px;
+}
+
+.task-panel .note {
+  margin: 2px 0;
+  color: #5e4a2a;
+  font-size: 12px;
+}
+
+.task-panel ul {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.task-panel li {
+  margin: 2px 0;
+}
+
+.task-panel code,
+.task-panel pre {
+  font:
+    12px / 1.4 ui-monospace,
+    monospace;
+  background: #fff6dc;
+}
+
+.task-panel code {
+  padding: 0 3px;
+  word-break: break-all;
+}
+
+.task-panel pre {
+  margin: 4px 0;
+  padding: 4px 6px;
+  white-space: pre-wrap;
+  max-height: 12em;
+  overflow: auto;
+}
+
+.task-panel .checks {
+  list-style: none;
+  padding-left: 0;
+}
+
+.task-panel .checks summary {
+  cursor: pointer;
+}
+
+.task-panel .checks .fail summary {
+  color: #8a2a1a;
+  font-weight: 600;
+}
+
+.task-panel .round + .round {
+  border-top: 1px dashed #8a6a3a;
+}
+
+.task-panel button {
+  margin-top: 10px;
+  font: inherit;
+  padding: 3px 10px;
+  border: 1px solid #5e3b1c;
+  background: #fff6dc;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.task-panel button:focus-visible {
+  outline: 2px solid #1a1420;
+}
+
+.findings {
+  margin: 2px 0 6px;
+  padding-left: 16px;
+}
+
+.findings .severity {
+  font-weight: 600;
+}
+
+.findings .blocking .severity {
+  color: #8a2a1a;
+}
+
+.findings .revisit {
+  font-style: italic;
+}
+
 .dev-overlay {
   position: fixed;
   /* Bottom right, under the hero pane and beside the Needs You panel (#61). */

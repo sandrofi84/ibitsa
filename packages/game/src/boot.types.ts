@@ -36,4 +36,8 @@ export interface Started {
   map(): MapProbe | null;
   /** Which hero the pane shows and the bar speaks to (#125); null without WebGL. */
   selection: HeroSelection | null;
+  /** Where a click reaches a task point, in page pixels, for tests (#141); null if it isn't drawn. */
+  taskOnPage(taskPointId: string): { x: number; y: number } | null;
+  /** The task point the task panel shows, or null (#141). */
+  taskPanel(): string | null;
 }

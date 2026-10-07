@@ -48,10 +48,13 @@ if (name === 'live') {
         ? null
         : { defaultBranch: 'main', branches: ['main', 'feature/x'], uncommittedChanges: 2 },
     ...(params.get('campaignCap') ? { campaignBudgetUsd: Number(params.get('campaignCap')) } : {}),
-    // Dev only (#140): `review=demo` turns reviews on, with scripted checks and verdicts.
+    // Dev only (#140): `review=demo` turns reviews on, with paced scripted checks and verdicts.
     ...(params.get('review') === 'demo' ? { review: 'demo' as const } : {}),
+    // `reviews=1`: submitted tasks are checked and reviewed by scripted councillors (#141).
+    reviews: params.get('reviews') === '1',
   });
-  const { client, zoom, hero, camera, hut, selectHero, map, selection } = startGame(root, host);
+  const { client, zoom, hero, camera, hut, selectHero, map, selection, taskOnPage, taskPanel } =
+    startGame(root, host);
   w.__ibitsa = {
     snapshot: () => client.snapshot,
     // Lets a test act for a hero the UI can't select yet.
@@ -68,10 +71,15 @@ if (name === 'live') {
     map,
     // The selected hero's id (#125).
     selected: () => selection?.selected(client.snapshot)?.id ?? null,
+    taskOnPage,
+    taskPanel,
   };
   // `&campaign=separate|stacked`: straight into a three-island campaign, to see the map (#124).
   const campaign = params.get('campaign');
   if (campaign === 'separate' || campaign === 'stacked') host.demoCampaign(campaign);
+  // `&reviewScript=pass|stubborn|revisit|dispute|failing|broken`: straight into a reviewed task (#141).
+  const reviewScript = params.get('reviewScript');
+  if (reviewScript) host.scriptedReviews(reviewScript);
 } else if (params.get('scene') === 'hut') {
   // The council hut from a scripted sitting (#99): every animation, without a replay. The real sitting
   // shows the hut by itself, e.g. `?fixture=m3-round-table` (#102).

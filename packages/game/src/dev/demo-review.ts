@@ -7,8 +7,9 @@ const PACE_MS = 1_000;
 /**
  * Dev only (#140): reviews in the live host (`?fixture=live&review=demo`). The checks pass, and each
  * councillor's verdict comes in after a while: in the first round the first councillor started for a
- * task asks for changes with two blocking findings and the others pass; every later round passes. A
- * stand-in until the live host scripts reviews properly (#141), which replaces it.
+ * task asks for changes with two blocking findings and the others pass; every later round passes. Paced
+ * slowly so the councillors can be watched walking out; the review paths themselves (escalation, dispute,
+ * revisit, a failing check) are the live host's scripted reviews (#141, `reviewScript=`).
  */
 export class DemoReview {
   private readonly input: DemoReviewOptions['input'];

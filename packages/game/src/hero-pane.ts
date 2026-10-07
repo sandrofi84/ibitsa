@@ -28,6 +28,7 @@ export function mountHeroPane({
   onHistoryChange,
   newAction,
   selection,
+  openTask,
 }: {
   client: GameClient;
   host: Host;
@@ -39,6 +40,8 @@ export function mountHeroPane({
   newAction?: () => void;
   /** Which hero the pane shows (#125); the first hero without one. */
   selection?: HeroSelection;
+  /** Opens the hero's current task in the task panel (#141). */
+  openTask?: (taskPointId: string) => void;
 }): HeroPane {
   const pane = el('section', { className: 'hero-pane' });
   pane.setAttribute('aria-label', 'Hero');
@@ -267,6 +270,13 @@ export function mountHeroPane({
       autoToggle.dataset.control = 'auto';
       autoToggle.setAttribute('aria-pressed', String(auto));
       items.push(autoToggle);
+    }
+    // The current task's checks and reviews (#141).
+    const taskPointId = hero.taskPointId;
+    if (openTask && taskPointId) {
+      const task = button({ label: 'Open task', onClick: () => openTask(taskPointId) });
+      task.dataset.control = 'task';
+      items.push(task);
     }
     const worktree = island?.worktree ?? 'creating';
     if (worktree === 'ready') {
