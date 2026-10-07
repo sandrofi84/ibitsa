@@ -279,10 +279,14 @@ export class GitGameMaster implements GameMaster {
       env: { GIT_TERMINAL_PROMPT: '0' },
     });
     if (!fetched.ok) throw new Error(fetched.output);
-    if ((await git(worktreePath, ['rebase', '--onto', `origin/${onto}`, upstream])).ok)
-      return 'restacked';
+    const rebased = await git(worktreePath, ['rebase', '--onto', `origin/${onto}`, upstream]);
+    if (rebased.ok) return 'restacked';
+    // Only conflicted files make it the hero's to resolve; anything else (no identity, a bad commit) is
+    // an error the user sees.
+    const conflicted = await git(worktreePath, ['diff', '--name-only', '--diff-filter=U']);
     await git(worktreePath, ['rebase', '--abort']);
-    return 'conflict';
+    if (conflicted.ok && conflicted.output !== '') return 'conflict';
+    throw new Error(rebased.output.slice(-OUTPUT_TAIL));
   }
 
   /** `../<repo>.ibitsa/<branch>` next to the repository (spec §5.3). */

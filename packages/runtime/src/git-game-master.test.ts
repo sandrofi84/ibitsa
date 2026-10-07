@@ -481,6 +481,9 @@ describe('restack and removing a merged island (#154)', () => {
     run(dir, 'init', '-q', '--bare', remote);
     run(dir, 'remote', 'add', 'origin', remote);
     run(dir, 'push', '-q', 'origin', 'main');
+    // The game master's own git (the rebase) needs an identity; CI machines have none.
+    run(dir, 'config', 'user.name', 'Test');
+    run(dir, 'config', 'user.email', 'test@example.com');
     const master = gm(dir);
     const commit = (path: string, file: string) => {
       writeFileSync(join(path, file), file);
@@ -538,6 +541,13 @@ describe('restack and removing a merged island (#154)', () => {
     );
     expect(run(frontPath, 'rev-parse', 'HEAD')).toBe(before);
     expect(run(frontPath, 'status', '--porcelain')).toBe('');
+  });
+
+  it("fails with git's message when the rebase can't start, rather than calling it a conflict", async () => {
+    const { master, frontPath } = await stacked();
+    await expect(
+      master.restack({ worktreePath: frontPath, onto: 'main', upstream: 'no-such-commit' }),
+    ).rejects.toThrow(/no-such-commit/);
   });
 
   it("removes a merged island's worktree with its local branch", async () => {
