@@ -927,6 +927,8 @@ const LIVE_COUNCILLORS: CouncillorInfo[] = [
   tools: ['Read', 'Grep', 'Glob'],
   modes: { planning: true, review: true },
   hash: id,
+  // Where the extension would find its skill, for the Roster's Customise (#181).
+  path: `/ibitsa/plugin/skills/${id}/SKILL.md`,
 }));
 
 /** Three islands with a task each (#124): separate, or stacked in this order. */

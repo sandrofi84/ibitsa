@@ -1,3 +1,4 @@
+import type { CouncillorOverride, CouncillorOverrides } from '@ibitsa/protocol';
 import type { UserSettings } from '@ibitsa/runtime';
 import type { ConfigReader } from './settings.types';
 
@@ -37,6 +38,30 @@ export function readPollSeconds(config: ConfigReader): number {
 export function readDisabledCouncillors(config: ConfigReader): string[] {
   const ids = config.get<unknown>('council.disabled');
   return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : [];
+}
+
+/**
+ * `ibitsa.councillors`: field overrides by councillor id (§4.7, #181), each field a string except the
+ * list of tools; anything else is dropped.
+ */
+export function readCouncillorOverrides(config: ConfigReader): CouncillorOverrides {
+  const all = config.get<unknown>('councillors');
+  if (typeof all !== 'object' || all === null || Array.isArray(all)) return {};
+  const text = (v: unknown) => (typeof v === 'string' && v.trim() ? { value: v.trim() } : null);
+  return Object.fromEntries(
+    Object.entries(all).flatMap(([id, o]) => {
+      if (typeof o !== 'object' || o === null || Array.isArray(o)) return [];
+      const fields = o as Record<string, unknown>;
+      const override: CouncillorOverride = {};
+      for (const key of ['title', 'model', 'portrait'] as const) {
+        const t = text(fields[key]);
+        if (t) override[key] = t.value;
+      }
+      if (Array.isArray(fields.tools))
+        override.tools = fields.tools.filter((t): t is string => typeof t === 'string');
+      return [[id, override]];
+    }),
+  );
 }
 
 const ELDER_MODELS = ['haiku', 'sonnet', 'opus', 'fable'];

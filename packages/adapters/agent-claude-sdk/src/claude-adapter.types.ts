@@ -4,6 +4,7 @@ import type {
   SettingSource,
   tool,
 } from '@anthropic-ai/claude-agent-sdk';
+import type { CouncillorOverrides } from '@ibitsa/protocol';
 
 /** The parts of the SDK the adapter uses; injectable so tests run without the SDK or tokens. */
 export interface SdkModule {
@@ -24,6 +25,8 @@ export interface ClaudeAdapterOptions {
   pluginDirs?: () => string[];
   /** The user's home, for personal skills; injectable for tests. */
   home?: string;
+  /** `ibitsa.councillors` (#181): field overrides by councillor id, read each time councillors are listed. */
+  councillorOverrides?: () => CouncillorOverrides;
   /** Injectable for tests; defaults to the real platform and a PATH lookup. */
   platform?: NodeJS.Platform;
   hasCommand?: (name: string) => boolean;

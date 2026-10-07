@@ -1,3 +1,4 @@
+import type { CouncillorOverrides } from './councillors.types';
 import type { RuleKey, SettingValue } from './host-channel.schema';
 
 /** One rule in the Guild Hall's Rule book (#179): its value, where it comes from, and how to edit it. */
@@ -55,4 +56,17 @@ export type HostEvent =
   /** The packs found, and the one in use (#183). */
   | { channel: 'host'; type: 'packs'; packs: PackView[]; active: string }
   /** Load this pack's files now (#183); null is the bundled default. Ends in `/`. */
-  | { channel: 'host'; type: 'packChanged'; base: string | null };
+  | { channel: 'host'; type: 'packChanged'; base: string | null }
+  /** The Roster's settings (#181), after `readCouncilSettings` or a change. */
+  | { channel: 'host'; type: 'councilSettings'; council: CouncilSettingsView };
+
+/**
+ * The Roster's settings (#181): who's turned off (`ibitsa.council.disabled`) and each councillor's
+ * overrides (`ibitsa.councillors`), with the layer each comes from (§8.1).
+ */
+export interface CouncilSettingsView {
+  disabled: string[];
+  disabledLayer: 'default' | 'user' | 'workspace';
+  overrides: CouncillorOverrides;
+  overridesLayer: 'default' | 'user' | 'workspace';
+}

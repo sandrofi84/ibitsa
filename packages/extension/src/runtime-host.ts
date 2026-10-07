@@ -44,6 +44,11 @@ export class RuntimeHost {
     this.connection?.receive({ ...intent, commandId: `palette-${++this.commands}` });
   }
 
+  /** A councillor was turned off or extended (#181): the snapshot's roster follows. */
+  refreshCouncillors(): void {
+    this.runtime?.refreshCouncillors();
+  }
+
   dispose(): void {
     this.runtime?.dispose();
     this.runtime = null;

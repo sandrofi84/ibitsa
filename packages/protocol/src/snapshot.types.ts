@@ -26,6 +26,8 @@ export interface Snapshot {
   sandboxed?: boolean;
   /** The councillors the workspace can seat (§4.7), for convening and the hut. Added by the runtime. */
   councillors?: CouncillorInfo[];
+  /** Every councillor, turned-off ones included, for the Guild Hall's Roster (#181). Added by the runtime. */
+  roster?: CouncillorInfo[];
   /** `ibitsa.council.mode`: ask how the council sits each time, or always one way (§4.2). Added by the runtime. */
   councilMode?: 'ask' | 'roundTable' | 'chambers';
   /** What the git host allows here (§5.6, #162); absent until known. Added by the runtime. */

@@ -61,6 +61,7 @@ describe('CouncillorSkills (#98)', () => {
         tools: ['Read', 'Grep', 'Glob'],
         modes: { planning: false, review: true },
         hash: expect.stringMatching(/^[0-9a-f]{12}$/),
+        path: join(home, '.claude', 'skills', 'perf', 'SKILL.md'),
       },
       {
         id: 'security',
@@ -73,8 +74,65 @@ describe('CouncillorSkills (#98)', () => {
         tools: ['Read', 'Grep', 'Glob'],
         modes: { planning: true, review: true },
         hash: expect.stringMatching(/^[0-9a-f]{12}$/),
+        path: join(plugin, 'skills', 'security', 'SKILL.md'),
       },
     ]);
+  });
+
+  it("applies the user's overrides: title, model, portrait and read-only tools, with a new hash (#181)", () => {
+    const { cwd, home } = folders();
+    write(
+      join(cwd, '.claude', 'skills', 'security', 'SKILL.md'),
+      skill('name: security\nibitsa-councillor: true'),
+    );
+    const plain = new CouncillorSkills({ cwd, home, pluginDirs: [] }).list()[0];
+    const extended = new CouncillorSkills({
+      cwd,
+      home,
+      pluginDirs: [],
+      overrides: {
+        security: {
+          title: 'Guardian',
+          model: 'opus',
+          portrait: 'councillor.elder',
+          tools: ['Read', 'Bash', 'WebSearch'],
+        },
+        nobody: { title: 'Ghost' },
+      },
+    }).list();
+    expect(extended).toEqual([
+      {
+        ...plain,
+        title: 'Guardian',
+        model: 'opus',
+        portrait: 'councillor.elder',
+        tools: ['Read', 'WebSearch'],
+        hash: expect.stringMatching(/^[0-9a-f]{12}$/),
+      },
+    ]);
+    expect(extended[0]?.hash).not.toBe(plain?.hash);
+    // Blank fields and tools that aren't read-only leave the skill's own.
+    const blank = new CouncillorSkills({
+      cwd,
+      home,
+      pluginDirs: [],
+      overrides: { security: { title: '  ', tools: ['Bash'] } },
+    }).list()[0];
+    expect(blank).toMatchObject({ title: plain?.title, tools: plain?.tools });
+  });
+
+  it('reads overrides from the adapter, through CouncillorSkills.of (#181)', async () => {
+    const { cwd, home } = folders();
+    write(
+      join(cwd, '.claude', 'skills', 'security', 'SKILL.md'),
+      skill('name: security\nibitsa-councillor: true'),
+    );
+    const adapter = new ClaudeAdapter({
+      env: () => ({}),
+      home,
+      councillorOverrides: () => ({ security: { title: 'Guardian' } }),
+    });
+    expect((await adapter.listCouncillors({ cwd }))[0]?.title).toBe('Guardian');
   });
 
   it('lets the project replace the user, and the user replace a built-in, by id', () => {

@@ -82,6 +82,23 @@ export class HostChannel {
         if (path) this.deps.openFile(path);
         return;
       }
+      case 'readCouncilSettings':
+        this.postCouncil();
+        return;
+      case 'setCouncillorEnabled':
+        await this.deps.council.setEnabled(request);
+        this.postCouncil();
+        return;
+      case 'setCouncillorOverride':
+        await this.deps.council.setOverride(request);
+        this.postCouncil();
+        return;
+      case 'customiseCouncillor':
+        this.deps.council.customise(request);
+        return;
+      case 'newCouncillor':
+        this.deps.council.create(request);
+        return;
     }
   }
 
@@ -92,6 +109,10 @@ export class HostChannel {
       packs: this.deps.packs.list(),
       active: this.deps.activePack(),
     });
+  }
+
+  private postCouncil(): void {
+    this.post({ channel: 'host', type: 'councilSettings', council: this.deps.council.view() });
   }
 
   private postRules(): void {

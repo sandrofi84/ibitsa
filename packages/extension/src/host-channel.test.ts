@@ -2,6 +2,7 @@ import { resolve } from 'node:path';
 import type { HostEvent } from '@ibitsa/protocol';
 import { describe, expect, it, vi } from 'vitest';
 import type { Credentials } from './credentials.types';
+import { GuildCouncil } from './guild-council';
 import { GuildSettings } from './guild-settings';
 import { HostChannel, isHostMessage, openablePath } from './host-channel';
 import type { HostChannelDeps } from './host-channel.types';
@@ -35,6 +36,13 @@ function setup(overrides: Partial<HostChannelDeps> = {}) {
     activePack: () => 'default',
     setActivePack: vi.fn(async () => {}),
     packBase: (dir) => `webview:${dir}/`,
+    council: new GuildCouncil({
+      inspect: () => undefined,
+      update: async () => {},
+      files: { exists: () => false, read: () => '', write: () => {} },
+      roots: { home: '/home/me', workspace: '/ws', plugin: '/ext/plugin' },
+      open: () => {},
+    }),
     ...overrides,
   };
   return { channel: new HostChannel(deps), deps, posted };
@@ -195,5 +203,79 @@ describe('asset packs on the host channel (#183)', () => {
     await channel.receive({ channel: 'host', type: 'usePack', id: '../../etc' });
     expect(deps.setActivePack).not.toHaveBeenCalled();
     expect(posted).toEqual([]);
+  });
+});
+
+describe('the Roster on the host channel (#181)', () => {
+  it('sends the council settings on request and after a change, and hands file actions to the council', async () => {
+    const council = {
+      view: vi.fn(() => ({
+        disabled: [],
+        disabledLayer: 'default' as const,
+        overrides: {},
+        overridesLayer: 'default' as const,
+      })),
+      setEnabled: vi.fn(async () => {}),
+      setOverride: vi.fn(async () => {}),
+      customise: vi.fn(() => null),
+      create: vi.fn(() => null),
+    };
+    const { channel, posted } = setup({ council: council as unknown as GuildCouncil });
+    await channel.receive({ channel: 'host', type: 'readCouncilSettings' });
+    await channel.receive({
+      channel: 'host',
+      type: 'setCouncillorEnabled',
+      id: 'security',
+      enabled: false,
+      layer: 'user',
+    });
+    await channel.receive({
+      channel: 'host',
+      type: 'setCouncillorOverride',
+      id: 'security',
+      override: { title: 'Guardian' },
+      layer: 'workspace',
+    });
+    await channel.receive({
+      channel: 'host',
+      type: 'customiseCouncillor',
+      id: 'security',
+      path: '/ext/plugin/skills/security/SKILL.md',
+      layer: 'user',
+    });
+    await channel.receive({
+      channel: 'host',
+      type: 'newCouncillor',
+      id: 'perf',
+      title: 'Performance',
+      description: 'Speed.',
+      layer: 'workspace',
+    });
+    expect(posted.map((e) => e.type)).toEqual([
+      'councilSettings',
+      'councilSettings',
+      'councilSettings',
+    ]);
+    expect(council.setEnabled).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'security', enabled: false, layer: 'user' }),
+    );
+    expect(council.customise).toHaveBeenCalledOnce();
+    expect(council.create).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'perf', title: 'Performance' }),
+    );
+  });
+
+  it("refuses an id that isn't a skill folder's name", async () => {
+    const create = vi.fn(() => null);
+    const { channel } = setup({ council: { create } as unknown as GuildCouncil });
+    await channel.receive({
+      channel: 'host',
+      type: 'newCouncillor',
+      id: '../../etc',
+      title: 'X',
+      description: 'Y',
+      layer: 'user',
+    });
+    expect(create).not.toHaveBeenCalled();
   });
 });

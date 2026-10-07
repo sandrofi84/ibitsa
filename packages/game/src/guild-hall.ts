@@ -9,9 +9,11 @@ import type { GameClient } from './client';
 import { button, el } from './dom';
 import type { GuildHall, GuildTab } from './guild-hall.types';
 import { packsTab } from './guild-packs';
+import { mountRoster } from './guild-roster';
 import type { Host } from './host.types';
 
 const TABS: { id: GuildTab; label: string }[] = [
+  { id: 'roster', label: 'Roster' },
   { id: 'rules', label: 'Rule book' },
   { id: 'spells', label: 'Spell book' },
   { id: 'chronicle', label: 'Chronicle' },
@@ -139,9 +141,17 @@ export function mountGuildHall({ client, host }: { client: GameClient; host: Hos
   client.onActions(() => {
     if (tab === 'spells') render();
   });
+  const roster = mountRoster({
+    client,
+    host,
+    onChange: () => {
+      if (tab === 'roster') render();
+    },
+  });
 
   const show = (next: GuildTab) => {
     tab = next;
+    if (next === 'roster') roster.refresh();
     if (next === 'rules') host.request({ channel: 'host', type: 'readSettings' });
     if (next === 'chronicle') client.requestChronicle();
     if (next === 'spells') client.requestActions();
@@ -172,6 +182,8 @@ export function mountGuildHall({ client, host }: { client: GameClient; host: Hos
 
   function tabBody(t: GuildTab): HTMLElement[] {
     switch (t) {
+      case 'roster':
+        return roster.render();
       case 'rules':
         return ruleBook();
       case 'spells':

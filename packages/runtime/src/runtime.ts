@@ -72,6 +72,8 @@ export class Runtime {
   private readonly reviews = new Map<string, ReviewSession>();
   /** The workspace's councillors, kept for the snapshot (#103). */
   private councillorList: CouncillorInfo[] = [];
+  /** Every councillor, turned-off ones included, for the Guild Hall's Roster (#181). */
+  private rosterList: CouncillorInfo[] = [];
   private readonly timers = new Map<string, unknown>();
   private snapshotTimer: unknown = null;
   private lastSnapshotAt = Number.NEGATIVE_INFINITY;
@@ -832,11 +834,21 @@ export class Runtime {
     return this.sitting?.id === sittingId ? this.sitting.session : undefined;
   }
 
-  private refreshCouncillors(): void {
-    void this.currentCouncillors().then((list) => {
-      this.councillorList = list;
-      this.scheduleSnapshot();
-    });
+  /**
+   * Reads the councillors again for the snapshot: those the council can seat, and the whole roster,
+   * turned-off ones included, for the Guild Hall (#181). Also called when their settings change.
+   */
+  refreshCouncillors(): void {
+    const cwd = this.options.repoDir;
+    if (!cwd || !this.councillors) return;
+    void this.councillors
+      .list(cwd)
+      .catch(() => [])
+      .then((all) => {
+        this.rosterList = all;
+        this.councillorList = seatable(all, this.options.disabledCouncillors?.() ?? []);
+        this.scheduleSnapshot();
+      });
   }
 
   /** `at` is in log time (ms since the header). */
@@ -1020,6 +1032,7 @@ export class Runtime {
       projectRules: this.projectRules.list(),
       sandboxed: (this.options.platform ?? process.platform) !== 'win32',
       councillors: this.councillorList,
+      roster: this.rosterList,
       councilMode: this.options.councilMode?.() ?? 'ask',
     };
     return {

@@ -1867,3 +1867,24 @@ body.in-hut:has(.council-chamber:not([hidden])) .needs-you {
   color: #a32020;
   margin: 4px 0 0;
 }
+
+/* The Roster (#181): a card per councillor, then the new councillor form. */
+.guild-hall .roster {
+  list-style: none;
+  padding: 0;
+}
+
+.guild-hall .councillor-card {
+  border-top: 1px solid #c8b78a;
+  padding-top: 6px;
+}
+
+.guild-hall .councillor-card .sits,
+.guild-hall .councillor-card .override {
+  display: inline-block;
+  margin-right: 12px;
+}
+
+.guild-hall .new-councillor .rule-problem {
+  color: #a32020;
+}

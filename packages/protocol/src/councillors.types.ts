@@ -19,4 +19,19 @@ export interface CouncillorInfo {
   modes: { planning: boolean; review: boolean };
   /** A short hash of the skill file, so a changed councillor gives a new council version (§4.10). */
   hash: string;
+  /** The skill file, for the Guild Hall's Customise (#181); absent from logs before it. */
+  path?: string;
 }
+
+/**
+ * `ibitsa.councillors`: field overrides by councillor id (§4.7, #181, "extend"), applied when
+ * councillors are listed; the skill file stays as it is.
+ */
+export interface CouncillorOverride {
+  title?: string | undefined;
+  model?: string | undefined;
+  /** Kept to the read-only tools a sitting allows. */
+  tools?: string[] | undefined;
+  portrait?: string | undefined;
+}
+export type CouncillorOverrides = Record<string, CouncillorOverride>;

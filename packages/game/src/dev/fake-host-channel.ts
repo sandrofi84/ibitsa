@@ -1,4 +1,11 @@
-import type { HostEvent, HostRequest, PackView, RuleKey, SettingView } from '@ibitsa/protocol';
+import type {
+  CouncilSettingsView,
+  HostEvent,
+  HostRequest,
+  PackView,
+  RuleKey,
+  SettingView,
+} from '@ibitsa/protocol';
 
 /** The files the standalone build's worktree pretends to hold, for @ references (#83). */
 export const DEMO_FILES = [
@@ -22,6 +29,13 @@ export class FakeHostChannel {
   private readonly rules: SettingView[] = DEMO_RULES.map((r) => ({ ...r }));
   /** The pack in use (#183). */
   private activePack = 'default';
+  /** The Roster's settings (#181): nobody turned off, nobody extended. */
+  private council: CouncilSettingsView = {
+    disabled: [],
+    disabledLayer: 'default',
+    overrides: {},
+    overridesLayer: 'default',
+  };
 
   constructor({ credentialsReady }: { credentialsReady: boolean }) {
     this.ready = credentialsReady;
@@ -86,6 +100,30 @@ export class FakeHostChannel {
         this.emitRules();
         return;
       }
+      // The Roster (#181): kept in memory; customising and new councillors only open a file there.
+      case 'readCouncilSettings':
+        this.emitCouncil();
+        return;
+      case 'setCouncillorEnabled': {
+        const others = this.council.disabled.filter((id) => id !== request.id);
+        this.council.disabled = request.enabled ? others : [...others, request.id];
+        this.council.disabledLayer = request.layer;
+        this.emitCouncil();
+        return;
+      }
+      case 'setCouncillorOverride': {
+        const { [request.id]: _old, ...others } = this.council.overrides;
+        this.council.overrides = request.override
+          ? { ...others, [request.id]: request.override }
+          : others;
+        this.council.overridesLayer =
+          Object.keys(this.council.overrides).length > 0 ? request.layer : 'default';
+        this.emitCouncil();
+        return;
+      }
+      case 'customiseCouncillor':
+      case 'newCouncillor':
+        return;
     }
   }
 
@@ -96,6 +134,14 @@ export class FakeHostChannel {
 
   private emitPacks(): void {
     this.emit({ channel: 'host', type: 'packs', packs: DEMO_PACKS, active: this.activePack });
+  }
+
+  private emitCouncil(): void {
+    this.emit({
+      channel: 'host',
+      type: 'councilSettings',
+      council: structuredClone(this.council),
+    });
   }
 
   private emitRules(): void {
