@@ -1594,3 +1594,101 @@ body.in-hut:has(.council-dialogue:not([hidden])) .needs-you {
   gap: 8px;
   margin: 6px 0;
 }
+
+/* The council's chamber mid-campaign (#169): its lines and a box to ask, over the hut. */
+.council-chamber {
+  position: fixed;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  width: min(680px, calc(100vw - 32px));
+  box-sizing: border-box;
+  padding: 8px 10px;
+  background: rgba(239, 224, 184, 0.97);
+  border: 3px solid #5a3e1c;
+  border-radius: 4px;
+  box-shadow: 0 0 0 2px #1a1420;
+  font:
+    13px / 1.45 system-ui,
+    sans-serif;
+  color: #1a1420;
+  z-index: 30;
+}
+
+.council-chamber h2 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+
+.council-chamber .chamber-lines {
+  /* The lines scroll; the box to ask stays in view. */
+  max-height: 26vh;
+  overflow: auto;
+  list-style: none;
+  margin: 0 0 6px;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.council-chamber .chamber-lines li {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.council-chamber .chamber-lines li.you {
+  opacity: 0.8;
+}
+
+.council-chamber .portrait {
+  width: 24px;
+  height: 24px;
+  image-rendering: pixelated;
+  border: 2px solid #5a3e1c;
+  background: #3a2a1a;
+  flex: none;
+}
+
+.council-chamber select,
+.council-chamber textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 4px 0;
+  font: inherit;
+}
+
+.council-chamber .chamber-actions {
+  display: flex;
+  gap: 6px;
+}
+
+body.in-hut:has(.council-chamber:not([hidden])) .needs-you {
+  display: none;
+}
+
+/* A reply from the council while the hut is closed (#169). */
+.council-notice {
+  position: fixed;
+  top: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(520px, calc(100vw - 32px));
+  padding: 6px 10px;
+  background: rgba(239, 224, 184, 0.97);
+  border: 2px solid #5a3e1c;
+  border-radius: 4px;
+  font:
+    13px / 1.45 system-ui,
+    sans-serif;
+  color: #1a1420;
+  z-index: 30;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.council-notice[hidden] {
+  display: none;
+}

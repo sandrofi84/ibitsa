@@ -11,6 +11,7 @@ import type {
   SittingView,
 } from '@ibitsa/protocol';
 import { checkPlan } from '@ibitsa/protocol';
+import { Consultation } from './consultation';
 import { Quest } from './quest';
 import { newId } from './state';
 import type { CoreState, QuestionBatch, SittingRecord } from './state.types';
@@ -67,6 +68,7 @@ export class Sitting {
       error: record.error,
       rating: record.rating,
       comparisonOf: record.comparisonOf,
+      consultations: record.consultations ?? [],
     };
   }
 
@@ -356,6 +358,11 @@ export class Sitting {
   handle({ sittingId, event }: { sittingId: string; event: CouncilEvent }): void {
     const record = this.ctx.state.sitting;
     if (record?.id !== sittingId) return;
+    // Once its plan is approved the council speaks only when asked mid-campaign (#169).
+    if (record.status === 'approved') {
+      new Consultation(this.ctx).handle({ record, event });
+      return;
+    }
     if (!Sitting.active(record)) {
       if ('toolUseId' in event)
         this.complete({ record, toolUseId: event.toolUseId, reason: 'The sitting has ended.' });

@@ -8,6 +8,7 @@ import { GameClient } from './client';
 import { mountCommandBar } from './command-bar';
 import { CommandHistory } from './command-history';
 import { mountConveneForm } from './convene-form';
+import { consultedSitting, mountCouncilChamber } from './council-chamber';
 import { mountCouncilDialogue } from './council-dialogue-box';
 import { mountElderPanel } from './elder-panel';
 import { mountHeroPane } from './hero-pane';
@@ -35,6 +36,7 @@ import { fitViewport } from './viewport';
 import {
   HEIGHT,
   HERO_SELECTED,
+  HUT_SELECTED,
   PULL_REQUEST_HOVERED,
   PULL_REQUEST_SELECTED,
   RIGHT_INSET,
@@ -105,6 +107,8 @@ export function startGame(root: HTMLElement, host: Host): Started {
       taskOnPage: () => null,
       taskPanel: () => null,
       pullRequestOnPage: () => null,
+      hutOnPage: () => null,
+      councilChamber: () => false,
       pullRequestPanel: () => null,
       pullRequestPreview: () => null,
       map: () => null,
@@ -319,6 +323,29 @@ export function startGame(root: HTMLElement, host: Host): Started {
     // A hut shown before the pack loaded started instead of the map.
     else if (wasShowing && !scenes.isActive('world')) scenes.start('world');
   };
+  // Mid-campaign the hut opens the council's chamber (#169): the council's lines and a box to ask.
+  let chamberHut = false;
+  const chamberFeed = () => {
+    const consulted = consultedSitting(client.snapshot);
+    if (consulted) sittingFeed.update({ sitting: consulted, focus: null });
+  };
+  const chamber = mountCouncilChamber({
+    client,
+    portrait: (appearance) => portraits.url(appearance),
+    onOpen: () => {
+      chamberHut = true;
+      chamberFeed();
+      showHut(sittingFeed);
+    },
+    onClose: () => {
+      chamberHut = false;
+      hideHut();
+    },
+  });
+  client.onSnapshot(() => {
+    if (chamberHut) chamberFeed();
+  });
+  game.events.on(HUT_SELECTED, () => chamber.open());
   // The hut shows while the council sits (§7.1 screen 2), and the map comes back after.
   let sittingHut = false;
   client.onSnapshot((snapshot) => {
@@ -349,6 +376,13 @@ export function startGame(root: HTMLElement, host: Host): Started {
     const rect = game.canvas.getBoundingClientRect();
     return { x: rect.left + at.x * game.scale.zoom, y: rect.top + at.y * game.scale.zoom };
   };
+  const hutOnPage = () => {
+    const scene = world();
+    if (!scene?.sys.isActive()) return null;
+    const at = scene.toCanvas(scene.hutSpot());
+    const rect = game.canvas.getBoundingClientRect();
+    return { x: rect.left + at.x * game.scale.zoom, y: rect.top + at.y * game.scale.zoom };
+  };
   const pullRequestOnPage = (islandId: string) => {
     const scene = world();
     const spot = scene?.pullRequestSpot(islandId);
@@ -370,6 +404,8 @@ export function startGame(root: HTMLElement, host: Host): Started {
     taskOnPage,
     taskPanel: () => taskPanel.shown(),
     pullRequestOnPage,
+    hutOnPage,
+    councilChamber: () => chamber.shown(),
     pullRequestPanel: () => prPanel.shown(),
     pullRequestPreview: () => pullRequests.preview.shown(),
   };

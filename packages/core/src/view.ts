@@ -1,5 +1,6 @@
 import type { NeedsYouItem, Snapshot } from '@ibitsa/protocol';
 import { CampaignRecord } from './campaign-record';
+import { Consultation } from './consultation';
 import { Elder } from './elder';
 import { Hero } from './hero';
 import { NeedsYou } from './needs-you';

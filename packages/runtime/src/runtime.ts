@@ -253,6 +253,7 @@ export class Runtime {
       // Reviews (M5) once the game master can run checks and the adapter can start reviewers.
       reviews: Boolean(this.options.gameMaster.runChecks && this.options.adapter.startReview),
       loopLimit: user.loopLimit ?? DEFAULT_SETTINGS.loopLimit,
+      consultBudgetMicroUsd: user.consultBudgetMicroUsd ?? DEFAULT_SETTINGS.consultBudgetMicroUsd,
       budget: budgetCap
         ? ('native' as const)
         : costReported
@@ -738,7 +739,8 @@ export class Runtime {
     }
     const plan = sittingPlan(effect);
     // The council's context kept from the last campaign (#167): this sitting resumes it, once.
-    const kept = this.keptCouncil.take();
+    // A kept council (#167) is taken by the next fresh sitting, not by a resume (#169).
+    const kept = effect.resume ? null : this.keptCouncil.take();
     try {
       this.sitting?.session.close();
       const session = start(
@@ -749,8 +751,12 @@ export class Runtime {
           brief: effect.brief,
           roster: plan.roster,
           model: plan.model,
-          maxBudgetMicroUsd: plan.maxBudgetMicroUsd,
-          ...(kept ? { resume: { sessionId: kept, kept: true } } : {}),
+          maxBudgetMicroUsd: effect.maxBudgetMicroUsd ?? plan.maxBudgetMicroUsd,
+          ...(effect.resume
+            ? { resume: effect.resume }
+            : kept
+              ? { resume: { sessionId: kept, kept: true } }
+              : {}),
         },
         report,
       );
@@ -759,6 +765,8 @@ export class Runtime {
       report({ type: 'error', message: String(e) });
       return;
     }
+    // A resumed session is the council that already sat: its version was noted then.
+    if (effect.resume) return;
     // Which council sat (§4.10): the mode, the roster's skill files and the adapter's prompts.
     const seats = effect.roster.map(
       ({ councillorId }) =>

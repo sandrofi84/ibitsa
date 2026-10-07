@@ -1,6 +1,13 @@
-import { type HeroView, heroHandle } from '@ibitsa/protocol';
+import { type HeroView, heroHandle, type Snapshot } from '@ibitsa/protocol';
 import { describe, expect, it } from 'vitest';
-import { ALL, addressedHero, messageTargets, parseMessage } from './mentions';
+import {
+  ALL,
+  addressedHero,
+  councilHandles,
+  councilMessage,
+  messageTargets,
+  parseMessage,
+} from './mentions';
 
 const recipients = ['ranger-ilse', ALL];
 
@@ -65,5 +72,35 @@ describe('who a message goes to (#125)', () => {
     expect(addressedHero({ text: '/test', heroes, selected: 'h3' })?.id).toBe('h3');
     expect(addressedHero({ text: '/test', heroes, selected: 'gone' })?.id).toBe('h1');
     expect(addressedHero({ text: '/test', heroes: [], selected: null })).toBeNull();
+  });
+});
+
+describe('asking the council mid-campaign (#169)', () => {
+  const snapshot = (status: string, campaign = 'active') =>
+    ({
+      campaign: { status: campaign },
+      sitting: { status, roster: [{ councillorId: 'security' }, { councillorId: 'tester' }] },
+    }) as unknown as Snapshot;
+
+  it('offers @council and each councillor who sat, once the plan is approved and under way', () => {
+    expect(councilHandles(snapshot('approved'))).toEqual(['council', 'security', 'tester']);
+    expect(councilHandles(snapshot('deliberating'))).toEqual([]);
+    expect(councilHandles(snapshot('approved', 'finished'))).toEqual([]);
+    expect(councilHandles(null)).toEqual([]);
+  });
+
+  it('reads @council as the whole council and @<id> as one councillor; anything else is for heroes', () => {
+    const s = snapshot('approved');
+    expect(councilMessage({ text: '@council how are we doing?', snapshot: s })).toEqual({
+      councillorId: null,
+      text: 'how are we doing?',
+    });
+    expect(councilMessage({ text: 'look at @src/a.ts @security please', snapshot: s })).toEqual({
+      councillorId: 'security',
+      text: 'look at @src/a.ts please',
+    });
+    expect(councilMessage({ text: '@ranger-ilse carry on', snapshot: s })).toBeNull();
+    expect(councilMessage({ text: '@council', snapshot: s })).toBeNull();
+    expect(councilMessage({ text: '@council hi', snapshot: snapshot('deliberating') })).toBeNull();
   });
 });

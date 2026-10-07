@@ -385,6 +385,56 @@ describe('a council whose context was kept (#167)', () => {
   });
 });
 
+describe('resuming the lead session (#166, #169)', () => {
+  it('resumes by id and sends only the given message: a question mid-campaign, answered with say', async () => {
+    const { calls, inputs, events } = run(
+      async function* ({ call, next }) {
+        await next();
+        await call('say', { councillorId: 'security', text: 'Keep the cookie httpOnly.' });
+        yield result('success');
+      },
+      {
+        resume: { sessionId: 'sit-1', prompt: 'The user asks security: cookies?' },
+        maxBudgetMicroUsd: 500_000,
+      },
+    );
+    await until(() => events.some((e) => e.type === 'usage'));
+    expect(calls[0]?.options).toMatchObject({ resume: 'sit-1', maxBudgetUsd: 0.5 });
+    expect(inputs).toEqual(['The user asks security: cookies?']);
+    expect(events).toContainEqual({
+      type: 'said',
+      councillorId: 'security',
+      text: 'Keep the cookie httpOnly.',
+    });
+  });
+
+  it('resumes in separate chambers too, with the chambers to dispatch', async () => {
+    const { calls, inputs } = run(
+      async function* ({ next }) {
+        await next();
+        yield result('success');
+      },
+      { mode: 'chambers', resume: { sessionId: 'sit-2', prompt: 'A question' } },
+    );
+    await until(() => inputs.length > 0);
+    expect(calls[0]?.options).toMatchObject({ resume: 'sit-2' });
+    expect(Object.keys(calls[0]?.options.agents ?? {})).toContain('security');
+    expect(inputs).toEqual(['A question']);
+  });
+
+  it('sends nothing when resumed without a message', async () => {
+    const { calls } = run(
+      async function* () {
+        yield result('success');
+      },
+      { resume: { sessionId: 'sit-3' } },
+    );
+    await until(() => calls.length > 0);
+    await flush();
+    expect(calls[0]?.options).toMatchObject({ resume: 'sit-3' });
+  });
+});
+
 describe('what a sitting cost (#106)', () => {
   it('reports cost per model, and tokens per councillor from the chambers it started', async () => {
     const assistant = (m: Record<string, unknown>) => message({ type: 'assistant', ...m });

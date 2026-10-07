@@ -209,6 +209,16 @@ export const CommandSchema = v.variant('type', [
     text: v.optional(v.pipe(v.string(), v.trim(), v.nonEmpty())),
   }),
   v.strictObject({ type: v.literal('approvePlan'), commandId: id, version: positiveInt }),
+  /**
+   * Talk to the council mid-campaign (§4.8, #169): `@council`, `@<councillor id>` or the hut. The
+   * approved sitting's lead session answers; heroes keep working.
+   */
+  v.strictObject({
+    type: v.literal('consultCouncil'),
+    commandId: id,
+    text: v.pipe(v.string(), v.trim(), v.nonEmpty()),
+    councillorId: v.optional(id),
+  }),
   v.strictObject({
     type: v.literal('requestPlanChange'),
     commandId: id,

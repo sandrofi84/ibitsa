@@ -4,7 +4,7 @@ import { atMenu, handles } from './at-menu';
 import type { CommandBar, CommandBarOptions } from './command-bar.types';
 import { createCommandInput } from './command-input';
 import { el } from './dom';
-import { messageTargets } from './mentions';
+import { councilMessage, messageTargets } from './mentions';
 import { slashMenu } from './slash-menu';
 
 /**
@@ -43,6 +43,16 @@ export function mountCommandBar({
       const all = heroes();
       if (all.length === 0) {
         startQuest(text);
+        return;
+      }
+      // `@council` or `@<councillor>` asks the council (#169); heroes keep working.
+      const council = councilMessage({ text, snapshot });
+      if (council) {
+        client.send({
+          type: 'consultCouncil',
+          text: council.text,
+          ...(council.councillorId ? { councillorId: council.councillorId } : {}),
+        });
         return;
       }
       const message = messageTargets({ text, heroes: all, selected: selected() });

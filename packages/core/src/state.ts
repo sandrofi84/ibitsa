@@ -8,6 +8,7 @@ export const DEFAULT_SETTINGS: QuestSettings = {
   campaignBudgetMicroUsd: null,
   reviews: false,
   loopLimit: 3,
+  consultBudgetMicroUsd: 500_000,
 };
 
 export function initialState(): CoreState {

@@ -1,5 +1,6 @@
 import type { CampaignEndView, Command, MicroUsd, Reading } from '@ibitsa/protocol';
 import type { CampaignRecordData } from './campaign-record.types';
+import { Consultation } from './consultation';
 import type { CoreInput, GameMasterEvent } from './inputs.types';
 import { Quest } from './quest';
 import { Review } from './review';
@@ -30,6 +31,7 @@ export class CampaignRecord {
       ...(state.elder && state.elder.gold.kind !== 'unknown' ? [state.elder] : []),
       ...state.heroes,
       ...Review.spenders(state.islands).filter((r) => r.gold.kind !== 'unknown'),
+      ...Consultation.spenders(state).filter((c) => c.gold.kind !== 'unknown'),
       ...(lessons && lessons.kind !== 'unknown' ? [{ gold: lessons }] : []),
     ]);
   }

@@ -3,6 +3,7 @@ import type {
   AskUserQuestion,
   CampaignEndView,
   CheckResult,
+  ConsultationView,
   CouncilAnswer,
   CouncilQuestion,
   CouncilReport,
@@ -40,6 +41,8 @@ export interface QuestSettings {
   reviews: boolean;
   /** Review rounds before a task goes to the user (§5.5). */
   loopLimit: number;
+  /** The cap on one question to the council mid-campaign (§4.8, #169). */
+  consultBudgetMicroUsd: number;
 }
 
 /** Core's own state. Plain JSON so it can be cloned, compared and rebuilt by replay. */
@@ -206,12 +209,17 @@ export interface SittingRecord {
   comparisonOf: string | null;
   rating: SittingRating | null;
   usage: { byModel: ModelUsage[]; byCouncillor: { councillorId: string; tokens: number }[] };
+  /** Questions to the council once its plan is approved (§4.8, #169); absent in older logs. */
+  consultations?: ConsultationRecord[];
   /** What the elder's brief recommended when the council convened; null without a brief. */
   elderPicks: {
     effort: Effort;
     councillors: { councillorId: string; effort: Effort | null }[];
   } | null;
 }
+
+/** One question to the council mid-campaign (#169): plain data; `Consultation` gives it behaviour. */
+export type ConsultationRecord = ConsultationView;
 
 /** One `ask_user` call; `answers` stays null until the user answers. */
 export interface QuestionBatch {

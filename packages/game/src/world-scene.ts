@@ -148,6 +148,12 @@ export class WorldScene extends Phaser.Scene {
     return this.prSpots.get(islandId) ?? null;
   }
 
+  /** The middle of the council hut on the map (#169), for tests that click it. */
+  hutSpot(): { x: number; y: number } {
+    const { hut } = this.layout.village;
+    return { x: hut.x + 32, y: hut.y + 32 };
+  }
+
   /** The camera as the controls and tests see it. */
   cameraState(): CameraState {
     const cam = this.cameras.main;
@@ -204,7 +210,14 @@ export class WorldScene extends Phaser.Scene {
     this.empty = this.add.text(330, 120, 'No quest yet', textStyle('#d8ecff')).setOrigin(0.5);
     this.world.add([
       village,
-      this.add.image(v.hut.x, v.hut.y, 'building:hut').setOrigin(0),
+      // Mid-campaign the hut opens the council's chamber (#169).
+      this.add
+        .image(v.hut.x, v.hut.y, 'building:hut')
+        .setOrigin(0)
+        .setInteractive({ useHandCursor: true })
+        .on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+          if (onCanvas(pointer)) this.game.events.emit(HUT_SELECTED);
+        }),
       this.add.text(v.x + 22, v.y + 70, 'HOME VILLAGE', textStyle()),
       this.questLayer,
       this.empty,
@@ -690,6 +703,8 @@ export const HERO_SELECTED = 'heroSelected';
 export const TASK_SELECTED = 'taskSelected';
 /** Emitted on `game.events` with the island's id when its PR badge is clicked (#153). */
 export const PULL_REQUEST_SELECTED = 'pullRequestSelected';
+/** The council hut was clicked on the map (#169). */
+export const HUT_SELECTED = 'hutSelected';
 
 /**
  * Phaser hears presses anywhere in the window, so a click on a panel lying over the map (a card's

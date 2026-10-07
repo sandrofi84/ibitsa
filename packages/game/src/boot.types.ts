@@ -42,6 +42,10 @@ export interface Started {
   taskPanel(): string | null;
   /** Where a click reaches an island's PR badge, in page pixels, for tests (#153); null without one. */
   pullRequestOnPage(islandId: string): { x: number; y: number } | null;
+  /** Where the council hut is on the page, while the map shows (#169). */
+  hutOnPage(): { x: number; y: number } | null;
+  /** Whether the council's chamber is open (#169). */
+  councilChamber(): boolean;
   /** The island whose PR card is open on its own, or null (#153). */
   pullRequestPanel(): string | null;
   /** The island the PR preview is open for, or null (#153). */

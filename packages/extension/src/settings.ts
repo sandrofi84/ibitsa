@@ -9,12 +9,17 @@ export function readUserSettings(config: ConfigReader): UserSettings {
   const parallel = config.get<number>('parties.maxParallel');
   const loopLimit = config.get<number>('review.loopLimit');
   const campaignUsd = config.get<number | null>('campaign.budgetUsd');
+  const consultUsd = config.get<number>('council.consultBudgetUsd');
   return {
     budgetMicroUsd:
       typeof budgetUsd === 'number' && budgetUsd > 0 ? Math.round(budgetUsd * 1_000_000) : null,
     stall: DEFAULT_STALL,
     maxParallel: typeof parallel === 'number' && parallel >= 1 ? Math.floor(parallel) : 2,
     loopLimit: typeof loopLimit === 'number' && loopLimit >= 1 ? Math.floor(loopLimit) : 3,
+    consultBudgetMicroUsd:
+      typeof consultUsd === 'number' && consultUsd > 0
+        ? Math.round(consultUsd * 1_000_000)
+        : 500_000,
     campaignBudgetMicroUsd:
       typeof campaignUsd === 'number' && campaignUsd > 0
         ? Math.round(campaignUsd * 1_000_000)

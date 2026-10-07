@@ -3,7 +3,8 @@ import type { GameClient } from './client';
 import type { MenuItem, MenuProvider } from './command-menu.types';
 import { rankPaths } from './file-search';
 import { STATE_LABELS } from './heroes';
-import { ALL, addressedHero, parseMessage } from './mentions';
+import { ALL, addressedHero, COUNCIL, councilHandles, parseMessage } from './mentions';
+import { councillorTitle } from './sitting-hut';
 
 /**
  * The @ menu (spec §6.1, #83). Recipients first: the hero by its handle, with its state, and `@all`;
@@ -27,9 +28,17 @@ export function atMenu({
       const snapshot = client.snapshot;
       if (snapshot?.campaign?.status !== 'active') return [];
       const heroes = snapshot.heroes;
-      const named = parseMessage({ text: before, recipients: handles(heroes) }).recipient;
+      const council = councilHandles(snapshot);
+      const named = parseMessage({
+        text: before,
+        recipients: [...handles(heroes), ...council],
+      }).recipient;
       const items: MenuItem[] = [];
-      if (recipients && !named) items.push(...recipientItems({ heroes, query }));
+      if (recipients && !named) {
+        items.push(...recipientItems({ heroes, query }), ...councilItems({ council, query }));
+      }
+      // The council reads no worktree: no files after @council or a councillor.
+      if (named && council.includes(named)) return items;
       const hero = addressedHero({ text: before, heroes, selected: selected() });
       const island = snapshot.islands.find((i) => i.id === hero?.islandId);
       if (island?.worktree === 'ready') {
@@ -74,4 +83,18 @@ function recipientItems({
     insert: `@${ALL}`,
   });
   return items.filter((item) => item.label.slice(1).startsWith(q));
+}
+
+/** `@council` and each councillor who sat, once the council can be asked mid-campaign (#169). */
+function councilItems({ council, query }: { council: string[]; query: string }): MenuItem[] {
+  const q = query.toLowerCase();
+  return council
+    .map((handle) => ({
+      id: `recipient:${handle}`,
+      label: `@${handle}`,
+      detail: handle === COUNCIL ? 'Ask the whole council' : `Ask ${councillorTitle(handle)}`,
+      group: 'Council',
+      insert: `@${handle}`,
+    }))
+    .filter((item) => item.label.slice(1).startsWith(q));
 }

@@ -87,6 +87,9 @@ if (name === 'live') {
     taskPanel,
     // An island's PR badge, card and preview (#153).
     pullRequestOnPage: started.pullRequestOnPage,
+    // The council hut and its chamber (#169).
+    hutOnPage: started.hutOnPage,
+    councilChamber: started.councilChamber,
     pullRequestPanel: started.pullRequestPanel,
     pullRequestPreview: started.pullRequestPreview,
   };

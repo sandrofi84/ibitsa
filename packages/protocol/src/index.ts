@@ -58,6 +58,7 @@ export { type Finding, FindingSchema, type Verdict, VerdictSchema } from './revi
 export type { CheckResult, ReviewEvent, ReviewView, TaskReviewView } from './review.types';
 export type {
   Concern,
+  ConsultationView,
   CouncilEvent,
   CouncilQuestion,
   CouncilReport,
