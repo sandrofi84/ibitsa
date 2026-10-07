@@ -5,6 +5,8 @@ export default defineConfig({
   testDir: 'e2e',
   testMatch: '**/*.e2e.ts',
   timeout: 60_000,
+  // Tests run one by one across workers and CI's shards, not file by file, so shards stay even.
+  fullyParallel: true,
   use: {
     ...devices['Desktop Chrome'],
     baseURL: 'http://localhost:4320',
