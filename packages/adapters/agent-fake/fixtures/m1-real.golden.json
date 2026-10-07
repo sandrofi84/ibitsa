@@ -72,6 +72,7 @@
       "stackedStart": null,
       "capMicroUsd": null,
       "maxParallel": 2,
+      "shipped": false,
       "gold": {
         "kind": "exact",
         "value": 117863
@@ -93,7 +94,16 @@
             "title": "Make slugify strip accents",
             "state": "doneUnreviewed"
           }
-        ]
+        ],
+        "remote": null,
+        "pullRequestDraft": {
+          "title": "Make slugify strip accents",
+          "body": "\"Crème Brûlée\" should become \"creme-brulee\". Add a test for it, run the tests with `node --test`, commit, then submit.",
+          "base": "main",
+          "draft": false,
+          "cleared": true,
+          "cannotOpen": null
+        }
       }
     ],
     "heroes": [

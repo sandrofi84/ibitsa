@@ -9,6 +9,7 @@ import type {
   Effort,
   ElderStatus,
   Finding,
+  IslandRemoteView,
   MicroUsd,
   ModelUsage,
   PlanOutcome,
@@ -101,7 +102,12 @@ export interface Island {
   }[];
   /** Review effort per reviewing councillor, from party assembly (M5); Light when absent. */
   reviewEfforts?: Record<string, Effort>;
+  /** Its branch on the git host and its PR (M6); absent before anything was pushed. */
+  remote?: IslandRemote;
 }
+
+/** An island's branch on the git host (§5.6): plain data; `PullRequest` gives it behaviour. */
+export type IslandRemote = IslandRemoteView;
 
 export interface RunningTool {
   toolUseId: string;

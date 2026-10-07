@@ -52,6 +52,7 @@ function connected({
         stackedStart: null,
         capMicroUsd: null,
         maxParallel: 2,
+        shipped: false,
       },
       elder: null,
       sitting: null,
@@ -64,6 +65,8 @@ function connected({
           basedOn: null,
           behind: false,
           taskPoints: [],
+          remote: null,
+          pullRequestDraft: null,
         },
       ],
       heroes: [

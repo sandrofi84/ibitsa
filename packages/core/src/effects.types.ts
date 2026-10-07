@@ -39,6 +39,31 @@ export type Effect =
   /** Remove a finished quest's worktree if it is clean. */
   | { type: 'removeWorktree'; islandId: string; worktreePath: string; commandId: string }
   | { type: 'sendMessage'; heroId: string; text: string; priority: 'now' | 'next' }
+  /** Push the island's branch (§5.6); `branchPushed` or `remoteFailed` comes back. */
+  | { type: 'pushBranch'; islandId: string; worktreePath: string; branch: string }
+  /** Push, then open the PR; `pullRequestOpened` or `remoteFailed` comes back. */
+  | {
+      type: 'openPullRequest';
+      islandId: string;
+      worktreePath: string;
+      branch: string;
+      base: string;
+      title: string;
+      body: string;
+      draft: boolean;
+    }
+  /** Push, then mark the draft ready for review; `pullRequestReady` or `remoteFailed` comes back. */
+  | {
+      type: 'markPullRequestReady';
+      islandId: string;
+      worktreePath: string;
+      branch: string;
+      number: number;
+    }
+  /** The PRs to poll from now on (an empty list stops polling); `pullRequestsPolled` comes back. */
+  | { type: 'watchPullRequests'; numbers: number[] }
+  /** Poll these PRs now, as well as at the interval. */
+  | { type: 'pollPullRequests'; numbers: number[] }
   /** Interrupt the turn and drop the adapter's queued messages. */
   | { type: 'interrupt'; heroId: string }
   /** Compact the session (Rest, #82); the agent reports `resting` then `compacted`. */

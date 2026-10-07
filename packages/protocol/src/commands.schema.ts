@@ -218,6 +218,23 @@ export const CommandSchema = v.variant('type', [
   v.strictObject({ type: v.literal('dismissCouncil'), commandId: id }),
   /** Refused unless the worktree is clean. */
   v.strictObject({ type: v.literal('removeWorktree'), commandId: id, islandId: id }),
+  /** Push the island's branch and open its PR (§5.6): a draft before the island is cleared. */
+  v.strictObject({
+    type: v.literal('openPullRequest'),
+    commandId: id,
+    islandId: id,
+    title: v.pipe(v.string(), v.trim(), v.nonEmpty()),
+    body: v.string(),
+    draft: v.boolean(),
+  }),
+  /** Push what's new to the island's open PR. */
+  v.strictObject({ type: v.literal('updatePullRequest'), commandId: id, islandId: id }),
+  /** Push, then turn the draft into a PR ready for review: once the island is cleared. */
+  v.strictObject({ type: v.literal('markPullRequestReady'), commandId: id, islandId: id }),
+  /** Poll the git host now rather than at the next interval. */
+  v.strictObject({ type: v.literal('refreshPullRequests'), commandId: id }),
+  /** Push the island's branch without a PR, to any remote. */
+  v.strictObject({ type: v.literal('pushBranch'), commandId: id, islandId: id }),
 ]);
 
 export type Command = v.InferOutput<typeof CommandSchema>;

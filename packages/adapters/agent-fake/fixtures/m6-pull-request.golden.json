@@ -1,0 +1,438 @@
+{
+  "cues": [],
+  "marks": [
+    {
+      "mark": "cleared",
+      "t": 9500,
+      "snapshot": {
+        "campaign": {
+          "id": "c1",
+          "title": "Make slugify strip accents",
+          "status": "active",
+          "autoApprove": false,
+          "branching": "separate",
+          "stackedStart": null,
+          "capMicroUsd": null,
+          "maxParallel": 2,
+          "shipped": false,
+          "gold": {
+            "kind": "unknown"
+          }
+        },
+        "elder": null,
+        "sitting": null,
+        "islands": [
+          {
+            "id": "i2",
+            "name": "Make slugify strip accents",
+            "branch": "ibitsa/make-slugify-strip-accents",
+            "worktree": "ready",
+            "basedOn": null,
+            "behind": false,
+            "taskPoints": [
+              {
+                "id": "t3",
+                "title": "Make slugify strip accents",
+                "state": "doneUnreviewed"
+              }
+            ],
+            "remote": null,
+            "pullRequestDraft": {
+              "title": "Make slugify strip accents",
+              "body": "\"Crème Brûlée\" should become \"creme-brulee\". Add a test for it.",
+              "base": "main",
+              "draft": false,
+              "cleared": true,
+              "cannotOpen": null
+            }
+          }
+        ],
+        "heroes": [
+          {
+            "id": "h4",
+            "name": "Ranger Ilse",
+            "classId": "ranger",
+            "islandId": "i2",
+            "taskPointId": "t3",
+            "state": {
+              "kind": "submitted",
+              "summary": "slugify strips accents, with a test."
+            },
+            "activity": null,
+            "hp": {
+              "kind": "unknown"
+            },
+            "gold": {
+              "kind": "unknown"
+            },
+            "queuedMessages": 0
+          }
+        ],
+        "needsYou": []
+      }
+    },
+    {
+      "mark": "opening",
+      "t": 20000,
+      "snapshot": {
+        "campaign": {
+          "id": "c1",
+          "title": "Make slugify strip accents",
+          "status": "active",
+          "autoApprove": false,
+          "branching": "separate",
+          "stackedStart": null,
+          "capMicroUsd": null,
+          "maxParallel": 2,
+          "shipped": false,
+          "gold": {
+            "kind": "unknown"
+          }
+        },
+        "elder": null,
+        "sitting": null,
+        "islands": [
+          {
+            "id": "i2",
+            "name": "Make slugify strip accents",
+            "branch": "ibitsa/make-slugify-strip-accents",
+            "worktree": "ready",
+            "basedOn": null,
+            "behind": false,
+            "taskPoints": [
+              {
+                "id": "t3",
+                "title": "Make slugify strip accents",
+                "state": "doneUnreviewed"
+              }
+            ],
+            "remote": {
+              "pushedHead": null,
+              "busy": "opening",
+              "error": null,
+              "pullRequest": null
+            },
+            "pullRequestDraft": {
+              "title": "Make slugify strip accents",
+              "body": "\"Crème Brûlée\" should become \"creme-brulee\". Add a test for it.",
+              "base": "main",
+              "draft": false,
+              "cleared": true,
+              "cannotOpen": "Wait for the push to finish."
+            }
+          }
+        ],
+        "heroes": [
+          {
+            "id": "h4",
+            "name": "Ranger Ilse",
+            "classId": "ranger",
+            "islandId": "i2",
+            "taskPointId": "t3",
+            "state": {
+              "kind": "submitted",
+              "summary": "slugify strips accents, with a test."
+            },
+            "activity": null,
+            "hp": {
+              "kind": "unknown"
+            },
+            "gold": {
+              "kind": "unknown"
+            },
+            "queuedMessages": 0
+          }
+        ],
+        "needsYou": []
+      }
+    },
+    {
+      "mark": "opened",
+      "t": 23000,
+      "snapshot": {
+        "campaign": {
+          "id": "c1",
+          "title": "Make slugify strip accents",
+          "status": "active",
+          "autoApprove": false,
+          "branching": "separate",
+          "stackedStart": null,
+          "capMicroUsd": null,
+          "maxParallel": 2,
+          "shipped": false,
+          "gold": {
+            "kind": "unknown"
+          }
+        },
+        "elder": null,
+        "sitting": null,
+        "islands": [
+          {
+            "id": "i2",
+            "name": "Make slugify strip accents",
+            "branch": "ibitsa/make-slugify-strip-accents",
+            "worktree": "ready",
+            "basedOn": null,
+            "behind": false,
+            "taskPoints": [
+              {
+                "id": "t3",
+                "title": "Make slugify strip accents",
+                "state": "doneUnreviewed"
+              }
+            ],
+            "remote": {
+              "pushedHead": "c0ffee1",
+              "busy": null,
+              "error": null,
+              "pullRequest": {
+                "number": 12,
+                "url": "https://github.com/o/r/pull/12",
+                "state": "open",
+                "base": "main"
+              }
+            },
+            "pullRequestDraft": null
+          }
+        ],
+        "heroes": [
+          {
+            "id": "h4",
+            "name": "Ranger Ilse",
+            "classId": "ranger",
+            "islandId": "i2",
+            "taskPointId": "t3",
+            "state": {
+              "kind": "submitted",
+              "summary": "slugify strips accents, with a test."
+            },
+            "activity": null,
+            "hp": {
+              "kind": "unknown"
+            },
+            "gold": {
+              "kind": "unknown"
+            },
+            "queuedMessages": 0
+          }
+        ],
+        "needsYou": []
+      }
+    },
+    {
+      "mark": "approved",
+      "t": 83000,
+      "snapshot": {
+        "campaign": {
+          "id": "c1",
+          "title": "Make slugify strip accents",
+          "status": "active",
+          "autoApprove": false,
+          "branching": "separate",
+          "stackedStart": null,
+          "capMicroUsd": null,
+          "maxParallel": 2,
+          "shipped": false,
+          "gold": {
+            "kind": "unknown"
+          }
+        },
+        "elder": null,
+        "sitting": null,
+        "islands": [
+          {
+            "id": "i2",
+            "name": "Make slugify strip accents",
+            "branch": "ibitsa/make-slugify-strip-accents",
+            "worktree": "ready",
+            "basedOn": null,
+            "behind": false,
+            "taskPoints": [
+              {
+                "id": "t3",
+                "title": "Make slugify strip accents",
+                "state": "doneUnreviewed"
+              }
+            ],
+            "remote": {
+              "pushedHead": "c0ffee1",
+              "busy": null,
+              "error": null,
+              "pullRequest": {
+                "number": 12,
+                "url": "https://github.com/o/r/pull/12",
+                "state": "approved",
+                "base": "main"
+              }
+            },
+            "pullRequestDraft": null
+          }
+        ],
+        "heroes": [
+          {
+            "id": "h4",
+            "name": "Ranger Ilse",
+            "classId": "ranger",
+            "islandId": "i2",
+            "taskPointId": "t3",
+            "state": {
+              "kind": "submitted",
+              "summary": "slugify strips accents, with a test."
+            },
+            "activity": null,
+            "hp": {
+              "kind": "unknown"
+            },
+            "gold": {
+              "kind": "unknown"
+            },
+            "queuedMessages": 0
+          }
+        ],
+        "needsYou": []
+      }
+    },
+    {
+      "mark": "merged",
+      "t": 143000,
+      "snapshot": {
+        "campaign": {
+          "id": "c1",
+          "title": "Make slugify strip accents",
+          "status": "active",
+          "autoApprove": false,
+          "branching": "separate",
+          "stackedStart": null,
+          "capMicroUsd": null,
+          "maxParallel": 2,
+          "shipped": true,
+          "gold": {
+            "kind": "unknown"
+          }
+        },
+        "elder": null,
+        "sitting": null,
+        "islands": [
+          {
+            "id": "i2",
+            "name": "Make slugify strip accents",
+            "branch": "ibitsa/make-slugify-strip-accents",
+            "worktree": "ready",
+            "basedOn": null,
+            "behind": false,
+            "taskPoints": [
+              {
+                "id": "t3",
+                "title": "Make slugify strip accents",
+                "state": "doneUnreviewed"
+              }
+            ],
+            "remote": {
+              "pushedHead": "c0ffee1",
+              "busy": null,
+              "error": null,
+              "pullRequest": {
+                "number": 12,
+                "url": "https://github.com/o/r/pull/12",
+                "state": "merged",
+                "base": "main"
+              }
+            },
+            "pullRequestDraft": null
+          }
+        ],
+        "heroes": [
+          {
+            "id": "h4",
+            "name": "Ranger Ilse",
+            "classId": "ranger",
+            "islandId": "i2",
+            "taskPointId": "t3",
+            "state": {
+              "kind": "submitted",
+              "summary": "slugify strips accents, with a test."
+            },
+            "activity": null,
+            "hp": {
+              "kind": "unknown"
+            },
+            "gold": {
+              "kind": "unknown"
+            },
+            "queuedMessages": 0
+          }
+        ],
+        "needsYou": []
+      }
+    }
+  ],
+  "final": {
+    "campaign": {
+      "id": "c1",
+      "title": "Make slugify strip accents",
+      "status": "active",
+      "autoApprove": false,
+      "branching": "separate",
+      "stackedStart": null,
+      "capMicroUsd": null,
+      "maxParallel": 2,
+      "shipped": true,
+      "gold": {
+        "kind": "unknown"
+      }
+    },
+    "elder": null,
+    "sitting": null,
+    "islands": [
+      {
+        "id": "i2",
+        "name": "Make slugify strip accents",
+        "branch": "ibitsa/make-slugify-strip-accents",
+        "worktree": "ready",
+        "basedOn": null,
+        "behind": false,
+        "taskPoints": [
+          {
+            "id": "t3",
+            "title": "Make slugify strip accents",
+            "state": "doneUnreviewed"
+          }
+        ],
+        "remote": {
+          "pushedHead": "c0ffee1",
+          "busy": null,
+          "error": null,
+          "pullRequest": {
+            "number": 12,
+            "url": "https://github.com/o/r/pull/12",
+            "state": "merged",
+            "base": "main"
+          }
+        },
+        "pullRequestDraft": null
+      }
+    ],
+    "heroes": [
+      {
+        "id": "h4",
+        "name": "Ranger Ilse",
+        "classId": "ranger",
+        "islandId": "i2",
+        "taskPointId": "t3",
+        "state": {
+          "kind": "submitted",
+          "summary": "slugify strips accents, with a test."
+        },
+        "activity": null,
+        "hp": {
+          "kind": "unknown"
+        },
+        "gold": {
+          "kind": "unknown"
+        },
+        "queuedMessages": 0
+      }
+    ],
+    "needsYou": []
+  }
+}

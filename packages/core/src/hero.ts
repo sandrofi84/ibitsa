@@ -275,6 +275,20 @@ export class Hero {
       this.stall(`No progress for ${w.quietTurns} turns.`);
   }
 
+  /**
+   * Its island's PR is ready for review (§5.6): the session closes. A message later (PR comments,
+   * #154) resumes it by its id, like any hero whose session isn't live.
+   */
+  endSession(): void {
+    const r = this.record;
+    if (!r.sessionLive) return;
+    r.sessionLive = false;
+    r.inTurn = false;
+    r.runningTools = [];
+    this.ctx.outbox.effect({ type: 'closeSession', heroId: r.id });
+    this.ctx.outbox.effect({ type: 'cancelTimer', timerId: Hero.silenceTimer(r.id) });
+  }
+
   /** The agent process is gone (spec §12): say so, unless the hero had already finished. */
   restarted(): void {
     const r = this.record;

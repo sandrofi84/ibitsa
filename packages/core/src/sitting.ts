@@ -4,6 +4,7 @@ import type {
   CouncilEvent,
   CouncilQuestion,
   DialogueLine,
+  Plan,
   SittingMessage,
   SittingStatus,
   SittingTally,
@@ -28,6 +29,15 @@ export class Sitting {
 
   constructor(ctx: StepContext) {
     this.ctx = ctx;
+  }
+
+  /** The plan the user last approved, in this campaign's sittings; none for a quick quest. */
+  static approvedPlan(state: CoreState): Plan | undefined {
+    const sittings = [...state.pastSittings, ...(state.sitting ? [state.sitting] : [])];
+    return sittings
+      .flatMap((s) => s.plans)
+      .filter((p) => p.outcome.kind === 'approved')
+      .at(-1)?.plan;
   }
 
   static active(record: SittingRecord | null): record is SittingRecord {

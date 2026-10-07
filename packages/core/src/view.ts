@@ -3,6 +3,7 @@ import { Elder } from './elder';
 import { Hero } from './hero';
 import { NeedsYou } from './needs-you';
 import { Outbox } from './outbox';
+import { PullRequest } from './pull-request';
 import { Quest } from './quest';
 import { Review } from './review';
 import { Sitting } from './sitting';
@@ -22,6 +23,7 @@ export function view(state: CoreState): Snapshot {
       stackedStart: state.campaign.stackedStart,
       capMicroUsd: state.settings.campaignBudgetMicroUsd,
       maxParallel: state.settings.maxParallel,
+      shipped: PullRequest.shipped(state),
       gold: Quest.totalGold([
         ...(state.elder && state.elder.gold.kind !== 'unknown' ? [state.elder] : []),
         ...state.heroes,
@@ -46,6 +48,10 @@ export function view(state: CoreState): Snapshot {
       taskPoints: i.taskPoints.map(({ id, title, state, review }) =>
         review ? { id, title, state, review: Review.view(review) } : { id, title, state },
       ),
+      remote: i.remote
+        ? { ...i.remote, pullRequest: i.remote.pullRequest && { ...i.remote.pullRequest } }
+        : null,
+      pullRequestDraft: PullRequest.draft({ state, island: i }),
     })),
     heroes: state.heroes.map((record) => new Hero({ record, ctx }).view()),
     needsYou: state.needsYou.map((item): NeedsYouItem => {

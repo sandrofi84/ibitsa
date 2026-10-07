@@ -4,6 +4,8 @@ import type {
   Command,
   CouncilEvent,
   ElderEvent,
+  PolledPullRequest,
+  PullRequestState,
   ReviewEvent,
 } from '@ibitsa/protocol';
 import type { QuestSettings } from './state.types';
@@ -34,6 +36,21 @@ export type GameMasterEvent =
   | { type: 'worktreeRebased'; islandId: string; outcome: 'upToDate' | 'rebased' | 'conflict' }
   /** The council version of a sitting whose session started (§4.10); noted by the runtime. */
   | { type: 'councilVersionNoted'; sittingId: string; version: string }
+  /** The island's branch was pushed (§5.6): `head` is the commit pushed. */
+  | { type: 'branchPushed'; islandId: string; head: string }
+  | {
+      type: 'pullRequestOpened';
+      islandId: string;
+      head: string;
+      number: number;
+      url: string;
+      state: PullRequestState;
+    }
+  | { type: 'pullRequestReady'; islandId: string; head: string }
+  /** A push or PR action failed: shown on the island's PR card. */
+  | { type: 'remoteFailed'; islandId: string; message: string }
+  /** The git host's answer for the PRs being watched. */
+  | { type: 'pullRequestsPolled'; pullRequests: PolledPullRequest[] }
   /** The runtime rebuilt state after a restart; every live session is gone (spec §12). */
   | { type: 'runtimeRestarted' };
 
