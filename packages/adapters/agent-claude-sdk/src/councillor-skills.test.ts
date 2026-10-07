@@ -126,6 +126,27 @@ describe('CouncillorSkills (#98)', () => {
     });
   });
 
+  it("gives a review its councillor's opening and `## Review` section, without the planning one (#138)", () => {
+    const { cwd, home } = folders();
+    write(
+      join(cwd, '.claude', 'skills', 'security', 'SKILL.md'),
+      skill(
+        'name: security\nibitsa-councillor: true',
+        'You guard secrets.\n\n## Planning\nThreat model.\n\n## Review\nCheck inputs.\n',
+      ),
+    );
+    write(
+      join(cwd, '.claude', 'skills', 'plain', 'SKILL.md'),
+      skill('ibitsa-councillor: true', 'Only an opening.\n'),
+    );
+    const skills = new CouncillorSkills({ cwd, home, pluginDirs: [] });
+    expect(skills.review('security')?.guidance).toBe(
+      'You guard secrets.\n\n## Review\nCheck inputs.',
+    );
+    expect(skills.review('plain')?.guidance).toBe('Only an opening.');
+    expect(skills.review('nobody')).toBeNull();
+  });
+
   it('gives a changed skill file a new hash', () => {
     const { cwd, home } = folders();
     const path = join(cwd, '.claude', 'skills', 'a', 'SKILL.md');

@@ -8,6 +8,7 @@ import type {
   CouncilEvent,
   CouncillorInfo,
   ElderEvent,
+  ReviewEvent,
 } from '@ibitsa/protocol';
 import type {
   AgentAdapter,
@@ -15,6 +16,8 @@ import type {
   CreateActionRequest,
   CreateActionResult,
   ElderStart,
+  ReviewSession as ReviewSessionPort,
+  ReviewStart,
   SessionResume,
   SessionStart,
   SittingSession,
@@ -25,6 +28,7 @@ import type { ClaudeAdapterOptions } from './claude-adapter.types';
 import { ClaudeSession, loadSdk, plugins } from './claude-session';
 import { CouncillorSkills } from './councillor-skills';
 import { ElderSession } from './elder-session';
+import { ReviewSession } from './review-session';
 import { ROUND_TABLE_INSTRUCTIONS, RoundTableSession } from './round-table-session';
 import { expandSkill } from './skill-expansion';
 import type { Expansion } from './skill-expansion.types';
@@ -130,6 +134,11 @@ export class ClaudeAdapter implements AgentAdapter {
       .update([ROUND_TABLE_INSTRUCTIONS, CHAMBERS_INSTRUCTIONS].join('\n'))
       .digest('hex')
       .slice(0, 12);
+  }
+
+  /** A councillor's review of one task (§5.5, #138): read-only, capped, ending with `submit_verdict`. */
+  startReview(start: ReviewStart, onEvent: (event: ReviewEvent) => void): ReviewSessionPort {
+    return new ReviewSession({ adapter: this.options, start, onEvent });
   }
 
   /** The elder's research (spec §4.1, #101): read-only, capped, ending with `submit_brief`. */

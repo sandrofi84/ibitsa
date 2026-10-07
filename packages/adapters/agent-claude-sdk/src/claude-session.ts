@@ -30,6 +30,8 @@ export const CLASS_MODELS: Record<string, string> = {
 };
 
 export const SUBMIT_TOOL = 'mcp__ibitsa__submit_task';
+/** The hero says review findings contradict each other or a decision (M5); the user decides. */
+export const DISPUTE_TOOL = 'mcp__ibitsa__dispute_finding';
 
 /** Appended to Claude Code's own system prompt; identical for every hero so it caches (spec §10). */
 export const HERO_INSTRUCTIONS = `You are working on one task in your own git worktree.
@@ -231,6 +233,18 @@ export class ClaudeSession implements AgentSession {
           // Loaded up front: otherwise the hero must find it with ToolSearch first (seen in the live check).
           { alwaysLoad: true },
         ),
+        sdk.tool(
+          'dispute_finding',
+          'Tell the user that review findings contradict each other or a recorded decision. Give the review ids from the findings you were sent, and why.',
+          {
+            reviewIds: z
+              .array(z.string())
+              .describe('The reviews whose findings you dispute, e.g. r12.'),
+            reason: z.string().describe('Why they contradict each other or a decision.'),
+          },
+          async ({ reviewIds, reason }) => this.disputeFinding({ reviewIds, reason }),
+          { alwaysLoad: true },
+        ),
       ],
     });
     const claudeCodePath = init.adapter.claudeCodePath?.()?.trim();
@@ -243,7 +257,7 @@ export class ClaudeSession implements AgentSession {
       ...hero,
       mcpServers: { ibitsa },
       ...plugins(init.adapter.pluginDirs?.() ?? []),
-      allowedTools: [SUBMIT_TOOL, ...(hero.allowedTools ?? [])],
+      allowedTools: [SUBMIT_TOOL, DISPUTE_TOOL, ...(hero.allowedTools ?? [])],
       canUseTool: this.canUseTool,
       hooks: {
         PreToolUse: [
@@ -322,6 +336,19 @@ export class ClaudeSession implements AgentSession {
         ...(boundary ? { boundary } : {}),
       });
     });
+
+  /** The dispute_finding handler (M5): it goes to the user; the hero hears back as a message. */
+  private disputeFinding({ reviewIds, reason }: { reviewIds: string[]; reason: string }) {
+    this.emit({ type: 'findingDisputed', reviewIds, reason });
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: 'The user will decide and you will hear back as a message. Work on any other findings meanwhile, or end your turn.',
+        },
+      ],
+    };
+  }
 
   /** The submit_task handler: core runs the submit check, then this returns its verdict to the hero. */
   private submitTask(summary: string) {

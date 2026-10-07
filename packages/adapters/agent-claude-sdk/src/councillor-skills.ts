@@ -40,6 +40,19 @@ export class CouncillorSkills {
     return { info: found.info, guidance: guidance.trim() };
   }
 
+  /**
+   * What a councillor brings to a review (M5): its skill's opening lines and its `## Review` section;
+   * without one, the opening alone. Null for an unknown id.
+   */
+  review(id: string): { info: CouncillorInfo; guidance: string } | null {
+    const found = this.byId().get(id);
+    if (!found) return null;
+    const sections = readSkillFile(found.path).body.split(/^(?=##\s)/m);
+    const opening = sections[0] ?? '';
+    const review = sections.find((part) => /^##\s+Review\b/i.test(part)) ?? '';
+    return { info: found.info, guidance: `${opening}${review}`.trim() };
+  }
+
   private byId(): Map<string, { info: CouncillorInfo; path: string }> {
     const byId = new Map<string, { info: CouncillorInfo; path: string }>();
     for (const root of this.roots()) {
