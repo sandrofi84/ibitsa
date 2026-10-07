@@ -109,3 +109,35 @@ describe('CameraDirector', () => {
     expect(d.current).toEqual(overview);
   });
 });
+
+describe('which hero the camera follows (#124)', () => {
+  const two = (states: [ExecutionState['kind'], ExecutionState['kind']]): Snapshot => {
+    const one = snapshot({ state: states[0] });
+    const hero = one.heroes[0];
+    if (!hero) throw new Error('no hero');
+    return {
+      ...one,
+      heroes: [hero, { ...hero, id: 'h7', state: { kind: states[1] } as ExecutionState }],
+    };
+  };
+
+  it('follows the selected hero, else the first one working, else the first', () => {
+    expect(CameraDirector.focusOf(two(['idle', 'working']), 'h4')?.id).toBe('h4');
+    expect(CameraDirector.focusOf(two(['idle', 'working']), null)?.id).toBe('h7');
+    expect(CameraDirector.focusOf(two(['idle', 'idle']), 'gone')?.id).toBe('h4');
+    expect(CameraDirector.focusOf(snapshot({ state: null }), null)).toBeUndefined();
+  });
+
+  it('forgets what the last hero was doing when it switches, so the new one arriving counts', () => {
+    const d = new CameraDirector({ auto: true });
+    d.observe(two(['traveling', 'traveling']), 'h4');
+    d.overview();
+    // h7 arrives while h4 is selected: nothing for the camera to see.
+    d.observe(two(['traveling', 'idle']), 'h4');
+    expect(d.current).toEqual(overview);
+    // Selecting h7 starts afresh; its next arrival focuses again.
+    d.observe(two(['traveling', 'traveling']), 'h7');
+    d.observe(two(['traveling', 'idle']), 'h7');
+    expect(d.current).toEqual(focused);
+  });
+});

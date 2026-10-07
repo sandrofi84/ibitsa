@@ -2,7 +2,14 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { extname, join, relative, sep } from 'node:path';
 import * as v from 'valibot';
 import { ManifestSchema } from './manifest.schema.ts';
-import { ACTIVITY_KINDS, COUNCIL_ANIMATIONS, REQUIRED_ANIMATIONS, SPEC } from './manifest.ts';
+import {
+  ACTIVITY_KINDS,
+  BRIDGE_FRAMES,
+  COUNCIL_ANIMATIONS,
+  MARKER_KINDS,
+  REQUIRED_ANIMATIONS,
+  SPEC,
+} from './manifest.ts';
 import { readPngSize } from './png.ts';
 import type { PackValidation } from './validate.types.ts';
 
@@ -184,6 +191,37 @@ export function validatePack(dir: string): PackValidation {
     label: 'activity icons',
     check: exactly(ai.size * ai.kinds.length, ai.size),
   });
+
+  const br = manifest.bridge;
+  if (br) {
+    const want = SPEC.bridge;
+    if (br.height !== want.height || br.end !== want.end || br.segment !== want.segment) {
+      errors.push(
+        `bridge: pieces must be ${want.height} tall with ends of ${want.end} and a segment of ${want.segment}`,
+      );
+    }
+    for (const frame of BRIDGE_FRAMES) {
+      if (!br.frames.includes(frame)) errors.push(`bridge: missing frame "${frame}"`);
+    }
+    checkImage({
+      file: br.image,
+      label: 'bridge',
+      check: exactly(br.end * 2 + br.segment, br.height * br.frames.length),
+    });
+  }
+
+  const mk = manifest.markers;
+  if (mk) {
+    if (mk.size !== SPEC.marker) errors.push(`markers: size ${mk.size}, expected ${SPEC.marker}`);
+    for (const kind of MARKER_KINDS) {
+      if (!mk.kinds.includes(kind)) errors.push(`markers: missing "${kind}"`);
+    }
+    checkImage({
+      file: mk.image,
+      label: 'markers',
+      check: exactly(mk.size * mk.kinds.length, mk.size),
+    });
+  }
 
   for (const [key, b] of Object.entries(manifest.buildings)) {
     if (b.width % SPEC.tile !== 0 || b.height % SPEC.tile !== 0)

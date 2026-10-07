@@ -2,6 +2,7 @@ import type { CameraState } from './camera-director.types';
 import type { GameClient } from './client';
 import type { HutRendered } from './hut-scene.types';
 import type { HutFeed } from './hut-view.types';
+import type { MapProbe } from './world-scene.types';
 
 /** Starts the game in `root`, talking to the core through `host`. Shared by the webview and standalone builds. */
 export interface Started {
@@ -25,4 +26,11 @@ export interface Started {
   showHut(feed: HutFeed): void;
   /** What the hut shows, for tests; null while it isn't showing. */
   hut(): HutRendered | null;
+  /**
+   * The hero the map camera follows (#124); the hero pane's selection (#125) calls it. Null goes back to
+   * the first hero working.
+   */
+  selectHero(heroId: string | null): void;
+  /** What the map shows, for tests: islands, bridges and blocked heroes; null before the game is ready. */
+  map(): MapProbe | null;
 }

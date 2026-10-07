@@ -320,3 +320,37 @@ describe('LiveDevHost: the elder and the council (#101, #103–#105)', () => {
     expect(snapshot()?.sitting?.questions).not.toBeNull();
   });
 });
+
+describe('LiveDevHost: a demo campaign of three islands (#124)', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  const states = (snapshot: () => import('@ibitsa/protocol').Snapshot | undefined) =>
+    snapshot()?.heroes.map((h) =>
+      h.state.kind === 'blocked' ? `blocked:${h.state.reason}` : h.state.kind,
+    );
+
+  it('separate: two parties work and the third waits for a slot', async () => {
+    const { host, snapshot, settle } = setup();
+    host.demoCampaign('separate');
+    await settle();
+    expect(snapshot()?.campaign).toMatchObject({ branching: 'separate', status: 'active' });
+    expect(snapshot()?.islands.map((i) => i.worktree)).toEqual(['ready', 'ready', 'waiting']);
+    expect(states(snapshot)?.[2]).toBe('blocked:slot');
+  });
+
+  it('stacked: the next island waits for the one before, and starts once it is cleared', async () => {
+    const { host, snapshot, settle } = setup();
+    host.demoCampaign('stacked');
+    await settle();
+    expect(snapshot()?.islands.map((i) => i.worktree)).toEqual(['ready', 'waiting', 'waiting']);
+    expect(states(snapshot)?.slice(1)).toEqual([
+      'blocked:previousIsland',
+      'blocked:previousIsland',
+    ]);
+    const heroId = snapshot()?.heroes[0]?.id ?? '';
+    host.send({ type: 'sendMessage', commandId: 'm', heroId, text: 'submit it', priority: 'now' });
+    await settle();
+    expect(snapshot()?.islands.map((i) => i.worktree)).toEqual(['ready', 'ready', 'waiting']);
+  });
+});

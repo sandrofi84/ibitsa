@@ -84,6 +84,8 @@ export function startGame(root: HTMLElement, host: Host): Started {
       camera: () => null,
       showHut: () => {},
       hut: () => null,
+      selectHero: () => {},
+      map: () => null,
     };
   }
 
@@ -268,5 +270,8 @@ export function startGame(root: HTMLElement, host: Host): Started {
   });
   const hutScene = () => game.scene.getScene('hut') as HutScene | null;
   const hut = () => (hutScene()?.sys.isActive() ? (hutScene()?.rendered() ?? null) : null);
-  return { client, zoom: () => diagnostics.zoom, hero, camera, showHut, hut };
+  // The scene keeps a selection made before the map is up and uses it from its first snapshot.
+  const selectHero = (heroId: string | null) => world()?.selectHero(heroId);
+  const map = () => world()?.mapProbe() ?? null;
+  return { client, zoom: () => diagnostics.zoom, hero, camera, showHut, hut, selectHero, map };
 }

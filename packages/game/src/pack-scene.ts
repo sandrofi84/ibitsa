@@ -4,6 +4,9 @@ import { councilTexture } from './council-look';
 import { HUT_FEED } from './hut-view';
 
 export const PACK_KEY = 'pack';
+/** Texture keys of the pack's optional drawbridge and map markers (#124). */
+export const BRIDGE_KEY = 'bridge';
+export const MARKERS_KEY = 'markers';
 
 /** Loads the art pack described by its engine-neutral manifest (spec §9.3), then starts the world. */
 export class PackScene extends Phaser.Scene {
@@ -50,6 +53,13 @@ export class PackScene extends Phaser.Scene {
     });
     for (const [key, b] of Object.entries(manifest.buildings))
       this.load.image(`building:${key}`, this.url(b.image));
+    // Optional pieces (#124): without them the world scene draws its own planks and markers.
+    if (manifest.bridge) this.load.image(BRIDGE_KEY, this.url(manifest.bridge.image));
+    if (manifest.markers)
+      this.load.spritesheet(MARKERS_KEY, this.url(manifest.markers.image), {
+        frameWidth: manifest.markers.size,
+        frameHeight: manifest.markers.size,
+      });
 
     this.load.once(Phaser.Loader.Events.COMPLETE, () => {
       this.defineFrames(manifest);
@@ -98,5 +108,15 @@ export class PackScene extends Phaser.Scene {
     island.add('left', 0, 0, 0, i.leftCap, i.height);
     island.add('middle', 0, i.leftCap, 0, i.middle, i.height);
     island.add('right', 0, i.leftCap + i.middle, 0, i.rightCap, i.height);
+    const b = manifest.bridge;
+    if (b) {
+      const bridge = this.textures.get(BRIDGE_KEY);
+      b.frames.forEach((frame, row) => {
+        const y = row * b.height;
+        bridge.add(`${frame}:left`, 0, 0, y, b.end, b.height);
+        bridge.add(`${frame}:segment`, 0, b.end, y, b.segment, b.height);
+        bridge.add(`${frame}:right`, 0, b.end + b.segment, y, b.end, b.height);
+      });
+    }
   }
 }
