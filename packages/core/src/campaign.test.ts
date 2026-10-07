@@ -259,6 +259,20 @@ describe('a campaign with several parties (#121)', () => {
     });
   });
 
+  it('stacked: branches from the branch git actually made for the island before, suffix and all (#122)', () => {
+    const run = new Run().approved(stacked).start();
+    run.gm({
+      type: 'worktreeCreated',
+      islandId: run.island(0).id,
+      path: '/wt/a',
+      branch: 'ibitsa/schema-2',
+    });
+    run.agent(run.hero(0).id, { type: 'sessionStarted', sessionId: 's' });
+    run.submit(0);
+    expect(run.worktrees().at(-1)?.baseRef).toBe('ibitsa/schema-2');
+    expect(run.island(1).baseRef).toBe('ibitsa/schema-2');
+  });
+
   it('stacked, all at once: the next starts once the first worktree exists, and rebases between its turns', () => {
     const run = new Run().approved(stacked).start({ stackedStart: 'together' });
     expect(run.worktrees()).toHaveLength(1);

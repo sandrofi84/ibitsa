@@ -271,7 +271,8 @@ Built so round table and separate chambers, and later changes to either, can be 
 - **Separate:** each island is an independent branch off `main`. Islands are spread around the map. There is no merge step: each task/branch gets its own PR.
 - **Stacked:** islands are **in a line, connected by bridges**. Each branch is based on the previous one. Each PR targets the previous branch. In party assembly you choose how they start (M4 planning):
   - **Each island when the one before is cleared** (default): a raised, locked drawbridge until then; the next branch starts from the previous branch's head at that moment. Until reviews exist (M5), cleared = every task submitted.
-  - **All at once:** later branches start from the earlier branch's current head. Between a later hero's turns the game master rebases it onto the earlier branch; on a conflict it aborts and tells the hero (queued message) to rebase and resolve. The bridge shows "behind" until it catches up.
+  - **All at once:** later branches start from the earlier branch's current head. Between a later hero's turns the game master rebases it onto the earlier branch (`git rebase`, #122): already containing it does nothing; a conflict is aborted, leaving the worktree as it was, and the hero is told (queued message) to rebase and resolve; uncommitted work is never rebased or stashed, and goes to the hero the same way. The bridge shows "behind" until it catches up.
+  - Each island branches from the island before **as git named it** (a taken name gets a suffix, §5.3 branch names), read when that island starts.
   - Either way, if an earlier branch moves on after a later one started, M4 doesn't restack beyond that; the island shows it's behind.
 - The council proposes the strategy in the plan; the user approves it.
 - Worktrees are created by the game master (`git worktree add`), default location: a sibling folder `../<repo>.ibitsa/<branch>` (configurable).
