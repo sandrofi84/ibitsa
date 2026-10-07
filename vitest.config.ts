@@ -27,6 +27,7 @@ export default defineConfig({
         'packages/assets/src/**',
         'packages/game/src/client.ts',
         'packages/game/src/restart-notice.ts',
+        'packages/game/src/sound-cues.ts',
         'packages/game/src/action-draft.ts',
         'packages/game/src/at-menu.ts',
         'packages/game/src/command-history.ts',

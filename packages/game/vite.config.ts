@@ -19,7 +19,12 @@ function defaultPack(): Plugin {
         const path = decodeURIComponent((req.url ?? '').split('?')[0] ?? '').replace(/^\/+/, '');
         const file = join(PACK_DIR, path);
         if (!file.startsWith(PACK_DIR) || !existsSync(file)) return next();
-        res.setHeader('Content-Type', file.endsWith('.json') ? 'application/json' : 'image/png');
+        const type = file.endsWith('.json')
+          ? 'application/json'
+          : file.endsWith('.wav')
+            ? 'audio/wav'
+            : 'image/png';
+        res.setHeader('Content-Type', type);
         res.end(readFileSync(file));
       });
     },

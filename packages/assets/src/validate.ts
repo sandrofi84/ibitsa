@@ -8,9 +8,11 @@ import {
   COUNCIL_ANIMATIONS,
   REQUIRED_ANIMATIONS,
   REQUIRED_MARKERS,
+  SOUND_LIMITS,
   SPEC,
 } from './manifest.ts';
 import { readPngSize } from './png.ts';
+import { wavSeconds } from './sound.ts';
 import type { PackValidation } from './validate.types.ts';
 
 /** Packs hold images, audio and the manifest only: no scripts, nothing executable (spec §9.3). */
@@ -238,6 +240,20 @@ export function validatePack(dir: string): PackValidation {
     errors.push(`dialogue frame: size ${d.size}, expected ${SPEC.dialogueFrame}`);
   if (d.inset * 2 >= d.size) errors.push('dialogue frame: inset leaves no middle slice');
   checkImage({ file: d.image, label: 'dialogue frame', check: exactly(d.size, d.size) });
+
+  // Sounds (§9.4, #184): there, and not too long; a WAV's length is read from its header.
+  for (const [slot, sound] of Object.entries(manifest.sounds ?? {})) {
+    if (!files.includes(sound.file)) {
+      errors.push(`sound ${slot}: ${sound.file} is missing`);
+      continue;
+    }
+    if (!sound.file.toLowerCase().endsWith('.wav')) continue;
+    const seconds = wavSeconds(new Uint8Array(readFileSync(join(dir, sound.file))));
+    const limit = slot.startsWith('music') ? SOUND_LIMITS.musicSeconds : SOUND_LIMITS.cueSeconds;
+    if (seconds === null) errors.push(`sound ${slot}: ${sound.file} is not a PCM WAV`);
+    else if (seconds > limit)
+      errors.push(`sound ${slot}: ${seconds.toFixed(1)} s, at most ${limit} s`);
+  }
 
   return errors.length > 0 ? { ok: false, errors } : { ok: true, manifest };
 }

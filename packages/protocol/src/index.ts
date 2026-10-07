@@ -40,7 +40,9 @@ export {
   HostRequestSchema,
   RULE_BOOK,
   type RuleKey,
+  type SettingKey,
   type SettingValue,
+  SOUND_SETTINGS,
 } from './host-channel.schema';
 export type {
   CouncilSettingsView,

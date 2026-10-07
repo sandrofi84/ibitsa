@@ -1,4 +1,10 @@
-import { RULE_BOOK, type RuleKey, type SettingValue, type SettingView } from '@ibitsa/protocol';
+import {
+  RULE_BOOK,
+  type SettingKey,
+  type SettingValue,
+  type SettingView,
+  SOUND_SETTINGS,
+} from '@ibitsa/protocol';
 import type { GuildSettingsDeps, SettingSchema } from './guild-settings.types';
 
 /**
@@ -9,8 +15,9 @@ import type { GuildSettingsDeps, SettingSchema } from './guild-settings.types';
 export class GuildSettings {
   constructor(private readonly deps: GuildSettingsDeps) {}
 
+  /** The Rule book's rules, then the volumes (#184): everything the webview may read and write. */
   rules(): SettingView[] {
-    return RULE_BOOK.map((key) => this.view(key));
+    return [...RULE_BOOK, ...SOUND_SETTINGS].map((key) => this.view(key));
   }
 
   async write({
@@ -18,7 +25,7 @@ export class GuildSettings {
     value,
     layer,
   }: {
-    key: RuleKey;
+    key: SettingKey;
     value: SettingValue;
     layer: 'user' | 'workspace';
   }): Promise<void> {
@@ -26,11 +33,11 @@ export class GuildSettings {
   }
 
   /** Removes the rule from that layer, so the one below applies again. */
-  async reset({ key, layer }: { key: RuleKey; layer: 'user' | 'workspace' }): Promise<void> {
+  async reset({ key, layer }: { key: SettingKey; layer: 'user' | 'workspace' }): Promise<void> {
     await this.deps.update({ key, value: undefined, layer });
   }
 
-  private view(key: RuleKey): SettingView {
+  private view(key: SettingKey): SettingView {
     const schema = this.deps.schema[`ibitsa.${key}`] ?? {};
     const layers = this.deps.inspect(key) ?? {};
     const defaultValue = asValue(layers.defaultValue ?? schema.default ?? null);
@@ -57,6 +64,7 @@ export class GuildSettings {
 function kindOf(schema: SettingSchema): SettingView['kind'] {
   const types = [schema.type ?? []].flat();
   if (schema.enum) return 'choice';
+  if (types.includes('boolean')) return 'toggle';
   if (types.includes('array')) return 'list';
   if (types.includes('integer')) return 'integer';
   if (types.includes('number')) return 'number';

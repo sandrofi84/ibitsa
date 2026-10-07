@@ -1,5 +1,4 @@
 import type { Command, MicroUsd, Plan, PlanTask, Reading } from '@ibitsa/protocol';
-import { taskOrder } from '@ibitsa/protocol';
 import { CampaignRecord } from './campaign-record';
 import { Consultation } from './consultation';
 import { Elder } from './elder';

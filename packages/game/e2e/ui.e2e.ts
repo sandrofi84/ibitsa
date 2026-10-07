@@ -160,7 +160,9 @@ test('without credentials the onboarding card comes first; a rejected key says w
   await dialog.getByRole('button', { name: 'Save key and start' }).click();
   await expect(dialog).toBeHidden();
   await expect.poll(() => probe(page, (p) => p.snapshot()?.campaign?.status)).toBe('active');
-  expect(await probe(page, (p) => p.hostRequests().map((r) => r.type))).toEqual([
+  // The sound board reads the volumes at start-up (#184); the credentials' requests are these.
+  const requests = await probe(page, (p) => p.hostRequests().map((r) => r.type));
+  expect(requests.filter((r) => r !== 'readSettings')).toEqual([
     'credentialsStatus',
     'openApiKeyPage',
     'saveApiKey',

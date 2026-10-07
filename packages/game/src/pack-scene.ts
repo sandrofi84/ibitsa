@@ -75,6 +75,10 @@ export class PackScene extends Phaser.Scene {
         frameHeight: manifest.markers.size,
       });
 
+    // Sounds (§9.4, #184): a pack may leave any slot silent.
+    for (const [slot, sound] of Object.entries(manifest.sounds ?? {}))
+      this.load.audio(`sound:${slot}`, this.url(sound.file));
+
     this.load.once(Phaser.Loader.Events.COMPLETE, () => {
       this.defineFrames(manifest);
       this.registry.set(
@@ -87,6 +91,7 @@ export class PackScene extends Phaser.Scene {
           .toJSON()
           .anims.map((a) => a.key)
           .filter((k) => !this.before.anims.has(k)),
+        sounds: Object.keys(manifest.sounds ?? {}).map((slot) => `sound:${slot}`),
       });
       // The hut when one was asked for before the pack loaded (`Started.showHut`), else the map.
       this.scene.start(this.registry.has(HUT_FEED) ? 'hut' : 'world');

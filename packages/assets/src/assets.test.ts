@@ -6,6 +6,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { engineTextures } from './art.ts';
 import { buildDefaultPack } from './generate.ts';
 import type { Manifest } from './manifest.schema.ts';
+import { SOUND_LIMITS, SOUND_SLOTS } from './manifest.ts';
+import { defaultSounds, synth, wav, wavSeconds } from './sound.ts';
 import { validatePack } from './validate.ts';
 
 const PACK = fileURLToPath(new URL('../default-pack/', import.meta.url));
@@ -238,5 +240,50 @@ describe('regenerating', () => {
     for (const [name, raster] of Object.entries(engineTextures())) {
       expect(readFileSync(join(TEXTURES, name)).equals(raster.png()), name).toBe(true);
     }
+  });
+});
+
+describe('sounds (#184)', () => {
+  it('generates every default cue as a short PCM WAV, and none of the music', () => {
+    const sounds = defaultSounds();
+    expect(Object.keys(sounds).sort()).toEqual(
+      SOUND_SLOTS.filter((s) => !s.startsWith('music')).sort(),
+    );
+    for (const samples of Object.values(sounds)) {
+      const seconds = wavSeconds(wav(samples));
+      expect(seconds).toBeGreaterThan(0);
+      expect(seconds).toBeLessThanOrEqual(SOUND_LIMITS.cueSeconds);
+    }
+    expect(wavSeconds(wav(synth([{ wave: 'noise', freq: 1, seconds: 0.5 }])))).toBeCloseTo(0.5, 2);
+  });
+
+  it('reads no length from what is not a PCM WAV', () => {
+    expect(wavSeconds(new Uint8Array(10))).toBeNull();
+    expect(
+      wavSeconds(new TextEncoder().encode('RIFF....WAVEjunkjunkjunkjunkjunkjunkjunkjunkjunk')),
+    ).toBeNull();
+  });
+
+  it('refuses a missing sound, one too long, and one that is not a WAV inside', () => {
+    const dir = copyPack();
+    writeFileSync(
+      join(dir, 'sounds', 'long.wav'),
+      wav(synth([{ wave: 'square', freq: 440, seconds: 4 }])),
+    );
+    writeFileSync(join(dir, 'sounds', 'fake.wav'), 'not a wav at all');
+    editManifest(dir, (m) => {
+      m.sounds = {
+        ...m.sounds,
+        needsYou: { file: 'sounds/nope.wav' },
+        taskDone: { file: 'sounds/long.wav' },
+        prOpened: { file: 'sounds/fake.wav' },
+      };
+    });
+    const result = validatePack(dir);
+    expect(result.ok ? [] : result.errors).toEqual([
+      'sound needsYou: sounds/nope.wav is missing',
+      'sound taskDone: 4.0 s, at most 3 s',
+      'sound prOpened: sounds/fake.wav is not a PCM WAV',
+    ]);
   });
 });

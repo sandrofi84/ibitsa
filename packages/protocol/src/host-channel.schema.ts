@@ -24,6 +24,20 @@ export const RULE_BOOK = [
 export const RuleKeySchema = v.picklist(RULE_BOOK);
 export type RuleKey = v.InferOutput<typeof RuleKeySchema>;
 
+/** The volume settings (§9.4, #184), edited in the Guild Hall's Packs tab. */
+export const SOUND_SETTINGS = [
+  'sound.master',
+  'sound.alerts',
+  'sound.voices',
+  'sound.effects',
+  'sound.music',
+  'sound.focus',
+] as const;
+
+/** Every setting the webview may read and write: the Rule book's and the volumes. */
+export const SettingKeySchema = v.picklist([...RULE_BOOK, ...SOUND_SETTINGS]);
+export type SettingKey = v.InferOutput<typeof SettingKeySchema>;
+
 /** A setting's value as the Rule book edits it: a number, text, a list of commands, or none. */
 export const SettingValueSchema = v.union([
   v.number(),
@@ -63,14 +77,14 @@ export const HostRequestSchema = v.variant('type', [
   v.strictObject({
     channel: v.literal('host'),
     type: v.literal('writeSetting'),
-    key: RuleKeySchema,
+    key: SettingKeySchema,
     value: SettingValueSchema,
     layer: SettingLayerSchema,
   }),
   v.strictObject({
     channel: v.literal('host'),
     type: v.literal('resetSetting'),
-    key: RuleKeySchema,
+    key: SettingKeySchema,
     layer: SettingLayerSchema,
   }),
   v.strictObject({ channel: v.literal('host'), type: v.literal('openSettings') }),

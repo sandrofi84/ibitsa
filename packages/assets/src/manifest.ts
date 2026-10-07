@@ -21,6 +21,29 @@ export const SPEC = {
   marker: 12,
 } as const;
 
+/**
+ * The sound slots a pack may fill (§9.4, #184): cues, and optional music loops for the scenes. A pack
+ * without a slot is silent there.
+ */
+export const SOUND_SLOTS = [
+  'needsYou',
+  'councillorSpeaks',
+  'taskDone',
+  'reviewPassed',
+  'reviewFailed',
+  'prOpened',
+  'prMerged',
+  'hpLow',
+  'resting',
+  'campaignStart',
+  'campaignEnd',
+  'musicVillage',
+  'musicMap',
+  'musicHut',
+] as const;
+/** The longest a cue may be, and a music loop, in seconds (§9.4). */
+export const SOUND_LIMITS = { cueSeconds: 3, musicSeconds: 120 } as const;
+
 /** A drawbridge's frames, one row each, top to bottom (#124). */
 export const BRIDGE_FRAMES = ['lowered', 'raised'] as const;
 /**

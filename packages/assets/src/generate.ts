@@ -28,6 +28,7 @@ import {
   SPEC,
   TASK_POINT_STATES,
 } from './manifest.ts';
+import { defaultSounds, wav } from './sound.ts';
 
 /** A councillor's 32×32 council sheet (§9.2): writes the image and returns its manifest entry. */
 function councilEntry({
@@ -86,6 +87,13 @@ export function buildDefaultPack(): { manifest: Manifest; files: Record<string, 
   files['ui/dialogue-frame.png'] = dialogueFrame().png();
   files['map/bridge.png'] = bridge().png();
   files['ui/markers.png'] = markers().png();
+  // The default sounds (§9.4, #184), generated like the art.
+  const sounds: NonNullable<Manifest['sounds']> = {};
+  for (const [slot, samples] of Object.entries(defaultSounds())) {
+    const file = `sounds/${slot}.wav`;
+    files[file] = Buffer.from(wav(samples));
+    sounds[slot as keyof typeof sounds] = { file };
+  }
 
   const manifest: Manifest = {
     name: 'default',
@@ -120,6 +128,7 @@ export function buildDefaultPack(): { manifest: Manifest; files: Record<string, 
       guildHall: { image: 'map/guild-hall.png', width: SPEC.guildHall, height: SPEC.guildHall },
     },
     ui: { dialogueFrame: { image: 'ui/dialogue-frame.png', size: SPEC.dialogueFrame, inset: 8 } },
+    sounds,
   };
   return { manifest, files };
 }

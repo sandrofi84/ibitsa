@@ -6,12 +6,21 @@ import {
   MARKER_KINDS,
   OPTIONAL_ANIMATIONS,
   REQUIRED_ANIMATIONS,
+  SOUND_SLOTS,
   TASK_POINT_STATES,
 } from './manifest.ts';
 
 const file = v.pipe(
   v.string(),
   v.regex(/^(?!\/)(?!.*\.\.)[\w./-]+\.png$/, 'must be a relative .png path inside the pack'),
+);
+/** A sound file inside the pack (#184). */
+const audio = v.pipe(
+  v.string(),
+  v.regex(
+    /^(?!\/)(?!.*\.\.)[\w./-]+\.(ogg|mp3|wav)$/,
+    'must be a relative .ogg, .mp3 or .wav path inside the pack',
+  ),
 );
 const size = v.pipe(v.number(), v.integer(), v.minValue(1));
 
@@ -86,6 +95,13 @@ export const ManifestSchema = v.strictObject({
   ui: v.strictObject({
     dialogueFrame: v.strictObject({ image: file, size, inset: size }),
   }),
+  /** Sounds by slot (§9.4, #184): OGG, MP3 or WAV; music loops when `loop` is set. Optional. */
+  sounds: v.optional(
+    v.record(
+      v.picklist(SOUND_SLOTS),
+      v.strictObject({ file: audio, loop: v.optional(v.boolean()) }),
+    ),
+  ),
 });
 
 export type Manifest = v.InferOutput<typeof ManifestSchema>;

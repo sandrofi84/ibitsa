@@ -1,9 +1,11 @@
-import type {
-  ChronicleEntry,
-  PackView,
-  RuleKey,
-  SettingValue,
-  SettingView,
+import {
+  type ChronicleEntry,
+  type PackView,
+  RULE_BOOK,
+  type RuleKey,
+  type SettingKey,
+  type SettingValue,
+  type SettingView,
 } from '@ibitsa/protocol';
 import type { GameClient } from './client';
 import { button, el } from './dom';
@@ -93,7 +95,14 @@ export function parseRule({
         : { ok: false, reason: 'Choose one of the options.' };
     case 'text':
       return { ok: true, value: text };
+    case 'toggle':
+      return { ok: true, value: trimmed === 'true' };
   }
+}
+
+/** A rule of the Rule book, not a volume (the Packs tab has those, #184). */
+export function isRule(view: SettingView): view is SettingView & { key: RuleKey } {
+  return (RULE_BOOK as readonly string[]).includes(view.key);
 }
 
 /**
@@ -110,7 +119,7 @@ export function mountGuildHall({ client, host }: { client: GameClient; host: Hos
   let tab: GuildTab | null = null;
   let rules: SettingView[] = [];
   let layer: 'user' | 'workspace' = 'user';
-  const problems = new Map<RuleKey, string>();
+  const problems = new Map<SettingKey, string>();
 
   const close = () => {
     tab = null;
@@ -133,7 +142,7 @@ export function mountGuildHall({ client, host }: { client: GameClient; host: Hos
     }
     if (event.type !== 'settings') return;
     rules = event.rules;
-    if (tab === 'rules') render();
+    if (tab === 'rules' || tab === 'packs') render();
   });
   client.onChronicle(() => {
     if (tab === 'chronicle') render();
@@ -155,7 +164,10 @@ export function mountGuildHall({ client, host }: { client: GameClient; host: Hos
     if (next === 'rules') host.request({ channel: 'host', type: 'readSettings' });
     if (next === 'chronicle') client.requestChronicle();
     if (next === 'spells') client.requestActions();
-    if (next === 'packs') host.request({ channel: 'host', type: 'readPacks' });
+    if (next === 'packs') {
+      host.request({ channel: 'host', type: 'readPacks' });
+      host.request({ channel: 'host', type: 'readSettings' });
+    }
     render();
   };
 
@@ -195,6 +207,11 @@ export function mountGuildHall({ client, host }: { client: GameClient; host: Hos
           packs,
           active: activePack,
           onUse: (id) => host.request({ channel: 'host', type: 'usePack', id }),
+          sound: {
+            levels: rules.filter((r) => !isRule(r)),
+            onChange: (key, value) =>
+              host.request({ channel: 'host', type: 'writeSetting', key, value, layer: 'user' }),
+          },
         });
     }
   }
@@ -215,10 +232,10 @@ export function mountGuildHall({ client, host }: { client: GameClient; host: Hos
       onClick: () => host.request({ channel: 'host', type: 'openSettings' }),
     });
     if (rules.length === 0) return [top, el('p', { text: 'Reading the rules…' }), vscodeSettings];
-    return [top, ...rules.map(ruleRow), vscodeSettings];
+    return [top, ...rules.filter(isRule).map(ruleRow), vscodeSettings];
   }
 
-  function ruleRow(rule: SettingView): HTMLElement {
+  function ruleRow(rule: SettingView & { key: RuleKey }): HTMLElement {
     const row = el('div', { className: 'rule' });
     const id = `rule-${rule.key.replaceAll('.', '-')}`;
     const label = el('label', { text: ruleTitle(rule.key) });

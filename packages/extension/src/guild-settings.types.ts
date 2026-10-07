@@ -1,4 +1,4 @@
-import type { RuleKey, SettingValue } from '@ibitsa/protocol';
+import type { SettingKey, SettingValue } from '@ibitsa/protocol';
 
 /** A setting's schema as the extension's manifest declares it (`contributes.configuration`). */
 export interface SettingSchema {
@@ -21,9 +21,9 @@ export interface SettingLayers {
 export interface GuildSettingsDeps {
   /** `contributes.configuration.properties` from the manifest, keys with the `ibitsa.` prefix. */
   schema: Record<string, SettingSchema>;
-  inspect(key: RuleKey): SettingLayers | undefined;
+  inspect(key: SettingKey): SettingLayers | undefined;
   update(change: {
-    key: RuleKey;
+    key: SettingKey;
     value: SettingValue | undefined;
     layer: 'user' | 'workspace';
   }): PromiseLike<void>;
