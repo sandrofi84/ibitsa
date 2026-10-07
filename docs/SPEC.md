@@ -294,6 +294,7 @@ Each hero is always in exactly one state, mapped from agent events (settled in [
 | resting | `status: 'compacting'` until `compact_result` | rest animation |
 | working: *kind* | `PreToolUse` until `PostToolUse`/`PostToolUseFailure`; `think` while mid-turn with no tool running | animation per kind (below) |
 | blocked | dependency not done (M4) | padlock; at drawbridge if stacked |
+| under review | its task is being checked or reviewed (M5) | idle at task point; councillors there with magnifiers |
 | submitted | hero called `submit_task({ summary })` | idle at task point; councillors walk out |
 | idle | turn ended without `submit_task`, or after a stop | idle at task point; last message as a "Needs you" `reply` |
 | traveling | dispatched, until the session's `system`/`init` message | walking along path; the game may speed the walk so the token arrives within ~1 s, never shows work before `init` |
@@ -316,8 +317,8 @@ Each hero is always in exactly one state, mapped from agent events (settled in [
 
 ### 5.5 Review loop (run by the game master, never by the hero)
 1. Hero declares the task done by calling `submit_task`. The game master first checks that the worktree has no uncommitted changes and at least one commit beyond its base; otherwise the tool call is rejected with the reason ("commit your changes first") and the hero keeps working. Heroes commit their own work as they go.
-2. Game master runs **free deterministic checks** in the worktree (tests, lint, typecheck, and configured tools such as axe, npm audit, semgrep). Failures go straight back to the hero.
-3. Game master launches each of the party's reviewing councillors **concurrently**: read-only, review-mode prompt, councillor's own model (per-councillor effort applies here), given the diff, check outputs, the task's acceptance criteria and relevant decision records.
+2. Game master runs **free deterministic checks** in the worktree (tests, lint, typecheck, and configured tools such as axe, npm audit, semgrep). Failures go straight back to the hero. (M5 planning:) the commands come from `ibitsa.checks`; without it, the worktree's `package.json` scripts named `test`, `lint`, `typecheck` or `check`; an empty list turns checks off. They run one at a time, stopping at the first failure, 10 minutes each; the hero gets the last ~4,000 characters. They run again on every resubmission. A failure spends no councillor.
+3. Game master launches each of the party's reviewing councillors **concurrently**: read-only, review-mode prompt, councillor's own model (per-councillor effort applies here), given the diff, check outputs, the task's acceptance criteria and relevant decision records. (M5 planning:) one short session per reviewer, its instructions from the councillor skill's `## Review` section, ending with a `submit_verdict` tool. Its **review effort** is set per councillor in party assembly: Light (Haiku, $0.10 a review, the default), Standard (Sonnet, $0.40), Deep (Opus, $1.20); a councillor's `ibitsa-model` overrides the model. It sees **only this task's commits** (core records the branch head when the task starts and when it's submitted).
 4. Each returns a structured verdict:
 
 ```ts
@@ -326,14 +327,16 @@ Each hero is always in exactly one state, mapped from agent events (settled in [
               file?: string, line?: number, message: string }[] }
 ```
 
-5. Blocking findings are sent into the hero's session; it fixes and resubmits.
+5. Blocking findings are sent into the hero's session; it fixes and resubmits. (M5 planning:) a blocking finding must say why: the acceptance criterion it fails, or `bug`, `security` or `breaks` (something that worked); core rejects one that doesn't. A reviewer can't block against a recorded decision: it files **"revisit D…?"**, which goes to the user, not the hero. While its task is reviewed the hero waits (**under review**) and gets its next task once every reviewer passes.
 6. Re-review: only councillors who raised blocking findings, only on the delta since their last review.
-7. **Loop limit** (default 3 rounds) → escalate to the user with disputed findings.
-8. **Conflicting findings** between councillors → escalate to the user (or the elder, if configured).
+7. **Loop limit** (default 3 rounds, `ibitsa.review.loopLimit`) → escalate to the user with the open findings: **Accept anyway**, **Send back with a note**, or **Stop**.
+8. **Conflicting findings** between councillors → escalate to the user. (M5 planning:) not detected automatically: the hero calls a `dispute_finding` tool when two findings contradict each other or a recorded decision, and it goes to the user straight away. (Asking the elder first may come later.)
 9. Suggestions are collected into the PR description.
 10. All pass → task is cleared; the PR can be opened.
 
-On the map, councillors walk out of the council hut to the task point, show a magnifier while reviewing, and a red count badge when they have findings.
+On the map, councillors walk out of the council hut to the task point, show a magnifier while reviewing, and a red count badge when they have findings. Clicking a task point opens the **task panel**: each reviewer's verdict and findings per round, the check output, and the suggestions (kept for the PR description, M6).
+- **"Done" means passed review** (M5): dependencies between tasks and stacked bridges wait for it; until M5 it meant submitted.
+- **Quick quests** have no councillors: checks run, and the task is done once they pass.
 
 ### 5.6 Pull requests
 - PRs are opened per task point (or per branch, as the plan defines) via the git-host adapter.
@@ -842,7 +845,7 @@ Settled in [#9](https://github.com/sandrofi84/ibitsa/issues/9); see [ADR 0001](a
 | M2 | Command bar & actions | `@` targets and files, `/` actions as skills, preview, controls, Command Palette entries. |
 | M3 | Elder & council | Research brief with field slices, convening (round table or separate chambers, per-councillor effort), `report` and `ask_user` with voices and "Why?", plan + decision records saved, approval loop, quick-quest path, tallies and "convene the other way", council hut with 32×32 sheets (§14.2). |
 | M4 | Parties & map | Plans with islands and branching, multiple worktrees and parallel parties, separate and stacked layouts (both stacked start modes), bridges, party assembly, blocked states, several heroes in the UI, a campaign cap (§14.3). |
-| M5 | Review loop | Deterministic checks, concurrent reviewers, verdicts, loop limit, escalation, councillors walking on the map. |
+| M5 | Review loop | Deterministic checks, concurrent reviewers, verdicts, loop limit, escalation, councillors walking on the map, the task panel (§5.5, §14.4). |
 | M6 | PRs | Git-host adapter, PR per task, stacked bases, badges with polling. |
 | M7 | Campaign lifecycle | Campaign record, keep/compact/empty, mid-campaign council and amendments, resume after restart. |
 | M8 | Customization | Settings layers, Guild Hall, councillor editing, class/model mapping, asset & sound packs with validator and recolor, sounds. |
@@ -877,6 +880,17 @@ Settled in M4 planning.
 - **Ending** (#126): with several parties the hero pane offers **Finish campaign** (enabled once every island is submitted, "N of M islands submitted"; core names the open islands otherwise) and **Abandon campaign** (every party, started or not; nothing starts after). **Stop** stops one party. After the end each island's worktree is opened or removed from its hero's pane. The HUD shows the campaign's gold against its cap; heroes stopped by the cap say so in "Needs you" with **Raise the campaign cap by $5**.
 - **Campaign cap:** `ibitsa.campaign.budgetUsd` (empty by default): when every hero plus the elder and council together reach it, every working hero stops (interrupted) and asks, as an out-of-gold item marked as the campaign's; raising it (`raiseCampaignBudget`) lets them carry on. It counts what has been reported, so a hero that hasn't reported yet counts as nothing spent, and it's checked at each cost report (it may overshoot by a turn).
 - **Starting:** `startCampaign` (#121) carries out the approved plan: one island and one hero per plan island (class, name and optional gold pouch per party), the base branch, and for stacked plans the start mode. Party assembly sends it (#123); the one-hero `startPlannedQuest` is gone. A plan without islands is one island named after the campaign.
+
+### 14.4 M5: the review loop
+Settled in M5 planning; the details are in §5.5.
+- Checks from `ibitsa.checks` or detected `package.json` scripts; one at a time, stop at the first failure.
+- One read-only reviewer session per councillor, in parallel, with `submit_verdict`; review effort per councillor in party assembly (Light by default).
+- Reviewers see only the task's commits; re-reviews only the flaggers, on the delta.
+- The hero waits under review; "done" means passed review for dependencies and bridges.
+- Blocking findings cite a criterion or bug/security/breaks; "revisit D…?" goes to the user.
+- Loop limit 3, then Accept anyway / Send back / Stop; the hero's `dispute_finding` escalates contradictions.
+- Councillors walk out with magnifiers; the task panel shows verdicts, findings, checks and suggestions.
+- Quick quests: checks only.
 
 ## 15. Open questions
 1. Name registration: domains (ibitsa.com, ibitsa.dev, questforibitsa.com), GitHub org, npm scope, Marketplace/Open VSX publisher; trademark search (EUIPO TMview, USPTO). Initial checks found no conflicting software use.
