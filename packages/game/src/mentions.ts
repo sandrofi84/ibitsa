@@ -1,8 +1,39 @@
-import { type HeroView, heroHandle } from '@ibitsa/protocol';
+import { type HeroView, heroHandle, type Snapshot } from '@ibitsa/protocol';
 import type { ParsedMessage } from './mentions.types';
 
 /** Everyone working: `@all` (one hero in M2; every party's hero from M4). */
 export const ALL = 'all';
+/** The whole council, mid-campaign (§4.8, #169). */
+export const COUNCIL = 'council';
+
+/**
+ * Who on the council can be asked now (#169): `council` and each councillor who sat, once the plan
+ * is approved and the campaign under way; nobody otherwise.
+ */
+export function councilHandles(snapshot: Snapshot | null): string[] {
+  const sitting = snapshot?.sitting;
+  if (snapshot?.campaign?.status !== 'active' || sitting?.status !== 'approved') return [];
+  return [COUNCIL, ...sitting.roster.map((c) => c.councillorId)];
+}
+
+/**
+ * A command bar message for the council (#169): `@council` asks the whole council, `@<councillor id>`
+ * one councillor. Null when the message names neither (it goes to heroes).
+ */
+export function councilMessage({
+  text,
+  snapshot,
+}: {
+  text: string;
+  snapshot: Snapshot | null;
+}): { councillorId: string | null; text: string } | null {
+  const parsed = parseMessage({ text, recipients: councilHandles(snapshot) });
+  if (!parsed.recipient || !parsed.text) return null;
+  return {
+    councillorId: parsed.recipient === COUNCIL ? null : parsed.recipient,
+    text: parsed.text,
+  };
+}
 
 /**
  * Reads a command bar message (spec §6.1, #83): the first @mention that names a recipient is the

@@ -1,6 +1,7 @@
 import type { Command } from '@ibitsa/protocol';
 import { Campaign } from './campaign';
 import { CampaignRecord } from './campaign-record';
+import { Consultation } from './consultation';
 import { Elder } from './elder';
 import { Hero } from './hero';
 import type { CoreInput, GameMasterEvent } from './inputs.types';
@@ -161,6 +162,9 @@ function command(ctx: StepContext, command: Command): void {
     case 'approvePlan':
       new Sitting(ctx).approve(command);
       return;
+    case 'consultCouncil':
+      new Consultation(ctx).ask(command);
+      return;
     case 'requestPlanChange':
       new Sitting(ctx).requestChange(command);
       return;
@@ -263,6 +267,7 @@ function gameMaster(ctx: StepContext, event: GameMasterEvent): void {
       new PullRequest(ctx).handle(event);
       return;
     case 'runtimeRestarted':
+      new Consultation(ctx).stop('VS Code reloaded before the council answered. Ask again.');
       new PullRequest(ctx).restarted();
       if (ctx.state.campaign?.status === 'planning') {
         new Elder(ctx).restarted();

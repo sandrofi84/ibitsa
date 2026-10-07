@@ -378,8 +378,8 @@ export class LiveDevHost implements Host {
     });
     const sittingId = this.state.sitting?.id ?? '';
     const council = (event: CouncilEvent) => quietly({ kind: 'council', t, sittingId, event });
-    // A council that sat has a context to keep or empty at the end (#167).
-    council({ type: 'sessionStarted', sessionId: 'demo-council' });
+    // A lead session: to ask mid-campaign (#169), and a context to keep or empty at the end (#167).
+    council({ type: 'sessionStarted', sessionId: 'live-sitting' });
     for (const councillorId of roster) {
       council({
         type: 'reportFiled',
@@ -519,6 +519,21 @@ export class LiveDevHost implements Host {
         return;
       case 'startSitting': {
         if (this.settingUp) return;
+        if (effect.resume) {
+          // Asked mid-campaign (#169): the councillor asked answers, else the elder, then the turn ends.
+          const asked = effect.resume.prompt?.match(/The user asks (\S+), who answers/)?.[1];
+          this.council(effect.sittingId, [
+            {
+              type: 'said',
+              councillorId: asked ?? 'elder',
+              text: asked
+                ? `${asked} here: nothing in the work so far changes my advice.`
+                : 'The campaign is on track; nothing needs the council yet.',
+            },
+            { type: 'usage', totalCost: 40_000 },
+          ]);
+          return;
+        }
         const [first] = effect.roster;
         this.asker = first?.councillorId ?? 'tester';
         // In separate chambers the reports come in one by one, so the study stage can be watched (#105).

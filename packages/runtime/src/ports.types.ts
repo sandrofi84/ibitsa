@@ -136,8 +136,9 @@ export interface SittingStart {
   model: string;
   maxBudgetMicroUsd: number;
   /**
-   * Resume an earlier lead session instead of starting one (#166). `kept` (#167): the council's context
-   * was kept from the last campaign, so the new sitting's usual opening goes to the resumed session.
+   * Resume an earlier lead session instead of starting one (#166): `prompt` is its next message, e.g.
+   * a question to the council mid-campaign (#169); without one nothing is sent. `kept` (#167): the
+   * council's context was kept from the last campaign, so the new sitting's usual opening goes to it.
    */
   resume?: { sessionId: string; prompt?: string; kept?: boolean };
 }
@@ -289,4 +290,6 @@ export interface UserSettings {
   campaignBudgetMicroUsd?: number | null;
   /** `ibitsa.review.loopLimit` (M5). */
   loopLimit?: number;
+  /** `ibitsa.council.consultBudgetUsd` in micro-dollars (#169): one question to the council. */
+  consultBudgetMicroUsd?: number;
 }

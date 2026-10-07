@@ -1,5 +1,6 @@
 import type { Command, Effort } from '@ibitsa/protocol';
 import { planIslands, taskOrder } from '@ibitsa/protocol';
+import { Consultation } from './consultation';
 import { Hero } from './hero';
 import { Quest } from './quest';
 import { Review } from './review';
@@ -260,6 +261,7 @@ export class Campaign {
       ...(state.elder ? [state.elder] : []),
       ...sittings,
       ...Review.spenders(state.islands),
+      ...Consultation.spenders(state),
     ].reduce((sum, { gold }) => sum + (gold.kind === 'unknown' ? 0 : gold.value), 0);
   }
 }

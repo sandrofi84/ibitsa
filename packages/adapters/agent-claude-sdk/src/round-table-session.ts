@@ -344,7 +344,11 @@ export class RoundTableSession implements SittingSession {
       const query = sdk.query({ prompt: this.input, options: this.options(ibitsa) });
       this.query = query;
       if (this.closed) query.close();
-      this.input.push(userMessage({ text: this.opening(), priority: 'next' }));
+      // Resumed (#166, #169), the session already knows the task: it gets only the next message.
+      const resume = this.init.start.resume;
+      // A kept council (#167) starts a new sitting in its old session: it does get the opening.
+      const first = resume && !resume.kept ? resume.prompt : this.opening();
+      if (first) this.input.push(userMessage({ text: first, priority: 'next' }));
       for await (const message of query) this.onSdkMessage(message);
     } catch (error) {
       if (!this.closed)
@@ -392,7 +396,7 @@ export class RoundTableSession implements SittingSession {
       },
       maxTurns: MAX_TURNS,
       maxBudgetUsd: start.maxBudgetMicroUsd / 1_000_000,
-      // A council whose context was kept from the last campaign picks up its session (#167).
+      // Resumed for a question (#169), or a council kept from the last campaign (#167).
       ...(start.resume ? { resume: start.resume.sessionId } : {}),
       ...(claudeCodePath ? { pathToClaudeCodeExecutable: claudeCodePath } : {}),
     };

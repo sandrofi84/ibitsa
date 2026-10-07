@@ -164,6 +164,12 @@
           "default": "ask",
           "markdownDescription": "How the council sits when you convene it."
         },
+        "ibitsa.council.consultBudgetUsd": {
+          "type": "number",
+          "default": 0.5,
+          "exclusiveMinimum": 0,
+          "markdownDescription": "The most one question to the council mid-campaign (`@council`, `@<councillor>` or the hut) may spend, in dollars."
+        },
         "ibitsa.council.disabled": {
           "type": "array",
           "items": {

@@ -104,6 +104,18 @@ export interface SittingView {
   rating: SittingRating | null;
   /** Set when this sitting was convened the other way, to compare with that one (§4.10). */
   comparisonOf: string | null;
+  /** Talking to the council once its plan is approved (§4.8, #169), oldest first. */
+  consultations: ConsultationView[];
+}
+
+/** One question to the council mid-campaign; its answers are dialogue lines. */
+export interface ConsultationView {
+  id: string;
+  /** Who was asked: a councillor's id, or null for the whole council. */
+  councillorId: string | null;
+  status: 'asking' | 'answered' | 'failed';
+  error: string | null;
+  gold: Reading<MicroUsd>;
 }
 
 export interface SittingRating {

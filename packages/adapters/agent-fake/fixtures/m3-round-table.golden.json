@@ -61,7 +61,8 @@
           },
           "error": null,
           "rating": null,
-          "comparisonOf": null
+          "comparisonOf": null,
+          "consultations": []
         },
         "islands": [],
         "heroes": [],
@@ -174,7 +175,8 @@
           },
           "error": null,
           "rating": null,
-          "comparisonOf": null
+          "comparisonOf": null,
+          "consultations": []
         },
         "islands": [],
         "heroes": [],
@@ -362,7 +364,8 @@
           },
           "error": null,
           "rating": null,
-          "comparisonOf": null
+          "comparisonOf": null,
+          "consultations": []
         },
         "islands": [],
         "heroes": [],
@@ -639,7 +642,8 @@
           },
           "error": null,
           "rating": null,
-          "comparisonOf": null
+          "comparisonOf": null,
+          "consultations": []
         },
         "islands": [],
         "heroes": [],
@@ -917,7 +921,8 @@
           },
           "error": null,
           "rating": null,
-          "comparisonOf": null
+          "comparisonOf": null,
+          "consultations": []
         },
         "islands": [],
         "heroes": [],
@@ -1359,7 +1364,8 @@
           },
           "error": null,
           "rating": null,
-          "comparisonOf": null
+          "comparisonOf": null,
+          "consultations": []
         },
         "islands": [],
         "heroes": [],
@@ -1799,7 +1805,8 @@
       },
       "error": null,
       "rating": null,
-      "comparisonOf": null
+      "comparisonOf": null,
+      "consultations": []
     },
     "islands": [],
     "heroes": [],

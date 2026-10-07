@@ -150,6 +150,13 @@ export type Effect =
       roster: { councillorId: string; effort: Effort }[];
       /** The elder's brief the sitting starts from (spec §4.1); null when convened without one. */
       brief: ResearchBrief | null;
+      /**
+       * Resume the lead session instead of opening the sitting (#166): `prompt` is its next message
+       * (mid-campaign, the user's question and the campaign's status, #169).
+       */
+      resume?: { sessionId: string; prompt?: string };
+      /** A cap of its own instead of the effort's, e.g. one question mid-campaign (#169). */
+      maxBudgetMicroUsd?: number;
     }
   /** Something the user did that the sitting must hear about. */
   | { type: 'sittingMessage'; sittingId: string; message: SittingMessage }

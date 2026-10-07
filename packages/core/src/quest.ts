@@ -1,6 +1,7 @@
 import type { Command, MicroUsd, Plan, PlanTask, Reading } from '@ibitsa/protocol';
 import { taskOrder } from '@ibitsa/protocol';
 import { CampaignRecord } from './campaign-record';
+import { Consultation } from './consultation';
 import { Elder } from './elder';
 import { Hero } from './hero';
 import { Sitting } from './sitting';
@@ -276,6 +277,7 @@ export class Quest {
     if (state.campaign) state.campaign.status = status;
     new Elder(this.ctx).stop();
     new Sitting(this.ctx).stop('The quest was abandoned.');
+    new Consultation(this.ctx).stop('The quest ended.');
     for (const hero of state.heroes) {
       this.ctx.outbox.effect({ type: 'closeSession', heroId: hero.id });
       this.ctx.outbox.effect({ type: 'cancelTimer', timerId: Hero.silenceTimer(hero.id) });

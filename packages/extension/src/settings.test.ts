@@ -100,3 +100,15 @@ describe('readPollSeconds (#152)', () => {
     expect(readPollSeconds(config({ 'pullRequests.pollSeconds': 5 }))).toBe(60);
   });
 });
+
+describe('council.consultBudgetUsd (#169)', () => {
+  it('is $0.50 by default, in micro-dollars', () => {
+    expect(readUserSettings(config({})).consultBudgetMicroUsd).toBe(500_000);
+    expect(
+      readUserSettings(config({ 'council.consultBudgetUsd': 1.25 })).consultBudgetMicroUsd,
+    ).toBe(1_250_000);
+    expect(readUserSettings(config({ 'council.consultBudgetUsd': 0 })).consultBudgetMicroUsd).toBe(
+      500_000,
+    );
+  });
+});
