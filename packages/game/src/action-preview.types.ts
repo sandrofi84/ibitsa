@@ -6,4 +6,6 @@ export interface ActionPreviewOptions {
   input: CommandInput;
   /** Recipient handles a message may start with, e.g. `ranger-ilse` (#83). */
   recipients: () => string[];
+  /** The hero a message goes to when no @ names one: its worktree expands the action (#125). */
+  selected?: () => string | null;
 }

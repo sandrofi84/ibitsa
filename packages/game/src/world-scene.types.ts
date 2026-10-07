@@ -6,4 +6,6 @@ export interface MapProbe {
   bridges: { from: string; to: string; vertical: boolean; lowered: boolean; behind: boolean }[];
   /** Heroes showing the padlock, and what they wait for. */
   blocked?: { heroId: string; reason: 'slot' | 'previousIsland' | 'dependency' }[];
+  /** The hero the camera follows: the selected one (#125), else the first working, else the first. */
+  following?: string | null;
 }

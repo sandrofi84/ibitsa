@@ -2,7 +2,7 @@ import type { ActionInfo } from '@ibitsa/protocol';
 import { handles } from './at-menu';
 import type { GameClient } from './client';
 import type { MenuItem, MenuProvider } from './command-menu.types';
-import { parseMessage } from './mentions';
+import { addressedHero, parseMessage } from './mentions';
 
 const GROUPS: Record<ActionInfo['source'], string> = {
   plugin: 'Plugins',
@@ -19,10 +19,13 @@ const GROUPS: Record<ActionInfo['source'], string> = {
 export function slashMenu({
   client,
   newAction,
+  selected = () => null,
 }: {
   client: GameClient;
   /** Offered last, as "New action…": opens the form that writes a skill (#86). */
   newAction?: () => void;
+  /** The hero a message goes to when no @ names one: the menu lists its worktree's actions (#125). */
+  selected?: () => string | null;
 }): MenuProvider {
   return {
     trigger: '/',
@@ -32,7 +35,8 @@ export function slashMenu({
       // Only the first word, or right after the recipient: `/test`, `@ranger-ilse /test`.
       const rest = parseMessage({ text: before, recipients: handles(snapshot.heroes) }).text;
       if (rest !== '') return [];
-      const actions = await client.actionsReady();
+      const hero = addressedHero({ text: before, heroes: snapshot.heroes, selected: selected() });
+      const actions = await client.actionsReady(hero?.id ?? null);
       const items = actionItems({ actions, query });
       if (!newAction) return items;
       return [

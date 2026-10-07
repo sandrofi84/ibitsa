@@ -354,3 +354,45 @@ describe('LiveDevHost: a demo campaign of three islands (#124)', () => {
     expect(snapshot()?.islands.map((i) => i.worktree)).toEqual(['ready', 'ready', 'waiting']);
   });
 });
+
+describe('LiveDevHost: several heroes (#125)', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it('starts a campaign with that many heroes at the first hello, each on its own island', async () => {
+    const host = new LiveDevHost({ credentialsReady: true, repo, heroes: 2 });
+    const messages: CoreMessage[] = [];
+    host.onMessage((m) => messages.push(m));
+    host.send({ type: 'hello', protocolVersion: 1 });
+    await vi.advanceTimersByTimeAsync(5_000);
+    const snapshot = (
+      messages.filter((m) => m.type === 'snapshot').at(-1) as { snapshot: Snapshot }
+    ).snapshot;
+    expect(snapshot.heroes.map((h) => [h.name, h.state.kind])).toEqual([
+      ['Ranger Ilse', 'idle'],
+      ['Rogue Vex', 'idle'],
+    ]);
+    expect(snapshot.islands.map((i) => i.worktree)).toEqual(['ready', 'ready']);
+    // Its council isn't played as well: the sitting stays approved.
+    expect(snapshot.sitting?.status).toBe('approved');
+    host.send({ type: 'requestActions', heroId: snapshot.heroes[1]?.id ?? '' });
+    host.send({
+      type: 'requestPreview',
+      name: 'ibitsa:test',
+      args: '',
+      heroId: snapshot.heroes[1]?.id ?? '',
+    });
+    await vi.advanceTimersByTimeAsync(10);
+    expect(messages.filter((m) => m.type === 'actions').at(-1)).toMatchObject({
+      heroId: snapshot.heroes[1]?.id,
+    });
+    expect(messages.filter((m) => m.type === 'preview').at(-1)).toMatchObject({
+      heroId: snapshot.heroes[1]?.id,
+    });
+    host.send({ type: 'hello', protocolVersion: 1 });
+    await vi.advanceTimersByTimeAsync(10);
+    const again = (messages.filter((m) => m.type === 'snapshot').at(-1) as { snapshot: Snapshot })
+      .snapshot;
+    expect(again.heroes).toHaveLength(2);
+  });
+});

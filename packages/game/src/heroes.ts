@@ -45,6 +45,16 @@ export function speechExcerpt(text: string): string {
     : `${sentence.slice(0, SPEECH_MAX - 1).trimEnd()}…`;
 }
 
+/** Why a blocked hero is waiting (#121, #125). */
+export const BLOCKED_REASONS: Record<
+  Extract<ExecutionState, { kind: 'blocked' }>['reason'],
+  string
+> = {
+  slot: 'Waiting for a free slot',
+  previousIsland: 'Waiting for the island before',
+  dependency: 'Waiting for a task on another island',
+};
+
 /** How a hero's state reads in the pane and the @ menu. */
 export const STATE_LABELS: Record<ExecutionState['kind'], string> = {
   unknown: 'Unknown',

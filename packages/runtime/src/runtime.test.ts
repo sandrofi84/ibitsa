@@ -511,6 +511,23 @@ describe('the / menu (#84)', () => {
     expect(actionsOf(received).at(-1)).toEqual([action('v2')]);
   });
 
+  it("lists a named hero's worktree and says whose list it is; an unknown hero gets the first (#125)", async () => {
+    const cwds: string[] = [];
+    const { connection, received } = await withActions(async (cwd) => {
+      cwds.push(cwd);
+      return [action('a')];
+    });
+    connection.receive({ type: 'requestActions', heroId: 'h4' });
+    connection.receive({ type: 'requestActions', heroId: 'nobody' });
+    connection.receive({ type: 'requestPreview', name: 'a', args: '', heroId: 'h4' });
+    await flush();
+    const answers = received.filter((m) => m.type === 'actions');
+    expect(answers.map((m) => m.type === 'actions' && m.heroId)).toEqual(['h4', 'nobody']);
+    expect(cwds).toEqual(['/wt/ibitsa/fix-the-login-redirect']);
+    const preview = received.find((m) => m.type === 'preview');
+    expect(preview?.type === 'preview' && preview.heroId).toBe('h4');
+  });
+
   it('gives the current actions to the host too (#87)', async () => {
     const { runtime } = setup();
     expect(await runtime.currentActions()).toEqual([]);

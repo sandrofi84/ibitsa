@@ -1,9 +1,9 @@
-import type { HeroView, Snapshot } from '@ibitsa/protocol';
+import { type HeroView, heroHandle } from '@ibitsa/protocol';
 import type { GameClient } from './client';
 import type { MenuItem, MenuProvider } from './command-menu.types';
 import { rankPaths } from './file-search';
 import { STATE_LABELS } from './heroes';
-import { ALL, heroHandle, parseMessage } from './mentions';
+import { ALL, addressedHero, parseMessage } from './mentions';
 
 /**
  * The @ menu (spec §6.1, #83). Recipients first: the hero by its handle, with its state, and `@all`;
@@ -13,10 +13,13 @@ import { ALL, heroHandle, parseMessage } from './mentions';
 export function atMenu({
   client,
   recipients,
+  selected = () => null,
 }: {
   client: GameClient;
   /** False in the hero pane: its box always speaks to that hero. */
   recipients: boolean;
+  /** The hero a message goes to when no @ names one (#125). */
+  selected?: () => string | null;
 }): MenuProvider {
   return {
     trigger: '@',
@@ -27,7 +30,8 @@ export function atMenu({
       const named = parseMessage({ text: before, recipients: handles(heroes) }).recipient;
       const items: MenuItem[] = [];
       if (recipients && !named) items.push(...recipientItems({ heroes, query }));
-      const island = recipientIsland({ snapshot, named });
+      const hero = addressedHero({ text: before, heroes, selected: selected() });
+      const island = snapshot.islands.find((i) => i.id === hero?.islandId);
       if (island?.worktree === 'ready') {
         const paths = await client.files(island.id);
         for (const path of rankPaths({ paths, query })) {
@@ -70,12 +74,4 @@ function recipientItems({
     insert: `@${ALL}`,
   });
   return items.filter((item) => item.label.slice(1).startsWith(q));
-}
-
-/** The island whose files to offer: the named hero's, else the first hero's (the only one in M2). */
-function recipientIsland({ snapshot, named }: { snapshot: Snapshot; named: string | null }) {
-  const hero =
-    snapshot.heroes.find((h) => named !== null && heroHandle(h.name) === named) ??
-    snapshot.heroes[0];
-  return snapshot.islands.find((i) => i.id === hero?.islandId);
 }

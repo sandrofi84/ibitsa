@@ -33,9 +33,9 @@ export class RuntimeHost {
     return (await this.ensure()).snapshotState;
   }
 
-  /** The `/` menu's actions for the running quest (#87). */
-  async actions(): Promise<ActionInfo[]> {
-    return (await this.ensure()).currentActions();
+  /** The `/` menu's actions for a hero's worktree (#87, #125; the first hero's without one). */
+  async actions(heroId?: string): Promise<ActionInfo[]> {
+    return (await this.ensure()).currentActions(heroId);
   }
 
   /** Sends a command as if from a front end, e.g. Stop Hero from the Command Palette (#87). */

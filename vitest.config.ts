@@ -38,6 +38,7 @@ export default defineConfig({
         'packages/game/src/view-state.ts',
         'packages/game/src/viewport.ts',
         'packages/game/src/camera-director.ts',
+        'packages/game/src/hero-selection.ts',
         'packages/game/src/dev/dev-host.ts',
         'packages/game/src/dev/live-dev-host.ts',
         'packages/game/src/dev/fake-host-channel.ts',

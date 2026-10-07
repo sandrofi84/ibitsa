@@ -9,7 +9,11 @@ import { councillorTitle, isSitting } from './sitting-hut';
  * The "Needs you" queue (spec §6.4) as plain DOM below the map: keyboard-accessible, readable text,
  * and every permission shown exactly as the core rendered it.
  */
-export function mountNeedsYouPanel({ client, openCouncil }: NeedsYouPanelOptions): void {
+export function mountNeedsYouPanel({
+  client,
+  openCouncil,
+  selectHero,
+}: NeedsYouPanelOptions): void {
   const panel = document.createElement('section');
   panel.className = 'needs-you';
   panel.setAttribute('aria-label', 'Needs you');
@@ -27,7 +31,14 @@ export function mountNeedsYouPanel({ client, openCouncil }: NeedsYouPanelOptions
     shown = key;
     panel.replaceChildren(
       ...(council ? [council] : []),
-      ...snapshot.needsYou.map((item) => renderItem({ item, snapshot, client })),
+      ...snapshot.needsYou.map((item) => {
+        const box = renderItem({ item, snapshot, client });
+        // Clicking an item (not one of its buttons) shows its hero in the pane (#125).
+        box.addEventListener('click', (e) => {
+          if (!(e.target as HTMLElement).closest('button')) selectHero?.(item.heroId);
+        });
+        return box;
+      }),
     );
     panel.hidden = snapshot.needsYou.length === 0 && !council;
   });

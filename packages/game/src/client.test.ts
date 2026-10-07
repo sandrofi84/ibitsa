@@ -252,6 +252,25 @@ describe('GameClient actionsReady (#84)', () => {
     void client.actionsReady();
     expect(host.sent).toHaveLength(2);
   });
+
+  it("keeps each hero's list apart, and drops them all when a skill changes (#125)", async () => {
+    const host = new FakeHost();
+    const client = new GameClient(host);
+    host.deliver({ type: 'snapshot', seq: 1, snapshot: quest('c1') });
+    const forTwo = client.actionsReady('h2');
+    expect(host.sent).toEqual([{ type: 'requestActions', heroId: 'h2' }]);
+    host.deliver({ type: 'actions', seq: 2, actions: list('two'), heroId: 'h2' });
+    expect((await forTwo).map((a) => a.name)).toEqual(['two']);
+    const forOne = client.actionsReady('h1');
+    host.deliver({ type: 'actions', seq: 3, actions: list('one'), heroId: 'h1' });
+    expect((await forOne).map((a) => a.name)).toEqual(['one']);
+    expect((await client.actionsReady('h2')).map((a) => a.name)).toEqual(['two']);
+    expect(host.sent).toHaveLength(2);
+    // A push (no hero): every held list is stale.
+    host.deliver({ type: 'actions', seq: 4, actions: list('new') });
+    void client.actionsReady('h2');
+    expect(host.sent.at(-1)).toEqual({ type: 'requestActions', heroId: 'h2' });
+  });
 });
 
 describe('GameClient preview (#85)', () => {
@@ -284,6 +303,31 @@ describe('GameClient preview (#85)', () => {
       seq: 3,
       preview: { name: 'z', args: '', text: 'Z', notes: [] },
     });
+  });
+
+  it("asks per hero, and answers each hero's waiters with its own preview (#125)", async () => {
+    const host = new FakeHost();
+    const client = new GameClient(host);
+    const one = client.preview({ name: 'pr', args: '', heroId: 'h1' });
+    const two = client.preview({ name: 'pr', args: '', heroId: 'h2' });
+    expect(host.sent).toEqual([
+      { type: 'requestPreview', name: 'pr', args: '', heroId: 'h1' },
+      { type: 'requestPreview', name: 'pr', args: '', heroId: 'h2' },
+    ]);
+    host.deliver({
+      type: 'preview',
+      seq: 1,
+      preview: { name: 'pr', args: '', text: 'TWO', notes: [] },
+      heroId: 'h2',
+    });
+    host.deliver({
+      type: 'preview',
+      seq: 2,
+      preview: { name: 'pr', args: '', text: 'ONE', notes: [] },
+      heroId: 'h1',
+    });
+    expect((await one).text).toBe('ONE');
+    expect((await two).text).toBe('TWO');
   });
 });
 

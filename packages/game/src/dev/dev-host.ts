@@ -89,11 +89,21 @@ export class DevHost implements Host {
       return;
     }
     if (command.type === 'requestPreview') {
-      this.emit({ type: 'preview', seq: ++this.seq, preview: devPreview(command) });
+      this.emit({
+        type: 'preview',
+        seq: ++this.seq,
+        preview: devPreview(command),
+        ...(command.heroId ? { heroId: command.heroId } : {}),
+      });
       return;
     }
     if (command.type === 'requestActions') {
-      this.emit({ type: 'actions', seq: ++this.seq, actions: this.devActions.list });
+      this.emit({
+        type: 'actions',
+        seq: ++this.seq,
+        actions: this.devActions.list,
+        ...(command.heroId ? { heroId: command.heroId } : {}),
+      });
       return;
     }
     if (command.type === 'createAction') {

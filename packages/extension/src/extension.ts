@@ -1,4 +1,5 @@
 import { ClaudeAdapter } from '@ibitsa/agent-claude-sdk';
+import { heroHandle } from '@ibitsa/protocol';
 import { GitGameMaster } from '@ibitsa/runtime';
 import * as vscode from 'vscode';
 import { agentEnvironment } from './agent-environment';
@@ -9,12 +10,13 @@ import { exportTallies } from './export-tallies';
 import type { ExportTalliesArgs } from './export-tallies.types';
 import type { IbitsaApi } from './extension.types';
 import { GAME_VIEW_TYPE, GamePanel } from './game-panel';
+import { chooseHero } from './hero-choice';
 import { API_KEYS_URL, HostChannel } from './host-channel';
 import { anthropicKeyValidator } from './key-validator';
 import type { KeyValidator } from './key-validator.types';
 import { loginShellEnv } from './login-shell-env';
 import { missingCredentialsAdapter } from './placeholders';
-import { runAction } from './run-action';
+import { pickHero, runAction } from './run-action';
 import { RuntimeHost } from './runtime-host';
 import type { DependencyFactory, Notifier } from './runtime-host.types';
 import {
@@ -94,16 +96,25 @@ export function activate(context: vscode.ExtensionContext): IbitsaApi {
   context.subscriptions.push(
     { dispose: () => host?.dispose() },
     vscode.commands.registerCommand('ibitsa.openGame', openGame),
-    vscode.commands.registerCommand('ibitsa.messageHero', () => {
+    vscode.commands.registerCommand('ibitsa.messageHero', async () => {
+      // With several heroes, pick one: the bar opens addressed to it (#125).
+      const state = host && (await host.state());
+      const several = (state?.heroes.length ?? 0) > 1;
+      const hero = several ? await chooseHero({ state, pick: pickHero }) : null;
+      if (several && !hero) return;
       openGame();
-      GamePanel.postHost({ channel: 'host', type: 'focusCommandBar' });
+      GamePanel.postHost(
+        hero
+          ? { channel: 'host', type: 'fillCommandBar', text: `@${heroHandle(hero.name)} ` }
+          : { channel: 'host', type: 'focusCommandBar' },
+      );
     }),
     vscode.commands.registerCommand('ibitsa.runAction', (picked?: { name: string; args: string }) =>
       runAction({ host, picked, open: openGame }),
     ),
     vscode.commands.registerCommand('ibitsa.stopHero', async () => {
       const state = host && (await host.state());
-      const hero = state?.campaign?.status === 'active' ? state.heroes[0] : undefined;
+      const hero = await chooseHero({ state, pick: pickHero });
       if (!host || !hero) {
         void vscode.window.showInformationMessage('No hero is on a quest.');
         return;

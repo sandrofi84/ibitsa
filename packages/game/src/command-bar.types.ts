@@ -1,5 +1,6 @@
 import type { GameClient } from './client';
 import type { CommandHistory } from './command-history';
+import type { HeroSelection } from './hero-selection';
 
 export interface CommandBarOptions {
   client: GameClient;
@@ -9,6 +10,8 @@ export interface CommandBarOptions {
   startQuest: (description: string) => void;
   /** Opens the New action form, offered at the end of the / menu (#86). */
   newAction?: () => void;
+  /** Which hero a message without an @ goes to (#125); the first hero without one. */
+  selection?: HeroSelection;
 }
 
 export interface CommandBar {

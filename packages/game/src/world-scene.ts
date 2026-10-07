@@ -112,6 +112,7 @@ export class WorldScene extends Phaser.Scene {
   mapProbe(): MapProbe {
     return {
       ...this.probe,
+      following: (this.last && CameraDirector.focusOf(this.last, this.selected)?.id) ?? null,
       blocked: [...this.heroes].flatMap(([heroId, token]) => {
         const reason = token.blockedReason();
         return reason ? [{ heroId, reason }] : [];
