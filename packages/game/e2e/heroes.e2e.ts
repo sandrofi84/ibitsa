@@ -99,12 +99,19 @@ test("two heroes: choose whom the pane shows, message one, message all, and each
   // So does clicking a hero on the map.
   await heroes.getByRole('button', { name: /^Rogue Vex/ }).click();
   await expect(pane.getByRole('heading', { name: 'Rogue Vex' })).toBeVisible();
-  // Selecting Rogue Vex pans the camera to it (#124), so Ranger Ilse's token moves for a moment: read its
-  // place and click it again until the click lands.
+  // The camera follows Rogue Vex now (#124), so Ranger Ilse may be off screen: show the whole map,
+  // then click Ilse's token, reading its place again on each try while the camera settles.
+  await page.locator('body').press('0');
   await expect(async () => {
     const at = await probe(page, (p) => p.hero.onPage());
     expect(at).not.toBeNull();
-    if (at) await page.mouse.click(at.x, at.y);
+    if (!at) return;
+    const under = await page.evaluate(
+      ({ x, y }) => document.elementFromPoint(x, y)?.tagName ?? null,
+      at,
+    );
+    expect(under, `something covers Ranger Ilse at ${at.x},${at.y}`).toBe('CANVAS');
+    await page.mouse.click(at.x, at.y);
     expect(await selectedName(page)).toBe('Ranger Ilse');
   }).toPass({ timeout: 15_000, intervals: [250, 500, 1_000] });
   expect(errors).toEqual([]);
