@@ -521,10 +521,13 @@ export function bridge(): Raster {
   return img;
 }
 
-/** Map markers (#124): a padlock over a blocked hero, and a "behind" mark (two arrows back). */
+/**
+ * Map markers: a padlock over a blocked hero, a "behind" mark (two arrows back) (#124), a reviewer's
+ * magnifier and an hourglass over a hero waiting under review (#140).
+ */
 export function markers(): Raster {
   const s = 12;
-  const img = new Raster(s * 2, s);
+  const img = new Raster(s * 4, s);
   img.pattern({
     x: 0,
     y: 0,
@@ -562,6 +565,46 @@ export function markers(): Raster {
       '............',
     ],
     palette: { k: INK, o: hex('#f28a30') },
+  });
+  // A reviewer's magnifier (#140): a glass with a handle.
+  img.pattern({
+    x: s * 2,
+    y: 0,
+    rows: [
+      '............',
+      '...kkkk.....',
+      '..kbbbbk....',
+      '.kbwbbbbk...',
+      '.kbbbbbbk...',
+      '.kbbbbbbk...',
+      '..kbbbbk....',
+      '...kkkkhh...',
+      '.......hhh..',
+      '........hhh.',
+      '.........hh.',
+      '............',
+    ],
+    palette: { k: INK, b: hex('#9fd4f2'), w: hex('#ffffff'), h: hex('#8a5a2a') },
+  });
+  // A hero waiting under review (#140): an hourglass.
+  img.pattern({
+    x: s * 3,
+    y: 0,
+    rows: [
+      '............',
+      '..kkkkkkkk..',
+      '...kyyyyk...',
+      '...kyyyyk...',
+      '....kyyk....',
+      '.....kk.....',
+      '....k..k....',
+      '...k.yy.k...',
+      '...kyyyyk...',
+      '..kkkkkkkk..',
+      '............',
+      '............',
+    ],
+    palette: { k: INK, y: hex('#e8c87a') },
   });
   return img;
 }

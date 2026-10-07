@@ -4,6 +4,7 @@ import * as Phaser from 'phaser';
 import { CameraDirector, OVERVIEW_ZOOM } from './camera-director';
 import type { CameraState } from './camera-director.types';
 import type { GameClient } from './client';
+import { CouncillorToken } from './councillor-token';
 import { speechExcerpt } from './heroes';
 import {
   BRIDGE,
@@ -13,9 +14,14 @@ import {
   layoutWorld,
   overviewCenter,
   pathTo,
+  reviewerPath,
+  reviewerSide,
 } from './layout';
 import type { BridgeLayout, Point, WorldLayout } from './layout.types';
-import { BRIDGE_KEY, MARKERS_KEY, PACK_KEY } from './pack-scene';
+import { marker } from './map-markers';
+import { BRIDGE_KEY, PACK_KEY } from './pack-scene';
+import { reviewersOf } from './reviewers';
+import { councillorAppearance, councillorTitle } from './sitting-hut';
 import type { ViewState } from './view-state';
 import type { MapProbe } from './world-scene.types';
 
@@ -73,6 +79,9 @@ export class WorldScene extends Phaser.Scene {
   private hud!: Phaser.GameObjects.Text;
   private empty!: Phaser.GameObjects.Text;
   private readonly heroes = new Map<string, HeroToken>();
+  /** Councillors out reviewing (#140), by review; and the reviews whose councillor has gone home. */
+  private readonly reviewers = new Map<string, CouncillorToken>();
+  private readonly reviewed = new Set<string>();
   private islandKey = '';
   /** The hero the camera follows when chosen in the hero pane (#125); else the first one working. */
   private selected: string | null = null;
@@ -117,6 +126,10 @@ export class WorldScene extends Phaser.Scene {
         const reason = token.blockedReason();
         return reason ? [{ heroId, reason }] : [];
       }),
+      underReview: [...this.heroes].flatMap(([heroId, token]) =>
+        token.underReview() ? [heroId] : [],
+      ),
+      reviewers: [...this.reviewers.values()].map((t) => t.probe()),
     };
   }
 
@@ -383,7 +396,50 @@ export class WorldScene extends Phaser.Scene {
         this.heroes.delete(id);
       }
     }
+    this.renderReviewers(snapshot);
     if (this.director.observe(snapshot, this.selected)) this.aimCamera(this.director.current);
+  }
+
+  /**
+   * The councillors reviewing each task (#140): one walks out from the hut for each review of the round,
+   * and walks back once the phase is over, or once its review is gone. A review whose councillor has
+   * gone home, or was already over when the map first saw it, doesn't bring it out again.
+   */
+  private renderReviewers(snapshot: Snapshot): void {
+    if (!snapshot.campaign) {
+      for (const token of this.reviewers.values()) token.destroy();
+      this.reviewers.clear();
+      return;
+    }
+    const listed = new Set<string>();
+    for (const view of reviewersOf(snapshot)) {
+      listed.add(view.key);
+      if (this.reviewed.has(view.key)) continue;
+      let token = this.reviewers.get(view.key);
+      if (!token) {
+        if (view.leaving) {
+          this.reviewed.add(view.key);
+          continue;
+        }
+        token = new CouncillorToken({
+          scene: this,
+          layer: this.world,
+          view,
+          character: this.councillorKey(view.councillorId),
+          title: councillorTitle(view.councillorId),
+          side: reviewerSide(view.index),
+          path: reviewerPath(this.layout, view),
+          still: reducedMotion(),
+          gone: () => {
+            this.reviewers.delete(view.key);
+            this.reviewed.add(view.key);
+          },
+        });
+        this.reviewers.set(view.key, token);
+      }
+      token.update(view);
+    }
+    for (const [key, token] of this.reviewers) if (!listed.has(key)) token.leave();
   }
 
   /**
@@ -472,6 +528,11 @@ export class WorldScene extends Phaser.Scene {
     return this.manifest.characters[key] ? key : 'hero.ranger';
   }
 
+  private councillorKey(councillorId: string): string {
+    const key = councillorAppearance(councillorId);
+    return this.manifest.characters[key] ? key : 'councillor.default';
+  }
+
   private cue(cue: Cue): void {
     if (cue.type === 'activityFinished') this.heroes.get(cue.heroId)?.flash(cue);
     if (cue.type === 'retrying') this.heroes.get(cue.heroId)?.flash({ outcome: 'failed' });
@@ -485,30 +546,9 @@ function gold(reading: Reading<number>): string {
   return reading.kind === 'estimated' ? `~${g}` : String(g);
 }
 
-/**
- * A map marker centred on `at` (#124): the pack's (padlock, behind), else a small drawn one, so a pack
- * without markers still shows them.
- */
-function marker({
-  scene,
-  kind,
-  at,
-}: {
-  scene: Phaser.Scene;
-  kind: 'padlock' | 'behind';
-  at: Point;
-}): Phaser.GameObjects.GameObject {
-  if (scene.textures.exists(MARKERS_KEY)) {
-    return scene.add.sprite(at.x, at.y, MARKERS_KEY, kind === 'padlock' ? 0 : 1);
-  }
-  const g = scene.add.graphics({ x: at.x - 4, y: at.y - 4 });
-  if (kind === 'padlock') {
-    g.lineStyle(1, 0x1a1420).strokeRect(2, 0, 4, 4);
-    g.fillStyle(0xf2c230).fillRect(0, 3, 8, 6);
-  } else {
-    g.fillStyle(0xf28a30).fillTriangle(0, 4, 4, 0, 4, 8).fillTriangle(4, 4, 8, 0, 8, 8);
-  }
-  return g;
+/** The viewer asked for less motion: councillors appear in place rather than walk (#140). */
+function reducedMotion(): boolean {
+  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 }
 
 /** What a blocked hero waits for, in a few words (#121, #124). */
@@ -549,6 +589,7 @@ export class HeroToken {
   private traveled = false;
   private state: HeroView['state']['kind'] = 'traveling';
   private readonly padlock: Phaser.GameObjects.Sprite;
+  private readonly hourglass: Phaser.GameObjects.Sprite | Phaser.GameObjects.Graphics;
   private readonly blockedLabel: Phaser.GameObjects.Text;
   private blocked: 'slot' | 'previousIsland' | 'dependency' | null = null;
 
@@ -602,6 +643,9 @@ export class HeroToken {
       at: { x: 0, y: -26 },
     }) as Phaser.GameObjects.Sprite;
     this.padlock.setVisible(false);
+    // Under review (#140): it waits idle on its task point under an hourglass.
+    this.hourglass = marker({ scene, kind: 'hourglass', at: { x: 0, y: -26 } });
+    this.hourglass.setVisible(false);
     this.blockedLabel = scene.add
       .text(0, -36, '', { ...textStyle('#1a1420'), backgroundColor: '#f3ead2' })
       .setOrigin(0.5)
@@ -617,9 +661,15 @@ export class HeroToken {
       this.bubble,
       this.speech,
       this.padlock,
+      this.hourglass,
       this.blockedLabel,
     ]);
     layer.add(this.container);
+  }
+
+  /** Whether it waits under the hourglass while councillors review its task (#140). */
+  underReview(): boolean {
+    return this.hourglass.visible;
   }
 
   /** What the hero waits for while blocked, else null (#124). */
@@ -745,6 +795,7 @@ export class HeroToken {
     this.padlock.setVisible(this.blocked !== null);
     if (this.blocked) this.blockedLabel.setText(` ${BLOCKED_LABEL[this.blocked]} `);
     else this.blockedLabel.setVisible(false);
+    this.hourglass.setVisible(s.kind === 'underReview');
 
     const working = s.kind === 'working' && hero.activity && hero.activity.kind !== 'think';
     const animation = s.kind === 'traveling' || this.travel ? 'walk' : working ? 'work' : 'idle';

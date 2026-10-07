@@ -21,8 +21,13 @@ export const SPEC = {
 
 /** A drawbridge's frames, one row each, top to bottom (#124). */
 export const BRIDGE_FRAMES = ['lowered', 'raised'] as const;
-/** Map markers, left to right: a blocked hero's padlock, and a stacked island that's behind (#124). */
-export const MARKER_KINDS = ['padlock', 'behind'] as const;
+/**
+ * Map markers, left to right: a blocked hero's padlock, a stacked island that's behind (#124), a
+ * reviewer's magnifier and a hero waiting under review (#140).
+ */
+export const MARKER_KINDS = ['padlock', 'behind', 'magnifier', 'hourglass'] as const;
+/** The markers a pack's strip must have; the review ones (#140) are drawn by the game if missing. */
+export const REQUIRED_MARKERS = ['padlock', 'behind'] as const;
 
 export const REQUIRED_ANIMATIONS = ['idle', 'walk', 'work'] as const;
 export const OPTIONAL_ANIMATIONS = [

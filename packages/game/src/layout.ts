@@ -148,6 +148,36 @@ export function heroSpot(layout: WorldLayout, taskPointId: string | null): Point
   return { x: layout.village.door.x, y: layout.village.door.y + 4 };
 }
 
+/**
+ * Where the `index`th reviewer of a task stands (§7.2, #140): around the hero, right above, right
+ * below, left above, left below, then a step further out; clear of the task points either side.
+ */
+export function reviewerSpot(
+  layout: WorldLayout,
+  { taskPointId, index }: { taskPointId: string; index: number },
+): Point {
+  const hero = heroSpot(layout, taskPointId);
+  const side = reviewerSide(index);
+  return {
+    x: hero.x + side * (18 + Math.floor(index / 4) * 20),
+    y: hero.y + (index % 2 === 0 ? -14 : 14),
+  };
+}
+
+/** Which side of the hero the `index`th reviewer stands: 1 right, -1 left (#140). */
+export function reviewerSide(index: number): 1 | -1 {
+  return index % 4 < 2 ? 1 : -1;
+}
+
+/** A reviewer's walk from the council hut's door to its place beside a task point (#140). */
+export function reviewerPath(
+  layout: WorldLayout,
+  { taskPointId, index }: { taskPointId: string; index: number },
+): Point[] {
+  const path = pathTo(layout, taskPointId);
+  return [...path.slice(0, -1), reviewerSpot(layout, { taskPointId, index })];
+}
+
 /** Heroes whose islands haven't started wait in a line at Home Village (#124): the `n`th of them. */
 export function villageSpot(layout: WorldLayout, n: number): Point {
   const door = layout.village.door;

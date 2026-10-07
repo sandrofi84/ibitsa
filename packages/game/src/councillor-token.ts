@@ -1,0 +1,185 @@
+import type * as Phaser from 'phaser';
+import type { CouncillorTokenOptions, ReviewerProbe } from './councillor-token.types';
+import type { Point } from './layout.types';
+import { marker } from './map-markers';
+import type { ReviewerView } from './reviewers.types';
+
+/** A councillor's walk between the hut and a task point; a little quicker than a hero's. */
+const WALK_MS = 2_400;
+/** How long a councillor stays by the hero once the review is over, before walking home. */
+export const LINGER_MS = 1_500;
+const PARCHMENT = 0xf3ead2;
+
+/**
+ * A reviewing councillor on the map (§7.2, #140): a square token with a parchment border and a name
+ * plate, no HP bar. It walks from the council hut to the task point, holds a magnifier while its review
+ * runs, then shows a red badge with its blocking findings when it asks for changes (nothing for a pass)
+ * or a grey "?" when the review failed, and walks back once the phase is over.
+ */
+export class CouncillorToken {
+  private readonly container: Phaser.GameObjects.Container;
+  private readonly sprite: Phaser.GameObjects.Sprite;
+  private readonly magnifier: Phaser.GameObjects.Sprite | Phaser.GameObjects.Graphics;
+  private readonly badge: Phaser.GameObjects.Text;
+  private readonly scene: Phaser.Scene;
+  private readonly character: string;
+  private readonly path: Point[];
+  private readonly still: boolean;
+  private view: ReviewerView;
+  private walk: Phaser.Tweens.Tween | null = null;
+  private linger: Phaser.Time.TimerEvent | null = null;
+  private readonly gone: () => void;
+  private leaving = false;
+
+  constructor(options: CouncillorTokenOptions) {
+    const { scene, layer, view, character, title, side, path, still, gone } = options;
+    this.scene = scene;
+    this.gone = gone;
+    this.character = character;
+    this.path = path;
+    this.still = still;
+    this.view = view;
+    const base = scene.add.graphics();
+    base.fillStyle(0x1a1420, 0.45).fillRect(-9, -17, 18, 18);
+    base.lineStyle(1, PARCHMENT).strokeRect(-9, -17, 18, 18);
+    this.sprite = scene.add.sprite(0, 0, character).setOrigin(0.5, 1);
+    // Under the token, reaching away from the hero so it never covers it.
+    const plate = scene.add
+      .text(-9 * side, 2, title.slice(0, 9), {
+        fontFamily: 'monospace',
+        fontSize: '8px',
+        color: '#1a1420',
+        backgroundColor: '#f3ead2',
+      })
+      .setOrigin(side === 1 ? 0 : 1, 0);
+    // The magnifier, badge or "?" on the token's outer top corner.
+    const corner = { x: 8 * side, y: -16 };
+    this.magnifier = marker({ scene, kind: 'magnifier', at: corner });
+    this.badge = scene.add
+      .text(corner.x, corner.y, '', { fontFamily: 'monospace', fontSize: '8px', color: '#ffffff' })
+      .setOrigin(0.5)
+      .setVisible(false);
+    const start = (still ? path.at(-1) : path[0]) ?? { x: 0, y: 0 };
+    this.container = scene.add.container(start.x, start.y, [
+      base,
+      this.sprite,
+      plate,
+      this.magnifier,
+      this.badge,
+    ]);
+    layer.add(this.container);
+    if (still) this.play('idle');
+    else this.walkAlong({ path, arrive: () => this.arrived() });
+    this.show(view);
+  }
+
+  /** The review moved on: a verdict came in, the review failed, or the phase is over. */
+  update(view: ReviewerView): void {
+    this.view = view;
+    this.show(view);
+    if (view.leaving) this.leave();
+  }
+
+  /**
+   * Walks back to the hut after a short stay, then is gone: once the phase is over, or when its review
+   * is no longer on the map. Waits for the walk out to finish first.
+   */
+  leave(): void {
+    if (this.leaving) return;
+    this.leaving = true;
+    if (!this.walk) this.goHome();
+  }
+
+  probe(): ReviewerProbe {
+    return {
+      key: this.view.key,
+      councillorId: this.view.councillorId,
+      taskPointId: this.view.taskPointId,
+      x: this.container.x,
+      y: this.container.y,
+      walking: this.walk !== null,
+      magnifier: this.magnifier.visible,
+      badge: this.badge.visible && this.view.status === 'done' ? this.view.findings : null,
+      failed: this.badge.visible && this.view.status === 'failed',
+      leaving: this.leaving,
+    };
+  }
+
+  destroy(): void {
+    this.walk?.stop();
+    this.linger?.remove();
+    this.container.destroy();
+  }
+
+  private show(view: ReviewerView): void {
+    this.magnifier.setVisible(view.status === 'running');
+    if (view.status === 'failed') {
+      this.badge.setText(' ? ').setBackgroundColor('#8a8a8a').setVisible(true);
+    } else if (view.status === 'done' && view.findings > 0) {
+      this.badge.setText(` ${view.findings} `).setBackgroundColor('#e8483a').setVisible(true);
+    } else {
+      this.badge.setVisible(false);
+    }
+  }
+
+  private arrived(): void {
+    this.play('idle');
+    if (this.leaving) this.goHome();
+  }
+
+  private goHome(): void {
+    this.linger = this.scene.time.delayedCall(LINGER_MS, () => {
+      this.linger = null;
+      if (this.still) return this.finish();
+      const back = [...this.path].reverse();
+      this.walkAlong({ path: back, arrive: () => this.finish() });
+    });
+  }
+
+  private finish(): void {
+    this.destroy();
+    this.gone();
+  }
+
+  private play(animation: 'walk' | 'idle'): void {
+    const key = `${this.character}:${animation}`;
+    if (this.sprite.anims.currentAnim?.key !== key) this.sprite.play(key);
+  }
+
+  /** Walks the path at an even pace, facing the way it goes. */
+  private walkAlong({ path, arrive }: { path: Point[]; arrive: () => void }): void {
+    const lengths = path
+      .slice(1)
+      .map((p, i) => Math.hypot(p.x - (path[i] as Point).x, p.y - (path[i] as Point).y));
+    const total = lengths.reduce((a, b) => a + b, 0) || 1;
+    this.play('walk');
+    this.walk = this.scene.tweens.addCounter({
+      from: 0,
+      to: total,
+      duration: WALK_MS,
+      onUpdate: (tween) => {
+        let d = tween.getValue() ?? 0;
+        for (let k = 0; k < lengths.length; k++) {
+          const len = lengths[k] as number;
+          const a = path[k] as Point;
+          const b = path[k + 1] as Point;
+          if (d <= len || k === lengths.length - 1) {
+            const f = len === 0 ? 1 : Math.min(1, d / len);
+            this.container.setPosition(
+              Math.round(a.x + (b.x - a.x) * f),
+              Math.round(a.y + (b.y - a.y) * f),
+            );
+            this.sprite.setFlipX(b.x < a.x);
+            return;
+          }
+          d -= len;
+        }
+      },
+      onComplete: () => {
+        this.walk = null;
+        this.sprite.setFlipX(false);
+        arrive();
+      },
+    });
+  }
+}

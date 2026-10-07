@@ -24,6 +24,7 @@ import {
 } from '@ibitsa/protocol';
 import type { Host } from '../host.types';
 import { MemoryViewStorage } from '../view-state';
+import { DemoReview } from './demo-review';
 import { DevActions, devPreview } from './dev-actions';
 import { DEMO_FILES, FakeHostChannel } from './fake-host-channel';
 
@@ -58,6 +59,8 @@ export class LiveDevHost implements Host {
   private readonly heroes: number;
   /** True while that campaign is set up, so its council isn't also played by the script. */
   private settingUp = false;
+  /** Dev only (#140): scripted checks and verdicts, while reviews are on. */
+  private readonly demoReview: DemoReview | null;
 
   constructor({
     credentialsReady,
@@ -65,6 +68,7 @@ export class LiveDevHost implements Host {
     sandboxed = true,
     campaignBudgetUsd,
     heroes = 0,
+    review,
   }: {
     credentialsReady: boolean;
     repo: RepoView | null;
@@ -72,18 +76,27 @@ export class LiveDevHost implements Host {
     /** A campaign cap, as `ibitsa.campaign.budgetUsd` would set it (#126). */
     campaignBudgetUsd?: number;
     heroes?: number;
+    /** Dev only (#140): `demo` turns reviews on and answers them with a scripted verdict. */
+    review?: 'demo';
   }) {
     this.channel = new FakeHostChannel({ credentialsReady });
     this.repo = repo;
     this.sandboxed = sandboxed;
-    if (campaignBudgetUsd !== undefined) {
+    this.demoReview =
+      review === 'demo'
+        ? new DemoReview({ input: (input) => this.input(input), t: () => this.t() })
+        : null;
+    if (campaignBudgetUsd !== undefined || this.demoReview) {
       this.state = step(this.state, {
         kind: 'gm',
         t: 0,
         event: {
           type: 'questSettings',
           ...DEFAULT_SETTINGS,
-          campaignBudgetMicroUsd: Math.round(campaignBudgetUsd * 1_000_000),
+          reviews: this.demoReview !== null,
+          ...(campaignBudgetUsd === undefined
+            ? {}
+            : { campaignBudgetMicroUsd: Math.round(campaignBudgetUsd * 1_000_000) }),
         },
       }).state;
     }
@@ -161,7 +174,12 @@ export class LiveDevHost implements Host {
     this.input({
       kind: 'gm',
       t: this.t(),
-      event: { type: 'questSettings', ...DEFAULT_SETTINGS, maxParallel: count },
+      event: {
+        type: 'questSettings',
+        ...DEFAULT_SETTINGS,
+        reviews: this.demoReview !== null,
+        maxParallel: count,
+      },
     });
     this.input({
       kind: 'command',
@@ -250,7 +268,12 @@ export class LiveDevHost implements Host {
     quietly({
       kind: 'gm',
       t,
-      event: { type: 'questSettings', ...DEFAULT_SETTINGS, maxParallel: 2 },
+      event: {
+        type: 'questSettings',
+        ...DEFAULT_SETTINGS,
+        reviews: this.demoReview !== null,
+        maxParallel: 2,
+      },
     });
     const command = (c: Record<string, unknown>) =>
       quietly({
@@ -258,22 +281,26 @@ export class LiveDevHost implements Host {
         t,
         command: { commandId: `demo-${++this.diffs}`, ...c } as Command,
       });
+    // With reviews on (#140), three councillors set criteria, so three walk out to review each task.
+    const roster = this.demoReview ? ['security', 'tester', 'architect'] : ['tester'];
     command({
       type: 'conveneCouncil',
       task: 'Ship sign-in',
       mode: 'roundTable',
-      roster: ['tester'],
+      roster,
       effort: 'light',
     });
     const sittingId = this.state.sitting?.id ?? '';
     const council = (event: CouncilEvent) => quietly({ kind: 'council', t, sittingId, event });
-    council({
-      type: 'reportFiled',
-      toolUseId: 'demo-report',
-      councillorId: 'tester',
-      report: { concerns: [], questions: [], recommendations: [], notChecked: [] },
-    });
-    council({ type: 'planProposed', toolUseId: 'demo-plan', plan: demoPlan(branching) });
+    for (const councillorId of roster)
+      council({
+        type: 'reportFiled',
+        toolUseId: `demo-report-${councillorId}`,
+        councillorId,
+        report: { concerns: [], questions: [], recommendations: [], notChecked: [] },
+      });
+    const plan = demoPlan({ branching, reviewers: this.demoReview ? roster : [] });
+    council({ type: 'planProposed', toolUseId: 'demo-plan', plan });
     command({ type: 'approvePlan', version: 1 });
     this.input({
       kind: 'command',
@@ -368,6 +395,7 @@ export class LiveDevHost implements Host {
   }
 
   private perform(effect: Effect): void {
+    if (this.demoReview?.perform(effect)) return;
     switch (effect.type) {
       case 'createWorktree':
         setTimeout(
@@ -631,14 +659,21 @@ const LIVE_COUNCILLORS: CouncillorInfo[] = [
 }));
 
 /** Three islands with a task each (#124): separate, or stacked in this order. */
-function demoPlan(branching: 'separate' | 'stacked'): Plan {
+function demoPlan({
+  branching,
+  reviewers,
+}: {
+  branching: 'separate' | 'stacked';
+  /** Councillors with a criterion for every task, who review them (#140). */
+  reviewers: string[];
+}): Plan {
   const task = (id: string, title: string) => ({
     id,
     title,
     description: `${title}.`,
     files: [],
     dependsOn: [],
-    criteria: [],
+    criteria: reviewers.map((councillorId) => ({ councillorId, items: [`${title} works.`] })),
     decisions: [],
   });
   return {

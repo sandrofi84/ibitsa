@@ -86,9 +86,21 @@ describe('validatePack', () => {
     expect(manifest.markers).toEqual({
       image: 'ui/markers.png',
       size: 12,
-      kinds: ['padlock', 'behind'],
+      kinds: ['padlock', 'behind', 'magnifier', 'hourglass'],
     });
   });
+
+  it("asks a pack's markers for the padlock and the behind mark only: the game draws the review ones (#140)", () => {
+    const dir = copyPack();
+    editManifest(dir, (m) => {
+      if (m.markers) m.markers.kinds = ['magnifier', 'hourglass', 'magnifier', 'hourglass'];
+    });
+    const result = validatePack(dir);
+    expect(result.ok ? [] : result.errors).toEqual([
+      'markers: missing "padlock"',
+      'markers: missing "behind"',
+    ]);
+  }, 20_000);
 
   it('accepts a pack without a drawbridge or markers: the game draws its own (#124)', () => {
     const dir = copyPack();
@@ -119,7 +131,7 @@ describe('validatePack', () => {
       'bridge: map/bridge.png is 48×48, expected 32×24',
       'markers: size 16, expected 12',
       'markers: missing "behind"',
-      'markers: ui/markers.png is 24×12, expected 16×16',
+      'markers: ui/markers.png is 48×12, expected 16×16',
     ]);
   });
 

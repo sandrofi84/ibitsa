@@ -48,6 +48,8 @@ if (name === 'live') {
         ? null
         : { defaultBranch: 'main', branches: ['main', 'feature/x'], uncommittedChanges: 2 },
     ...(params.get('campaignCap') ? { campaignBudgetUsd: Number(params.get('campaignCap')) } : {}),
+    // Dev only (#140): `review=demo` turns reviews on, with scripted checks and verdicts.
+    ...(params.get('review') === 'demo' ? { review: 'demo' as const } : {}),
   });
   const { client, zoom, hero, camera, hut, selectHero, map, selection } = startGame(root, host);
   w.__ibitsa = {

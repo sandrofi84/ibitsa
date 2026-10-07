@@ -294,7 +294,9 @@
     "size": 12,
     "kinds": [
       "padlock",
-      "behind"
+      "behind",
+      "magnifier",
+      "hourglass"
     ]
   },
   "buildings": {
