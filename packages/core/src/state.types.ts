@@ -1,12 +1,14 @@
 import type {
   ActivityKind,
   AskUserQuestion,
+  CheckResult,
   CouncilAnswer,
   CouncilQuestion,
   CouncilReport,
   DialogueLine,
   Effort,
   ElderStatus,
+  Finding,
   MicroUsd,
   ModelUsage,
   PlanOutcome,
@@ -17,6 +19,7 @@ import type {
   SittingRating,
   SittingStatus,
   TaskPointState,
+  Verdict,
 } from '@ibitsa/protocol';
 
 /** Settings that shape the rules, logged as a `questSettings` input before each quest starts. */
@@ -31,6 +34,10 @@ export interface QuestSettings {
   maxParallel: number;
   /** The whole campaign's cap (§14.3); `null` = none. */
   campaignBudgetMicroUsd: number | null;
+  /** Whether submitted tasks are checked and reviewed (M5). Logs from before M5 have none. */
+  reviews: boolean;
+  /** Review rounds before a task goes to the user (§5.5). */
+  loopLimit: number;
 }
 
 /** Core's own state. Plain JSON so it can be cloned, compared and rebuilt by replay. */
@@ -87,7 +94,13 @@ export interface Island {
     /** The plan task it stands for, and the plan tasks it waits on (#121). */
     planTaskId?: string;
     dependsOn?: string[];
+    /** The branch head when it was last submitted (M5): what reviewers review up to. */
+    submitHead?: string | null;
+    /** Its checks and reviews once submitted (M5). */
+    review?: TaskReview | null;
   }[];
+  /** Review effort per reviewing councillor, from party assembly (M5); Light when absent. */
+  reviewEfforts?: Record<string, Effort>;
 }
 
 export interface RunningTool {
@@ -214,7 +227,33 @@ export type PendingItem =
       capEnforcement: 'native' | 'turnEnd';
       scope?: 'hero' | 'campaign';
     }
-  | { kind: 'error'; id: string; heroId: string; message: string };
+  | { kind: 'error'; id: string; heroId: string; message: string }
+  | {
+      kind: 'reviewEscalation';
+      id: string;
+      heroId: string;
+      taskPointId: string;
+      reason: 'loopLimit' | 'reviewFailed';
+      findings: (Finding & { councillorId: string })[];
+    }
+  | {
+      kind: 'revisitDecision';
+      id: string;
+      heroId: string;
+      councillorId: string;
+      decisionId: string;
+      message: string;
+    }
+  | {
+      kind: 'dispute';
+      id: string;
+      heroId: string;
+      taskPointId: string;
+      reason: string;
+      findings: (Finding & { councillorId: string })[];
+      /** The reviews whose blocking findings are disputed. */
+      reviewIds: string[];
+    };
 
 /** Raw facts about the elder's research; the `Elder` class gives them behaviour (ADR 0002). */
 export interface ElderRecord {
@@ -228,4 +267,30 @@ export interface ElderRecord {
   sessionId: string | null;
   startedAt: number;
   endedAt: number | null;
+}
+
+/** A task's checks and reviews (§5.5); the `Review` class gives them behaviour. */
+export interface TaskReview {
+  round: number;
+  phase: 'checks' | 'reviewing' | 'changes' | 'escalated' | 'passed';
+  checks: CheckResult[] | null;
+  reviews: ReviewRecord[];
+  suggestions: (Finding & { councillorId: string })[];
+  /** The hero's summary from its last submit. */
+  summary: string;
+}
+
+export interface ReviewRecord {
+  id: string;
+  councillorId: string;
+  effort: Effort;
+  round: number;
+  status: 'running' | 'done' | 'failed';
+  verdict: Verdict | null;
+  error: string | null;
+  gold: Reading<MicroUsd>;
+  /** The head it reviewed up to, so a re-review sees only what changed since. */
+  head: string | null;
+  /** The user dropped its blocking findings after a dispute: it doesn't hold the task back. */
+  waived: boolean;
 }

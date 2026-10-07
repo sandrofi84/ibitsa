@@ -13,6 +13,7 @@ import {
 } from '@ibitsa/core';
 import {
   type ActionInfo,
+  type CheckResult,
   type Command,
   type CoreMessage,
   type CouncilEvent,
@@ -22,12 +23,13 @@ import {
   PROTOCOL_VERSION,
   parseCommand,
   type RepoView,
+  type ReviewEvent,
   type Snapshot,
 } from '@ibitsa/protocol';
 import { CampaignDocuments } from './campaign-documents';
-import { councilVersion, seatable, sittingPlan } from './council';
+import { councilVersion, reviewPlan, seatable, sittingPlan } from './council';
 import { CouncilTallies } from './council-tallies';
-import type { AgentSession, FrontEnd, SittingSession } from './ports.types';
+import type { AgentSession, FrontEnd, ReviewSession, SittingSession } from './ports.types';
 import { ProjectRules } from './project-rules';
 import type { Connection, RuntimeOptions } from './runtime.types';
 import { SkillCatalog, watchFolder } from './skill-catalog';
@@ -55,6 +57,7 @@ export class Runtime {
   private readonly sessions = new Map<string, AgentSession>();
   private elderSession: { close(): void } | null = null;
   private sitting: { id: string; session: SittingSession } | null = null;
+  private readonly reviews = new Map<string, ReviewSession>();
   /** The workspace's councillors, kept for the snapshot (#103). */
   private councillorList: CouncillorInfo[] = [];
   private readonly timers = new Map<string, unknown>();
@@ -136,6 +139,7 @@ export class Runtime {
     this.actions?.dispose();
     this.elderSession?.close();
     this.sitting?.session.close();
+    for (const review of this.reviews.values()) review.close();
     this.councillors?.dispose();
     this.frontEnds.clear();
   }
@@ -218,6 +222,9 @@ export class Runtime {
       maxParallel: user.maxParallel ?? DEFAULT_SETTINGS.maxParallel,
       campaignBudgetMicroUsd:
         user.campaignBudgetMicroUsd ?? DEFAULT_SETTINGS.campaignBudgetMicroUsd,
+      // Reviews (M5) once the game master can run checks and the adapter can start reviewers.
+      reviews: Boolean(this.options.gameMaster.runChecks && this.options.adapter.startReview),
+      loopLimit: user.loopLimit ?? DEFAULT_SETTINGS.loopLimit,
       budget: budgetCap
         ? ('native' as const)
         : costReported
@@ -466,6 +473,37 @@ export class Runtime {
         this.sittingFor(effect.sittingId)?.close();
         if (this.sitting?.id === effect.sittingId) this.sitting = null;
         return;
+      case 'runChecks': {
+        const run = this.options.gameMaster.runChecks?.bind(this.options.gameMaster);
+        const report = (results: CheckResult[]) =>
+          this.input({
+            kind: 'gm',
+            t: this.t(),
+            event: { type: 'checksRan', taskPointId: effect.taskPointId, results },
+          });
+        if (!run) {
+          report([]);
+          return;
+        }
+        void run({ worktreePath: effect.worktreePath })
+          .catch((e: unknown) => [{ command: 'checks', ok: false, output: String(e) }])
+          .then(report);
+        return;
+      }
+      case 'startReview':
+        void this.startReview(effect);
+        return;
+      case 'completeReviewTool':
+        this.reviews.get(effect.reviewId)?.completeTool({
+          toolUseId: effect.toolUseId,
+          accepted: effect.accepted,
+          ...(effect.reason === undefined ? {} : { reason: effect.reason }),
+        });
+        return;
+      case 'closeReview':
+        this.reviews.get(effect.reviewId)?.close();
+        this.reviews.delete(effect.reviewId);
+        return;
       case 'rebaseWorktree': {
         const rebase = this.options.gameMaster.rebaseWorktree?.bind(this.options.gameMaster);
         if (!rebase) return;
@@ -520,6 +558,49 @@ export class Runtime {
       this.elderSession = start(
         { cwd, task, councillors, model, maxBudgetMicroUsd: budgetMicroUsd },
         report,
+      );
+    } catch (e) {
+      report({ type: 'error', message: String(e) });
+    }
+  }
+
+  /** A reviewer on its effort's model and cap (or its councillor's own model), given its diff (M5). */
+  private async startReview(effect: Extract<Effect, { type: 'startReview' }>): Promise<void> {
+    const { reviewId } = effect;
+    const report = (event: ReviewEvent) =>
+      this.input({ kind: 'review', t: this.t(), reviewId, event });
+    const start = this.options.adapter.startReview?.bind(this.options.adapter);
+    if (!start) {
+      report({ type: 'error', message: 'This agent cannot review.' });
+      return;
+    }
+    try {
+      const diff =
+        (await this.options.gameMaster.taskDiff?.({
+          worktreePath: effect.worktreePath,
+          from: effect.from,
+          to: effect.to,
+          since: effect.since,
+        })) ?? '';
+      const effort = reviewPlan(effect.effort);
+      const own = this.councillorList.find((c) => c.id === effect.councillorId)?.model;
+      this.reviews.set(
+        reviewId,
+        start(
+          {
+            cwd: effect.worktreePath,
+            councillorId: effect.councillorId,
+            model: own ?? effort.model,
+            maxBudgetMicroUsd: effort.budgetMicroUsd,
+            round: effect.round,
+            diff,
+            task: effect.task,
+            criteria: effect.criteria,
+            decisions: effect.decisions,
+            checks: effect.checks,
+          },
+          report,
+        ),
       );
     } catch (e) {
       report({ type: 'error', message: String(e) });

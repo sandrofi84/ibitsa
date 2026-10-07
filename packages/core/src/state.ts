@@ -6,6 +6,8 @@ export const DEFAULT_SETTINGS: QuestSettings = {
   stall: { testFailures: 4, fileEdits: 12, noProgressTurns: 6 },
   maxParallel: 2,
   campaignBudgetMicroUsd: null,
+  reviews: false,
+  loopLimit: 3,
 };
 
 export function initialState(): CoreState {

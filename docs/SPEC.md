@@ -335,6 +335,8 @@ Each hero is always in exactly one state, mapped from agent events (settled in [
 
 On the map, councillors walk out of the council hut to the task point, show a magnifier while reviewing, and a red count badge when they have findings.
 
+**Turning it on** (#136): reviews are a campaign setting (`reviews`, logged with the quest settings). The runtime turns them on once the game master can run checks and the agent can start reviewers; logs from before M5 replay without them, a submitted task going straight to done (unreviewed).
+
 ### 5.6 Pull requests
 - PRs are opened per task point (or per branch, as the plan defines) via the git-host adapter.
 - Stacked: each PR's base is the previous branch.

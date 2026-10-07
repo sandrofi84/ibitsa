@@ -18,7 +18,7 @@ export class NeedsYou {
    * kind appears at most once per hero.
    */
   ask(item: NewItem): void {
-    const repeatable = item.kind === 'permission' || item.kind === 'question';
+    const repeatable = ['permission', 'question', 'revisitDecision', 'dispute'].includes(item.kind);
     if (
       !repeatable &&
       this.state.needsYou.some((i) => i.heroId === item.heroId && i.kind === item.kind)

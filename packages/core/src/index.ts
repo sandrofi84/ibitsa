@@ -8,6 +8,7 @@ export type { CoreInput, GameMasterEvent } from './inputs.types';
 export { JOURNAL_PAGE, Journal } from './journal';
 export { describePermission } from './needs-you';
 export { Quest } from './quest';
+export { Review } from './review';
 export { Sitting } from './sitting';
 export { DEFAULT_SETTINGS, initialState } from './state';
 export type {

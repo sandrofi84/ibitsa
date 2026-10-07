@@ -67,3 +67,12 @@ export function sittingPlan({
     roster: roster.map((c) => ({ ...c, model: CHAMBER[c.effort].model })),
   };
 }
+
+/** A reviewer's model and cap by its review effort (§5.5, M5); starting numbers, to be tuned. */
+export function reviewPlan(effort: Effort): { model: string; budgetMicroUsd: number } {
+  return {
+    light: { model: 'haiku', budgetMicroUsd: 100_000 },
+    standard: { model: 'sonnet', budgetMicroUsd: 400_000 },
+    deep: { model: 'opus', budgetMicroUsd: 1_200_000 },
+  }[effort];
+}

@@ -11,6 +11,7 @@ import type {
   ElderEvent,
   RepoView,
   ResearchBrief,
+  ReviewEvent,
   Snapshot,
 } from '@ibitsa/protocol';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -23,6 +24,7 @@ import type {
   CreateActionResult,
   ElderStart,
   GameMaster,
+  ReviewStart,
   SessionResume,
   SessionStart,
   SittingStart,
@@ -1720,5 +1722,146 @@ describe('rebasing a stacked island (#121)', () => {
       worktreePath: '/wt/x',
       onto: 'ibitsa/a',
     });
+  });
+});
+
+describe('the review loop (M5, #136)', () => {
+  it('turns reviews on only when the game master can run checks and the agent can review', async () => {
+    const plain = await arrived();
+    const settingsOf = (dir: string) =>
+      logOf(dir).records.find((r) => r.kind === 'gm' && r.event.type === 'questSettings');
+    const off = settingsOf(plain.storageDir);
+    expect(off?.kind === 'gm' && off.event.type === 'questSettings' && off.event.reviews).toBe(
+      false,
+    );
+    const able = setup();
+    Object.assign(able.gameMaster, { runChecks: async () => [] });
+    Object.assign(able.adapter, {
+      startReview: () => ({ completeTool: () => {}, close: () => {} }),
+    });
+    able.connection.receive(startQuest);
+    await flush();
+    const on = settingsOf(able.storageDir);
+    expect(on?.kind === 'gm' && on.event.type === 'questSettings' && on.event).toMatchObject({
+      reviews: true,
+      loopLimit: 3,
+    });
+  });
+
+  it('runs checks, starts reviewers with their diff and model, and passes their verdicts on', async () => {
+    const env = await arrived();
+    const runs: unknown[] = [];
+    const starts: ReviewStart[] = [];
+    const log: unknown[] = [];
+    let emit: (e: ReviewEvent) => void = () => {};
+    Object.assign(env.gameMaster, {
+      runChecks: async (r: unknown) => {
+        runs.push(r);
+        return [{ command: 'pnpm test', ok: true, output: 'ok' }];
+      },
+      taskDiff: async () => 'diff --git a/x b/x',
+    });
+    Object.assign(env.adapter, {
+      startReview: (start: ReviewStart, onEvent: (e: ReviewEvent) => void) => {
+        starts.push(start);
+        emit = onEvent;
+        return {
+          completeTool: (r: unknown) => log.push(['complete', r]),
+          close: () => log.push(['close']),
+        };
+      },
+    });
+    const perform = (env.runtime as unknown as { perform(e: unknown): void }).perform.bind(
+      env.runtime,
+    );
+    perform({ type: 'runChecks', taskPointId: 't3', worktreePath: '/wt/x' });
+    await flush();
+    expect(runs).toEqual([{ worktreePath: '/wt/x' }]);
+    const checks = logOf(env.storageDir).records.find(
+      (r) => r.kind === 'gm' && r.event.type === 'checksRan',
+    );
+    expect(checks?.kind === 'gm' && checks.event).toMatchObject({
+      taskPointId: 't3',
+      results: [{ ok: true }],
+    });
+    perform({
+      type: 'startReview',
+      reviewId: 'r9',
+      taskPointId: 't3',
+      councillorId: 'security',
+      effort: 'standard',
+      round: 1,
+      worktreePath: '/wt/x',
+      from: 'main',
+      to: 'abc',
+      since: null,
+      task: { title: 'T', description: 'D' },
+      criteria: ['Hashed'],
+      decisions: [],
+      checks: [],
+    });
+    await flush();
+    expect(starts[0]).toMatchObject({
+      cwd: '/wt/x',
+      model: 'sonnet',
+      maxBudgetMicroUsd: 400_000,
+      diff: 'diff --git a/x b/x',
+      criteria: ['Hashed'],
+    });
+    emit({ type: 'usage', totalCost: 5 });
+    expect(
+      logOf(env.storageDir).records.some((r) => r.kind === 'review' && r.reviewId === 'r9'),
+    ).toBe(true);
+    perform({
+      type: 'completeReviewTool',
+      reviewId: 'r9',
+      toolUseId: 'v',
+      accepted: false,
+      reason: 'no',
+    });
+    perform({ type: 'closeReview', reviewId: 'r9' });
+    expect(log).toEqual([
+      ['complete', { toolUseId: 'v', accepted: false, reason: 'no' }],
+      ['close'],
+    ]);
+  });
+
+  it('reports no checks and a failed review when the game master or the agent cannot', async () => {
+    const env = await arrived();
+    const perform = (env.runtime as unknown as { perform(e: unknown): void }).perform.bind(
+      env.runtime,
+    );
+    perform({ type: 'runChecks', taskPointId: 't3', worktreePath: '/wt/x' });
+    perform({
+      type: 'startReview',
+      reviewId: 'r1',
+      taskPointId: 't3',
+      councillorId: 'x',
+      effort: 'light',
+      round: 1,
+      worktreePath: '/wt',
+      from: 'main',
+      to: null,
+      since: null,
+      task: { title: 'T', description: 'D' },
+      criteria: [],
+      decisions: [],
+      checks: [],
+    });
+    await flush();
+    const records = logOf(env.storageDir).records;
+    expect(records.find((r) => r.kind === 'gm' && r.event.type === 'checksRan')).toMatchObject({
+      event: { results: [] },
+    });
+    expect(records.find((r) => r.kind === 'review')).toMatchObject({
+      event: { type: 'error', message: 'This agent cannot review.' },
+    });
+    Object.assign(env.gameMaster, { runChecks: async () => Promise.reject(new Error('boom')) });
+    perform({ type: 'runChecks', taskPointId: 't3', worktreePath: '/wt/x' });
+    await flush();
+    const failed = logOf(env.storageDir)
+      .records.filter((r) => r.kind === 'gm' && r.event.type === 'checksRan')
+      .at(-1);
+    expect(failed).toMatchObject({ event: { results: [{ command: 'checks', ok: false }] } });
   });
 });

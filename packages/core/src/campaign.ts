@@ -1,7 +1,8 @@
-import type { Command } from '@ibitsa/protocol';
+import type { Command, Effort } from '@ibitsa/protocol';
 import { planIslands, taskOrder } from '@ibitsa/protocol';
 import { Hero } from './hero';
 import { Quest } from './quest';
+import { Review } from './review';
 import { newId } from './state';
 import type { CoreState, Island } from './state.types';
 import type { StepContext } from './step.types';
@@ -129,6 +130,7 @@ export class Campaign {
         basedOn: basedOn?.id ?? null,
         behind: false,
         taskPoints,
+        ...reviewEffortsOf(parties.get(planIsland.id)),
       });
       const party = parties.get(planIsland.id);
       if (!party) continue;
@@ -253,10 +255,12 @@ export class Campaign {
   private total(): number {
     const state = this.ctx.state;
     const sittings = [...state.pastSittings, ...(state.sitting ? [state.sitting] : [])];
-    return [...state.heroes, ...(state.elder ? [state.elder] : []), ...sittings].reduce(
-      (sum, { gold }) => sum + (gold.kind === 'unknown' ? 0 : gold.value),
-      0,
-    );
+    return [
+      ...state.heroes,
+      ...(state.elder ? [state.elder] : []),
+      ...sittings,
+      ...Review.spenders(state.islands),
+    ].reduce((sum, { gold }) => sum + (gold.kind === 'unknown' ? 0 : gold.value), 0);
   }
 }
 
@@ -266,4 +270,13 @@ function unique({ branch, taken }: { branch: string; taken: Set<string> }): stri
   for (let n = 2; taken.has(name); n++) name = `${branch}-${n}`;
   taken.add(name);
   return name;
+}
+
+/** A party's review efforts, when it set any (M5). */
+function reviewEffortsOf(
+  party: { reviewEfforts?: Record<string, Effort> | undefined } | undefined,
+): {
+  reviewEfforts?: Record<string, Effort>;
+} {
+  return party?.reviewEfforts ? { reviewEfforts: party.reviewEfforts } : {};
 }
