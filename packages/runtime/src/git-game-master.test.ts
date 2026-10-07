@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { GitGameMaster } from './git-game-master';
+import { detectChecks, GitGameMaster } from './git-game-master';
 
 const roots: string[] = [];
 afterEach(() => {
@@ -191,6 +191,8 @@ describe('checkSubmit', () => {
       heroId: 'h4',
       toolUseId: 'u9',
       ok: true,
+      // What was submitted (M5): reviewers review up to it.
+      head: run(wt, 'rev-parse', 'HEAD'),
     });
   });
 });
@@ -302,5 +304,132 @@ describe('rebaseWorktree (#122)', () => {
     expect(await master.rebaseWorktree({ worktreePath: b, onto: 'ibitsa/a' })).toBe('conflict');
     expect(existsSync(join(b, 'wip.txt'))).toBe(true);
     expect(existsSync(join(b, 'a.txt'))).toBe(false);
+  });
+});
+
+describe('runChecks (#137)', () => {
+  async function worktreeWith(files: Record<string, string>) {
+    const dir = repo();
+    const created = await gm(dir).createWorktree({
+      islandId: 'i1',
+      branch: 'ibitsa/x',
+      baseRef: 'main',
+    });
+    if (created.type !== 'worktreeCreated') throw new Error('no worktree');
+    for (const [name, text] of Object.entries(files)) writeFileSync(join(created.path, name), text);
+    return { dir, wt: created.path };
+  }
+  const pkg = (scripts: Record<string, string>) => JSON.stringify({ name: 'x', scripts });
+
+  it('runs the listed commands in order, stopping at the first failure, with the end of its output', async () => {
+    const { dir, wt } = await worktreeWith({});
+    const master = new GitGameMaster({
+      repoDir: dir,
+      setupCommand: () => '',
+      checks: () => [
+        'echo first',
+        'node -e "console.log(\'x\'.repeat(5000)); process.exit(1)"',
+        'echo never',
+      ],
+    });
+    const results = await master.runChecks({ worktreePath: wt });
+    expect(results.map((r) => [r.command.split(' ')[0], r.ok])).toEqual([
+      ['echo', true],
+      ['node', false],
+    ]);
+    expect(results[0]?.output).toBe('first');
+    expect(results[1]?.output).toHaveLength(4000);
+  });
+
+  it('runs with CI set, so test runners run once', async () => {
+    const { dir, wt } = await worktreeWith({});
+    const master = new GitGameMaster({
+      repoDir: dir,
+      setupCommand: () => '',
+      checks: () => ['node -e "console.log(process.env.CI)"'],
+    });
+    expect((await master.runChecks({ worktreePath: wt }))[0]?.output).toBe('1');
+  });
+
+  it("detects test, lint, typecheck and check scripts, run with the worktree's package manager", async () => {
+    const { wt } = await worktreeWith({
+      'package.json': pkg({ build: 'x', check: 'node -e 0', test: 'node -e 0', lint: 'node -e 0' }),
+      'pnpm-lock.yaml': '',
+    });
+    expect(detectChecks(wt)).toEqual(['pnpm run test', 'pnpm run lint', 'pnpm run check']);
+  });
+
+  it('runs detected scripts and reports how each went', async () => {
+    const { dir, wt } = await worktreeWith({
+      'package.json': pkg({ test: 'node -e "console.log(42)"', lint: 'node -e "process.exit(2)"' }),
+    });
+    const results = await gm(dir).runChecks({ worktreePath: wt });
+    expect(results.map((r) => [r.command, r.ok])).toEqual([
+      ['npm run test', true],
+      ['npm run lint', false],
+    ]);
+    expect(results[0]?.output).toContain('42');
+  });
+
+  it('uses yarn or npm without a pnpm lockfile, and runs nothing without a package.json or with an empty list', async () => {
+    const yarn = await worktreeWith({
+      'package.json': pkg({ test: 'node -e 0' }),
+      'yarn.lock': '',
+    });
+    const npm = await worktreeWith({ 'package.json': pkg({ typecheck: 'node -e 0' }) });
+    const none = await worktreeWith({});
+    const broken = await worktreeWith({ 'package.json': '{ not json' });
+    expect(detectChecks(yarn.wt)).toEqual(['yarn run test']);
+    expect(detectChecks(npm.wt)).toEqual(['npm run typecheck']);
+    expect(detectChecks(none.wt)).toEqual([]);
+    expect(detectChecks(broken.wt)).toEqual([]);
+    const off = new GitGameMaster({ repoDir: npm.dir, setupCommand: () => '', checks: () => [] });
+    expect(await off.runChecks({ worktreePath: npm.wt })).toEqual([]);
+  });
+});
+
+describe('taskDiff (#137)', () => {
+  async function heroWorktree() {
+    const dir = repo();
+    await gm(dir).createWorktree({ islandId: 'i2', branch: 'b', baseRef: 'main' });
+    return { dir, wt: worktree(dir, 'b') };
+  }
+
+  it("gives a task's commits, or only what changed since a review, as a stat and the patch", async () => {
+    const { dir, wt } = await heroWorktree();
+    const commit = ({ file, text }: { file: string; text: string }) => {
+      writeFileSync(join(wt, file), text);
+      run(wt, 'add', '.');
+      run(wt, 'commit', '-q', '-m', file);
+      return run(wt, 'rev-parse', 'HEAD');
+    };
+    const first = commit({ file: 'a.ts', text: 'export const a = 1;\n' });
+    const second = commit({ file: 'b.ts', text: 'export const b = 2;\n' });
+    const master = gm(dir);
+    const whole = await master.taskDiff({
+      worktreePath: wt,
+      from: 'main',
+      to: second,
+      since: null,
+    });
+    expect(whole).toContain('a.ts');
+    expect(whole).toContain('+export const b = 2;');
+    const delta = await master.taskDiff({ worktreePath: wt, from: 'main', to: null, since: first });
+    expect(delta).not.toContain('a.ts');
+    expect(delta).toContain('b.ts | 1 +');
+  });
+
+  it('cuts a huge diff and says so, and reports a range it cannot read', async () => {
+    const { dir, wt } = await heroWorktree();
+    writeFileSync(join(wt, 'big.txt'), `${'line\n'.repeat(20_000)}`);
+    run(wt, 'add', '.');
+    run(wt, 'commit', '-q', '-m', 'big');
+    const master = gm(dir);
+    const big = await master.taskDiff({ worktreePath: wt, from: 'main', to: null, since: null });
+    expect(big.length).toBeLessThan(61_000);
+    expect(big).toContain('(The diff was cut at 60000 characters: read the files for the rest.)');
+    expect(
+      await master.taskDiff({ worktreePath: wt, from: 'nope', to: null, since: null }),
+    ).toContain('The diff nope..HEAD could not be read');
   });
 });

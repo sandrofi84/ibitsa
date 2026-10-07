@@ -1,14 +1,20 @@
 import { createHash } from 'node:crypto';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import type { GameMasterEvent } from '@ibitsa/core';
-import type { RepoView } from '@ibitsa/protocol';
+import type { CheckResult, RepoView } from '@ibitsa/protocol';
 import { git, shell } from './git';
 import type { GitGameMasterOptions } from './git-game-master.types';
 import type { GameMaster } from './ports.types';
 
 /** Last chunk of a failed setup command's output kept in the error. */
 const OUTPUT_TAIL = 2_000;
+/** Last chunk of a check's output the hero and reviewers see (§5.5). */
+const CHECK_TAIL = 4_000;
+/** The most of a diff a reviewer gets; past it, the diff says it was cut. */
+const DIFF_LIMIT = 60_000;
+/** `package.json` scripts run as checks when `ibitsa.checks` isn't set, in this order (§5.5). */
+const CHECK_SCRIPTS = ['test', 'lint', 'typecheck', 'check'];
 
 /**
  * The game master's work in the repository (spec §5.3, §5.5, §14.1): worktrees, the setup command, the
@@ -119,7 +125,58 @@ export class GitGameMaster implements GameMaster {
     if (!ahead.ok || Number(ahead.output) < 1) {
       return result(false, `Nothing to submit: there are no commits beyond ${baseRef}.`);
     }
-    return result(true);
+    // What was submitted (M5): reviewers review up to this commit, even if the hero commits more later.
+    const head = await git(worktreePath, ['rev-parse', 'HEAD']);
+    return head.ok
+      ? { type: 'submitChecked', heroId, toolUseId, ok: true, head: head.output }
+      : result(true);
+  }
+
+  /**
+   * A submitted task's checks (§5.5, M5): `ibitsa.checks`, else the worktree's `package.json` scripts
+   * named test, lint, typecheck or check, run with its package manager. One at a time, stopping at the
+   * first failure; each keeps the end of its output.
+   */
+  async runChecks({ worktreePath }: { worktreePath: string }): Promise<CheckResult[]> {
+    const commands = this.options.checks?.() ?? detectChecks(worktreePath);
+    const results: CheckResult[] = [];
+    for (const command of commands) {
+      const run = await shell({
+        command,
+        cwd: worktreePath,
+        timeoutMs: this.options.checkTimeoutMs ?? 10 * 60_000,
+        env: { CI: '1' },
+      });
+      results.push({ command, ok: run.ok, output: run.output.slice(-CHECK_TAIL) });
+      if (!run.ok) break;
+    }
+    return results;
+  }
+
+  /**
+   * What a reviewer reads (§5.5, M5): the task's commits `from..to`, or only `since..to` on a re-review,
+   * as a stat then the patch, cut at a size a reviewer can read.
+   */
+  async taskDiff({
+    worktreePath,
+    from,
+    to,
+    since,
+  }: {
+    worktreePath: string;
+    from: string;
+    to: string | null;
+    since: string | null;
+  }): Promise<string> {
+    const range = `${since ?? from}..${to ?? 'HEAD'}`;
+    const stat = await git(worktreePath, ['diff', '--stat', range]);
+    const patch = await git(worktreePath, ['diff', range]);
+    if (!stat.ok || !patch.ok)
+      return `The diff ${range} could not be read: ${stat.ok ? patch.output : stat.output}`;
+    const text = `${stat.output}\n\n${patch.output}`;
+    return text.length > DIFF_LIMIT
+      ? `${text.slice(0, DIFF_LIMIT)}\n\n(The diff was cut at ${DIFF_LIMIT} characters: read the files for the rest.)`
+      : text;
   }
 
   /**
@@ -204,4 +261,25 @@ export class GitGameMaster implements GameMaster {
     const current = await git(this.options.repoDir, ['rev-parse', '--abbrev-ref', 'HEAD']);
     return current.ok ? current.output : 'main';
   }
+}
+
+/** The checks a worktree's `package.json` offers, run with the package manager its lockfile names. */
+export function detectChecks(worktreePath: string): string[] {
+  let scripts: Record<string, unknown> = {};
+  try {
+    const pkg = JSON.parse(readFileSync(join(worktreePath, 'package.json'), 'utf8')) as {
+      scripts?: Record<string, unknown>;
+    };
+    scripts = pkg.scripts ?? {};
+  } catch {
+    return [];
+  }
+  const runner = existsSync(join(worktreePath, 'pnpm-lock.yaml'))
+    ? 'pnpm run'
+    : existsSync(join(worktreePath, 'yarn.lock'))
+      ? 'yarn run'
+      : 'npm run';
+  return CHECK_SCRIPTS.filter((name) => typeof scripts[name] === 'string').map(
+    (name) => `${runner} ${name}`,
+  );
 }
