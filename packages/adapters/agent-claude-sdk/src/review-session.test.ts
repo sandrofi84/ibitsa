@@ -226,6 +226,30 @@ describe('the review session (#138)', () => {
     expect(broken.events.at(-1)).toEqual({ type: 'error', message: 'spawn failed' });
   });
 
+  it('once its verdict is filed, closing it lets the last turn finish, so its cost still arrives', async () => {
+    let finish: () => void = () => {};
+    const ended = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    const { events, session, control } = run(async function* ({ submit }) {
+      const filed = submit(VERDICT, callId('t1'));
+      await flush();
+      // The runtime's order: the ruling and the close in one step.
+      session.completeTool({ toolUseId: 't1', accepted: true });
+      session.close();
+      expect(await filed).toEqual({
+        content: [{ type: 'text', text: 'Verdict filed. Your review is done.' }],
+      });
+      await ended;
+      yield result('success');
+    });
+    await flush();
+    await flush();
+    expect(control.closed).toBe(0);
+    finish();
+    await expect.poll(() => events.at(-1)).toEqual({ type: 'usage', totalCost: 120_000 });
+  });
+
   it('closing it answers a waiting verdict, stops the query and stays quiet', async () => {
     let pending: Promise<ToolReply> | null = null;
     const { events, session, control } = run(async function* ({ submit }) {

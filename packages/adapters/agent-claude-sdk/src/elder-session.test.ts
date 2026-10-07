@@ -209,6 +209,17 @@ describe('the elder session (#101)', () => {
     expect(events).toEqual([{ type: 'error', message: 'no SDK' }]);
   });
 
+  it('once its brief is accepted, closing it lets the last turn finish, so its cost still arrives', async () => {
+    const { events, session, control } = run(async function* ({ submit }) {
+      await submit(BRIEF);
+      session.close();
+      await flush();
+      yield result('success', 0.07);
+    });
+    await expect.poll(() => events.at(-1)).toEqual({ type: 'usage', totalCost: 70_000 });
+    expect(control.closed).toBe(0);
+  });
+
   it('says nothing more once closed', async () => {
     const { events, session, control } = run(async function* () {
       await flush();
