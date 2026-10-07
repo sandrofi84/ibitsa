@@ -15,7 +15,7 @@ A campaign small and clear enough to skip the council and go straight to a singl
 The council's closing account of a campaign: decisions, what shipped, what was deferred, lessons.
 
 **Ibitsa**:
-The destination island in the game world; reaching it means the campaign's work has shipped.
+The legendary island the user is searching for. Each campaign charts possible locations (its islands); none turns out to be Ibitsa, so the search goes on.
 
 ## Council
 
