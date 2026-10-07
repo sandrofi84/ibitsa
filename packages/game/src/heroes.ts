@@ -1,29 +1,39 @@
-import type { ExecutionState } from '@ibitsa/protocol';
+import {
+  DEFAULT_CLASSES,
+  type ExecutionState,
+  type HeroClassView,
+  modelName,
+} from '@ibitsa/protocol';
 import type { HeroClass } from './heroes.types';
 
-/** The default hero classes (spec §5.2). Remapping and new classes come with M8. */
-export const HERO_CLASSES: HeroClass[] = [
-  {
-    id: 'paladin',
-    label: 'Paladin',
-    model: 'Claude Fable',
-    names: ['Aldric', 'Seraphine', 'Tamsin'],
-  },
-  {
-    id: 'barbarian',
-    label: 'Barbarian',
-    model: 'Claude Opus',
-    names: ['Brann', 'Hilda', 'Torvald'],
-  },
-  { id: 'ranger', label: 'Ranger', model: 'Claude Sonnet', names: ['Ilse', 'Rowan', 'Wren'] },
-  { id: 'rogue', label: 'Rogue', model: 'Claude Haiku', names: ['Vex', 'Nim', 'Sable'] },
-];
+/** A class as the game lists it: the protocol's view, its model in words. */
+function heroClass(view: HeroClassView): HeroClass {
+  return {
+    id: view.id,
+    label: view.name,
+    model: modelName(view.model),
+    names: view.names,
+    appearance: view.appearance,
+  };
+}
+
+let current: HeroClass[] = DEFAULT_CLASSES.map(heroClass);
+
+/** The hero classes in play (§5.2, #182): the snapshot's, else the built-ins. */
+export function heroClasses(): readonly HeroClass[] {
+  return current;
+}
+
+/** Follows the snapshot's classes; called on every snapshot, before any panel draws. */
+export function setHeroClasses(views: readonly HeroClassView[] | undefined): void {
+  current = (views ?? DEFAULT_CLASSES).map(heroClass);
+}
 
 export const DEFAULT_CLASS = 'ranger';
 
 export function defaultHeroName(classId: string): string {
-  const heroClass = HERO_CLASSES.find((c) => c.id === classId);
-  return heroClass ? `${heroClass.label} ${heroClass.names[0]}` : 'Hero';
+  const known = current.find((c) => c.id === classId);
+  return known ? `${known.label} ${known.names[0] ?? ''}`.trim() : 'Hero';
 }
 
 /** The longest speech bubble excerpt, in characters: it has to fit above a 16 px hero. */

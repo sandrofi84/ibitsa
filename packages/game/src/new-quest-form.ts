@@ -1,7 +1,7 @@
 import type { HostEvent, Snapshot } from '@ibitsa/protocol';
 import type { GameClient } from './client';
 import { button, el } from './dom';
-import { DEFAULT_CLASS, defaultHeroName, HERO_CLASSES } from './heroes';
+import { DEFAULT_CLASS, defaultHeroName, heroClasses } from './heroes';
 import type { Host } from './host.types';
 import type { NewQuestForm } from './new-quest-form.types';
 
@@ -74,11 +74,15 @@ export function mountNewQuestForm({
   description.required = true;
   description.placeholder = 'The task. Its first line becomes the quest title.';
   const classSelect = el('select');
-  for (const c of HERO_CLASSES) {
-    const option = new Option(`${c.label} (${c.model})`, c.id);
-    classSelect.add(option);
-  }
-  classSelect.value = DEFAULT_CLASS;
+  // The classes in play can change in the Armory (#182): the list is filled again on each opening.
+  const fillClasses = () => {
+    const chosen = classSelect.value || DEFAULT_CLASS;
+    classSelect.replaceChildren(
+      ...heroClasses().map((c) => new Option(`${c.label} (${c.model})`, c.id)),
+    );
+    classSelect.value = heroClasses().some((c) => c.id === chosen) ? chosen : DEFAULT_CLASS;
+  };
+  fillClasses();
   const heroName = el('input');
   heroName.required = true;
   heroName.value = defaultHeroName(DEFAULT_CLASS);
@@ -180,8 +184,8 @@ export function mountNewQuestForm({
   };
 
   function fillSuggestions(): void {
-    const names = HERO_CLASSES.find((c) => c.id === classSelect.value)?.names ?? [];
-    const label = HERO_CLASSES.find((c) => c.id === classSelect.value)?.label ?? '';
+    const names = heroClasses().find((c) => c.id === classSelect.value)?.names ?? [];
+    const label = heroClasses().find((c) => c.id === classSelect.value)?.label ?? '';
     nameSuggestions.replaceChildren(...names.map((n) => new Option(`${label} ${n}`)));
   }
 
@@ -287,6 +291,7 @@ export function mountNewQuestForm({
     pendingStart = null;
     error.textContent = '';
     dialog.replaceChildren(form);
+    fillClasses();
     fillSuggestions();
     dialog.showModal();
     if (task !== undefined) description.value = task;

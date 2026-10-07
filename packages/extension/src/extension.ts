@@ -7,6 +7,7 @@ import { heroHandle } from '@ibitsa/protocol';
 import { GitGameMaster } from '@ibitsa/runtime';
 import * as vscode from 'vscode';
 import { agentEnvironment } from './agent-environment';
+import { Armory } from './armory';
 import { API_KEY_SECRET, resolveCredentials } from './credentials';
 import { exportReplay } from './export-replay';
 import type { ExportReplayArgs } from './export-replay.types';
@@ -30,11 +31,13 @@ import { RuntimeHost } from './runtime-host';
 import type { DependencyFactory, Notifier } from './runtime-host.types';
 import {
   readChecks,
+  readClasses,
   readCouncillorOverrides,
   readCouncilMode,
   readDisabledCouncillors,
   readElderSettings,
   readPollSeconds,
+  readRecolor,
   readUserSettings,
 } from './settings';
 
@@ -89,6 +92,8 @@ export function activate(context: vscode.ExtensionContext): IbitsaApi {
             readDisabledCouncillors(vscode.workspace.getConfiguration('ibitsa')),
           pullRequestPollSeconds: () =>
             readPollSeconds(vscode.workspace.getConfiguration('ibitsa')),
+          classes: () => readClasses(vscode.workspace.getConfiguration('ibitsa')),
+          recolor: () => readRecolor(vscode.workspace.getConfiguration('ibitsa')),
           notify: (message) => notify(message),
           gameVisible: () => GamePanel.visible,
           openGame,
@@ -114,6 +119,18 @@ export function activate(context: vscode.ExtensionContext): IbitsaApi {
     openApiKeyPage: () => void vscode.env.openExternal(vscode.Uri.parse(API_KEYS_URL)),
     openWorktree: () => void vscode.commands.executeCommand('ibitsa.openWorktree'),
     post: (event) => GamePanel.postHost(event),
+    // The Armory (#182): `ibitsa.classes` and `ibitsa.recolor`, one entry at a time.
+    armory: new Armory({
+      inspect: (key) => config().inspect(key),
+      update: ({ key, value, layer }) =>
+        config().update(
+          key,
+          value,
+          layer === 'user'
+            ? vscode.ConfigurationTarget.Global
+            : vscode.ConfigurationTarget.Workspace,
+        ),
+    }),
     // The Guild Hall (#179): the Rule book over VS Code's own settings layers.
     settings: new GuildSettings({
       schema: (context.extension.packageJSON as ExtensionManifest).contributes.configuration

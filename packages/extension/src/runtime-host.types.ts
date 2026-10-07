@@ -1,4 +1,4 @@
-import type { Command } from '@ibitsa/protocol';
+import type { Command, HeroClassView, RecolorMap } from '@ibitsa/protocol';
 import type { AgentAdapter, GameMaster, GitHost, UserSettings } from '@ibitsa/runtime';
 import type { Credentials } from './credentials.types';
 
@@ -36,6 +36,10 @@ export interface RuntimeHostOptions {
   disabledCouncillors?: () => string[];
   /** `ibitsa.pullRequests.pollSeconds` (§5.6). */
   pullRequestPollSeconds?: () => number;
+  /** The hero classes in play from `ibitsa.classes` (#182). */
+  classes?: () => HeroClassView[];
+  /** `ibitsa.recolor` (#182). */
+  recolor?: () => RecolorMap;
   notify: Notifier;
   /** Is the game tab on screen? Notifications only appear when it isn't. */
   gameVisible: () => boolean;

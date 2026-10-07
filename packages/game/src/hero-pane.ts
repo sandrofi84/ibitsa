@@ -7,7 +7,7 @@ import { createCommandInput } from './command-input';
 import { button, el } from './dom';
 import type { HeroPane } from './hero-pane.types';
 import type { HeroSelection } from './hero-selection';
-import { BLOCKED_REASONS, HERO_CLASSES, STATE_LABELS } from './heroes';
+import { BLOCKED_REASONS, heroClasses, STATE_LABELS } from './heroes';
 import type { Host } from './host.types';
 import { slashMenu } from './slash-menu';
 import type { ViewState } from './view-state';
@@ -166,7 +166,7 @@ export function mountHeroPane({
         ? 'Auto mode is on. There is no sandbox here: every command runs without asking, except writes outside the worktree.'
         : 'Auto mode is on: the hero’s requests are allowed without asking, except outside the worktree or the sandbox.'
       : '';
-    const heroClass = HERO_CLASSES.find((c) => c.id === hero.classId);
+    const heroClass = heroClasses().find((c) => c.id === hero.classId);
     title.textContent = hero.name;
     const rows: [string, string][] = [
       ['Class', heroClass ? `${heroClass.label} (${heroClass.model})` : hero.classId],

@@ -21,6 +21,7 @@ import type {
   ReviewEvent,
   Snapshot,
 } from '@ibitsa/protocol';
+import { resolveClasses } from '@ibitsa/protocol';
 import { afterEach, describe, expect, it } from 'vitest';
 import { councilVersion } from './council';
 import { KeptCouncil } from './kept-council';
@@ -2001,5 +2002,50 @@ describe('the campaign record and the council context (#167)', () => {
     });
     expect(new KeptCouncil(storageDir).peek()).toBeNull();
     runtime.dispose();
+  });
+});
+
+describe('hero classes (#182)', () => {
+  it("starts a hero on its class's model, and puts the classes and recolors in the snapshot", async () => {
+    const storageDir = mkdtempSync(join(tmpdir(), 'ibitsa-runtime-'));
+    dirs.push(storageDir);
+    const adapter = new FakeAdapter();
+    const runtime = new Runtime({
+      storageDir,
+      adapter,
+      gameMaster: new FakeGameMaster(),
+      clock: new ManualClock(),
+      classes: () => resolveClasses({ ranger: { model: 'opus' } }),
+      recolor: () => ({ 'class:ranger': { hue: 90, preset: 'none' } }),
+    });
+    runtime.start();
+    const received: CoreMessage[] = [];
+    const connection = runtime.connect({ post: (m) => received.push(m) });
+    connection.receive(startQuest);
+    await flush();
+    expect(adapter.sessions[0]?.start.model).toBe('opus');
+    connection.receive({ type: 'hello', protocolVersion: 1 });
+    const snapshot = received.flatMap((m) => (m.type === 'snapshot' ? [m.snapshot] : [])).at(-1);
+    expect(snapshot?.classes?.find((c) => c.id === 'ranger')?.model).toBe('opus');
+    expect(snapshot?.recolor).toEqual({ 'class:ranger': { hue: 90, preset: 'none' } });
+    runtime.dispose();
+  });
+
+  it('runs the built-ins without settings, and names no model for an unknown class', async () => {
+    const env = setup();
+    env.connection.receive({ ...startQuest, classId: 'bard' });
+    await flush();
+    expect(env.adapter.sessions[0]?.start).not.toHaveProperty('model');
+    env.connection.receive({ type: 'hello', protocolVersion: 1 });
+    const snapshot = env.received
+      .flatMap((m) => (m.type === 'snapshot' ? [m.snapshot] : []))
+      .at(-1);
+    expect(snapshot?.classes?.map((c) => c.id)).toEqual([
+      'paladin',
+      'barbarian',
+      'ranger',
+      'rogue',
+    ]);
+    expect(snapshot?.recolor).toEqual({});
   });
 });

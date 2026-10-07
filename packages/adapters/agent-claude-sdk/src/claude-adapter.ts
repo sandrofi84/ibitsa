@@ -52,6 +52,7 @@ export class ClaudeAdapter implements AgentAdapter {
       adapter: this.options,
       cwd: start.cwd,
       classId: start.classId,
+      ...(start.model ? { model: start.model } : {}),
       session: { sessionId: start.sessionId },
       prompt: start.prompt,
       ...(start.maxBudgetMicroUsd === undefined
@@ -67,6 +68,7 @@ export class ClaudeAdapter implements AgentAdapter {
       adapter: this.options,
       cwd: resume.cwd,
       classId: resume.classId,
+      ...(resume.model ? { model: resume.model } : {}),
       session: { resume: resume.sessionId },
       ...(resume.prompt === undefined ? {} : { prompt: resume.prompt }),
       ...(resume.maxBudgetMicroUsd === undefined

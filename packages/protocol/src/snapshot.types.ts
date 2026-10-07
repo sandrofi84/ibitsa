@@ -1,4 +1,6 @@
 import type { CampaignEndView } from './campaign-record.types';
+import type { RecolorMap } from './classes.schema';
+import type { HeroClassView } from './classes.types';
 import type { CouncillorInfo } from './councillors.types';
 import type { ElderView } from './elder.types';
 import type { GitHostView, IslandRemoteView, PullRequestDraft } from './pull-request.types';
@@ -34,6 +36,10 @@ export interface Snapshot {
   gitHost?: GitHostView;
   /** The council's context kept from an earlier campaign (§4.9, #168), named by it. Added by the runtime. */
   keptCouncil?: { from: string } | null;
+  /** The hero classes in play (§5.2, #182): the built-ins and `ibitsa.classes`. Added by the runtime. */
+  classes?: HeroClassView[];
+  /** Recolors by `class:<id>` and `councillor:<id>` (§5.2, #182). Added by the runtime. */
+  recolor?: RecolorMap;
 }
 
 export interface RepoView {

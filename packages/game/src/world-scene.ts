@@ -5,7 +5,7 @@ import { CameraDirector, OVERVIEW_ZOOM } from './camera-director';
 import type { CameraState } from './camera-director.types';
 import type { GameClient } from './client';
 import { CouncillorToken } from './councillor-token';
-import { speechExcerpt } from './heroes';
+import { heroClasses, speechExcerpt } from './heroes';
 import {
   BRIDGE,
   bridgeState,
@@ -23,6 +23,7 @@ import { marker } from './map-markers';
 import { BRIDGE_KEY, PACK_KEY } from './pack-scene';
 import { badgeOf } from './pull-requests';
 import type { PullRequestBadge } from './pull-requests.types';
+import { recoloredCharacter, recolorOf } from './recolor';
 import { reviewersOf } from './reviewers';
 import { councillorAppearance, councillorTitle } from './sitting-hut';
 import type { ViewState } from './view-state';
@@ -826,14 +827,21 @@ export class WorldScene extends Phaser.Scene {
       this.questLayer.add(marker({ scene: this, kind: 'behind', at: { x: mid.x, y: mid.y - 14 } }));
   }
 
+  /** The class's appearance (#182), recolored as the class's settings say; a ranger when it's unknown. */
   private characterKey(classId: string): string {
-    const key = `hero.${classId}`;
-    return this.manifest.characters[key] ? key : 'hero.ranger';
+    const appearance = heroClasses().find((c) => c.id === classId)?.appearance ?? `hero.${classId}`;
+    const key = this.manifest.characters[appearance] ? appearance : 'hero.ranger';
+    return recoloredCharacter({ scene: this, key, recolor: recolorOf(`class:${classId}`) });
   }
 
   private councillorKey(councillorId: string): string {
-    const key = councillorAppearance(councillorId);
-    return this.manifest.characters[key] ? key : 'councillor.default';
+    const appearance = councillorAppearance(councillorId);
+    const key = this.manifest.characters[appearance] ? appearance : 'councillor.default';
+    return recoloredCharacter({
+      scene: this,
+      key,
+      recolor: recolorOf(`councillor:${councillorId}`),
+    });
   }
 
   private cue(cue: Cue): void {

@@ -81,6 +81,8 @@ export class RuntimeHost {
       ...(o.disabledCouncillors ? { disabledCouncillors: o.disabledCouncillors } : {}),
       ...(gitHost ? { gitHost } : {}),
       ...(o.pullRequestPollSeconds ? { pullRequestPollSeconds: o.pullRequestPollSeconds } : {}),
+      ...(o.classes ? { classes: o.classes } : {}),
+      ...(o.recolor ? { recolor: o.recolor } : {}),
     });
     this.connection = runtime.connect(this.watcher(runtime));
     runtime.start();

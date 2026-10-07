@@ -1901,3 +1901,23 @@ body.in-hut:has(.council-chamber:not([hidden])) .needs-you {
   font-style: normal;
   font-weight: bold;
 }
+
+/* The Armory (#182): a fieldset per class; its fields side by side, its recolor under them. */
+.guild-hall .armory-class {
+  margin: 6px 0;
+  border: 1px solid #c8b78a;
+}
+
+.guild-hall .armory-field {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  margin: 2px 8px 2px 0;
+}
+
+.guild-hall .armory-recolor {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 4px;
+}

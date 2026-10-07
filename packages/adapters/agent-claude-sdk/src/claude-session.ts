@@ -21,7 +21,10 @@ import type { HeroSettings } from './hero-settings.types';
 import { InputQueue } from './input-queue';
 import { Worktree } from './worktree';
 
-/** Hero classes → SDK model aliases (spec §5.2, §14.1). Unknown classes get Sonnet. */
+/**
+ * The built-in classes → SDK model aliases (spec §5.2, §14.1), for when the runtime names no model;
+ * unknown classes get Sonnet. The classes in play come from `ibitsa.classes` (#182).
+ */
 export const CLASS_MODELS: Record<string, string> = {
   paladin: 'fable',
   barbarian: 'opus',
@@ -250,7 +253,7 @@ export class ClaudeSession implements AgentSession {
     const claudeCodePath = init.adapter.claudeCodePath?.()?.trim();
     return {
       cwd: init.cwd,
-      model: CLASS_MODELS[init.classId] ?? 'sonnet',
+      model: init.model ?? CLASS_MODELS[init.classId] ?? 'sonnet',
       ...init.session,
       env: init.adapter.env(),
       systemPrompt: { type: 'preset', preset: 'claude_code', append: HERO_INSTRUCTIONS },

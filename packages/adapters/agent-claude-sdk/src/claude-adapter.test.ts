@@ -127,6 +127,18 @@ function gate() {
 }
 
 describe('ClaudeAdapter sessions', () => {
+  it("runs the class's model the runtime names, and the built-in mapping without one (#182)", async () => {
+    const fake = fakeSdk(async function* ({ input }) {
+      await input.next();
+      yield init;
+    });
+    adapter(fake.sdk).startSession({ ...start, model: 'claude-opus-5-5' }, () => {});
+    adapter(fake.sdk).resumeSession({ ...start, model: 'haiku' }, () => {});
+    adapter(fake.sdk).startSession({ ...start, classId: 'bard' }, () => {});
+    await flush();
+    expect(fake.calls.map((c) => c.options.model)).toEqual(['claude-opus-5-5', 'haiku', 'sonnet']);
+  });
+
   it('starts one streaming-input query with the hero options', async () => {
     const fake = fakeSdk(async function* ({ input }) {
       await input.next();

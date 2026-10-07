@@ -112,6 +112,8 @@ export class LiveDevHost implements Host {
     keptCouncil?: { from: string } | null;
   }) {
     this.channel = new FakeHostChannel({ credentialsReady });
+    // A class or recolor changed in the Armory (#182): the snapshot carries it, as the runtime's does.
+    this.channel.armory.onChange(() => this.emitSnapshot());
     this.repo = repo;
     this.gitHost = gitHost;
     this.keptCouncil = keptCouncil;
@@ -819,6 +821,8 @@ export class LiveDevHost implements Host {
         repo: this.repo,
         ...(this.gitHost ? { gitHost: this.gitHost } : {}),
         keptCouncil: this.keptCouncil,
+        classes: this.channel.armory.classes(),
+        recolor: this.channel.armory.recolor(),
         projectRules: this.projectRules,
         sandboxed: this.sandboxed,
         councillors: LIVE_COUNCILLORS,

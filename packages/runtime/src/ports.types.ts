@@ -30,6 +30,8 @@ export interface SessionStart {
   sessionId: string;
   cwd: string;
   classId: string;
+  /** The class's model (§5.2, #182), resolved by the runtime from the classes in play. */
+  model?: string;
   prompt: string;
   /** For adapters with a native cap: what is left of the gold pouch (spec §7.3). */
   maxBudgetMicroUsd?: number;
@@ -42,6 +44,7 @@ export interface SessionResume {
   sessionId: string;
   cwd: string;
   classId: string;
+  model?: string;
   /** Sent after resuming when interrupted work should continue. */
   prompt?: string;
   maxBudgetMicroUsd?: number;

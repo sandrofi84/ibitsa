@@ -1,4 +1,10 @@
 import * as v from 'valibot';
+import {
+  ClassIdSchema,
+  ClassSettingSchema,
+  RecolorSchema,
+  RecolorTargetSchema,
+} from './classes.schema';
 
 // Webview → extension requests that are not core commands (spec §11.6, #37). They never reach the
 // runtime, core or the event log, so the API key can travel here. Validated at the extension: the
@@ -133,6 +139,34 @@ export const HostRequestSchema = v.variant('type', [
     id: CouncillorIdSchema,
     title: v.pipe(v.string(), v.trim(), v.nonEmpty(), v.maxLength(60)),
     description: v.pipe(v.string(), v.trim(), v.nonEmpty(), v.maxLength(300)),
+    layer: SettingLayerSchema,
+  }),
+  // The Armory (#182): the classes and recolors with their layers, each written or reset by itself.
+  v.strictObject({ channel: v.literal('host'), type: v.literal('readArmory') }),
+  v.strictObject({
+    channel: v.literal('host'),
+    type: v.literal('writeClass'),
+    id: ClassIdSchema,
+    class: ClassSettingSchema,
+    layer: SettingLayerSchema,
+  }),
+  v.strictObject({
+    channel: v.literal('host'),
+    type: v.literal('resetClass'),
+    id: ClassIdSchema,
+    layer: SettingLayerSchema,
+  }),
+  v.strictObject({
+    channel: v.literal('host'),
+    type: v.literal('writeRecolor'),
+    target: RecolorTargetSchema,
+    recolor: RecolorSchema,
+    layer: SettingLayerSchema,
+  }),
+  v.strictObject({
+    channel: v.literal('host'),
+    type: v.literal('resetRecolor'),
+    target: RecolorTargetSchema,
     layer: SettingLayerSchema,
   }),
 ]);

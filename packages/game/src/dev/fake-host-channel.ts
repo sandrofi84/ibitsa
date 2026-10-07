@@ -6,6 +6,7 @@ import type {
   SettingKey,
   SettingView,
 } from '@ibitsa/protocol';
+import { FakeArmory } from './fake-armory';
 
 /** The files the standalone build's worktree pretends to hold, for @ references (#83). */
 export const DEMO_FILES = [
@@ -36,6 +37,8 @@ export class FakeHostChannel {
     overrides: {},
     overridesLayer: 'default',
   };
+  /** The Armory's classes and recolors (#182). */
+  readonly armory = new FakeArmory();
 
   constructor({ credentialsReady }: { credentialsReady: boolean }) {
     this.ready = credentialsReady;
@@ -123,6 +126,16 @@ export class FakeHostChannel {
       }
       case 'customiseCouncillor':
       case 'newCouncillor':
+        return;
+      case 'readArmory':
+        this.emit({ channel: 'host', type: 'armory', armory: this.armory.view() });
+        return;
+      case 'writeClass':
+      case 'resetClass':
+      case 'writeRecolor':
+      case 'resetRecolor':
+        this.armory.apply(request);
+        this.emit({ channel: 'host', type: 'armory', armory: this.armory.view() });
         return;
     }
   }

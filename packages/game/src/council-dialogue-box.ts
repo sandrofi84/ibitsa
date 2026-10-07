@@ -2,6 +2,7 @@ import type { DialogueLine, SittingView } from '@ibitsa/protocol';
 import { CouncilDialogue } from './council-dialogue';
 import type { CouncilDialogueBox, CouncilDialogueOptions } from './council-dialogue-box.types';
 import { button, el } from './dom';
+import { recolorFilter, recolorOf } from './recolor';
 import { councillorAppearance, councillorTitle, isSitting } from './sitting-hut';
 
 /**
@@ -82,6 +83,7 @@ export function mountCouncilDialogue({
       const img = el('img', { className: 'portrait' });
       img.src = src;
       img.alt = '';
+      img.style.filter = recolorFilter(recolorOf(`councillor:${question.councillorId}`));
       header.append(img);
     }
     const who = el('p', { className: 'who' });

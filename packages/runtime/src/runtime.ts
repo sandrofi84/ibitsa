@@ -21,8 +21,10 @@ import {
   type CouncilEvent,
   type CouncillorInfo,
   type Cue,
+  DEFAULT_CLASSES,
   type ElderEvent,
   type GitHostView,
+  type HeroClassView,
   type LessonsEvent,
   PROTOCOL_VERSION,
   parseCommand,
@@ -352,7 +354,12 @@ export class Runtime {
           this.sessions.set(
             heroId,
             this.options.adapter.startSession(
-              { ...effect, ...this.allowRules(effect.allowRules), sessionId: randomUUID() },
+              {
+                ...effect,
+                ...this.allowRules(effect.allowRules),
+                ...this.modelOf(effect.classId),
+                sessionId: randomUUID(),
+              },
               (event) => this.input({ kind: 'agent', t: this.t(), heroId, event }),
             ),
           );
@@ -374,7 +381,7 @@ export class Runtime {
           this.sessions.set(
             heroId,
             this.options.adapter.resumeSession(
-              { ...resume, ...this.allowRules(resume.allowRules) },
+              { ...resume, ...this.allowRules(resume.allowRules), ...this.modelOf(resume.classId) },
               (event) => this.input({ kind: 'agent', t: this.t(), heroId, event }),
             ),
           );
@@ -1040,7 +1047,20 @@ export class Runtime {
       ...(this.repo === undefined ? {} : { repo: this.repo }),
       ...(this.gitHost ? { gitHost: this.gitHost } : {}),
       keptCouncil: this.keptCouncilView(),
+      classes: this.classes(),
+      recolor: this.options.recolor?.() ?? {},
     };
+  }
+
+  /** The hero classes in play (§5.2, #182): the built-ins with `ibitsa.classes` over them. */
+  private classes(): HeroClassView[] {
+    return this.options.classes?.() ?? [...DEFAULT_CLASSES];
+  }
+
+  /** The model a hero of this class runs on (#182); none for a class nobody knows. */
+  private modelOf(classId: string): { model?: string } {
+    const model = this.classes().find((c) => c.id === classId)?.model;
+    return model ? { model } : {};
   }
 
   private rescanRepo(): void {

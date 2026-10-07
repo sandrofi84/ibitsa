@@ -1,4 +1,11 @@
-import type { CouncillorOverride, CouncillorOverrides } from '@ibitsa/protocol';
+import {
+  type CouncillorOverride,
+  type CouncillorOverrides,
+  type HeroClassView,
+  type RecolorMap,
+  resolveClasses,
+  resolveRecolor,
+} from '@ibitsa/protocol';
 import type { UserSettings } from '@ibitsa/runtime';
 import type { ConfigReader } from './settings.types';
 
@@ -66,6 +73,16 @@ export function readCouncillorOverrides(config: ConfigReader): CouncillorOverrid
 
 const ELDER_MODELS = ['haiku', 'sonnet', 'opus', 'fable'];
 const COUNCIL_MODES = ['ask', 'roundTable', 'chambers'] as const;
+
+/** `ibitsa.classes` over the built-ins (§5.2, #182). */
+export function readClasses(config: ConfigReader): HeroClassView[] {
+  return resolveClasses(config.get<unknown>('classes'));
+}
+
+/** `ibitsa.recolor` (#182), entries that don't check out dropped. */
+export function readRecolor(config: ConfigReader): RecolorMap {
+  return resolveRecolor(config.get<unknown>('recolor'));
+}
 
 /** `ibitsa.council.mode`: ask how the council sits each time, or always one way (§4.2, #103). */
 export function readCouncilMode(config: ConfigReader): (typeof COUNCIL_MODES)[number] {
