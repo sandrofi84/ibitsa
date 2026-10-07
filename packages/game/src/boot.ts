@@ -23,7 +23,7 @@ import type { HutFeed } from './hut-view.types';
 import { mountNeedsYouPanel } from './needs-you-panel';
 import { mountNewActionForm } from './new-action-form';
 import { mountNewQuestForm } from './new-quest-form';
-import { PACK_KEY, PackScene } from './pack-scene';
+import { PACK_BASE, PACK_KEY, PACK_KEYS, PackScene } from './pack-scene';
 import { mountNewParty, mountPartyAssembly } from './party-assembly';
 import { mountPlanReview } from './plan-review';
 import {
@@ -115,6 +115,7 @@ export function startGame(root: HTMLElement, host: Host): Started {
       councilChamber: () => false,
       guildHallOnPage: () => null,
       guildHall: () => null,
+      packLoads: () => 0,
       pullRequestPanel: () => null,
       pullRequestPreview: () => null,
       map: () => null,
@@ -230,6 +231,8 @@ export function startGame(root: HTMLElement, host: Host): Started {
     scene: [PackScene, WorldScene, HutScene],
   });
   game.registry.set('assetBase', assetBase);
+  // The active pack's files (#183): a user's or project's pack, else the bundled default.
+  game.registry.set(PACK_BASE, root.dataset.packBase ?? `${assetBase}pack/`);
   game.registry.set('client', client);
   game.registry.set('view', view);
   const cameraControls = mountCameraControls(game.events);
@@ -310,7 +313,7 @@ export function startGame(root: HTMLElement, host: Host): Started {
   portraits.url = (appearance) => {
     const manifest = game.cache.json.get(PACK_KEY) as Manifest | undefined;
     const path = manifest?.characters[appearance]?.portrait;
-    return path ? `${assetBase}pack/${path}` : null;
+    return path ? `${game.registry.get(PACK_BASE) as string}${path}` : null;
   };
   const showHut = (feed: HutFeed) => {
     game.registry.set(HUT_FEED, feed);
@@ -323,6 +326,27 @@ export function startGame(root: HTMLElement, host: Host): Started {
     if (scenes.isActive('world')) scenes.sleep('world');
     if (loaded) scenes.start('hut');
   };
+  /**
+   * A pack chosen in the Guild Hall (#183): the old pack's art goes and the new one loads, then the map
+   * (or the hut) starts again from the snapshot. Nothing else is lost.
+   */
+  const switchPack = (base: string | null) => {
+    game.registry.set(PACK_BASE, base ?? `${assetBase}pack/`);
+    const scenes = game.scene;
+    for (const key of ['world', 'hut']) {
+      if (scenes.isActive(key) || scenes.isSleeping(key)) scenes.stop(key);
+    }
+    const keys = game.registry.get(PACK_KEYS) as
+      | { textures: string[]; anims: string[] }
+      | undefined;
+    for (const k of keys?.anims ?? []) game.anims.remove(k);
+    for (const k of keys?.textures ?? []) game.textures.remove(k);
+    game.cache.json.remove(PACK_KEY);
+    scenes.start('pack');
+  };
+  host.onHostEvent((event) => {
+    if (event.type === 'packChanged') switchPack(event.base);
+  });
   /** Back to the map once the sitting is over. */
   const hideHut = () => {
     game.registry.remove(HUT_FEED);
@@ -430,6 +454,7 @@ export function startGame(root: HTMLElement, host: Host): Started {
     councilChamber: () => chamber.shown(),
     guildHallOnPage,
     guildHall: () => guildHall.shown(),
+    packLoads: () => (game.registry.get('packLoads') as number | undefined) ?? 0,
     pullRequestPanel: () => prPanel.shown(),
     pullRequestPreview: () => pullRequests.preview.shown(),
   };

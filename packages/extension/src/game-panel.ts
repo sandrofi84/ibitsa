@@ -71,10 +71,21 @@ export class GamePanel {
     GamePanel.current = new GamePanel(panel, extensionUri);
   }
 
+  /** The asset packs (#183): their folders may be loaded by the webview, and the active one is drawn. */
+  static packs: { roots(): string[]; activeDir(): string | null } | null = null;
+
+  /** A file's address in the open game tab, e.g. a pack's sprite sheet (#183); null without one. */
+  static url(path: string): string | null {
+    return GamePanel.current?.panel.webview.asWebviewUri(vscode.Uri.file(path)).toString() ?? null;
+  }
+
   private static webviewOptions(extensionUri: vscode.Uri): vscode.WebviewOptions {
     return {
       enableScripts: true,
-      localResourceRoots: [vscode.Uri.joinPath(extensionUri, 'dist', 'webview')],
+      localResourceRoots: [
+        vscode.Uri.joinPath(extensionUri, 'dist', 'webview'),
+        ...(GamePanel.packs?.roots() ?? []).map((root) => vscode.Uri.file(root)),
+      ],
     };
   }
 
@@ -165,6 +176,9 @@ function renderHtml(webview: vscode.Webview, extensionUri: vscode.Uri): string {
     `script-src 'nonce-${nonce}'`,
   ].join('; ');
   const forceNoWebgl = process.env.IBITSA_FORCE_NO_WEBGL === '1';
+  // A user's or project's pack (#183); the bundled one otherwise.
+  const packDir = GamePanel.packs?.activeDir();
+  const packBase = packDir ? `${webview.asWebviewUri(vscode.Uri.file(packDir)).toString()}/` : null;
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -175,7 +189,7 @@ function renderHtml(webview: vscode.Webview, extensionUri: vscode.Uri): string {
     <title>Ibitsa</title>
   </head>
   <body>
-    <div id="game" data-asset-base="${asset('')}/" data-force-no-webgl="${forceNoWebgl}"></div>
+    <div id="game" data-asset-base="${asset('')}/"${packBase ? ` data-pack-base="${packBase}"` : ''} data-force-no-webgl="${forceNoWebgl}"></div>
     <script type="module" nonce="${nonce}" src="${asset('main.js')}"></script>
   </body>
 </html>`;

@@ -25,6 +25,16 @@ function setup(overrides: Partial<HostChannelDeps> = {}) {
     openSettings: vi.fn(),
     openFile: vi.fn(),
     openable: { workspace: '/ws', roots: ['/home/me/.claude/skills'] },
+    packs: {
+      list: () => [
+        { id: 'default', name: 'Default', scope: 'builtin', errors: [], preview: null },
+        { id: 'user:retro', name: 'Retro', scope: 'user', errors: [], preview: null },
+      ],
+      dir: (id: string) => (id === 'user:retro' ? '/home/me/.ibitsa/packs/retro' : null),
+    } as unknown as HostChannelDeps['packs'],
+    activePack: () => 'default',
+    setActivePack: vi.fn(async () => {}),
+    packBase: (dir) => `webview:${dir}/`,
     ...overrides,
   };
   return { channel: new HostChannel(deps), deps, posted };
@@ -154,5 +164,36 @@ describe('the Guild Hall on the host channel (#179)', () => {
     expect(openablePath({ path: '/home/me/.claude/skills', workspace: '/ws', roots })).toBeNull();
     expect(openablePath({ path: 'a.md', workspace: undefined, roots })).toBeNull();
     expect(openablePath({ path: '/ws/../ws2/a.md', workspace: '/ws', roots })).toBeNull();
+  });
+});
+
+describe('asset packs on the host channel (#183)', () => {
+  it('lists the packs with the one in use', async () => {
+    const { channel, posted } = setup();
+    await channel.receive({ channel: 'host', type: 'readPacks' });
+    expect(posted).toEqual([
+      expect.objectContaining({ type: 'packs', active: 'default', packs: expect.any(Array) }),
+    ]);
+  });
+
+  it('uses a pack that is there and valid, telling the game where its files are', async () => {
+    const { channel, posted, deps } = setup();
+    await channel.receive({ channel: 'host', type: 'usePack', id: 'user:retro' });
+    expect(deps.setActivePack).toHaveBeenCalledWith('user:retro');
+    expect(posted[0]).toEqual({
+      channel: 'host',
+      type: 'packChanged',
+      base: 'webview:/home/me/.ibitsa/packs/retro/',
+    });
+    await channel.receive({ channel: 'host', type: 'usePack', id: 'default' });
+    expect(posted.at(-2)).toEqual({ channel: 'host', type: 'packChanged', base: null });
+  });
+
+  it('ignores a pack that is missing or broken', async () => {
+    const { channel, posted, deps } = setup();
+    await channel.receive({ channel: 'host', type: 'usePack', id: 'project:broken' });
+    await channel.receive({ channel: 'host', type: 'usePack', id: '../../etc' });
+    expect(deps.setActivePack).not.toHaveBeenCalled();
+    expect(posted).toEqual([]);
   });
 });

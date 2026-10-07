@@ -1,4 +1,4 @@
-import type { HostEvent, HostRequest, RuleKey, SettingView } from '@ibitsa/protocol';
+import type { HostEvent, HostRequest, PackView, RuleKey, SettingView } from '@ibitsa/protocol';
 
 /** The files the standalone build's worktree pretends to hold, for @ references (#83). */
 export const DEMO_FILES = [
@@ -20,6 +20,8 @@ export class FakeHostChannel {
   private readonly listeners: ((event: HostEvent) => void)[] = [];
   /** The Guild Hall's rules (#179), as VS Code would hold them, at each layer. */
   private readonly rules: SettingView[] = DEMO_RULES.map((r) => ({ ...r }));
+  /** The pack in use (#183). */
+  private activePack = 'default';
 
   constructor({ credentialsReady }: { credentialsReady: boolean }) {
     this.ready = credentialsReady;
@@ -55,6 +57,22 @@ export class FakeHostChannel {
       case 'readSettings':
         this.emitRules();
         return;
+      case 'readPacks':
+        this.emitPacks();
+        return;
+      case 'usePack': {
+        const pack = DEMO_PACKS.find((p) => p.id === request.id);
+        if (!pack || pack.errors.length > 0) return;
+        this.activePack = pack.id;
+        // The demo's "retro" pack is the default's files under another name: enough to see a switch.
+        this.emit({
+          channel: 'host',
+          type: 'packChanged',
+          base: pack.id === 'default' ? null : '/pack/',
+        });
+        this.emitPacks();
+        return;
+      }
       case 'writeSetting':
       case 'resetSetting': {
         const rule = this.rules.find((r) => r.key === request.key);
@@ -74,6 +92,10 @@ export class FakeHostChannel {
   /** Plays an event the extension would send, e.g. from the Command Palette (tests, #87). */
   send(event: HostEvent): void {
     this.emit(event);
+  }
+
+  private emitPacks(): void {
+    this.emit({ channel: 'host', type: 'packs', packs: DEMO_PACKS, active: this.activePack });
   }
 
   private emitRules(): void {
@@ -140,4 +162,30 @@ const DEMO_RULES: SettingView[] = [
     nullable: false,
     defaultValue: '',
   }),
+];
+
+/** The packs a fresh setup might find (#183): the default, one of yours, and a project's that's broken. */
+const DEMO_PACKS: PackView[] = [
+  { id: 'default', name: 'Default', scope: 'builtin', errors: [], preview: null },
+  {
+    id: 'user:retro',
+    name: 'retro',
+    scope: 'user',
+    errors: [],
+    preview: {
+      sheet: '/pack/characters/hero-paladin.png',
+      frameWidth: 16,
+      frameHeight: 16,
+      row: 1,
+      frames: 4,
+      fps: 8,
+    },
+  },
+  {
+    id: 'project:half-done',
+    name: 'half-done',
+    scope: 'project',
+    errors: ['characters: missing "hero.ranger"', 'map/tiles.png: 64×16, expected 96×16'],
+    preview: null,
+  },
 ];

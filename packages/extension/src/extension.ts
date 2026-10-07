@@ -21,6 +21,7 @@ import { API_KEYS_URL, HostChannel } from './host-channel';
 import { anthropicKeyValidator } from './key-validator';
 import type { KeyValidator } from './key-validator.types';
 import { loginShellEnv } from './login-shell-env';
+import { PackLibrary } from './packs';
 import { missingCredentialsAdapter } from './placeholders';
 import { pickHero, runAction } from './run-action';
 import { RuntimeHost } from './runtime-host';
@@ -91,6 +92,16 @@ export function activate(context: vscode.ExtensionContext): IbitsaApi {
         })
       : null;
   GamePanel.host = host;
+  // Asset packs (#183): the user's and the project's, the active one drawn when the game opens.
+  const packs = new PackLibrary({
+    home: homedir(),
+    workspace: workspaceDir,
+    url: (path) => GamePanel.url(path) ?? '',
+  });
+  GamePanel.packs = {
+    roots: () => packs.roots(),
+    activeDir: () => packs.dir(config().get<string>('pack') ?? 'default'),
+  };
   GamePanel.hostChannel = new HostChannel({
     credentials: () => resolveCredentials(context.secrets, process.env),
     development,
@@ -119,6 +130,10 @@ export function activate(context: vscode.ExtensionContext): IbitsaApi {
         `@ext:${context.extension.id}`,
       ),
     openFile: (path) => void vscode.window.showTextDocument(vscode.Uri.file(path)),
+    packs,
+    activePack: () => config().get<string>('pack') ?? 'default',
+    setActivePack: (id) => config().update('pack', id, vscode.ConfigurationTarget.Global),
+    packBase: (dir) => `${GamePanel.url(dir) ?? ''}/`,
     openable: {
       workspace: workspaceDir,
       roots: [

@@ -1,5 +1,5 @@
 /** The Guild Hall's tabs (§7.1, #179); the Roster, Armory and Packs join with their own issues. */
-export type GuildTab = 'rules' | 'spells' | 'chronicle';
+export type GuildTab = 'rules' | 'spells' | 'chronicle' | 'packs';
 
 /** What the rest of the game can do with the Guild Hall. */
 export interface GuildHall {
