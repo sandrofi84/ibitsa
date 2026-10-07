@@ -122,6 +122,28 @@ export class GitGameMaster implements GameMaster {
     return result(true);
   }
 
+  /**
+   * Stacked, all at once (spec §5.3, #122): catch a later island up with the branch it builds on,
+   * between its hero's turns. Already containing it is `upToDate`; a clean rebase is `rebased`; a
+   * conflict is aborted, leaving the worktree as it was, and reported as `conflict` for the hero to
+   * resolve. Uncommitted work is never rebased or stashed: that is a `conflict` for the hero too.
+   */
+  async rebaseWorktree({
+    worktreePath,
+    onto,
+  }: {
+    worktreePath: string;
+    onto: string;
+  }): Promise<'upToDate' | 'rebased' | 'conflict'> {
+    if ((await git(worktreePath, ['merge-base', '--is-ancestor', onto, 'HEAD'])).ok)
+      return 'upToDate';
+    const status = await git(worktreePath, ['status', '--porcelain']);
+    if (!status.ok || status.output !== '') return 'conflict';
+    if ((await git(worktreePath, ['rebase', onto])).ok) return 'rebased';
+    await git(worktreePath, ['rebase', '--abort']);
+    return 'conflict';
+  }
+
   /** Changes to tracked files and the list of untracked ones; new files count as progress too. */
   async observeDiff({ worktreePath }: { worktreePath: string }): Promise<string> {
     const diff = await git(worktreePath, ['diff', 'HEAD']);

@@ -173,6 +173,9 @@ export class Campaign {
       if (busy >= state.settings.maxParallel) return;
       if (Campaign.blockReason(state, island) !== 'slot') continue;
       island.launched = true;
+      // Stacked: branch from the island before as git named it (it may have added a suffix).
+      const base = state.islands.find((i) => i.id === island.basedOn);
+      if (base) island.baseRef = base.branch;
       const first = island.taskPoints[0];
       if (first) first.state = 'active';
       this.ctx.outbox.effect({

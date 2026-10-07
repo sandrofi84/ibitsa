@@ -226,3 +226,81 @@ describe('removeWorktree', () => {
     expect(run(dir, 'branch', '--list', 'b')).toContain('b');
   });
 });
+
+describe('rebaseWorktree (#122)', () => {
+  /** A stacked pair: `ibitsa/a` from main, and `ibitsa/b` from `ibitsa/a`, each in its worktree. */
+  async function stacked() {
+    const dir = repo();
+    // Rebasing rewrites commits, so the repo needs an identity (worktrees share its config).
+    run(dir, 'config', 'user.name', 'Test');
+    run(dir, 'config', 'user.email', 'test@example.com');
+    const master = gm(dir);
+    const a = await master.createWorktree({ islandId: 'i1', branch: 'ibitsa/a', baseRef: 'main' });
+    const b = await master.createWorktree({
+      islandId: 'i2',
+      branch: 'ibitsa/b',
+      baseRef: 'ibitsa/a',
+    });
+    if (a.type !== 'worktreeCreated' || b.type !== 'worktreeCreated')
+      throw new Error('no worktrees');
+    const commit = ({ wt, file, text }: { wt: string; file: string; text: string }) => {
+      writeFileSync(join(wt, file), text);
+      run(wt, 'add', '.');
+      run(wt, 'commit', '-q', '-m', `edit ${file}`);
+    };
+    return { master, a: a.path, b: b.path, commit };
+  }
+
+  it("starts a stacked island from the earlier island's branch, with its commits", async () => {
+    const dir = repo();
+    const master = gm(dir);
+    const a = await master.createWorktree({ islandId: 'i1', branch: 'ibitsa/a', baseRef: 'main' });
+    if (a.type !== 'worktreeCreated') throw new Error('no worktree');
+    writeFileSync(join(a.path, 'a.txt'), 'a\n');
+    run(a.path, 'add', '.');
+    run(a.path, 'commit', '-q', '-m', 'island a');
+    const b = await master.createWorktree({
+      islandId: 'i2',
+      branch: 'ibitsa/b',
+      baseRef: 'ibitsa/a',
+    });
+    if (b.type !== 'worktreeCreated') throw new Error('no worktree');
+    expect(run(b.path, 'log', '--format=%s')).toBe('island a\ninit');
+  });
+
+  it('is up to date while the later branch already contains the earlier one', async () => {
+    const { master, b, commit } = await stacked();
+    expect(await master.rebaseWorktree({ worktreePath: b, onto: 'ibitsa/a' })).toBe('upToDate');
+    commit({ wt: b, file: 'b.txt', text: 'b\n' });
+    expect(await master.rebaseWorktree({ worktreePath: b, onto: 'ibitsa/a' })).toBe('upToDate');
+  });
+
+  it('rebases cleanly onto new commits on the earlier branch', async () => {
+    const { master, a, b, commit } = await stacked();
+    commit({ wt: b, file: 'b.txt', text: 'b\n' });
+    commit({ wt: a, file: 'a.txt', text: 'a\n' });
+    expect(await master.rebaseWorktree({ worktreePath: b, onto: 'ibitsa/a' })).toBe('rebased');
+    expect(run(b, 'log', '--format=%s')).toBe('edit b.txt\nedit a.txt\ninit');
+    expect(await master.rebaseWorktree({ worktreePath: b, onto: 'ibitsa/a' })).toBe('upToDate');
+  });
+
+  it('aborts a conflicting rebase, leaving the worktree as it was', async () => {
+    const { master, a, b, commit } = await stacked();
+    commit({ wt: b, file: 'README.md', text: '# from b\n' });
+    commit({ wt: a, file: 'README.md', text: '# from a\n' });
+    const before = run(b, 'rev-parse', 'HEAD');
+    expect(await master.rebaseWorktree({ worktreePath: b, onto: 'ibitsa/a' })).toBe('conflict');
+    expect(run(b, 'rev-parse', 'HEAD')).toBe(before);
+    expect(run(b, 'status', '--porcelain')).toBe('');
+    expect(run(b, 'cat-file', '-p', 'HEAD:README.md')).toBe('# from b');
+  });
+
+  it('leaves uncommitted work alone: the hero rebases that itself', async () => {
+    const { master, a, b, commit } = await stacked();
+    commit({ wt: a, file: 'a.txt', text: 'a\n' });
+    writeFileSync(join(b, 'wip.txt'), 'work in progress\n');
+    expect(await master.rebaseWorktree({ worktreePath: b, onto: 'ibitsa/a' })).toBe('conflict');
+    expect(existsSync(join(b, 'wip.txt'))).toBe(true);
+    expect(existsSync(join(b, 'a.txt'))).toBe(false);
+  });
+});
