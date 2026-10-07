@@ -87,6 +87,7 @@ describe('slashMenu (#84)', () => {
         stackedStart: null,
         capMicroUsd: null,
         maxParallel: 2,
+        shipped: false,
       },
       elder: null,
       sitting: null,

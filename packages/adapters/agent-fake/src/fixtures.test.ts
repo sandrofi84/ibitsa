@@ -5,6 +5,7 @@ import m1Real from '../fixtures/m1-real.jsonl?raw';
 import m1RealLive from '../fixtures/m1-real.live.json';
 import m1Trouble from '../fixtures/m1-trouble.jsonl?raw';
 import m3RoundTable from '../fixtures/m3-round-table.jsonl?raw';
+import m6PullRequest from '../fixtures/m6-pull-request.jsonl?raw';
 import { parseLog } from './log';
 import { replayThroughCore } from './run';
 
@@ -16,6 +17,7 @@ const fixtures = {
   'm1-real': m1Real,
   'm1-demo': m1Demo,
   'm3-round-table': m3RoundTable,
+  'm6-pull-request': m6PullRequest,
 };
 
 describe.each(Object.entries(fixtures))('fixture %s', (name, text) => {
@@ -153,6 +155,32 @@ describe('m3-round-table', () => {
         { version: 2, outcome: { kind: 'approved' } },
       ],
     });
+    expect(output.cues.some((c) => c.cue.type === 'commandRejected')).toBe(false);
+  });
+});
+
+describe('m6-pull-request', () => {
+  // A hand-written quick quest to a merged PR (#151): opened ready for review, approved, merged.
+  const output = replayThroughCore(parseLog(m6PullRequest));
+  const at = (mark: string) => output.marks.find((m) => m.mark === mark)?.snapshot;
+
+  it('offers a ready PR once the task is done, with the task as its body', () => {
+    expect(at('cleared')?.islands[0]?.pullRequestDraft).toMatchObject({
+      title: 'Make slugify strip accents',
+      base: 'main',
+      draft: false,
+      body: '"Crème Brûlée" should become "creme-brulee". Add a test for it.',
+    });
+  });
+
+  it('follows the PR from opening to merged, and ships', () => {
+    expect(at('opening')?.islands[0]?.remote).toMatchObject({ busy: 'opening' });
+    const states = ['opened', 'approved', 'merged'].map(
+      (mark) => at(mark)?.islands[0]?.remote?.pullRequest?.state,
+    );
+    expect(states).toEqual(['open', 'approved', 'merged']);
+    expect(at('approved')?.campaign?.shipped).toBe(false);
+    expect(output.final.campaign?.shipped).toBe(true);
     expect(output.cues.some((c) => c.cue.type === 'commandRejected')).toBe(false);
   });
 });

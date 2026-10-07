@@ -99,6 +99,7 @@ describe('starting a quest', () => {
       stackedStart: null,
       capMicroUsd: null,
       maxParallel: 2,
+      shipped: false,
     });
     expect(snap.islands).toEqual([
       {
@@ -109,6 +110,8 @@ describe('starting a quest', () => {
         branch: 'ibitsa/fix-the-login-redirect',
         worktree: 'creating',
         taskPoints: [{ id: 't3', title: 'Fix the login redirect', state: 'active' }],
+        remote: null,
+        pullRequestDraft: null,
       },
     ]);
     expect(h.hero()).toMatchObject({

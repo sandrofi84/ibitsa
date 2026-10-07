@@ -151,6 +151,7 @@
           "stackedStart": null,
           "capMicroUsd": null,
           "maxParallel": 2,
+          "shipped": false,
           "gold": {
             "kind": "unknown"
           }
@@ -171,7 +172,16 @@
                 "title": "Make slugify strip accents",
                 "state": "active"
               }
-            ]
+            ],
+            "remote": null,
+            "pullRequestDraft": {
+              "title": "Make slugify strip accents",
+              "body": "The \"strips accents\" test fails. Before you fix it, use AskUserQuestion to ask me whether\nunderscores should also become dashes (two options). Then fix slugify, add a test for my answer,\nand append one line describing the change to ~/ibitsa-demo-notes.md. Commit, then submit.",
+              "base": "main",
+              "draft": true,
+              "cleared": false,
+              "cannotOpen": null
+            }
           }
         ],
         "heroes": [
@@ -218,6 +228,7 @@
           "stackedStart": null,
           "capMicroUsd": null,
           "maxParallel": 2,
+          "shipped": false,
           "gold": {
             "kind": "unknown"
           }
@@ -238,7 +249,16 @@
                 "title": "Make slugify strip accents",
                 "state": "active"
               }
-            ]
+            ],
+            "remote": null,
+            "pullRequestDraft": {
+              "title": "Make slugify strip accents",
+              "body": "The \"strips accents\" test fails. Before you fix it, use AskUserQuestion to ask me whether\nunderscores should also become dashes (two options). Then fix slugify, add a test for my answer,\nand append one line describing the change to ~/ibitsa-demo-notes.md. Commit, then submit.",
+              "base": "main",
+              "draft": true,
+              "cleared": false,
+              "cannotOpen": null
+            }
           }
         ],
         "heroes": [
@@ -279,6 +299,7 @@
           "stackedStart": null,
           "capMicroUsd": null,
           "maxParallel": 2,
+          "shipped": false,
           "gold": {
             "kind": "exact",
             "value": 161964
@@ -300,7 +321,16 @@
                 "title": "Make slugify strip accents",
                 "state": "doneUnreviewed"
               }
-            ]
+            ],
+            "remote": null,
+            "pullRequestDraft": {
+              "title": "Make slugify strip accents",
+              "body": "The \"strips accents\" test fails. Before you fix it, use AskUserQuestion to ask me whether\nunderscores should also become dashes (two options). Then fix slugify, add a test for my answer,\nand append one line describing the change to ~/ibitsa-demo-notes.md. Commit, then submit.",
+              "base": "main",
+              "draft": false,
+              "cleared": true,
+              "cannotOpen": null
+            }
           }
         ],
         "heroes": [
@@ -343,6 +373,7 @@
       "stackedStart": null,
       "capMicroUsd": null,
       "maxParallel": 2,
+      "shipped": false,
       "gold": {
         "kind": "exact",
         "value": 161964
@@ -364,7 +395,9 @@
             "title": "Make slugify strip accents",
             "state": "doneUnreviewed"
           }
-        ]
+        ],
+        "remote": null,
+        "pullRequestDraft": null
       }
     ],
     "heroes": [

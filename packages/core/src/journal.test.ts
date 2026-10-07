@@ -99,6 +99,20 @@ describe('Journal', () => {
       { kind: 'gm', event: { type: 'submitChecked', heroId: 'h4', toolUseId: 'u9', ok: true } },
       { kind: 'command', command: { type: 'finishQuest', commandId: 'f1' } },
       { kind: 'gm', event: { type: 'worktreeRemoved', islandId: 'i2' } },
+      { kind: 'gm', event: { type: 'branchPushed', islandId: 'i2', head: 'a' } },
+      {
+        kind: 'gm',
+        event: {
+          type: 'pullRequestOpened',
+          islandId: 'i2',
+          head: 'a',
+          number: 7,
+          url: 'u',
+          state: 'draft',
+        },
+      },
+      { kind: 'gm', event: { type: 'pullRequestReady', islandId: 'i2', head: 'b' } },
+      { kind: 'gm', event: { type: 'remoteFailed', islandId: 'i2', message: 'no remote' } },
     ]);
     expect(
       journal.entries.map((e) => [
@@ -121,6 +135,10 @@ describe('Journal', () => {
       ['event', 'The submit check passed.'],
       ['event', 'You finished the quest.'],
       ['event', 'Worktree removed.'],
+      ['event', 'Branch pushed.'],
+      ['event', 'Pull request #7 opened as a draft.'],
+      ['event', 'The pull request is ready for review.'],
+      ['event', 'Pushing failed: no remote'],
     ]);
     expect(journal.entries[2]).toEqual({
       t: 500,

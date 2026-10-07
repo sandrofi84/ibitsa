@@ -1,5 +1,6 @@
 import type { CouncillorInfo } from './councillors.types';
 import type { ElderView } from './elder.types';
+import type { IslandRemoteView, PullRequestDraft } from './pull-request.types';
 import type { Finding } from './review.schema';
 import type { TaskReviewView } from './review.types';
 import type { SittingView } from './sitting.types';
@@ -53,6 +54,8 @@ export interface CampaignView {
   capMicroUsd: MicroUsd | null;
   /** `ibitsa.parties.maxParallel` (§5.1): how many parties work at once (#123). */
   maxParallel: number;
+  /** Every island's PR is merged (§5.6): the heroes reach Ibitsa and Finish is offered. */
+  shipped: boolean;
 }
 
 export interface IslandView {
@@ -66,6 +69,10 @@ export interface IslandView {
   /** Stacked, all at once: the branch it builds on has moved on and rebasing conflicted (#121). */
   behind: boolean;
   taskPoints: TaskPointView[];
+  /** Its branch on the git host and its PR (M6); null before anything was pushed. */
+  remote: IslandRemoteView | null;
+  /** What the PR preview starts from, until a PR is open; null once there is one. */
+  pullRequestDraft: PullRequestDraft | null;
 }
 
 /** §7.2 task point states, plus M1's done-without-review (§14.1). */

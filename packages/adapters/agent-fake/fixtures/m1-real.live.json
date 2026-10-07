@@ -3,15 +3,16 @@
     "id": "c1",
     "title": "Make slugify strip accents",
     "status": "finished",
-    "gold": {
-      "kind": "exact",
-      "value": 117863
-    },
     "autoApprove": false,
     "branching": "separate",
     "stackedStart": null,
     "capMicroUsd": null,
-    "maxParallel": 2
+    "maxParallel": 2,
+    "shipped": false,
+    "gold": {
+      "kind": "exact",
+      "value": 117863
+    }
   },
   "elder": null,
   "sitting": null,
@@ -21,6 +22,8 @@
       "name": "Make slugify strip accents",
       "branch": "ibitsa/make-slugify-strip-accents",
       "worktree": "ready",
+      "basedOn": null,
+      "behind": false,
       "taskPoints": [
         {
           "id": "t3",
@@ -28,8 +31,15 @@
           "state": "doneUnreviewed"
         }
       ],
-      "basedOn": null,
-      "behind": false
+      "remote": null,
+      "pullRequestDraft": {
+        "title": "Make slugify strip accents",
+        "body": "\"Crème Brûlée\" should become \"creme-brulee\". Add a test for it, run the tests with `node --test`, commit, then submit.",
+        "base": "main",
+        "draft": false,
+        "cleared": true,
+        "cannotOpen": null
+      }
     }
   ],
   "heroes": [

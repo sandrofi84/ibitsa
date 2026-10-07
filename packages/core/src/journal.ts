@@ -181,6 +181,17 @@ export class Journal {
           return line(firstHero, { kind: 'event', text: 'VS Code reloaded; the session stopped.' });
         case 'worktreeRemoved':
           return line(null, { kind: 'event', text: 'Worktree removed.' });
+        case 'pullRequestOpened':
+          return line(null, {
+            kind: 'event',
+            text: `Pull request #${e.number} opened${e.state === 'draft' ? ' as a draft' : ''}.`,
+          });
+        case 'pullRequestReady':
+          return line(null, { kind: 'event', text: 'The pull request is ready for review.' });
+        case 'branchPushed':
+          return line(null, { kind: 'event', text: 'Branch pushed.' });
+        case 'remoteFailed':
+          return line(null, { kind: 'event', text: `Pushing failed: ${e.message}` });
         default:
           return [];
       }

@@ -3,7 +3,6 @@ import type {
   CheckResult,
   Command,
   Finding,
-  Plan,
   ReviewEvent,
   TaskReviewView,
 } from '@ibitsa/protocol';
@@ -11,6 +10,7 @@ import { checkVerdict } from '@ibitsa/protocol';
 import { Hero } from './hero';
 import type { CoreInput } from './inputs.types';
 import type { TaskPoint } from './review.types';
+import { Sitting } from './sitting';
 import { newId } from './state';
 import type { HeroRecord, Island, ReviewRecord, TaskReview } from './state.types';
 import type { StepContext } from './step.types';
@@ -86,7 +86,7 @@ export class Review {
       return;
     }
     review.phase = 'reviewing';
-    const plan = this.plan();
+    const plan = Sitting.approvedPlan(this.ctx.state);
     const planTask = plan?.tasks.find((t) => t.id === task.planTaskId);
     const decisions = plan?.decisions.filter((d) => planTask?.decisions.includes(d.id)) ?? [];
     for (const councillorId of reviewers) {
@@ -231,7 +231,7 @@ export class Review {
     hero: HeroRecord;
     event: Extract<ReviewEvent, { type: 'verdictSubmitted' }>;
   }): void {
-    const decisions = this.plan()?.decisions.map((d) => d.id) ?? [];
+    const decisions = Sitting.approvedPlan(this.ctx.state)?.decisions.map((d) => d.id) ?? [];
     const checked = checkVerdict({ input: event.verdict, decisions });
     if (!checked.ok) {
       this.complete({
@@ -330,7 +330,9 @@ export class Review {
 
   /** Councillors with criteria for the task; after the first round, only those with open blocking findings. */
   private reviewersFor(task: TaskPoint, review: TaskReview): string[] {
-    const planTask = this.plan()?.tasks.find((t) => t.id === task.planTaskId);
+    const planTask = Sitting.approvedPlan(this.ctx.state)?.tasks.find(
+      (t) => t.id === task.planTaskId,
+    );
     const all = (planTask?.criteria ?? []).map((c) => c.councillorId);
     if (!review.reviews.some((r) => r.status === 'done')) return [...new Set(all)];
     return [...new Set(this.open(review).map((r) => r.councillorId))];
@@ -369,17 +371,6 @@ export class Review {
       accepted: reason === undefined,
       ...(reason === undefined ? {} : { reason }),
     });
-  }
-
-  private plan(): Plan | undefined {
-    const sittings = [
-      ...this.ctx.state.pastSittings,
-      ...(this.ctx.state.sitting ? [this.ctx.state.sitting] : []),
-    ];
-    return sittings
-      .flatMap((s) => s.plans)
-      .filter((p) => p.outcome.kind === 'approved')
-      .at(-1)?.plan;
   }
 
   private taskOf(hero: HeroRecord): { task: TaskPoint; island: Island } | undefined {

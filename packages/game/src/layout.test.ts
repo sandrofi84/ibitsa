@@ -26,6 +26,8 @@ const island = (
   worktree: worktree as IslandView['worktree'],
   basedOn: null,
   behind,
+  remote: null,
+  pullRequestDraft: null,
   taskPoints: Array.from({ length: tasks }, (_, i) => ({
     id: `${id}-t${i}`,
     title: '',
@@ -54,6 +56,7 @@ const snapshot = ({
     stackedStart,
     capMicroUsd: null,
     maxParallel: 2,
+    shipped: false,
   },
   heroes,
   needsYou: [],

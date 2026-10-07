@@ -146,6 +146,7 @@
           "stackedStart": null,
           "capMicroUsd": null,
           "maxParallel": 2,
+          "shipped": false,
           "gold": {
             "kind": "unknown"
           }
@@ -166,7 +167,16 @@
                 "title": "Make the date parser accept ISO week dates",
                 "state": "active"
               }
-            ]
+            ],
+            "remote": null,
+            "pullRequestDraft": {
+              "title": "Make the date parser accept ISO week dates",
+              "body": "parseDate('2026-W41-1') should return Monday 5 October 2026.",
+              "base": "main",
+              "draft": true,
+              "cleared": false,
+              "cannotOpen": null
+            }
           }
         ],
         "heroes": [
@@ -207,6 +217,7 @@
           "stackedStart": null,
           "capMicroUsd": null,
           "maxParallel": 2,
+          "shipped": false,
           "gold": {
             "kind": "exact",
             "value": 61000
@@ -228,7 +239,16 @@
                 "title": "Make the date parser accept ISO week dates",
                 "state": "active"
               }
-            ]
+            ],
+            "remote": null,
+            "pullRequestDraft": {
+              "title": "Make the date parser accept ISO week dates",
+              "body": "parseDate('2026-W41-1') should return Monday 5 October 2026.",
+              "base": "main",
+              "draft": true,
+              "cleared": false,
+              "cannotOpen": null
+            }
           }
         ],
         "heroes": [
@@ -280,6 +300,7 @@
           "stackedStart": null,
           "capMicroUsd": null,
           "maxParallel": 2,
+          "shipped": false,
           "gold": {
             "kind": "exact",
             "value": 301500
@@ -301,7 +322,16 @@
                 "title": "Make the date parser accept ISO week dates",
                 "state": "active"
               }
-            ]
+            ],
+            "remote": null,
+            "pullRequestDraft": {
+              "title": "Make the date parser accept ISO week dates",
+              "body": "parseDate('2026-W41-1') should return Monday 5 October 2026.",
+              "base": "main",
+              "draft": true,
+              "cleared": false,
+              "cannotOpen": null
+            }
           }
         ],
         "heroes": [
@@ -353,6 +383,7 @@
           "stackedStart": null,
           "capMicroUsd": null,
           "maxParallel": 2,
+          "shipped": false,
           "gold": {
             "kind": "exact",
             "value": 301500
@@ -374,7 +405,16 @@
                 "title": "Make the date parser accept ISO week dates",
                 "state": "active"
               }
-            ]
+            ],
+            "remote": null,
+            "pullRequestDraft": {
+              "title": "Make the date parser accept ISO week dates",
+              "body": "parseDate('2026-W41-1') should return Monday 5 October 2026.",
+              "base": "main",
+              "draft": true,
+              "cleared": false,
+              "cannotOpen": null
+            }
           }
         ],
         "heroes": [
@@ -420,6 +460,7 @@
           "stackedStart": null,
           "capMicroUsd": null,
           "maxParallel": 2,
+          "shipped": false,
           "gold": {
             "kind": "exact",
             "value": 352000
@@ -441,7 +482,16 @@
                 "title": "Make the date parser accept ISO week dates",
                 "state": "doneUnreviewed"
               }
-            ]
+            ],
+            "remote": null,
+            "pullRequestDraft": {
+              "title": "Make the date parser accept ISO week dates",
+              "body": "parseDate('2026-W41-1') should return Monday 5 October 2026.",
+              "base": "main",
+              "draft": false,
+              "cleared": true,
+              "cannotOpen": null
+            }
           }
         ],
         "heroes": [
@@ -484,6 +534,7 @@
       "stackedStart": null,
       "capMicroUsd": null,
       "maxParallel": 2,
+      "shipped": false,
       "gold": {
         "kind": "exact",
         "value": 352000
@@ -505,7 +556,16 @@
             "title": "Make the date parser accept ISO week dates",
             "state": "doneUnreviewed"
           }
-        ]
+        ],
+        "remote": null,
+        "pullRequestDraft": {
+          "title": "Make the date parser accept ISO week dates",
+          "body": "parseDate('2026-W41-1') should return Monday 5 October 2026.",
+          "base": "main",
+          "draft": false,
+          "cleared": true,
+          "cannotOpen": null
+        }
       }
     ],
     "heroes": [

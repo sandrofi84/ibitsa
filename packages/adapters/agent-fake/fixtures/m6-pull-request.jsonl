@@ -1,0 +1,12 @@
+{"kind":"header","logVersion":1,"protocolVersion":1,"campaignId":"m6-pull-request","startedAt":"2026-10-07T10:00:00.000Z"}
+{"kind":"gm","t":0,"event":{"type":"questSettings","budgetMicroUsd":null,"stall":{"testFailures":4,"fileEdits":12,"noProgressTurns":6},"budget":"native"}}
+{"kind":"command","t":1,"command":{"type":"startQuest","commandId":"q1","description":"Make slugify strip accents\n\"Crème Brûlée\" should become \"creme-brulee\". Add a test for it.","heroName":"Ranger Ilse","classId":"ranger","baseRef":"main"}}
+{"kind":"gm","t":80,"event":{"type":"worktreeCreated","islandId":"i2","path":"/wt","branch":"ibitsa/make-slugify-strip-accents"}}
+{"kind":"agent","t":2000,"heroId":"h4","event":{"type":"sessionStarted","sessionId":"s-hero"}}
+{"kind":"agent","t":9000,"heroId":"h4","event":{"type":"taskSubmitted","toolUseId":"u1","summary":"slugify strips accents, with a test."}}
+{"kind":"gm","t":9100,"event":{"type":"submitChecked","heroId":"h4","toolUseId":"u1","ok":true,"head":"c0ffee1"}}
+{"kind":"agent","t":9500,"heroId":"h4","event":{"type":"turnEnded","queuedTurns":0},"mark":"cleared"}
+{"kind":"command","t":20000,"command":{"type":"openPullRequest","commandId":"p1","islandId":"i2","title":"Make slugify strip accents","body":"\"Crème Brûlée\" should become \"creme-brulee\". Add a test for it.","draft":false},"mark":"opening"}
+{"kind":"gm","t":23000,"event":{"type":"pullRequestOpened","islandId":"i2","head":"c0ffee1","number":12,"url":"https://github.com/o/r/pull/12","state":"open"},"mark":"opened"}
+{"kind":"gm","t":83000,"event":{"type":"pullRequestsPolled","pullRequests":[{"number":12,"state":"approved"}]},"mark":"approved"}
+{"kind":"gm","t":143000,"event":{"type":"pullRequestsPolled","pullRequests":[{"number":12,"state":"merged"}]},"mark":"merged"}

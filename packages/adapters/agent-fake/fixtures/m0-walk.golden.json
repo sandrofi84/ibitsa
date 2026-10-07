@@ -102,6 +102,7 @@
           "stackedStart": null,
           "capMicroUsd": null,
           "maxParallel": 2,
+          "shipped": false,
           "gold": {
             "kind": "unknown"
           }
@@ -122,7 +123,9 @@
                 "title": "Fix the login redirect",
                 "state": "active"
               }
-            ]
+            ],
+            "remote": null,
+            "pullRequestDraft": null
           }
         ],
         "heroes": [
@@ -161,6 +164,7 @@
           "stackedStart": null,
           "capMicroUsd": null,
           "maxParallel": 2,
+          "shipped": false,
           "gold": {
             "kind": "unknown"
           }
@@ -181,7 +185,16 @@
                 "title": "Fix the login redirect",
                 "state": "active"
               }
-            ]
+            ],
+            "remote": null,
+            "pullRequestDraft": {
+              "title": "Fix the login redirect",
+              "body": "After logout the app loops back to /login instead of the home page.",
+              "base": "main",
+              "draft": true,
+              "cleared": false,
+              "cannotOpen": null
+            }
           }
         ],
         "heroes": [
@@ -222,6 +235,7 @@
           "stackedStart": null,
           "capMicroUsd": null,
           "maxParallel": 2,
+          "shipped": false,
           "gold": {
             "kind": "exact",
             "value": 42000
@@ -243,7 +257,16 @@
                 "title": "Fix the login redirect",
                 "state": "active"
               }
-            ]
+            ],
+            "remote": null,
+            "pullRequestDraft": {
+              "title": "Fix the login redirect",
+              "body": "After logout the app loops back to /login instead of the home page.",
+              "base": "main",
+              "draft": true,
+              "cleared": false,
+              "cannotOpen": null
+            }
           }
         ],
         "heroes": [
@@ -289,6 +312,7 @@
           "stackedStart": null,
           "capMicroUsd": null,
           "maxParallel": 2,
+          "shipped": false,
           "gold": {
             "kind": "exact",
             "value": 97000
@@ -310,7 +334,16 @@
                 "title": "Fix the login redirect",
                 "state": "active"
               }
-            ]
+            ],
+            "remote": null,
+            "pullRequestDraft": {
+              "title": "Fix the login redirect",
+              "body": "After logout the app loops back to /login instead of the home page.",
+              "base": "main",
+              "draft": true,
+              "cleared": false,
+              "cannotOpen": null
+            }
           }
         ],
         "heroes": [
@@ -364,6 +397,7 @@
           "stackedStart": null,
           "capMicroUsd": null,
           "maxParallel": 2,
+          "shipped": false,
           "gold": {
             "kind": "exact",
             "value": 108000
@@ -385,7 +419,16 @@
                 "title": "Fix the login redirect",
                 "state": "doneUnreviewed"
               }
-            ]
+            ],
+            "remote": null,
+            "pullRequestDraft": {
+              "title": "Fix the login redirect",
+              "body": "After logout the app loops back to /login instead of the home page.",
+              "base": "main",
+              "draft": false,
+              "cleared": true,
+              "cannotOpen": null
+            }
           }
         ],
         "heroes": [
@@ -428,6 +471,7 @@
       "stackedStart": null,
       "capMicroUsd": null,
       "maxParallel": 2,
+      "shipped": false,
       "gold": {
         "kind": "exact",
         "value": 108000
@@ -449,7 +493,16 @@
             "title": "Fix the login redirect",
             "state": "doneUnreviewed"
           }
-        ]
+        ],
+        "remote": null,
+        "pullRequestDraft": {
+          "title": "Fix the login redirect",
+          "body": "After logout the app loops back to /login instead of the home page.",
+          "base": "main",
+          "draft": false,
+          "cleared": true,
+          "cannotOpen": null
+        }
       }
     ],
     "heroes": [

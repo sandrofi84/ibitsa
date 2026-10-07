@@ -5,6 +5,7 @@ import { Hero } from './hero';
 import type { CoreInput, GameMasterEvent } from './inputs.types';
 import { NeedsYou } from './needs-you';
 import { Outbox } from './outbox';
+import { PullRequest } from './pull-request';
 import { Quest } from './quest';
 import { Review } from './review';
 import { Sitting } from './sitting';
@@ -106,6 +107,19 @@ function command(ctx: StepContext, command: Command): void {
       return;
     case 'removeWorktree':
       quest.removeWorktree(command);
+      return;
+    case 'openPullRequest':
+      new PullRequest(ctx).open(command);
+      return;
+    case 'updatePullRequest':
+    case 'pushBranch':
+      new PullRequest(ctx).push(command);
+      return;
+    case 'markPullRequestReady':
+      new PullRequest(ctx).markReady(command);
+      return;
+    case 'refreshPullRequests':
+      new PullRequest(ctx).refresh(command.commandId);
       return;
     case 'setAutoApprove':
       quest.setAutoApprove(command);
@@ -212,7 +226,16 @@ function gameMaster(ctx: StepContext, event: GameMasterEvent): void {
     case 'councilVersionNoted':
       new Sitting(ctx).versionNoted(event);
       return;
+    case 'branchPushed':
+    case 'pullRequestOpened':
+    case 'pullRequestReady':
+    case 'remoteFailed':
+    case 'pullRequestsPolled':
+      new PullRequest(ctx).handle(event);
+      return;
     case 'runtimeRestarted':
+      // A finished quest's PRs are still polled.
+      new PullRequest(ctx).restarted();
       if (ctx.state.campaign?.status === 'planning') {
         new Elder(ctx).restarted();
         new Sitting(ctx).restarted();
