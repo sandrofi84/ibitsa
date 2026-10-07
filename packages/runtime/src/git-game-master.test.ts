@@ -2,12 +2,16 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { detectChecks, GitGameMaster } from './git-game-master';
+
+// Every test here runs real git, and on Windows each spawn is slow: 5 s isn't always enough (#160).
+vi.setConfig({ testTimeout: 20_000 });
 
 const roots: string[] = [];
 afterEach(() => {
-  for (const r of roots.splice(0)) rmSync(r, { recursive: true, force: true });
+  // A git process that's still closing can hold the folder on Windows for a moment.
+  for (const r of roots.splice(0)) rmSync(r, { recursive: true, force: true, maxRetries: 5 });
 });
 
 const run = (cwd: string, ...args: string[]) =>
