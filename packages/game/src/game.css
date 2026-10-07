@@ -110,6 +110,16 @@ body {
   opacity: 1;
 }
 
+/* After a reload (#166): below a rejected command's toast, and clicked away. */
+.restart-notice {
+  top: 44px;
+  cursor: pointer;
+}
+
+.restart-notice.visible {
+  pointer-events: auto;
+}
+
 /*
  * The task panel (§5.5, #141): a task's checks, reviews by round, and suggestions. Top left, beside the
  * camera controls; Needs you stays on top of it, since that's where you act.

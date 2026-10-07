@@ -198,4 +198,6 @@ export type SittingMessage =
   | { kind: 'changeRequested'; version: number; text: string }
   | { kind: 'councillorAdded'; councillorId: string; effort: Effort }
   /** "Why?" (§4.4): the councillor who asked `question` explains; `text` is the user's follow-up. */
-  | { kind: 'why'; questionId: string; councillorId: string; question: string; text?: string };
+  | { kind: 'why'; questionId: string; councillorId: string; question: string; text?: string }
+  /** Answers to questions asked before a reload (#166), whose tool call the resumed session lost. */
+  | { kind: 'answered'; answers: { question: string; answer: string }[] };

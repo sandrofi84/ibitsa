@@ -12,6 +12,7 @@ import type {
 } from '@ibitsa/protocol';
 import { checkPlan } from '@ibitsa/protocol';
 import { Consultation } from './consultation';
+import type { Effect } from './effects.types';
 import { Quest } from './quest';
 import { newId } from './state';
 import type { CoreState, QuestionBatch, SittingRecord } from './state.types';
@@ -144,9 +145,22 @@ export class Sitting {
     });
   }
 
-  /** VS Code reloaded: the lead session is gone (spec §12). Reports and questions so far are kept. */
-  restarted(): void {
-    this.stop('The sitting stopped when VS Code reloaded.');
+  /**
+   * VS Code reloaded: the lead session is gone (spec §12). Reports and questions so far are kept, and
+   * the session resumes (#166): at once if the council was deliberating, else when the user next acts.
+   * A sitting whose session never started starts again. Returns whether it resumed now.
+   */
+  restarted(): boolean {
+    const record = this.ctx.state.sitting;
+    if (!Sitting.active(record)) return false;
+    if (!record.sessionId) {
+      this.ctx.outbox.effect(startOf({ state: this.ctx.state, record }));
+      return true;
+    }
+    record.dormant = true;
+    if (record.status !== 'deliberating' || pendingBatch(record)) return false;
+    this.wake({ record, prompt: RESUME_PROMPT });
+    return true;
   }
 
   /** Ends an active sitting as failed, e.g. when its campaign is abandoned. */
@@ -202,6 +216,20 @@ export class Sitting {
       if (answer) answers.push(answer);
     }
     batch.answers = answers;
+    if (record.dormant) {
+      // Asked before the reload: the resumed session lost that tool call, so the answers go as words.
+      this.message({
+        record,
+        message: {
+          kind: 'answered',
+          answers: batch.items.map((item, k) => ({
+            question: item.question,
+            answer: wordsOf({ item, answer: answers[k] }),
+          })),
+        },
+      });
+      return;
+    }
     this.ctx.outbox.effect({
       type: 'answerSittingQuestions',
       sittingId: record.id,
@@ -216,7 +244,7 @@ export class Sitting {
     if (!record) return;
     const batch = pendingBatch(record);
     const item =
-      batch?.id === command.batchId
+      batch && batch.id === command.batchId
         ? batch.items.find((q) => q.id === command.questionId)
         : undefined;
     if (!item) {
@@ -542,7 +570,19 @@ export class Sitting {
   }
 
   private message({ record, message }: { record: SittingRecord; message: SittingMessage }): void {
+    if (record.dormant) this.wake({ record });
     this.ctx.outbox.effect({ type: 'sittingMessage', sittingId: record.id, message });
+  }
+
+  /** Resume a dormant sitting's lead session (#166); `prompt` gets it going without the user. */
+  private wake({ record, prompt }: { record: SittingRecord; prompt?: string }): void {
+    record.dormant = false;
+    const sessionId = record.sessionId;
+    if (!sessionId) return;
+    this.ctx.outbox.effect({
+      ...startOf({ state: this.ctx.state, record }),
+      resume: prompt === undefined ? { sessionId } : { sessionId, prompt },
+    });
   }
 
   private complete({
@@ -562,6 +602,42 @@ export class Sitting {
       ...(reason !== undefined && { reason }),
     });
   }
+}
+
+/** What a sitting that was deliberating hears when its session resumes after a reload (#166). */
+const RESUME_PROMPT =
+  'VS Code reloaded and your session was resumed. Carry on where you left off: any reports still missing, then your questions or the plan.';
+
+/** The effect that starts a sitting's lead session, from its record. */
+function startOf({
+  state,
+  record,
+}: {
+  state: CoreState;
+  record: SittingRecord;
+}): Extract<Effect, { type: 'startSitting' }> {
+  return {
+    type: 'startSitting',
+    sittingId: record.id,
+    mode: record.mode,
+    task: record.task,
+    effort: record.effort,
+    roster: record.roster,
+    brief: state.elder?.status === 'briefed' ? state.elder.brief : null,
+  };
+}
+
+/** An answer in words: the option's label, or what the user wrote. */
+function wordsOf({
+  item,
+  answer,
+}: {
+  item: QuestionBatch['items'][number];
+  answer: CouncilAnswer | undefined;
+}): string {
+  if (!answer) return '(no answer)';
+  if ('text' in answer) return answer.text;
+  return item.options.find((o) => o.id === answer.optionId)?.label ?? answer.optionId;
 }
 
 /** The elder chairs every sitting without being on the roster. */

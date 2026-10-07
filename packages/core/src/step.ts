@@ -267,15 +267,32 @@ function gameMaster(ctx: StepContext, event: GameMasterEvent): void {
       new PullRequest(ctx).handle(event);
       return;
     case 'runtimeRestarted':
-      new Consultation(ctx).stop('VS Code reloaded before the council answered. Ask again.');
-      new PullRequest(ctx).restarted();
-      if (ctx.state.campaign?.status === 'planning') {
-        new Elder(ctx).restarted();
-        new Sitting(ctx).restarted();
-      }
-      if (ctx.state.campaign?.status !== 'active') return;
-      ctx.needsYou.dropRequests();
-      for (const h of heroes(ctx)) h.restarted();
+      restarted(ctx);
       return;
+  }
+}
+
+/**
+ * VS Code reloaded (spec §12, #166): everything that was running resumes on its own: the elder's
+ * research, a sitting, heroes who were working, checks and reviewers. A cue tells the user what did.
+ */
+function restarted(ctx: StepContext): void {
+  // A question the council hadn't answered is dropped: its turn is gone (#169).
+  new Consultation(ctx).stop('VS Code reloaded before the council answered. Ask again.');
+  new PullRequest(ctx).restarted();
+  const status = ctx.state.campaign?.status;
+  const planning = status === 'planning';
+  const elder = planning && new Elder(ctx).restarted();
+  const council = planning && new Sitting(ctx).restarted();
+  let heroIds: string[] = [];
+  let work = { checks: 0, reviews: 0 };
+  if (status === 'active') {
+    // A permission or question that was waiting belonged to a turn that's gone: the hero asks again.
+    ctx.needsYou.dropRequests();
+    heroIds = heroes(ctx).flatMap((h) => (h.restarted() ? [h.id] : []));
+    work = new Review(ctx).restarted();
+  }
+  if (heroIds.length > 0 || work.checks > 0 || work.reviews > 0 || elder || council) {
+    ctx.outbox.cue({ type: 'resumed', heroIds, ...work, council, elder });
   }
 }

@@ -46,8 +46,14 @@
     {
       "t": 14333,
       "cue": {
-        "type": "needsYouAdded",
-        "itemId": "n6"
+        "type": "resumed",
+        "heroIds": [
+          "h4"
+        ],
+        "checks": 0,
+        "reviews": 0,
+        "council": false,
+        "elder": false
       }
     },
     {
@@ -98,7 +104,7 @@
       "t": 47685,
       "cue": {
         "type": "needsYouAdded",
-        "itemId": "n7"
+        "itemId": "n6"
       }
     },
     {
@@ -193,10 +199,11 @@
             "islandId": "i2",
             "taskPointId": "t3",
             "state": {
-              "kind": "unknown",
-              "reason": "Session not resumed after a restart."
+              "kind": "working"
             },
-            "activity": null,
+            "activity": {
+              "kind": "think"
+            },
             "hp": {
               "kind": "unknown"
             },
@@ -206,14 +213,7 @@
             "queuedMessages": 0
           }
         ],
-        "needsYou": [
-          {
-            "kind": "error",
-            "id": "n6",
-            "heroId": "h4",
-            "message": "The session stopped when VS Code reloaded."
-          }
-        ]
+        "needsYou": []
       }
     },
     {

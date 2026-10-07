@@ -284,6 +284,11 @@ export class LiveDevHost implements Host {
     return Date.now() - this.started;
   }
 
+  /** Dev only (#166): as if VS Code reloaded, the core hears the old sessions are gone. */
+  reload(): void {
+    this.input({ kind: 'gm', t: this.t(), event: { type: 'runtimeRestarted' } });
+  }
+
   /**
    * Straight into a campaign of three islands (#124), for seeing the map without the elder or council.
    * Two parties work at once, so the third island waits.

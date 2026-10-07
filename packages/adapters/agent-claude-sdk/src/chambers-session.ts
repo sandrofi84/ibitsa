@@ -14,7 +14,14 @@ import type {
 import { briefMarkdown } from '@ibitsa/runtime';
 import type { Chamber } from './chambers-session.types';
 import type { ToolReply } from './elder-session.types';
-import { READ_TOOLS, RoundTableSession, reply, seat, TOOL } from './round-table-session';
+import {
+  answeredText,
+  READ_TOOLS,
+  RoundTableSession,
+  reply,
+  seat,
+  TOOL,
+} from './round-table-session';
 
 const REPORT = TOOL('report');
 /** The tool that starts a subagent; `Task` is its older name. */
@@ -149,6 +156,8 @@ export class ChambersSession extends RoundTableSession {
           message.text && message.text !== 'Why?' ? `\nThey added: ${message.text}` : '';
         return `The user asked ${message.councillorId} "Why?" about: "${message.question}" (questionId ${message.questionId}).${followUp}\n\nAnswer in ${message.councillorId}'s voice with say, using that questionId, from its report; if the report doesn't cover it, dispatch ${message.councillorId} again with the question first. Then end your turn: the questions are still open.`;
       }
+      case 'answered':
+        return answeredText(message.answers);
     }
   }
 

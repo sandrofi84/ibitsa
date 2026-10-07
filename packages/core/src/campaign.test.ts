@@ -354,7 +354,7 @@ describe('a campaign with several parties (#121)', () => {
     ]);
   });
 
-  it("doesn't flag heroes that never started when VS Code reloads, and names clashing branches apart", () => {
+  it('asks again for a worktree being made when VS Code reloads, leaves waiting heroes alone, and names clashing branches apart', () => {
     const run = new Run()
       .approved(
         {
@@ -373,9 +373,16 @@ describe('a campaign with several parties (#121)', () => {
       'ibitsa/same-2',
       'ibitsa/same-3',
     ]);
+    run.effects = [];
     run.gm({ type: 'runtimeRestarted' });
-    expect(view(run.state).needsYou).toHaveLength(1);
-    expect(run.states()).toEqual(['unknown', 'blocked:slot', 'blocked:slot']);
+    expect(view(run.state).needsYou).toHaveLength(0);
+    expect(run.states()).toEqual(['traveling', 'blocked:slot', 'blocked:slot']);
+    expect(run.effects).toContainEqual({
+      type: 'createWorktree',
+      islandId: run.state.islands[0]?.id,
+      branch: 'ibitsa/same',
+      baseRef: 'main',
+    });
   });
 });
 

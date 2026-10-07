@@ -10,6 +10,8 @@ import type { StepContext } from './step.types';
 export const SILENCE_MS = 5 * 60_000;
 /** What a hero is told when it should pick its work back up. */
 export const CONTINUE_PROMPT = 'Continue with the task.';
+/** What a hero who was working hears when its session resumes after a reload (#166). */
+export const RESTART_PROMPT = 'VS Code reloaded; carry on where you left off.';
 
 /**
  * A hero's rules: execution state, activity, the stall watch, the gold pouch, pausing and resuming
@@ -158,6 +160,8 @@ export class Hero {
       this.ctx.needsYou.removeFor(r.id, ['outOfGold']);
     }
     if (r.sessionLive) this.ctx.outbox.effect({ type: 'interrupt', heroId: r.id });
+    // Until the interrupted turn ends, a reload mustn't take it for work in progress (#166).
+    if (r.inTurn) r.stopping = true;
     this.watchSilence();
   }
 
@@ -308,24 +312,33 @@ export class Hero {
     this.ctx.outbox.effect({ type: 'cancelTimer', timerId: Hero.silenceTimer(r.id) });
   }
 
-  /** The agent process is gone (spec §12): say so, unless the hero had already finished. */
-  restarted(): void {
+  /**
+   * The agent process is gone (spec §12). A hero who was working resumes its session and carries on
+   * (#166), as does one whose worktree was still being made; any other hero resumes with its next
+   * message. Returns whether it resumed now.
+   */
+  restarted(): boolean {
     const r = this.record;
-    // A hero whose island hasn't started yet has no session to lose (#121).
-    const wasActive = (!r.submitted || r.inTurn) && this.island()?.launched !== false;
+    const island = this.island();
+    const wasWorking = r.inTurn && !r.stopping;
+    r.stopping = false;
+    // Its worktree was being created: that result is lost, so it's asked for again.
+    const traveling = island?.launched === true && !island.worktreePath && !island.worktreeRemoved;
     r.sessionLive = false;
     r.inTurn = false;
     r.runningTools = [];
     r.resting = false;
     r.pendingSubmit = null;
     this.ctx.outbox.effect({ type: 'cancelTimer', timerId: Hero.silenceTimer(r.id) });
-    if (!wasActive || r.error !== null || r.outOfGold) return;
-    r.unknownReason = 'Session not resumed after a restart.';
-    this.ctx.needsYou.ask({
-      kind: 'error',
-      heroId: r.id,
-      message: 'The session stopped when VS Code reloaded.',
-    });
+    if (r.error !== null || r.outOfGold || r.stalled !== null) return false;
+    if (!wasWorking && !(traveling && r.sessionId === null)) return false;
+    if (r.sessionId) {
+      this.revive(RESTART_PROMPT);
+      // It works on that prompt straight away, as a new session works on its first.
+      r.inTurn = true;
+    } else this.revive();
+    this.watchSilence();
+    return true;
   }
 
   // ---------- agent events ----------
@@ -346,6 +359,7 @@ export class Hero {
         this.ctx.needsYou.removeFor(r.id, ['reply']);
         break;
       case 'turnEnded':
+        r.stopping = false;
         this.turnEnded(event.queuedTurns);
         break;
       case 'activityStarted':

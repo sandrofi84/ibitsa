@@ -724,14 +724,56 @@ describe('the sitting and its campaign (#103)', () => {
     expect(researching.rejections()).toEqual(['The elder is still researching.']);
   });
 
-  it('fails an active sitting on a reload or when its campaign is abandoned, keeping its reports', () => {
-    const reload = new Council().convene().report('architect');
+  it('resumes a deliberating sitting on a reload, keeping its reports (#166)', () => {
+    const reload = deliberating();
+    reload.effects = [];
     reload.feed({ kind: 'gm', t: 0, event: { type: 'runtimeRestarted' } });
-    expect(reload.sitting()).toMatchObject({
-      status: 'failed',
-      error: 'The sitting stopped when VS Code reloaded.',
+    expect(reload.sitting()).toMatchObject({ status: 'deliberating' });
+    expect(reload.sitting().reports).toHaveLength(2);
+    expect(reload.effects).toEqual([
+      expect.objectContaining({
+        type: 'startSitting',
+        sittingId: 's1',
+        resume: { sessionId: 's-1', prompt: expect.stringContaining('VS Code reloaded') },
+      }),
+    ]);
+    expect(reload.cues).toContainEqual(expect.objectContaining({ type: 'resumed', council: true }));
+  });
+
+  it('waits for the user when questions were open, and sends their answers as words (#166)', () => {
+    const c = deliberating().event({
+      type: 'questionsAsked',
+      toolUseId: 'ask1',
+      questions: [question()],
     });
-    expect(reload.sitting().reports).toHaveLength(1);
+    c.effects = [];
+    c.feed({ kind: 'gm', t: 0, event: { type: 'runtimeRestarted' } });
+    expect(c.effects).toEqual([]);
+    c.do({ type: 'answerCouncil', batchId: 'b4', answers: { q5: { optionId: 'google' } } });
+    expect(c.rejections()).toEqual([]);
+    expect(c.effects).toEqual([
+      expect.objectContaining({ type: 'startSitting', resume: { sessionId: 's-1' } }),
+      {
+        type: 'sittingMessage',
+        sittingId: 's1',
+        message: {
+          kind: 'answered',
+          answers: [{ question: 'Which sign-in methods?', answer: 'Email + Google' }],
+        },
+      },
+    ]);
+    // Awake again: the next message needs no resume.
+    c.effects = [];
+    c.do({ type: 'addCouncillor', councillorId: 'tester', effort: 'light' });
+    expect(c.effects.map((e) => e.type)).toEqual(['sittingMessage']);
+  });
+
+  it('starts a sitting again whose session never started, and fails one on abandon', () => {
+    const fresh = new Council().convene();
+    fresh.effects = [];
+    fresh.feed({ kind: 'gm', t: 0, event: { type: 'runtimeRestarted' } });
+    expect(fresh.effects).toEqual([expect.not.objectContaining({ resume: expect.anything() })]);
+    expect(fresh.effects[0]?.type).toBe('startSitting');
     const abandoned = new Council().convene();
     abandoned.do({ type: 'abandonQuest' });
     expect(abandoned.sitting()).toMatchObject({
