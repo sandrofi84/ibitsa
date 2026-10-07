@@ -21,7 +21,11 @@ Every character is backed by a real agent session. The game layer makes multi-ag
 
 ### 1.1 Name and naming conventions
 - **Quest for Ibitsa.** "Ibitsa" is a pun on Ibiza, the *party* island: the game sends *parties* across *islands*. It also hides "**bits**", and "Quest for…" nods to classic adventure titles.
-- In the game world, **Ibitsa is the destination island**. A campaign is the quest to reach it; when a campaign ends with its work shipped, the party celebrates on Ibitsa (end-of-campaign scene, §7.1).
+- In the game world, **Ibitsa is a legendary island nobody has found**. Settled in M8 planning, the **lore**:
+  - You are searching for Ibitsa, and go to the council for help. The elder welcomes you: "We heard you are looking for Ibitsa…" and asks "…what do you want to do there?" (the task).
+  - Nobody knows where it is. The elder **searches the old charts** (research), and the council's plan charts the **possible locations** (the islands).
+  - When the work has shipped, the heroes sail for Ibitsa on the horizon, and it fades into mist as they near it: "Not Ibitsa. The search goes on." The next quest continues the search.
+  - The lore lives in the game's words only. The spec, glossary and code keep their plain terms (campaign, island, research brief).
 - Naming rules:
 
 | Use | Form |
@@ -215,7 +219,7 @@ ask_user({
   - **Review mode:** how to review a diff against criteria, what counts as blocking vs suggestion, output format.
   - A councillor may be planning-only (e.g. Product).
 - Stored as Claude Code skill files with Ibitsa's own frontmatter fields: `ibitsa-councillor: true`, and optionally `ibitsa-title` (else the name capitalised), `ibitsa-portrait`, `ibitsa-model` and `ibitsa-tools`. Tools are kept to read-only ones (`Read`, `Grep`, `Glob`, `WebFetch`, `WebSearch`); without any, `Read`, `Grep`, `Glob`. The body has a `## Planning` and/or `## Review` section; a body with neither is all planning advice. A councillor's id is its skill name without a plugin prefix (#98).
-- Built-ins ship in Ibitsa's plugin (`ibitsa:architect`, …); users add their own in `~/.claude/skills/` and projects in `.claude/skills/` (§8.3), found the same way as actions (§6.2). A councillor with the same id **replaces** an earlier one: project over user over built-in. `ibitsa.council.disabled` lists ids the council never seats. **Extend** (override some fields) waits for the Guild Hall (M8).
+- Built-ins ship in Ibitsa's plugin (`ibitsa:architect`, …); users add their own in `~/.claude/skills/` and projects in `.claude/skills/` (§8.3), found the same way as actions (§6.2). A councillor with the same id **replaces** an earlier one: project over user over built-in. `ibitsa.council.disabled` lists ids the council never seats. (M8 planning:) In the Guild Hall's Roster, **Customise** copies a councillor's skill file to your or the project's `.claude/skills/<id>/SKILL.md` and opens it in the editor (replace); **Extend** overrides fields only (title, model, tools, portrait) through `ibitsa.councillors.<id>`; **New councillor** writes a skill from a template.
 - Default roster (v1): Elder, Architect, Tester, Accessibility, Security, Designer, by role title, each with a one-line manner of speaking. Names and personas wait for the commissioned art (§9.5, phase 2).
 - Councillor skills must not be auto-invoked by the model in normal Claude Code use (`disable-model-invocation: true`), and carry `ibitsa-target: council` so the hero's `/` menu leaves them out. `disable-model-invocation` doesn't stop a skill being preloaded into a subagent: Claude Code 0.3.289 skips a preloaded skill only when it's missing, not prompt-based, disabled by policy, or account-synced with sync off (read from the bundled CLI, #98).
 
@@ -277,7 +281,7 @@ Built so round table and separate chambers, and later changes to either, can be 
 | Ranger | Claude Sonnet |
 | Rogue | Claude Haiku |
 
-- Users can remap classes and add new classes (new model → new class with an appearance).
+- Users can remap classes and add new classes (new model → new class with an appearance). (M8 planning:) through `ibitsa.classes` (id → name, model, appearance: a character sprite), edited in the Guild Hall's Armory; the adapter stays Claude until M9. **Recolor:** a hue shift and a few palette presets per class and per councillor, kept in settings and applied by the game when it draws.
 
 ### 5.3 Branching strategies
 - **Separate:** each island is an independent branch off `main`. Islands are spread around the map. There is no merge step: each task/branch gets its own PR.
@@ -442,8 +446,10 @@ Shown in the same hover menu, visually distinct:
 6. **Party panel:** compact lineup usable as a bottom panel next to the terminal (a `WebviewView`, from M4).
 
 **Placement (M0–M3):** the game is a single editor tab (`WebviewPanel`), restored after a window reload with `registerWebviewPanelSerializer` (it reconnects via `hello` → snapshot). When the tab is hidden, the "Needs you" VS Code notification (§6.4) covers it.
-7. **Guild Hall (settings):** councillor roster, class armory (models), rule book, spell book (actions), asset/sound packs.
-8. **Campaign end:** the party sails to **Ibitsa**, the party island, for a short celebration scene (skippable; respects reduced motion). Then: record summary, keep/compact/empty with council HP. A campaign ended with work abandoned or unshipped skips the celebration.
+7. **Guild Hall (settings, M8):** a building in Home Village. Its panel has tabs: **Roster** (councillors), **Armory** (classes, models, recolor), **Rule book** (rules), **Spell book** (actions), **Packs** (art and sound, volume) and **Chronicle** (past campaigns). Every value shows its layer (built-in / you / this project) with **Reset**, and an edit picks the layer; a link opens VS Code's settings filtered to Ibitsa. It edits VS Code's settings and skill files, never a store of its own.
+8. **Campaign end (M8 lore):** once every PR has merged, the heroes sail toward Ibitsa on the horizon and it fades into mist: "Not Ibitsa. The search goes on." (Reduced motion: the line alone.) Then Finish: the record and keep/compact/empty (§4.9). Afterwards the islands sink back into the sea and the map returns to Home Village. Abandoning does the same, without the voyage.
+9. **Start screen (M8):** with no campaign, the map opens on Home Village with two labelled buildings, the **Guild Hall** and the **council hut**; they replace the "New quest" button (the Command Palette's **Ibitsa: New Quest** opens the hut). The hut opens the council's welcome in the dialogue frame: the elder's two lines, a box for the task, and **Help me find it** (ask the elder; while it works, "the elder searches the old charts") or **I know the way** (a quick quest, one island charted at once). Mid-campaign the hut opens the chamber (#169); while planning, the sitting.
+10. **Charting (M8):** once the plan is approved, the possible locations rise out of the fog one by one as their parties are assembled (reduced motion: they appear).
 
 ### 7.2 World map rules (Super Mario World overworld)
 - **Home Village** island with the **council hut**; it represents `main` and the campaign start.
@@ -480,6 +486,8 @@ Resolved in order (later wins):
 3. Project settings (committed to the repo)
 4. Campaign overrides
 
+Settled in M8 planning: these are **VS Code's own layers**. User settings are the user layer; workspace settings (`.vscode/settings.json`, committable) are the project layer; VS Code already tells where a value comes from and resets it. Campaign overrides are what a campaign chooses for itself (quest settings, convening, party assembly). There is no `~/.ibitsa/settings.json` or `.ibitsa/settings.json`.
+
 Any item can be **extended**, **replaced** or **disabled**. The UI shows where each value comes from and offers "reset to default".
 
 ### 8.2 Configurable
@@ -495,8 +503,8 @@ Any item can be **extended**, **replaced** or **disabled**. The UI shows where e
 | What | Where |
 |---|---|
 | Councillor and action skills | `~/.claude/skills/…` (user), `.claude/skills/…` (project) |
-| User settings | VS Code settings (`ibitsa.elder.*`, `ibitsa.council.*`, …) + `~/.ibitsa/settings.json` |
-| Project settings | `.ibitsa/settings.json` |
+| User settings | VS Code user settings (`ibitsa.*`) |
+| Project settings | VS Code workspace settings (`.vscode/settings.json`) |
 | Campaign documents | `.ibitsa/campaigns/<id>/{brief.md, plan.md, plan.json, record.md}` |
 | Runtime state, session ids, event logs | VS Code workspace storage (not committed) |
 | Asset/sound packs | `~/.ibitsa/packs/<pack>/`, `.ibitsa/packs/<pack>/` |
@@ -541,6 +549,7 @@ Character animations:
 - **Upload validator:** checks dimensions, grid, required animations; shows specific errors; live animation preview and "try in scene".
 - **Recolor:** tint/palette-swap of default sprites without drawing.
 - New characters = appearance attached to a hero class or councillor.
+- (M8 planning:) Packs are found in `~/.ibitsa/packs/` and `.ibitsa/packs/`; one is active at a time (chosen in the Guild Hall) and switches without a reload. Missing optional parts fall back to the default pack. The extension serves the active pack's files to the webview. The Packs tab runs the validator with its specific errors and previews animations. Packs may fill an optional `building:guildHall`; the game draws a fallback, and draws the fog and the mist itself.
 
 ### 9.4 Sound slots
 
@@ -557,6 +566,7 @@ Character animations:
 
 - Formats: OGG, MP3, WAV; loop points for music; max length for cues.
 - Volume: master + per category (alerts, voices, effects, music). Focus mode (only "needs you").
+- (M8 planning:) Sounds come in the same pack format, in an optional `sounds` section filling these slots. The default sounds are generated in code (sfxr-style, deterministic), like the placeholder art. Effects are on at 50% by default; music is off.
 
 ### 9.5 Producing assets
 1. **Phase 0 (now):** script-generated placeholder pack that matches the spec exactly; sfxr-style generated sounds (jsfxr/ChipTone); proves loader, manifest and validator.
@@ -948,6 +958,16 @@ Settled in M7 planning; the details are in §4.1, §4.8, §4.9 and §12.
 - `@council`, `@<councillor>` and the hut reach the lead session, capped per consultation; heroes keep working.
 - Amendments touch only work not started (rework is a new task), are reviewed as a change set, and can add islands with their own party assembly.
 - Later: `#review` notes for the reviewers (#164); a Chronicle of past campaigns (M8).
+
+### 14.7 M8: customization
+Settled in M8 planning; the details are in §1.1, §4.7, §5.2, §7.1, §8.1, §9.3 and §9.4.
+- Settings layers are VS Code's (user, workspace); campaign overrides stay with the campaign.
+- The Guild Hall in Home Village: Roster, Armory, Rule book, Spell book, Packs, Chronicle; every value shows its layer and resets.
+- Councillors: customise (copy the skill), extend (field overrides), new from a template, on/off.
+- Classes in `ibitsa.classes`, new classes with an appearance; recolor by hue and presets.
+- User packs, one active, falling back to the default; validator and previews; switching live.
+- Generated default sounds in the pack format; volume per category, Focus mode.
+- The lore: the start screen with the hut and the Guild Hall, the council's welcome, charting islands out of the fog, the voyage into the mist, islands sinking after Finish.
 
 ## 15. Open questions
 1. Name registration: domains (ibitsa.com, ibitsa.dev, questforibitsa.com), GitHub org, npm scope, Marketplace/Open VSX publisher; trademark search (EUIPO TMview, USPTO). Initial checks found no conflicting software use.
