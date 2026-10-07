@@ -106,9 +106,9 @@ test("two heroes: choose whom the pane shows, message one, message all, and each
   await page.locator('.needs-you').evaluate((panel) => {
     (panel as HTMLElement).style.visibility = 'hidden';
   });
-  // A click that lands on a task point instead opens the task panel (#141), which would cover the map:
-  // close it first.
-  const taskPanel = page.locator('section.task-panel');
+  // A click that lands on a task point instead opens the task panel (#141), or on a PR badge the PR card
+  // (#153); either would cover the map: close it first.
+  const taskPanel = page.locator('section.task-panel:not([hidden])').first();
   await expect(async () => {
     if (await taskPanel.isVisible()) await taskPanel.getByRole('button', { name: 'Close' }).click();
     const at = await probe(page, (p) => p.hero.onPage());

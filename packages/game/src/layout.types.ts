@@ -29,6 +29,8 @@ export interface WorldLayout {
   village: { x: number; y: number; middles: number; hut: Point; door: Point };
   islands: IslandLayout[];
   bridges: BridgeLayout[];
+  /** Ibitsa on the horizon (§7.2): in the sea between the rows, at the map's far end (#153). */
+  ibitsa: Point;
   /** The part of the map with something on it; at least the 480×270 world (#124). */
   bounds: { x: number; y: number; width: number; height: number };
 }

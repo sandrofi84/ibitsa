@@ -604,3 +604,84 @@ describe('LiveDevHost: scripted reviews (#141)', () => {
     });
   });
 });
+
+describe('LiveDevHost: a PR from draft to merged (#153)', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it('opens a draft, marks it ready once both tasks are done, and polls it to merged and Ibitsa', async () => {
+    const { host, snapshot, settle } = setup();
+    host.pullRequestDemo();
+    await settle();
+    const island = () => snapshot()?.islands[0];
+    const islandId = island()?.id ?? '';
+    expect(island()?.pullRequestDraft).toMatchObject({ draft: true, cleared: false, base: 'main' });
+    expect(island()?.pullRequestDraft?.body).toContain(
+      '**D1 How to strip:** Unicode normalisation.',
+    );
+
+    host.send({
+      type: 'openPullRequest',
+      commandId: 'p1',
+      islandId,
+      title: 'Slugs',
+      body: 'B',
+      draft: true,
+    });
+    await vi.advanceTimersByTimeAsync(100);
+    expect(island()?.remote?.busy).toBe('opening');
+    await settle();
+    expect(island()?.remote?.pullRequest).toMatchObject({ number: 1, state: 'draft' });
+    host.send({ type: 'pushBranch', commandId: 'p2', islandId });
+    await settle();
+    expect(island()?.remote?.pushedHead).toBe('pushed-2');
+
+    const heroId = snapshot()?.heroes[0]?.id ?? '';
+    for (const n of [1, 2]) {
+      host.send({
+        type: 'sendMessage',
+        commandId: `m${n}`,
+        heroId,
+        text: 'submit it',
+        priority: 'now',
+      });
+      await settle();
+    }
+    expect(island()?.taskPoints.map((t) => t.state)).toEqual(['doneUnreviewed', 'doneUnreviewed']);
+    host.send({ type: 'markPullRequestReady', commandId: 'p3', islandId });
+    await settle();
+    expect(island()?.remote?.pullRequest?.state).toBe('open');
+
+    host.send({ type: 'refreshPullRequests', commandId: 'r1' });
+    await settle();
+    expect(island()?.remote?.pullRequest?.state).toBe('approved');
+    host.send({ type: 'refreshPullRequests', commandId: 'r2' });
+    await settle();
+    expect(island()?.remote?.pullRequest?.state).toBe('merged');
+    expect(snapshot()?.campaign?.shipped).toBe(true);
+  });
+
+  it('with pr=demo polls on a timer, and a draft stays a draft', async () => {
+    const host = new LiveDevHost({ credentialsReady: true, repo, pullRequestPollMs: 1_000 });
+    const messages: CoreMessage[] = [];
+    host.onMessage((m) => messages.push(m));
+    const island = () =>
+      (messages.filter((m) => m.type === 'snapshot').at(-1) as { snapshot: Snapshot } | undefined)
+        ?.snapshot.islands[0];
+    host.pullRequestDemo();
+    await vi.advanceTimersByTimeAsync(5_000);
+    const islandId = island()?.id ?? '';
+    host.send({
+      type: 'openPullRequest',
+      commandId: 'p1',
+      islandId,
+      title: 'Slugs',
+      body: '',
+      draft: true,
+    });
+    await vi.advanceTimersByTimeAsync(5_000);
+    // A draft stays a draft, however often it's polled.
+    expect(island()?.remote?.pullRequest?.state).toBe('draft');
+    expect(vi.getTimerCount()).toBeGreaterThan(0);
+  });
+});

@@ -7,6 +7,8 @@ import type {
 } from '@ibitsa/protocol';
 import type { GameClient } from './client';
 import { button, el } from './dom';
+import { actOn, pullRequestCard } from './pull-request-card';
+import type { PullRequestActions } from './pull-request-card.types';
 import { councillorTitle } from './sitting-hut';
 import type { TaskPanel } from './task-panel.types';
 import { findingLine, phaseText, roundsOf } from './task-review';
@@ -22,9 +24,15 @@ const STATES: Record<TaskPointView['state'], string> = {
 /**
  * The task panel (spec §5.5, §7.2; #141): opened from a task point on the map or the hero pane, it shows
  * the task's check results, each reviewer's verdict and findings per round, and the suggestions kept for
- * the pull request. Plain DOM, keyboard-accessible; Esc closes it.
+ * the pull request, then its island's PR card (#153). Plain DOM, keyboard-accessible; Esc closes it.
  */
-export function mountTaskPanel({ client }: { client: GameClient }): TaskPanel {
+export function mountTaskPanel({
+  client,
+  pullRequests,
+}: {
+  client: GameClient;
+  pullRequests: PullRequestActions;
+}): TaskPanel {
   const panel = el('section', { className: 'task-panel' });
   // Named by its heading, the task's title.
   panel.setAttribute('aria-labelledby', 'task-panel-title');
@@ -50,13 +58,14 @@ export function mountTaskPanel({ client }: { client: GameClient }): TaskPanel {
   });
 
   function render(snapshot: Snapshot): void {
-    const task = snapshot.islands.flatMap((i) => i.taskPoints).find((tp) => tp.id === taskPointId);
-    if (!task) {
+    const island = snapshot.islands.find((i) => i.taskPoints.some((tp) => tp.id === taskPointId));
+    const task = island?.taskPoints.find((tp) => tp.id === taskPointId);
+    if (!island || !task) {
       close();
       return;
     }
     // Rebuild only when what it shows changes, so an opened output stays open between snapshots.
-    const key = JSON.stringify(task);
+    const key = JSON.stringify([task, island.remote, island.pullRequestDraft]);
     if (key === shownKey) return;
     shownKey = key;
     const heading = el('h2', { text: task.title });
@@ -71,6 +80,7 @@ export function mountTaskPanel({ client }: { client: GameClient }): TaskPanel {
       ...(task.review
         ? reviewParts(task.review)
         : [el('p', { className: 'note', text: 'Not submitted yet.' })]),
+      pullRequestCard({ island, onAction: actOn({ actions: pullRequests, islandId: island.id }) }),
       button({ label: 'Close', onClick: close }),
     );
   }

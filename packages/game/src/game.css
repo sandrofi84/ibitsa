@@ -1422,3 +1422,142 @@ body.in-hut:has(.council-dialogue:not([hidden])) .needs-you {
 .needs-you .item {
   cursor: default;
 }
+
+/* ---------- Pull requests (§5.6, #153) ---------- */
+
+.pr-card {
+  margin-top: 10px;
+  padding-top: 6px;
+  border-top: 1px dashed #8a6a3a;
+}
+
+.pr-card .pr-status {
+  margin: 0 0 4px;
+}
+
+.pr-card .pr-error,
+.pr-preview .pr-error {
+  color: #9a1e12;
+  margin: 4px 0;
+}
+
+.pr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.task-panel .pr-actions button {
+  margin-top: 4px;
+}
+
+.task-panel button:disabled,
+.pr-preview .pr-button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* The preview before opening a PR: in the middle, over the map. */
+.pr-preview:not([hidden]) {
+  position: fixed;
+  top: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(520px, calc(100vw - 24px));
+  max-height: calc(100vh - var(--command-bar-height, 52px) - 72px);
+  overflow: auto;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(239, 224, 184, 0.98);
+  border: 2px solid #8a6a3a;
+  border-radius: 4px;
+  padding: 10px 12px;
+  color: #1a1420;
+  font:
+    13px / 1.45 system-ui,
+    sans-serif;
+  z-index: 5;
+}
+
+.pr-preview h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.pr-preview .pr-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-weight: 600;
+}
+
+.pr-preview .pr-field:has(input[type="checkbox"]) {
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+}
+
+.pr-preview input:not([type="checkbox"]),
+.pr-preview textarea {
+  font: inherit;
+  font-weight: 400;
+  padding: 3px 5px;
+  border: 1px solid #8a6a3a;
+  background: #fff6dc;
+  color: #1a1420;
+}
+
+.pr-preview textarea {
+  font:
+    12px / 1.4 ui-monospace,
+    monospace;
+  resize: vertical;
+}
+
+.pr-preview p {
+  margin: 0;
+}
+
+.pr-preview .note {
+  color: #5e4a2a;
+  font-size: 12px;
+}
+
+.pr-preview .pr-base {
+  font:
+    12px / 1.4 ui-monospace,
+    monospace;
+  background: #fff6dc;
+  padding: 0 3px;
+}
+
+.pr-preview .pr-button {
+  font: inherit;
+  padding: 3px 10px;
+  border: 1px solid #5e3b1c;
+  background: #fff6dc;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.pr-preview .pr-button:focus-visible {
+  outline: 2px solid #1a1420;
+}
+
+/* A PR badge's hover: a one-line summary under the badge. */
+.pr-hover:not([hidden]) {
+  position: fixed;
+  max-width: 260px;
+  padding: 2px 6px;
+  background: rgba(26, 20, 32, 0.92);
+  color: #fff6dc;
+  border-radius: 3px;
+  font:
+    12px / 1.4 system-ui,
+    sans-serif;
+  pointer-events: none;
+  z-index: 6;
+}

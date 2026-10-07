@@ -40,4 +40,10 @@ export interface Started {
   taskOnPage(taskPointId: string): { x: number; y: number } | null;
   /** The task point the task panel shows, or null (#141). */
   taskPanel(): string | null;
+  /** Where a click reaches an island's PR badge, in page pixels, for tests (#153); null without one. */
+  pullRequestOnPage(islandId: string): { x: number; y: number } | null;
+  /** The island whose PR card is open on its own, or null (#153). */
+  pullRequestPanel(): string | null;
+  /** The island the PR preview is open for, or null (#153). */
+  pullRequestPreview(): string | null;
 }

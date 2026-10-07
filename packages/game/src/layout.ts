@@ -80,8 +80,14 @@ export function layoutWorld(snapshot: Snapshot | null): WorldLayout {
     village: { ...village, hut, door: { x: hut.x + 32, y: hut.y + 62 } },
     islands: laid,
     bridges,
+    ibitsa: { x: right - 40, y: CHANNEL_Y - 10 },
     bounds: { x: left, y: 0, width: right - left, height: WORLD.height },
   };
+}
+
+/** Where the n-th hero stands at Ibitsa once the campaign is shipped (#153): in a line by its gate. */
+export function ibitsaSpot(layout: WorldLayout, n: number): Point {
+  return { x: layout.ibitsa.x - 12 + (n % 4) * 8, y: layout.ibitsa.y + 22 };
 }
 
 /** Column by column, bottom then top, so the first island sits beside the village. */

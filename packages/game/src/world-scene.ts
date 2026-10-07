@@ -11,6 +11,7 @@ import {
   bridgeState,
   heroSpot,
   heroSpots,
+  ibitsaSpot,
   layoutWorld,
   overviewCenter,
   pathTo,
@@ -20,6 +21,8 @@ import {
 import type { BridgeLayout, Point, WorldLayout } from './layout.types';
 import { marker } from './map-markers';
 import { BRIDGE_KEY, PACK_KEY } from './pack-scene';
+import { badgeOf } from './pull-requests';
+import type { PullRequestBadge } from './pull-requests.types';
 import { reviewersOf } from './reviewers';
 import { councillorAppearance, councillorTitle } from './sitting-hut';
 import type { ViewState } from './view-state';
@@ -130,7 +133,14 @@ export class WorldScene extends Phaser.Scene {
         token.underReview() ? [heroId] : [],
       ),
       reviewers: [...this.reviewers.values()].map((t) => t.probe()),
+      shipped: this.last?.campaign?.shipped ?? false,
+      atIbitsa: [...this.heroes].flatMap(([heroId, token]) => (token.atIbitsa() ? [heroId] : [])),
     };
+  }
+
+  /** Where a PR badge sits on the map, for clicks in tests (#153); null when the island has none. */
+  pullRequestSpot(islandId: string): { x: number; y: number } | null {
+    return this.prSpots.get(islandId) ?? null;
   }
 
   /** The camera as the controls and tests see it. */
@@ -147,6 +157,7 @@ export class WorldScene extends Phaser.Scene {
 
   /** Where each task point's middle is on the map (#141), for tests. */
   private readonly taskSpots = new Map<string, { x: number; y: number }>();
+  private readonly prSpots = new Map<string, { x: number; y: number }>();
 
   /** Where a click reaches a task point on the map (below a hero on it), or null if it isn't drawn. */
   taskSpot(taskPointId: string): { x: number; y: number } | null {
@@ -373,6 +384,11 @@ export class WorldScene extends Phaser.Scene {
 
     const spots = heroSpots(this.layout, snapshot);
     const seen = new Set<string>();
+    // Every PR merged (#153): the heroes walk to Ibitsa on the horizon and stay there.
+    const shipped = snapshot.campaign?.shipped === true;
+    snapshot.heroes.forEach((hero, n) => {
+      if (shipped) spots.set(hero.id, ibitsaSpot(this.layout, n));
+    });
     for (const hero of snapshot.heroes) {
       seen.add(hero.id);
       const spot = spots.get(hero.id) ?? heroSpot(this.layout, hero.taskPointId);
@@ -394,9 +410,11 @@ export class WorldScene extends Phaser.Scene {
       token.update({
         hero,
         layout: this.layout,
-        questActive: snapshot.campaign?.status === 'active',
+        questActive: snapshot.campaign?.status === 'active' && !shipped,
         spot,
       });
+      // After the update, so "Ready for review!" has gone and the cheer shows.
+      if (shipped) token.journey(spot);
     }
     for (const [id, token] of this.heroes) {
       if (!seen.has(id)) {
@@ -458,11 +476,14 @@ export class WorldScene extends Phaser.Scene {
     this.questLayer.removeAll(true);
     const stacked = snapshot.campaign?.branching === 'stacked';
     const islands: MapProbe['islands'] = [];
+    this.prSpots.clear();
+    if (snapshot.campaign) this.drawIbitsa(snapshot.campaign.shipped);
     snapshot.islands.forEach((island, k) => {
       const l = this.layout.islands[k];
       if (!l) return;
       const dim = island.worktree === 'waiting';
-      islands.push({ id: island.id, x: l.x, y: l.y, row: l.row, dim });
+      const badge = badgeOf(island);
+      islands.push({ id: island.id, x: l.x, y: l.y, row: l.row, dim, pr: badge?.state ?? null });
       const first = island.taskPoints[0];
       if (first && (!stacked || k === 0)) this.dots(this.questLayer, pathTo(this.layout, first.id));
       const c = this.add.container(0, 0);
@@ -505,6 +526,8 @@ export class WorldScene extends Phaser.Scene {
       // An island still waiting for a slot, a dependency or the island before it looks idle.
       c.setAlpha(dim ? 0.55 : 1);
       this.questLayer.add(c);
+      if (badge)
+        this.drawBadge({ islandId: island.id, badge, at: { x: l.x + l.width - 12, y: l.y + 4 } });
     });
     const bridges = this.layout.bridges.map((b) => {
       const state = bridgeState({ snapshot, to: b.to });
@@ -512,6 +535,61 @@ export class WorldScene extends Phaser.Scene {
       return { from: b.from, to: b.to, vertical: b.vertical, ...state };
     });
     this.probe = { bounds: this.layout.bounds, islands, bridges };
+  }
+
+  /**
+   * An island's PR badge (§5.6, #153), floating at its top right: its state as a word on its colour.
+   * Hovering shows a summary; a click opens the PR card.
+   */
+  private drawBadge({
+    islandId,
+    badge,
+    at,
+  }: {
+    islandId: string;
+    badge: PullRequestBadge;
+    at: Point;
+  }): void {
+    const r = (badge.color >> 16) & 0xff;
+    const g = (badge.color >> 8) & 0xff;
+    const b = badge.color & 0xff;
+    const light = 0.299 * r + 0.587 * g + 0.114 * b > 140;
+    const text = this.add
+      .text(at.x, at.y, ` ${badge.label} `, {
+        ...textStyle(light ? '#1a1420' : '#ffffff'),
+        backgroundColor: `#${badge.color.toString(16).padStart(6, '0')}`,
+      })
+      .setOrigin(1, 0)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => this.game.events.emit(PULL_REQUEST_SELECTED, islandId))
+      .on('pointerover', () => {
+        const below = this.toCanvas({ x: at.x - text.width, y: at.y + text.height + 2 });
+        this.game.events.emit(PULL_REQUEST_HOVERED, { islandId, ...below });
+      })
+      .on('pointerout', () => this.game.events.emit(PULL_REQUEST_HOVERED, null));
+    this.questLayer.add(text);
+    this.prSpots.set(islandId, { x: at.x - text.width / 2, y: at.y + text.height / 2 });
+  }
+
+  /**
+   * Ibitsa on the horizon (§7.2): a far-off castle, out of reach until the campaign is shipped; then its
+   * banner turns gold (#153). Drawn by the game; packs have no art for it yet.
+   */
+  private drawIbitsa(shipped: boolean): void {
+    const { x, y } = this.layout.ibitsa;
+    const g = this.add.graphics({ x: x - 16, y: y - 6 });
+    const stone = shipped ? 0xe8dcc0 : 0x9aa6b8;
+    g.fillStyle(stone, shipped ? 1 : 0.7);
+    g.fillRect(0, 8, 32, 16).fillRect(2, 2, 6, 22).fillRect(24, 2, 6, 22).fillRect(12, 0, 8, 24);
+    g.fillStyle(0x1a1420, 0.6).fillRect(14, 16, 4, 8);
+    g.lineStyle(1, 0x5e3b1c).lineBetween(16, 0, 16, -6);
+    g.fillStyle(shipped ? 0xf2c230 : 0x6a6a6a).fillTriangle(16, -6, 22, -4, 16, -2);
+    this.questLayer.add(g);
+    this.questLayer.add(
+      this.add
+        .text(x, y - 14, 'IBITSA', textStyle(shipped ? '#f2c230' : '#c8d0dc'))
+        .setOrigin(0.5, 1),
+    );
   }
 
   /** A drawbridge (§9.2): the pack's pieces, or plain planks; a padlock while raised, a mark when behind. */
@@ -596,6 +674,10 @@ export const HERO_SELECTED = 'heroSelected';
 
 /** Emitted on `game.events` with the task point's id when it is clicked on the map (#141). */
 export const TASK_SELECTED = 'taskSelected';
+/** Emitted on `game.events` with the island's id when its PR badge is clicked (#153). */
+export const PULL_REQUEST_SELECTED = 'pullRequestSelected';
+/** Emitted on `game.events` with `{ islandId, x, y }` (canvas pixels) over a PR badge, null off it. */
+export const PULL_REQUEST_HOVERED = 'pullRequestHovered';
 /** How far below a task point a click still reaches it, clear of a hero standing on it. */
 const TASK_HIT_BELOW = 6;
 
@@ -619,6 +701,8 @@ export class HeroToken {
   private speechFade: Phaser.Tweens.Tween | null = null;
   private travel: Phaser.Tweens.Tween | null = null;
   private traveled = false;
+  /** Walking to (or standing at) Ibitsa once the campaign is shipped (#153). */
+  private journeyed = false;
   private state: HeroView['state']['kind'] = 'traveling';
   private readonly padlock: Phaser.GameObjects.Sprite;
   private readonly hourglass: Phaser.GameObjects.Sprite | Phaser.GameObjects.Graphics;
@@ -717,6 +801,21 @@ export class HeroToken {
   /** Whether a point on the map falls on the hero's sprite. */
   covers(point: { x: number; y: number }): boolean {
     return this.sprite.getBounds().contains(point.x, point.y);
+  }
+
+  /** The campaign is shipped (#153): walk to Ibitsa once and cheer; it stays there after. */
+  journey(to: Point): void {
+    if (this.journeyed) return;
+    this.journeyed = true;
+    this.travel?.stop();
+    this.travel = null;
+    this.walk([{ x: this.container.x, y: this.container.y }, to]);
+    this.say('Ibitsa!');
+  }
+
+  /** At (or on the way to) Ibitsa. */
+  atIbitsa(): boolean {
+    return this.journeyed;
   }
 
   /** The middle of the sprite, on the map. */
@@ -820,11 +919,11 @@ export class HeroToken {
     if (s.kind === 'traveling' && !this.traveled && !this.travel)
       this.walk(pathTo(layout, hero.taskPointId));
     if (s.kind !== 'traveling') {
-      if (this.travel) {
+      if (this.travel && !this.journeyed) {
         // Arrived for real: finish the walk within a second instead of showing work mid-path.
         const remaining = (1 - this.travel.progress) * TRAVEL_MS;
         this.travel.timeScale = Math.max(1, remaining / CATCH_UP_MS);
-      } else {
+      } else if (!this.travel) {
         this.container.setPosition(spot.x, spot.y);
       }
     }
