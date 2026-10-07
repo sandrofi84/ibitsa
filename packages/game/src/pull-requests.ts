@@ -1,4 +1,4 @@
-import type { IslandView, PullRequestState } from '@ibitsa/protocol';
+import type { GitHostView, IslandView, PullRequestState } from '@ibitsa/protocol';
 import type {
   PullRequestAction,
   PullRequestBadge,
@@ -46,11 +46,23 @@ export function badgeOf(island: IslandView): PullRequestBadge | null {
   return { state: 'none', label: 'PR', color: 0x5a4a3a };
 }
 
-/** The PR card: the PR's state and link, what's under way, the last failure, and the buttons. */
-export function cardOf(island: IslandView): PullRequestCardModel {
+/**
+ * The PR card: the PR's state and link, what's under way, the last failure, and the buttons. `host` is
+ * what the git host allows here (#162): its reasons disable buttons before anyone clicks.
+ */
+export function cardOf({
+  island,
+  host,
+}: {
+  island: IslandView;
+  host?: GitHostView | undefined;
+}): PullRequestCardModel {
   const remote = island.remote;
   const pr = remote?.pullRequest ?? null;
   const busy = remote?.busy ? WAIT : null;
+  // Pushing needs origin; PRs need the git host to serve it too.
+  const push = busy ?? host?.push ?? null;
+  const prs = busy ?? host?.push ?? host?.pullRequests ?? null;
   const actions: PullRequestAction[] = [];
   if (!pr) {
     const draft = island.pullRequestDraft;
@@ -58,20 +70,20 @@ export function cardOf(island: IslandView): PullRequestCardModel {
     actions.push({
       id: 'open',
       label: 'Open PR',
-      disabled: missing ?? busy ?? draft?.cannotOpen ?? null,
+      disabled: missing ?? prs ?? draft?.cannotOpen ?? null,
     });
-    actions.push({ id: 'push', label: 'Push branch only', disabled: missing ?? busy });
+    actions.push({ id: 'push', label: 'Push branch only', disabled: missing ?? push });
   } else if (pr.state !== 'merged' && pr.state !== 'closed') {
-    actions.push({ id: 'update', label: 'Update PR', disabled: busy });
+    actions.push({ id: 'update', label: 'Update PR', disabled: push });
     if (pr.state === 'draft') {
       actions.push({
         id: 'markReady',
         label: 'Mark ready for review',
-        disabled: busy ?? (cleared(island) ? null : 'Every task on the island has to pass first.'),
+        disabled: prs ?? (cleared(island) ? null : 'Every task on the island has to pass first.'),
       });
     }
-    actions.push({ id: 'comments', label: 'Bring the comments to the hero', disabled: busy });
-    actions.push({ id: 'refresh', label: 'Refresh', disabled: null });
+    actions.push({ id: 'comments', label: 'Bring the comments to the hero', disabled: prs });
+    actions.push({ id: 'refresh', label: 'Refresh', disabled: prs === WAIT ? null : prs });
   } else if (pr.state === 'merged' && island.worktree === 'ready') {
     actions.push({
       id: 'remove',
@@ -85,7 +97,8 @@ export function cardOf(island: IslandView): PullRequestCardModel {
     actions.push({
       id: 'restack',
       label: `Restack onto ${restack.onto}`,
-      disabled: busy,
+      // It fetches the new base from origin, and pushes when there's a PR.
+      disabled: push,
       ...(pr && pr.state !== 'merged' && pr.state !== 'closed'
         ? { confirm: 'Restack and force-push?' }
         : {}),
@@ -100,6 +113,10 @@ export function cardOf(island: IslandView): PullRequestCardModel {
         : 'No pull request yet.',
     url: pr?.url ?? null,
     busy: remote?.busy ? BUSY[remote.busy] : null,
+    signIn:
+      host && !host.signedIn && !host.push && !host.pullRequests && pr?.state !== 'merged'
+        ? "You'll be asked to sign in to GitHub."
+        : null,
     error: remote?.error ?? null,
     restack: !restack
       ? null

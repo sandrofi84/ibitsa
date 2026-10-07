@@ -7,6 +7,7 @@ interface Probe {
     islands: { id: string; worktree: string; taskPoints: { state: string }[] }[];
   } | null;
   send(intent: unknown): void;
+  journal(): string[];
   map(): { islands: { pr?: string | null }[]; shipped?: boolean; atIbitsa?: string[] } | null;
   pullRequestOnPage(islandId: string): { x: number; y: number } | null;
   pullRequestPanel(): string | null;
@@ -208,13 +209,15 @@ test('brings the PR comments to the hero, who goes back to the last task (#154)'
   await expect(card.getByText('Open, into main')).toBeVisible({ timeout: 10_000 });
 
   expect(await probe(page, (p) => p.snapshot()?.heroes[0]?.state.kind)).toBe('submitted');
+  const submits = () =>
+    probe(page, (p) => p.journal().filter((line) => line.startsWith('Submitted')).length);
+  const before = await submits();
   await card.getByRole('button', { name: 'Bring the comments to the hero' }).click();
   await expect(card.getByText('Fetching the review comments…')).toBeVisible();
-  // The hero goes back to work on the comments (its session resumed) and, being the scripted
-  // hero, hands the task in again straight away.
-  await expect
-    .poll(() => probe(page, (p) => p.snapshot()?.heroes[0]?.state.kind), { timeout: 10_000 })
-    .toBe('working');
+  // The hero goes back to work on the comments (its session resumed) and, being the scripted hero,
+  // hands the task in again straight away: too quickly to catch it working between snapshots, so
+  // the journal's next "Submitted" line shows it.
+  await expect.poll(submits, { timeout: 15_000 }).toBe(before + 1);
   await expect(card.getByText('Fetching the review comments…')).toBeHidden();
   await expect
     .poll(() => probe(page, (p) => p.snapshot()?.heroes[0]?.state.kind), { timeout: 15_000 })
@@ -269,4 +272,22 @@ test('stacked: once the first PR merges, the second is retargeted and restacked 
   await expect(card.getByText(/Restack moves this branch/)).toBeHidden({ timeout: 10_000 });
   await expect(card.getByRole('button', { name: /Restack/ })).toHaveCount(0);
   expect(errors).toEqual([]);
+});
+
+test("the card says what the git host won't allow before any click (#162)", async ({ page }) => {
+  await page.goto('/?fixture=live&pr=demo&prPoll=off&gitHost=gitlab');
+  await expect.poll(() => badge(page), { timeout: 15_000 }).toBe('none');
+  await clickBadge(page);
+  const card = page.getByRole('region', { name: 'Pull request card' });
+  await expect(card.getByRole('button', { name: 'Open PR' })).toBeDisabled();
+  await expect(card.getByRole('button', { name: 'Push branch only' })).toBeEnabled();
+  await expect(
+    card.getByText("Pull requests need a GitHub remote, and origin isn't on github.com."),
+  ).toBeVisible();
+
+  await page.goto('/?fixture=live&pr=demo&prPoll=off&gitHost=signedOut');
+  await expect.poll(() => badge(page), { timeout: 15_000 }).toBe('none');
+  await clickBadge(page);
+  await expect(card.getByRole('button', { name: 'Open PR' })).toBeEnabled();
+  await expect(card.getByText("You'll be asked to sign in to GitHub.")).toBeVisible();
 });

@@ -1,6 +1,6 @@
 import type { CouncillorInfo } from './councillors.types';
 import type { ElderView } from './elder.types';
-import type { IslandRemoteView, PullRequestDraft } from './pull-request.types';
+import type { GitHostView, IslandRemoteView, PullRequestDraft } from './pull-request.types';
 import type { Finding } from './review.schema';
 import type { TaskReviewView } from './review.types';
 import type { SittingView } from './sitting.types';
@@ -27,6 +27,8 @@ export interface Snapshot {
   councillors?: CouncillorInfo[];
   /** `ibitsa.council.mode`: ask how the council sits each time, or always one way (§4.2). Added by the runtime. */
   councilMode?: 'ask' | 'roundTable' | 'chambers';
+  /** What the git host allows here (§5.6, #162); absent until known. Added by the runtime. */
+  gitHost?: GitHostView;
 }
 
 export interface RepoView {

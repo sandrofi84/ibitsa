@@ -1,10 +1,12 @@
-import type { IslandView } from '@ibitsa/protocol';
+import type { GitHostView, IslandView } from '@ibitsa/protocol';
 import type { GameClient } from './client';
 import type { PullRequestAction } from './pull-requests.types';
 
 /** What the PR card needs: the island, and what to do when a button is pressed. */
 export interface PullRequestCardOptions {
   island: IslandView;
+  /** What the git host allows here (#162), from the snapshot. */
+  host?: GitHostView | undefined;
   onAction: (id: PullRequestAction['id']) => void;
 }
 

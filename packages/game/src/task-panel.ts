@@ -65,7 +65,7 @@ export function mountTaskPanel({
       return;
     }
     // Rebuild only when what it shows changes, so an opened output stays open between snapshots.
-    const key = JSON.stringify([task, island.remote, island.pullRequestDraft]);
+    const key = JSON.stringify([task, island.remote, island.pullRequestDraft, snapshot.gitHost]);
     if (key === shownKey) return;
     shownKey = key;
     const heading = el('h2', { text: task.title });
@@ -80,7 +80,11 @@ export function mountTaskPanel({
       ...(task.review
         ? reviewParts(task.review)
         : [el('p', { className: 'note', text: 'Not submitted yet.' })]),
-      pullRequestCard({ island, onAction: actOn({ actions: pullRequests, islandId: island.id }) }),
+      pullRequestCard({
+        island,
+        host: snapshot.gitHost,
+        onAction: actOn({ actions: pullRequests, islandId: island.id }),
+      }),
       button({ label: 'Close', onClick: close }),
     );
   }

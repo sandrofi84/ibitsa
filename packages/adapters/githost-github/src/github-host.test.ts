@@ -226,4 +226,19 @@ describe('GitHubHost (#152)', () => {
     const signedOut = new GitHubHost({ token: async () => null });
     await expect(open(signedOut)).rejects.toThrow('Sign in to GitHub to work with pull requests.');
   });
+
+  it('reports, without asking anyone to sign in, whether origin is on GitHub and the user signed in (#162)', async () => {
+    const { host, asks } = github();
+    expect(await host.status({ remoteUrl: REMOTE })).toEqual({ unsupported: null, signedIn: true });
+    expect(asks).toEqual([false]);
+    expect(await host.status({ remoteUrl: 'https://gitlab.com/o/r.git' })).toEqual({
+      unsupported: "Pull requests need a GitHub remote, and origin isn't on github.com.",
+      signedIn: false,
+    });
+    const signedOut = new GitHubHost({ token: async () => null });
+    expect(await signedOut.status({ remoteUrl: REMOTE })).toEqual({
+      unsupported: null,
+      signedIn: false,
+    });
+  });
 });

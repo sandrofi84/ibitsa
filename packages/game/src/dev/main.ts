@@ -6,6 +6,7 @@ import m1Demo from '@ibitsa/agent-fake/fixtures/m1-demo.jsonl?raw';
 import m1Real from '@ibitsa/agent-fake/fixtures/m1-real.jsonl?raw';
 import m1Trouble from '@ibitsa/agent-fake/fixtures/m1-trouble.jsonl?raw';
 import m3RoundTable from '@ibitsa/agent-fake/fixtures/m3-round-table.jsonl?raw';
+import type { GitHostView } from '@ibitsa/protocol';
 import { startGame } from '../boot';
 import { DevHost } from './dev-host';
 import { ScriptedSitting } from './dev-sitting';
@@ -53,6 +54,8 @@ if (name === 'live') {
     // `reviews=1`: submitted tasks are checked and reviewed by scripted councillors (#141).
     reviews: params.get('reviews') === '1',
     // `pr=demo` (#153): the fake GitHub polls every few seconds, unless `prPoll=off` (tests use Refresh).
+    // `gitHost=noOrigin|gitlab|signedOut` (#162): what the git host allows, as the runtime reports it.
+    ...gitHostParam(params.get('gitHost')),
     pullRequestPollMs:
       (params.get('pr') === 'demo' || params.get('pr') === 'stacked') &&
       params.get('prPoll') !== 'off'
@@ -69,6 +72,8 @@ if (name === 'live') {
     hostRequests: () => host.channel.requests,
     // The commands the game sent (#139).
     sent: () => host.sent,
+    // The journal's lines so far, as text (#162).
+    journal: () => client.journal.map((e) => ('text' in e ? e.text : `${e.activity} ${e.detail}`)),
     hostEvent: (event: Parameters<typeof host.channel.send>[0]) => host.channel.send(event),
     zoom,
     hero,
@@ -139,4 +144,20 @@ if (name === 'live') {
       host.replay.play();
     }
   });
+}
+
+/** Dev only (#162): the git host states the runtime can report, by name. */
+function gitHostParam(name: string | null): { gitHost?: GitHostView } {
+  const noOrigin = 'The repository has no origin remote.';
+  const states: Record<string, GitHostView> = {
+    noOrigin: { push: noOrigin, pullRequests: noOrigin, signedIn: false },
+    gitlab: {
+      push: null,
+      pullRequests: "Pull requests need a GitHub remote, and origin isn't on github.com.",
+      signedIn: false,
+    },
+    signedOut: { push: null, pullRequests: null, signedIn: false },
+  };
+  const state = name ? states[name] : undefined;
+  return state ? { gitHost: state } : {};
 }

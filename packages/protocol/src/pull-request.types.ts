@@ -57,6 +57,19 @@ export interface PullRequestDraft {
   cannotOpen: string | null;
 }
 
+/**
+ * What the git host allows here, before any click (#162). Added to the snapshot by the runtime from
+ * `origin` and the host; null fields mean nothing stands in the way.
+ */
+export interface GitHostView {
+  /** Why nothing can be pushed, e.g. no origin remote. */
+  push: string | null;
+  /** Why no PR can be opened or read, e.g. origin isn't on GitHub (Push branch only still works). */
+  pullRequests: string | null;
+  /** Signed in to the git host; when not, a PR action asks the user to sign in. */
+  signedIn: boolean;
+}
+
 /** One PR as the git host reports it when polled. */
 export interface PolledPullRequest {
   number: number;

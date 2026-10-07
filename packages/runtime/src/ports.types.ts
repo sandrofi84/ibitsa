@@ -232,6 +232,10 @@ export interface GitHost {
     draft: boolean;
   }): Promise<{ number: number; url: string; state: PullRequestState }>;
   markReady(request: { remoteUrl: string; number: number }): Promise<void>;
+  /** Before any click (#162): why this remote can't have PRs here, and whether the user is signed in. */
+  status(request: {
+    remoteUrl: string;
+  }): Promise<{ unsupported: string | null; signedIn: boolean }>;
   /** The badge state of each PR; never asks the user to sign in. */
   poll(request: { remoteUrl: string; numbers: number[] }): Promise<PolledPullRequest[]>;
   reviewComments(request: { remoteUrl: string; number: number }): Promise<PullRequestComment[]>;

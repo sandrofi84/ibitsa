@@ -27,6 +27,8 @@ export interface PullRequestCardModel {
   /** What's under way (pushing, opening, marking ready). */
   busy: string | null;
   error: string | null;
+  /** Signed out of the git host (#162): a PR action will ask to sign in. */
+  signIn: string | null;
   /** Stacked, after the island before merged (#154): what restacking does, or what the hero is fixing. */
   restack: string | null;
   actions: PullRequestAction[];

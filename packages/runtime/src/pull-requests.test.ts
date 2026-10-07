@@ -70,6 +70,7 @@ function setup({
             state: r.draft ? 'draft' : 'open',
           };
         },
+        status: async () => ({ unsupported: null, signedIn: true }),
         markReady: async (r) => {
           calls.push(`ready #${r.number}`);
         },
@@ -343,5 +344,27 @@ describe('PullRequests (#152)', () => {
     expect(events).toEqual([
       { type: 'remoteFailed', islandId: 'i3', message: 'This game master cannot restack.' },
     ]);
+  });
+
+  it('says what stands in the way before any click (#162)', async () => {
+    expect(await setup().prs.status()).toEqual({ push: null, pullRequests: null, signedIn: true });
+    expect(await setup({ remoteUrl: async () => null }).prs.status()).toEqual({
+      push: 'The repository has no origin remote.',
+      pullRequests: 'The repository has no origin remote.',
+      signedIn: false,
+    });
+    expect(await setup({ host: null }).prs.status()).toEqual({
+      push: null,
+      pullRequests: 'Pull requests need a git host; only Push branch works.',
+      signedIn: false,
+    });
+    const gitlab = setup({
+      host: { status: async () => ({ unsupported: 'Not on GitHub.', signedIn: false }) },
+    });
+    expect(await gitlab.prs.status()).toEqual({
+      push: null,
+      pullRequests: 'Not on GitHub.',
+      signedIn: false,
+    });
   });
 });
