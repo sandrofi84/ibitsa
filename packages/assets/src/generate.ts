@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path';
 import {
   ANIMATIONS,
   activityIcons,
+  bridge,
   CHARACTERS,
   characterSheet,
   councilSheet,
@@ -11,13 +12,21 @@ import {
   FRAMES,
   hut,
   island,
+  markers,
   portrait,
   TILE_INDEX,
   taskPoints,
   tiles,
 } from './art.ts';
 import type { Manifest } from './manifest.schema.ts';
-import { ACTIVITY_KINDS, COUNCIL_ANIMATIONS, SPEC, TASK_POINT_STATES } from './manifest.ts';
+import {
+  ACTIVITY_KINDS,
+  BRIDGE_FRAMES,
+  COUNCIL_ANIMATIONS,
+  MARKER_KINDS,
+  SPEC,
+  TASK_POINT_STATES,
+} from './manifest.ts';
 
 /** A councillor's 32×32 council sheet (§9.2): writes the image and returns its manifest entry. */
 function councilEntry({
@@ -73,6 +82,8 @@ export function buildDefaultPack(): { manifest: Manifest; files: Record<string, 
   files['map/hut.png'] = hut().png();
   files['ui/activity-icons.png'] = activityIcons(ACTIVITY_KINDS).png();
   files['ui/dialogue-frame.png'] = dialogueFrame().png();
+  files['map/bridge.png'] = bridge().png();
+  files['ui/markers.png'] = markers().png();
 
   const manifest: Manifest = {
     name: 'default',
@@ -100,6 +111,8 @@ export function buildDefaultPack(): { manifest: Manifest; files: Record<string, 
       size: SPEC.activityIcon,
       kinds: [...ACTIVITY_KINDS],
     },
+    bridge: { image: 'map/bridge.png', ...SPEC.bridge, frames: [...BRIDGE_FRAMES] },
+    markers: { image: 'ui/markers.png', size: SPEC.marker, kinds: [...MARKER_KINDS] },
     buildings: { hut: { image: 'map/hut.png', width: SPEC.hut, height: SPEC.hut } },
     ui: { dialogueFrame: { image: 'ui/dialogue-frame.png', size: SPEC.dialogueFrame, inset: 8 } },
   };

@@ -1,6 +1,7 @@
 import {
   type CoreInput,
   type CoreState,
+  DEFAULT_SETTINGS,
   type Effect,
   initialState,
   Journal,
@@ -119,6 +120,60 @@ export class LiveDevHost implements Host {
 
   private t(): number {
     return Date.now() - this.started;
+  }
+
+  /**
+   * Straight into a campaign of three islands (#124), for seeing the map without the elder or council:
+   * an approved plan is stepped into core without carrying out its effects (no scripted sitting), then
+   * the campaign starts for real. Two parties work at once, so the third island waits.
+   */
+  demoCampaign(branching: 'separate' | 'stacked'): void {
+    const quietly = (input: CoreInput) => {
+      this.state = step(this.state, input).state;
+    };
+    const t = this.t();
+    quietly({
+      kind: 'gm',
+      t,
+      event: { type: 'questSettings', ...DEFAULT_SETTINGS, maxParallel: 2 },
+    });
+    const command = (c: Record<string, unknown>) =>
+      quietly({
+        kind: 'command',
+        t,
+        command: { commandId: `demo-${++this.diffs}`, ...c } as Command,
+      });
+    command({
+      type: 'conveneCouncil',
+      task: 'Ship sign-in',
+      mode: 'roundTable',
+      roster: ['tester'],
+      effort: 'light',
+    });
+    const sittingId = this.state.sitting?.id ?? '';
+    const council = (event: CouncilEvent) => quietly({ kind: 'council', t, sittingId, event });
+    council({
+      type: 'reportFiled',
+      toolUseId: 'demo-report',
+      councillorId: 'tester',
+      report: { concerns: [], questions: [], recommendations: [], notChecked: [] },
+    });
+    council({ type: 'planProposed', toolUseId: 'demo-plan', plan: demoPlan(branching) });
+    command({ type: 'approvePlan', version: 1 });
+    this.input({
+      kind: 'command',
+      t,
+      command: {
+        type: 'startCampaign',
+        commandId: `demo-${++this.diffs}`,
+        baseRef: 'main',
+        parties: [
+          { islandId: 'I1', heroName: 'Ranger Ilse', classId: 'ranger' },
+          { islandId: 'I2', heroName: 'Rogue Vex', classId: 'rogue' },
+          { islandId: 'I3', heroName: 'Paladin Aric', classId: 'paladin' },
+        ],
+      },
+    });
   }
 
   private input(input: CoreInput): void {
@@ -458,6 +513,31 @@ const LIVE_COUNCILLORS: CouncillorInfo[] = [
   modes: { planning: true, review: true },
   hash: id,
 }));
+
+/** Three islands with a task each (#124): separate, or stacked in this order. */
+function demoPlan(branching: 'separate' | 'stacked'): Plan {
+  const task = (id: string, title: string) => ({
+    id,
+    title,
+    description: `${title}.`,
+    files: [],
+    dependsOn: [],
+    criteria: [],
+    decisions: [],
+  });
+  return {
+    summary: 'Sign-in in three parts.',
+    goal: 'Ship sign-in.',
+    tasks: [task('T1', 'Add the schema'), task('T2', 'Add the API'), task('T3', 'Add the form')],
+    decisions: [],
+    islands: [
+      { id: 'I1', title: 'Schema', tasks: ['T1'] },
+      { id: 'I2', title: 'API', tasks: ['T2'] },
+      { id: 'I3', title: 'Form', tasks: ['T3'] },
+    ],
+    branching,
+  };
+}
 
 /**
  * A small valid plan (#104, #123): two tasks on two islands, the second waiting on the first, and a

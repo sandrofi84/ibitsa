@@ -484,6 +484,88 @@ export function taskPoints(states: readonly (keyof typeof TASK_POINT_COLORS)[]):
   return img;
 }
 
+const PLANK = hex('#b07a3e');
+const PLANK_DARK = hex('#7a4e22');
+const CHAIN = hex('#9aa0a8');
+
+/**
+ * A stacked plan's drawbridge (§9.2, #124): rows `lowered` then `raised`, each a left end (8), a segment
+ * (32) that repeats, and a right end (8), 24 tall. Lowered: planks across with posts at both ends.
+ * Raised: the deck tilted up on its left post, open water under it, chains taut.
+ */
+export function bridge(): Raster {
+  const end = 8;
+  const segment = 32;
+  const h = 24;
+  const img = new Raster(end * 2 + segment, h * 2);
+  const post = (x: number, y: number) => {
+    img.rect({ x, y: y + 2, w: 4, h: 20, color: CLIFF_DARK });
+    img.rect({ x: x + 1, y: y + 1, w: 2, h: 1, color: CLIFF });
+  };
+  // Lowered.
+  post(2, 0);
+  post(end * 2 + segment - 6, 0);
+  for (let x = end; x < end + segment; x++) {
+    img.rect({ x, y: 9, w: 1, h: 7, color: x % 4 === 0 ? PLANK_DARK : PLANK });
+  }
+  img.rect({ x: 0, y: 9, w: end, h: 7, color: PLANK });
+  img.rect({ x: end + segment, y: 9, w: end, h: 7, color: PLANK });
+  img.rect({ x: 0, y: 16, w: end * 2 + segment, h: 1, color: PLANK_DARK });
+  // Raised: the deck stands up beside the left post; the segment is open water.
+  post(2, h);
+  post(end * 2 + segment - 6, h);
+  img.rect({ x: end - 2, y: h + 1, w: 6, h: 20, color: PLANK });
+  img.rect({ x: end + 3, y: h + 1, w: 1, h: 20, color: PLANK_DARK });
+  for (let x = end + 4; x < end + segment; x += 3) img.set({ x, y: h + 3, color: CHAIN });
+  img.rect({ x: end + segment, y: h + 9, w: end, h: 7, color: PLANK });
+  return img;
+}
+
+/** Map markers (#124): a padlock over a blocked hero, and a "behind" mark (two arrows back). */
+export function markers(): Raster {
+  const s = 12;
+  const img = new Raster(s * 2, s);
+  img.pattern({
+    x: 0,
+    y: 0,
+    rows: [
+      '............',
+      '....kkkk....',
+      '...k....k...',
+      '...k....k...',
+      '...k....k...',
+      '..kkkkkkkk..',
+      '..kyyyyyyk..',
+      '..kyyykyyk..',
+      '..kyyykyyk..',
+      '..kyyyyyyk..',
+      '..kkkkkkkk..',
+      '............',
+    ],
+    palette: { k: INK, y: hex('#f2c230') },
+  });
+  img.pattern({
+    x: s,
+    y: 0,
+    rows: [
+      '............',
+      '..kkkkkkkk..',
+      '.kooooooook.',
+      '.koookoookk.',
+      '.kookkookok.',
+      '.kokkkokkok.',
+      '.kookkookok.',
+      '.koookoookk.',
+      '.kooooooook.',
+      '..kkkkkkkk..',
+      '............',
+      '............',
+    ],
+    palette: { k: INK, o: hex('#f28a30') },
+  });
+  return img;
+}
+
 export function hut(): Raster {
   const img = new Raster(64, 64);
   img.rect({ x: 8, y: 28, w: 48, h: 34, color: hex('#7a4a24') });

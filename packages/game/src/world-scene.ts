@@ -5,10 +5,19 @@ import { CameraDirector, OVERVIEW_ZOOM } from './camera-director';
 import type { CameraState } from './camera-director.types';
 import type { GameClient } from './client';
 import { speechExcerpt } from './heroes';
-import { heroSpot, layoutWorld, pathTo } from './layout';
-import type { Point, WorldLayout } from './layout.types';
-import { PACK_KEY } from './pack-scene';
+import {
+  BRIDGE,
+  bridgeState,
+  heroSpot,
+  heroSpots,
+  layoutWorld,
+  overviewCenter,
+  pathTo,
+} from './layout';
+import type { BridgeLayout, Point, WorldLayout } from './layout.types';
+import { BRIDGE_KEY, MARKERS_KEY, PACK_KEY } from './pack-scene';
 import type { ViewState } from './view-state';
+import type { MapProbe } from './world-scene.types';
 
 export const WIDTH = 480;
 export const HEIGHT = 270;
@@ -65,6 +74,15 @@ export class WorldScene extends Phaser.Scene {
   private empty!: Phaser.GameObjects.Text;
   private readonly heroes = new Map<string, HeroToken>();
   private islandKey = '';
+  /** The hero the camera follows when chosen in the hero pane (#125); else the first one working. */
+  private selected: string | null = null;
+  private last: Snapshot | null = null;
+  private boundsKey = '';
+  private probe: MapProbe = {
+    bounds: { x: 0, y: 0, width: WIDTH, height: HEIGHT },
+    islands: [],
+    bridges: [],
+  };
 
   constructor() {
     super('world');
@@ -73,6 +91,32 @@ export class WorldScene extends Phaser.Scene {
   /** The first hero's token, for tests and probes. */
   firstHero(): HeroToken | null {
     return this.heroes.values().next().value ?? null;
+  }
+
+  /** The token the camera follows (#124): the selected hero, else the first working, else the first. */
+  private focusToken(): HeroToken | null {
+    const hero = this.last && CameraDirector.focusOf(this.last, this.selected);
+    return (hero && this.heroes.get(hero.id)) ?? this.firstHero();
+  }
+
+  /** Follow this hero (#124); the hero pane's selection (#125) calls it. Null goes back to the default. */
+  selectHero(id: string | null): void {
+    this.selected = id;
+    // Before the first snapshot the map isn't drawn yet; the selection waits for it.
+    if (!this.last) return;
+    if (this.director.observe(this.last, id)) this.aimCamera(this.director.current);
+    else if (this.director.current.follow) this.aimCamera(this.director.current);
+  }
+
+  /** What the map shows (#124), for tests and probes: islands, bridges and blocked heroes. */
+  mapProbe(): MapProbe {
+    return {
+      ...this.probe,
+      blocked: [...this.heroes].flatMap(([heroId, token]) => {
+        const reason = token.blockedReason();
+        return reason ? [{ heroId, reason }] : [];
+      }),
+    };
   }
 
   /** The camera as the controls and tests see it. */
@@ -102,9 +146,7 @@ export class WorldScene extends Phaser.Scene {
     this.world = this.add.container(0, 0);
     // The sea reaches past the map on every side, so a panel wider or taller than the world shows
     // more sea, never black (#59). A filled panel is under twice the world in each direction.
-    this.water = this.add
-      .tileSprite(-WIDTH, -HEIGHT, WIDTH * 3, HEIGHT * 3, 'tiles', waterIndex)
-      .setOrigin(0);
+    this.water = this.add.tileSprite(0, 0, 1, 1, 'tiles', waterIndex).setOrigin(0);
     this.world.add(this.water);
     let waterFrame = 0;
     this.time.addEvent({
@@ -141,15 +183,18 @@ export class WorldScene extends Phaser.Scene {
     this.view = this.registry.get('view') as ViewState;
     this.director = new CameraDirector({ auto: this.view.get(AUTO_KEY, true) });
     const cam = this.cameras.main;
-    cam.setBounds(-WIDTH, -HEIGHT, WIDTH * 3, HEIGHT * 3).centerOn(WIDTH / 2, HEIGHT / 2);
+    this.fitBounds();
+    cam.centerOn(WIDTH / 2, HEIGHT / 2);
     this.ui = this.cameras.add(0, 0, this.scale.width, this.scale.height, false, 'ui');
     this.ui.ignore(this.world);
     cam.ignore(this.hud);
     this.scale.on(Phaser.Scale.Events.RESIZE, (size: Phaser.Structs.Size) => {
       cam.setSize(size.width, size.height);
       this.ui.setSize(size.width, size.height);
-      if (!this.director.current.follow && this.director.current.zoom === OVERVIEW_ZOOM)
-        cam.centerOn(WIDTH / 2, HEIGHT / 2);
+      if (!this.director.current.follow && this.director.current.zoom === OVERVIEW_ZOOM) {
+        const c = overviewCenter(this.layout);
+        cam.centerOn(c.x, c.y);
+      }
     });
 
     const events = this.game.events;
@@ -218,15 +263,36 @@ export class WorldScene extends Phaser.Scene {
   private aimCamera(aim: { zoom: number; follow: boolean }): void {
     const cam = this.cameras.main;
     cam.zoomTo(aim.zoom, CAMERA_MS, 'Sine.easeInOut', true);
-    const hero = this.firstHero();
+    const hero = this.focusToken();
     if (aim.follow && hero) {
       cam.startFollow(hero.target(), true, 0.15, 0.15);
     } else {
       cam.stopFollow();
-      if (aim.zoom === OVERVIEW_ZOOM)
-        cam.pan(WIDTH / 2, HEIGHT / 2, CAMERA_MS, 'Sine.easeInOut', true);
+      if (aim.zoom === OVERVIEW_ZOOM) {
+        const c = overviewCenter(this.layout);
+        cam.pan(c.x, c.y, CAMERA_MS, 'Sine.easeInOut', true);
+      }
     }
     this.announceCamera();
+  }
+
+  /**
+   * The sea and the camera's reach follow the map (#124): past its edges by a whole world each side, so
+   * a panel wider or taller than the world shows more sea, never black (#59).
+   */
+  private fitBounds(): void {
+    const b = this.layout.bounds;
+    const key = JSON.stringify(b);
+    if (key === this.boundsKey) return;
+    this.boundsKey = key;
+    const area = {
+      x: b.x - WIDTH,
+      y: b.y - HEIGHT,
+      width: b.width + WIDTH * 2,
+      height: b.height + HEIGHT * 2,
+    };
+    this.water.setPosition(area.x, area.y).setSize(area.width, area.height);
+    this.cameras.main.setBounds(area.x, area.y, area.width, area.height);
   }
 
   private announceCamera(): void {
@@ -262,7 +328,9 @@ export class WorldScene extends Phaser.Scene {
   }
 
   render(snapshot: Snapshot): void {
+    this.last = snapshot;
     this.layout = layoutWorld(snapshot);
+    this.fitBounds();
     this.empty.setVisible(snapshot.campaign === null);
     this.hud.setText(
       snapshot.campaign
@@ -270,43 +338,22 @@ export class WorldScene extends Phaser.Scene {
         : '',
     );
 
-    // Islands and task points are cheap to rebuild; heroes persist so their movement continues.
-    const key = JSON.stringify(snapshot.islands);
+    // Islands, paths and bridges are cheap to rebuild; heroes persist so their movement continues.
+    const key = JSON.stringify([
+      snapshot.islands,
+      snapshot.campaign?.branching,
+      snapshot.campaign?.stackedStart,
+    ]);
     if (key !== this.islandKey) {
       this.islandKey = key;
-      this.questLayer.removeAll(true);
-      snapshot.islands.forEach((island, k) => {
-        const l = this.layout.islands[k];
-        if (!l) return;
-        this.drawIsland(this.questLayer, l);
-        this.questLayer.add(
-          this.add.text(l.x + 8, l.y + 70, island.name.toUpperCase().slice(0, 28), textStyle()),
-        );
-        const first = island.taskPoints[0];
-        if (first) this.dots(this.questLayer, pathTo(this.layout, first.id));
-        island.taskPoints.forEach((tp, i) => {
-          const p = l.taskPoints[i];
-          if (!p) return;
-          const next = l.taskPoints[i + 1];
-          if (next)
-            this.dots(this.questLayer, [
-              { x: p.x + 16, y: p.y + 8 },
-              { x: next.x, y: next.y + 8 },
-            ]);
-          this.questLayer.add(
-            this.add.sprite(p.x, p.y, 'taskPoints', TASK_FRAME[tp.state]).setOrigin(0),
-          );
-          if (tp.state === 'doneUnreviewed') {
-            // done, but no councillor has reviewed it yet (M1): a small marker, not colour alone
-            this.questLayer.add(this.add.rectangle(p.x + 12, p.y + 1, 3, 3, 0xffffff).setOrigin(0));
-          }
-        });
-      });
+      this.drawIslands(snapshot);
     }
 
+    const spots = heroSpots(this.layout, snapshot);
     const seen = new Set<string>();
     for (const hero of snapshot.heroes) {
       seen.add(hero.id);
+      const spot = spots.get(hero.id) ?? heroSpot(this.layout, hero.taskPointId);
       let token = this.heroes.get(hero.id);
       if (!token) {
         token = new HeroToken({
@@ -315,7 +362,10 @@ export class WorldScene extends Phaser.Scene {
           hero,
           iconKinds: this.manifest.activityIcons.kinds,
           character: this.characterKey(hero.classId),
-          layout: this.layout,
+          start:
+            hero.state.kind === 'traveling'
+              ? (pathTo(this.layout, hero.taskPointId)[0] ?? spot)
+              : spot,
         });
         this.heroes.set(hero.id, token);
       }
@@ -323,6 +373,7 @@ export class WorldScene extends Phaser.Scene {
         hero,
         layout: this.layout,
         questActive: snapshot.campaign?.status === 'active',
+        spot,
       });
     }
     for (const [id, token] of this.heroes) {
@@ -331,7 +382,88 @@ export class WorldScene extends Phaser.Scene {
         this.heroes.delete(id);
       }
     }
-    if (this.director.observe(snapshot)) this.aimCamera(this.director.current);
+    if (this.director.observe(snapshot, this.selected)) this.aimCamera(this.director.current);
+  }
+
+  /**
+   * Every island with its task points (#124): dimmed while it waits to start; a dotted path from the
+   * village to each separate island, or to the first stacked one, and drawbridges between stacked ones.
+   */
+  private drawIslands(snapshot: Snapshot): void {
+    this.questLayer.removeAll(true);
+    const stacked = snapshot.campaign?.branching === 'stacked';
+    const islands: MapProbe['islands'] = [];
+    snapshot.islands.forEach((island, k) => {
+      const l = this.layout.islands[k];
+      if (!l) return;
+      const dim = island.worktree === 'waiting';
+      islands.push({ id: island.id, x: l.x, y: l.y, row: l.row, dim });
+      const first = island.taskPoints[0];
+      if (first && (!stacked || k === 0)) this.dots(this.questLayer, pathTo(this.layout, first.id));
+      const c = this.add.container(0, 0);
+      this.drawIsland(c, l);
+      c.add(this.add.text(l.x + 8, l.y + 70, island.name.toUpperCase().slice(0, 28), textStyle()));
+      island.taskPoints.forEach((tp, i) => {
+        const p = l.taskPoints[i];
+        if (!p) return;
+        const next = l.taskPoints[i + 1];
+        if (next)
+          this.dots(c, [
+            { x: p.x + 16, y: p.y + 8 },
+            { x: next.x, y: next.y + 8 },
+          ]);
+        c.add(this.add.sprite(p.x, p.y, 'taskPoints', TASK_FRAME[tp.state]).setOrigin(0));
+        if (tp.state === 'doneUnreviewed') {
+          // done, but no councillor has reviewed it yet (M1): a small marker, not colour alone
+          c.add(this.add.rectangle(p.x + 12, p.y + 1, 3, 3, 0xffffff).setOrigin(0));
+        }
+      });
+      // An island still waiting for a slot, a dependency or the island before it looks idle.
+      c.setAlpha(dim ? 0.55 : 1);
+      this.questLayer.add(c);
+    });
+    const bridges = this.layout.bridges.map((b) => {
+      const state = bridgeState({ snapshot, to: b.to });
+      this.drawBridge({ bridge: b, ...state });
+      return { from: b.from, to: b.to, vertical: b.vertical, ...state };
+    });
+    this.probe = { bounds: this.layout.bounds, islands, bridges };
+  }
+
+  /** A drawbridge (§9.2): the pack's pieces, or plain planks; a padlock while raised, a mark when behind. */
+  private drawBridge({
+    bridge: b,
+    lowered,
+    behind,
+  }: {
+    bridge: BridgeLayout;
+    lowered: boolean;
+    behind: boolean;
+  }): void {
+    const frame = lowered ? 'lowered' : 'raised';
+    // Drawn left to right; a bridge between rows is the same turned a quarter clockwise.
+    const c = this.add.container(b.vertical ? b.x + BRIDGE.height : b.x, b.y);
+    if (b.vertical) c.setAngle(90);
+    if (this.textures.exists(BRIDGE_KEY)) {
+      c.add(this.add.image(0, 0, BRIDGE_KEY, `${frame}:left`).setOrigin(0));
+      for (let x = BRIDGE.end; x < b.length - BRIDGE.end; x += BRIDGE.segment)
+        c.add(this.add.image(x, 0, BRIDGE_KEY, `${frame}:segment`).setOrigin(0));
+      c.add(this.add.image(b.length - BRIDGE.end, 0, BRIDGE_KEY, `${frame}:right`).setOrigin(0));
+    } else {
+      const g = this.add.graphics();
+      g.fillStyle(0x5e3b1c)
+        .fillRect(2, 2, 4, 20)
+        .fillRect(b.length - 6, 2, 4, 20);
+      if (lowered) g.fillStyle(0xb07a3e).fillRect(0, 9, b.length, 7);
+      c.add(g);
+    }
+    this.questLayer.add(c);
+    const mid = b.vertical
+      ? { x: b.x + BRIDGE.height / 2, y: b.y + b.length / 2 }
+      : { x: b.x + b.length / 2, y: b.y + BRIDGE.height / 2 };
+    if (!lowered) this.questLayer.add(marker({ scene: this, kind: 'padlock', at: mid }));
+    if (behind)
+      this.questLayer.add(marker({ scene: this, kind: 'behind', at: { x: mid.x, y: mid.y - 14 } }));
   }
 
   private characterKey(classId: string): string {
@@ -351,6 +483,39 @@ function gold(reading: Reading<number>): string {
   const g = Math.round(reading.value / 10_000); // 1 gold = 1 cent
   return reading.kind === 'estimated' ? `~${g}` : String(g);
 }
+
+/**
+ * A map marker centred on `at` (#124): the pack's (padlock, behind), else a small drawn one, so a pack
+ * without markers still shows them.
+ */
+function marker({
+  scene,
+  kind,
+  at,
+}: {
+  scene: Phaser.Scene;
+  kind: 'padlock' | 'behind';
+  at: Point;
+}): Phaser.GameObjects.GameObject {
+  if (scene.textures.exists(MARKERS_KEY)) {
+    return scene.add.sprite(at.x, at.y, MARKERS_KEY, kind === 'padlock' ? 0 : 1);
+  }
+  const g = scene.add.graphics({ x: at.x - 4, y: at.y - 4 });
+  if (kind === 'padlock') {
+    g.lineStyle(1, 0x1a1420).strokeRect(2, 0, 4, 4);
+    g.fillStyle(0xf2c230).fillRect(0, 3, 8, 6);
+  } else {
+    g.fillStyle(0xf28a30).fillTriangle(0, 4, 4, 0, 4, 8).fillTriangle(4, 4, 8, 0, 8, 8);
+  }
+  return g;
+}
+
+/** What a blocked hero waits for, in a few words (#121, #124). */
+const BLOCKED_LABEL: Record<'slot' | 'previousIsland' | 'dependency', string> = {
+  slot: 'Waiting for a free slot',
+  previousIsland: 'Waiting for the island before',
+  dependency: 'Waiting on a task elsewhere',
+};
 
 /** How long the flask stays, green or red, after a test run. */
 const TEST_LINGER_MS = 900;
@@ -382,6 +547,9 @@ export class HeroToken {
   private travel: Phaser.Tweens.Tween | null = null;
   private traveled = false;
   private state: HeroView['state']['kind'] = 'traveling';
+  private readonly padlock: Phaser.GameObjects.Sprite;
+  private readonly blockedLabel: Phaser.GameObjects.Text;
+  private blocked: 'slot' | 'previousIsland' | 'dependency' | null = null;
 
   private readonly scene: Phaser.Scene;
   private readonly layer: Phaser.GameObjects.Container;
@@ -393,7 +561,7 @@ export class HeroToken {
     hero,
     iconKinds,
     character,
-    layout,
+    start,
   }: {
     scene: Phaser.Scene;
     /** The map layer the token lives in, so the camera zooms it. */
@@ -401,16 +569,13 @@ export class HeroToken {
     hero: HeroView;
     iconKinds: readonly string[];
     character: string;
-    layout: WorldLayout;
+    /** Where it appears: the start of its walk, its task point, or its place in the village line. */
+    start: Point;
   }) {
     this.scene = scene;
     this.layer = layer;
     this.iconKinds = iconKinds;
     this.character = character;
-    const start =
-      hero.state.kind === 'traveling'
-        ? pathTo(layout, hero.taskPointId)[0]
-        : heroSpot(layout, hero.taskPointId);
     const base = scene.add.graphics();
     base.fillStyle(0x000000, 0.35).fillEllipse(0, 0, 12, 4);
     base.lineStyle(1, 0xf3ead2).strokeEllipse(0, 0, 12, 4);
@@ -429,15 +594,36 @@ export class HeroToken {
       .on('pointerdown', () => scene.game.events.emit(HERO_SELECTED, hero.id));
     this.speech = scene.add.container(0, -24, [this.speechBox, this.speechText]).setVisible(false);
     this.icon = scene.add.sprite(13, -9, 'activityIcons', 0).setVisible(false);
-    this.container = scene.add.container(start?.x ?? 0, start?.y ?? 0, [
+    // Blocked (#124): a padlock over the head, and what it waits for when you point at it.
+    this.padlock = marker({
+      scene,
+      kind: 'padlock',
+      at: { x: 0, y: -26 },
+    }) as Phaser.GameObjects.Sprite;
+    this.padlock.setVisible(false);
+    this.blockedLabel = scene.add
+      .text(0, -36, '', { ...textStyle('#1a1420'), backgroundColor: '#f3ead2' })
+      .setOrigin(0.5)
+      .setVisible(false);
+    this.sprite
+      .on('pointerover', () => this.blockedLabel.setVisible(this.blocked !== null))
+      .on('pointerout', () => this.blockedLabel.setVisible(false));
+    this.container = scene.add.container(start.x, start.y, [
       base,
       this.sprite,
       this.hpBar,
       this.icon,
       this.bubble,
       this.speech,
+      this.padlock,
+      this.blockedLabel,
     ]);
     layer.add(this.container);
+  }
+
+  /** What the hero waits for while blocked, else null (#124). */
+  blockedReason(): 'slot' | 'previousIsland' | 'dependency' | null {
+    return this.blocked;
   }
 
   /** What the camera follows. */
@@ -531,10 +717,13 @@ export class HeroToken {
     hero,
     layout,
     questActive,
+    spot,
   }: {
     hero: HeroView;
     layout: WorldLayout;
     questActive: boolean;
+    /** Where it stands when not walking: its task point, or its place in the village line (#124). */
+    spot: Point;
   }): void {
     const previous = this.state;
     this.state = hero.state.kind;
@@ -548,10 +737,13 @@ export class HeroToken {
         const remaining = (1 - this.travel.progress) * TRAVEL_MS;
         this.travel.timeScale = Math.max(1, remaining / CATCH_UP_MS);
       } else {
-        const spot = heroSpot(layout, hero.taskPointId);
         this.container.setPosition(spot.x, spot.y);
       }
     }
+    this.blocked = s.kind === 'blocked' ? s.reason : null;
+    this.padlock.setVisible(this.blocked !== null);
+    if (this.blocked) this.blockedLabel.setText(` ${BLOCKED_LABEL[this.blocked]} `);
+    else this.blockedLabel.setVisible(false);
 
     const working = s.kind === 'working' && hero.activity && hero.activity.kind !== 'think';
     const animation = s.kind === 'traveling' || this.travel ? 'walk' : working ? 'work' : 'idle';

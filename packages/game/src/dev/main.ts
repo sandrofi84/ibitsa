@@ -46,7 +46,7 @@ if (name === 'live') {
         ? null
         : { defaultBranch: 'main', branches: ['main', 'feature/x'], uncommittedChanges: 2 },
   });
-  const { client, zoom, hero, camera, hut } = startGame(root, host);
+  const { client, zoom, hero, camera, hut, selectHero, map } = startGame(root, host);
   w.__ibitsa = {
     snapshot: () => client.snapshot,
     hostRequests: () => host.channel.requests,
@@ -55,7 +55,12 @@ if (name === 'live') {
     hero,
     camera,
     hut,
+    selectHero,
+    map,
   };
+  // `&campaign=separate|stacked`: straight into a three-island campaign, to see the map (#124).
+  const campaign = params.get('campaign');
+  if (campaign === 'separate' || campaign === 'stacked') host.demoCampaign(campaign);
 } else if (params.get('scene') === 'hut') {
   // The council hut from a scripted sitting (#99): every animation, without a replay. The real sitting
   // shows the hut by itself, e.g. `?fixture=m3-round-table` (#102).

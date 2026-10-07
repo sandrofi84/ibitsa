@@ -13,7 +13,16 @@ export const SPEC = {
   hut: 64,
   dialogueFrame: 24,
   activityIcon: 12,
+  /** A drawbridge row: a left end, a repeatable segment and a right end, 24 tall (§9.2, #124). */
+  bridge: { end: 8, segment: 32, height: 24 },
+  /** Small map markers, e.g. the padlock over a blocked hero (#124). */
+  marker: 12,
 } as const;
+
+/** A drawbridge's frames, one row each, top to bottom (#124). */
+export const BRIDGE_FRAMES = ['lowered', 'raised'] as const;
+/** Map markers, left to right: a blocked hero's padlock, and a stacked island that's behind (#124). */
+export const MARKER_KINDS = ['padlock', 'behind'] as const;
 
 export const REQUIRED_ANIMATIONS = ['idle', 'walk', 'work'] as const;
 export const OPTIONAL_ANIMATIONS = [

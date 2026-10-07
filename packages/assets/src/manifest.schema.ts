@@ -1,7 +1,9 @@
 import * as v from 'valibot';
 import {
   ACTIVITY_KINDS,
+  BRIDGE_FRAMES,
   COUNCIL_ANIMATIONS,
+  MARKER_KINDS,
   OPTIONAL_ANIMATIONS,
   REQUIRED_ANIMATIONS,
   TASK_POINT_STATES,
@@ -63,6 +65,23 @@ export const ManifestSchema = v.strictObject({
   taskPoints: v.strictObject({ image: file, size, states: v.array(v.picklist(TASK_POINT_STATES)) }),
   /** One square icon per activity kind, left to right in `kinds` order, shown beside the hero (#60). */
   activityIcons: v.strictObject({ image: file, size, kinds: v.array(v.picklist(ACTIVITY_KINDS)) }),
+  /**
+   * Stacked islands' drawbridges (§9.2, #124): one row per frame in `frames` order, each a left end, a
+   * repeatable segment and a right end. Optional: without it the game draws plain planks.
+   */
+  bridge: v.optional(
+    v.strictObject({
+      image: file,
+      height: size,
+      end: size,
+      segment: size,
+      frames: v.array(v.picklist(BRIDGE_FRAMES)),
+    }),
+  ),
+  /** Small map markers, left to right in `kinds` order (#124). Optional: the game draws its own. */
+  markers: v.optional(
+    v.strictObject({ image: file, size, kinds: v.array(v.picklist(MARKER_KINDS)) }),
+  ),
   buildings: v.record(v.string(), v.strictObject({ image: file, width: size, height: size })),
   ui: v.strictObject({
     dialogueFrame: v.strictObject({ image: file, size, inset: size }),

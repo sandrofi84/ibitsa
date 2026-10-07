@@ -1,4 +1,4 @@
-import type { Snapshot } from '@ibitsa/protocol';
+import type { HeroView, Snapshot } from '@ibitsa/protocol';
 import type { CameraAim } from './camera-director.types';
 
 export const OVERVIEW_ZOOM = 1;
@@ -16,6 +16,7 @@ export class CameraDirector {
   private auto: boolean;
   private previousState: string | null = null;
   private seenItems = new Set<string>();
+  private focused: string | null = null;
 
   constructor({ auto }: { auto: boolean }) {
     this.auto = auto;
@@ -29,9 +30,26 @@ export class CameraDirector {
     return this.auto;
   }
 
+  /**
+   * The hero the camera follows (#124): the selected one, else the first one working, else the first.
+   * The hero pane's selection (#125) sets `selected`.
+   */
+  static focusOf(snapshot: Snapshot, selected: string | null): HeroView | undefined {
+    return (
+      snapshot.heroes.find((h) => h.id === selected) ??
+      snapshot.heroes.find((h) => h.state.kind === 'working') ??
+      snapshot.heroes[0]
+    );
+  }
+
   /** Reacts to a snapshot; returns true when the aim changed. */
-  observe(snapshot: Snapshot): boolean {
-    const hero = snapshot.heroes[0];
+  observe(snapshot: Snapshot, selected: string | null = null): boolean {
+    const hero = CameraDirector.focusOf(snapshot, selected);
+    if (hero?.id !== this.focused) {
+      // A different hero to follow: what the last one was doing says nothing about this one.
+      this.focused = hero?.id ?? null;
+      this.previousState = null;
+    }
     const before = this.aim;
     if (!hero || snapshot.campaign?.status !== 'active') {
       this.userTookOver = false;

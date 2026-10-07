@@ -73,6 +73,55 @@ describe('validatePack', () => {
     );
   });
 
+  it('has a drawbridge (lowered and raised) and map markers in the default pack (#124)', () => {
+    const { manifest } = buildDefaultPack();
+    expect(manifest.bridge).toEqual({
+      image: 'map/bridge.png',
+      end: 8,
+      segment: 32,
+      height: 24,
+      frames: ['lowered', 'raised'],
+    });
+    expect(manifest.markers).toEqual({
+      image: 'ui/markers.png',
+      size: 12,
+      kinds: ['padlock', 'behind'],
+    });
+  });
+
+  it('accepts a pack without a drawbridge or markers: the game draws its own (#124)', () => {
+    const dir = copyPack();
+    editManifest(dir, (m) => {
+      delete m.bridge;
+      delete m.markers;
+    });
+    const result = validatePack(dir);
+    expect(result.ok ? [] : result.errors).toEqual([]);
+  });
+
+  it('rejects a drawbridge or markers of the wrong size or missing a frame (#124)', () => {
+    const dir = copyPack();
+    editManifest(dir, (m) => {
+      if (m.bridge) {
+        m.bridge.segment = 16;
+        m.bridge.frames = ['lowered'];
+      }
+      if (m.markers) {
+        m.markers.size = 16;
+        m.markers.kinds = ['padlock'];
+      }
+    });
+    const result = validatePack(dir);
+    expect(result.ok ? [] : result.errors).toEqual([
+      'bridge: pieces must be 24 tall with ends of 8 and a segment of 32',
+      'bridge: missing frame "raised"',
+      'bridge: map/bridge.png is 48×48, expected 32×24',
+      'markers: size 16, expected 12',
+      'markers: missing "behind"',
+      'markers: ui/markers.png is 24×12, expected 16×16',
+    ]);
+  });
+
   it('rejects a wrong frame size', () => {
     const dir = copyPack();
     editManifest(dir, (m) => {
