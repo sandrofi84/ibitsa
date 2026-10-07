@@ -20,6 +20,7 @@ import { pickHero, runAction } from './run-action';
 import { RuntimeHost } from './runtime-host';
 import type { DependencyFactory, Notifier } from './runtime-host.types';
 import {
+  readChecks,
   readCouncilMode,
   readDisabledCouncillors,
   readElderSettings,
@@ -46,6 +47,7 @@ export function activate(context: vscode.ExtensionContext): IbitsaApi {
       gameMaster: new GitGameMaster({
         repoDir: workspaceDir,
         setupCommand: () => config().get<string>('worktree.setup') ?? '',
+        checks: () => readChecks(config()),
       }),
     };
   };

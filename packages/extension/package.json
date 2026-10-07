@@ -88,6 +88,23 @@
           "minimum": 0,
           "markdownDescription": "The most a whole campaign may spend, in US dollars: every hero plus the elder and the council. When it's reached, every hero stops and asks. Leave empty for no cap."
         },
+        "ibitsa.checks": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "default": null,
+          "markdownDescription": "Commands run as checks when a hero submits a task, one at a time, stopping at the first failure (e.g. `pnpm test`). Leave empty to use the worktree's `package.json` scripts named `test`, `lint`, `typecheck` or `check`; an empty list `[]` runs no checks."
+        },
+        "ibitsa.review.loopLimit": {
+          "type": "integer",
+          "default": 3,
+          "minimum": 1,
+          "markdownDescription": "Review rounds before a task that keeps getting blocking findings comes to you."
+        },
         "ibitsa.worktree.setup": {
           "type": "string",
           "default": "",

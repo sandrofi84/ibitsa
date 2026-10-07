@@ -338,6 +338,8 @@ On the map, councillors walk out of the council hut to the task point, show a ma
 - **"Done" means passed review** (M5): dependencies between tasks and stacked bridges wait for it; until M5 it meant submitted.
 - **Quick quests** have no councillors: checks run, and the task is done once they pass.
 
+**Settings** (#139): `ibitsa.checks` (commands; `[]` for none; unset detects the `package.json` scripts) and `ibitsa.review.loopLimit` (3).
+
 **Turning it on** (#136): reviews are a campaign setting (`reviews`, logged with the quest settings). The runtime turns them on once the game master can run checks and the agent can start reviewers; logs from before M5 replay without them, a submitted task going straight to done (unreviewed).
 
 ### 5.6 Pull requests
@@ -411,7 +413,7 @@ Shown in the same hover menu, visually distinct:
 1. **Elder's recommendation:** the **elder panel**, docked where the hero pane goes while the campaign plans: research progress and gold, then the brief's summary (task, quick-quest verdict, files, findings, recommended councillors) with **Quick quest** and **Convene council** (the recommended one in bold), or the error and what to do. Convening (§4.2: round table or separate chambers, councillor checkboxes with reasons, effort) follows from it.
 2. **Council hut (interior):** side-on room (Alex Kidd shop style), councillors as **32×32** characters behind a long table (§9.2), active speaker highlighted, "!" for who wants to speak, RPG dialogue box with portrait, options, "Why?", free text. Step tracker: Goal › Research › Questions › Plan › Dispatch. Book of Decisions on the table. In separate chambers, councillors first **study** at the table (think animation, a small book, a progress mark above each) and look up when their report is in; then the dialogue starts. A round table skips the study stage.
 3. **Plan review:** in the hut (#104): plan, tasks in order with criteria, Book of Decisions; Approve / Ask for changes / Dismiss.
-4. **Party assembly** (M4, #123): a dialog from the elder panel's **Assemble the parties**: one row per island with its tasks, hero class and name (from the island's first task's suggested class; names unique across rows), the reviewing councillors (whoever wrote criteria for its tasks; used from M5) and the hero's gold cap in dollars (empty keeps the default pouch; "No cap" for none); the base branch with the uncommitted-changes note; for stacked plans, how islands start (§5.3); how many parties work at once. No cost forecast yet. Then **Start the campaign** (after the API-key card, if there's no key yet).
+4. **Party assembly** (M4, #123): a dialog from the elder panel's **Assemble the parties**: one row per island with its tasks, hero class and name (from the island's first task's suggested class; names unique across rows), the reviewing councillors (whoever wrote criteria for its tasks), each with a **review effort** (#139: Light, Haiku, up to $0.10 a review, by default; Standard, Sonnet, $0.40; Deep, Opus, $1.20), sent as the party's `reviewEfforts` and the hero's gold cap in dollars (empty keeps the default pouch; "No cap" for none); the base branch with the uncommitted-changes note; for stacked plans, how islands start (§5.3); how many parties work at once. No cost forecast yet. Then **Start the campaign** (after the API-key card, if there's no key yet).
 5. **World map (overworld):** see §7.2.
 6. **Party panel:** compact lineup usable as a bottom panel next to the terminal (a `WebviewView`, from M4).
 

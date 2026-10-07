@@ -7,12 +7,14 @@ const DEFAULT_STALL = { testFailures: 4, fileEdits: 12, noProgressTurns: 6 };
 export function readUserSettings(config: ConfigReader): UserSettings {
   const budgetUsd = config.get<number | null>('hero.budgetUsd');
   const parallel = config.get<number>('parties.maxParallel');
+  const loopLimit = config.get<number>('review.loopLimit');
   const campaignUsd = config.get<number | null>('campaign.budgetUsd');
   return {
     budgetMicroUsd:
       typeof budgetUsd === 'number' && budgetUsd > 0 ? Math.round(budgetUsd * 1_000_000) : null,
     stall: DEFAULT_STALL,
     maxParallel: typeof parallel === 'number' && parallel >= 1 ? Math.floor(parallel) : 2,
+    loopLimit: typeof loopLimit === 'number' && loopLimit >= 1 ? Math.floor(loopLimit) : 3,
     campaignBudgetMicroUsd:
       typeof campaignUsd === 'number' && campaignUsd > 0
         ? Math.round(campaignUsd * 1_000_000)
@@ -44,4 +46,16 @@ export function readElderSettings(config: ConfigReader): { model: string; budget
     budgetMicroUsd:
       typeof budgetUsd === 'number' && budgetUsd > 0 ? Math.round(budgetUsd * 1_000_000) : 250_000,
   };
+}
+
+/**
+ * `ibitsa.checks` (§5.5, M5): the commands checks run, an empty list for none, or null (unset) to use the
+ * worktree's `package.json` scripts. Blank or non-text entries are left out.
+ */
+export function readChecks(config: ConfigReader): string[] | null {
+  const checks = config.get<unknown>('checks');
+  if (!Array.isArray(checks)) return null;
+  return checks
+    .filter((c): c is string => typeof c === 'string' && c.trim() !== '')
+    .map((c) => c.trim());
 }

@@ -55,6 +55,8 @@ if (name === 'live') {
     // Lets a test act for a hero the UI can't select yet.
     send: (intent: Parameters<typeof client.send>[0]) => client.send(intent),
     hostRequests: () => host.channel.requests,
+    // The commands the game sent (#139).
+    sent: () => host.sent,
     hostEvent: (event: Parameters<typeof host.channel.send>[0]) => host.channel.send(event),
     zoom,
     hero,
