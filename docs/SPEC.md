@@ -87,7 +87,7 @@ Every character is backed by a real agent session. The game layer makes multi-ag
 8. **Assemble parties.** One party per worktree. The user picks the hero class per party and which councillors join each party (= will review its work). All pre-filled with recommendations from the plan.
 9. **Adventure.** Heroes work on the map. The user can talk to any party or to the council at any time.
 10. **Review loop.** When a hero submits a task, its party's councillors review it concurrently against the agreed criteria. Blocking findings send the hero back. Loop ends when all are satisfied or the loop limit escalates to the user.
-11. **PR.** A passed task can open a PR from its task point. PR status is shown as a badge.
+11. **PR.** One PR per island (its branch), opened by the user from the island's PR card, as a draft early or ready once the island is cleared. PR status is shown as a badge above the island (§5.6).
 12. **Campaign end.** The council writes the **campaign record**. The user chooses to keep (default), compact or empty the council's context.
 
 ---
@@ -230,7 +230,7 @@ ask_user({
   - **Compact**: summarize and continue.
   - **Empty**: next campaign starts fresh (the record file preserves knowledge).
 - On the next campaign, the elder compares the new task with any kept context and may suggest a different choice ("Unrelated to the accounts work. Start fresh?").
-- Hero sessions are task-scoped and end when their task's PR opens or the task is abandoned.
+- A hero's session ends when its island's PR is marked ready for review (or the work is abandoned). Bringing PR comments to the hero resumes that session (§5.6).
 
 ### 4.10 Measuring sittings
 Built so round table and separate chambers, and later changes to either, can be compared on real tasks (#106).
@@ -344,10 +344,19 @@ On the map, councillors walk out of the council hut to the task point, show a ma
 **Turning it on** (#136): reviews are a campaign setting (`reviews`, logged with the quest settings). The runtime turns them on once the game master can run checks and the agent can start reviewers; logs from before M5 replay without them, a submitted task going straight to done (unreviewed).
 
 ### 5.6 Pull requests
-- PRs are opened per task point (or per branch, as the plan defines) via the git-host adapter.
-- Stacked: each PR's base is the previous branch.
-- Badges on the map: open, draft, approved, changes requested, checks failing, merged. Kept up to date by polling the git host (configurable interval).
-- Merging is always a human action on the git host.
+Settled in M6 planning.
+- **One PR per island** (one island is one branch). A quick quest's branch gets one too. Merging is always a human action on the git host; Ibitsa only watches.
+- **Git host:** GitHub only in M6, behind a `GitHost` port (GitLab and others later). The repository is `origin`'s; fork workflows come later. Sign-in is VS Code's built-in GitHub authentication (`repo` scope); the token stays in the extension host, never in core or the log. No GitHub remote, or not signed in: the buttons are disabled with the reason, and **Push branch only** works for any remote.
+- **Opening is always a click**, from the island's **PR card**. A preview form shows the title (the island's title), the body, a **Draft** checkbox (ticked until the island is cleared) and the base branch (not editable), then **Open PR**.
+- **The body is built from the record, with no tokens:** the plan's summary, the island's tasks, their acceptance criteria and who reviewed against them, the decisions the island follows, the suggestions kept for the pull request, the check results and a summary of the review rounds. Editable in the preview.
+- **Pushing** (`git push -u origin <branch>`, the user's own git credentials) happens only on a click: Open PR, **Update PR** (pushes later commits), **Mark ready for review** (pushes first). Nothing leaves the machine otherwise.
+- **Drafts:** a draft may open before the island is cleared; later tasks reach it through Update PR. Once the island is cleared the card offers Mark ready for review. The hero's session ends when the PR is ready (§4.9) and its party slot frees.
+- **PR comments:** **Bring the comments to the hero** fetches the PR's review comments and sends them, as one message, to the hero's resumed session. Its commits go through the review loop again (§5.5), and Update PR pushes them.
+- **Stacked:** island N's PR has island N−1's branch as its base and can open only once N−1's PR exists (the button says why until then). When polling sees N−1 merged, Ibitsa retargets N's PR to N−1's base, then offers **Restack**: `git rebase --onto <new base> <N−1's old head>` in N's worktree and `git push --force-with-lease`, after the user confirms. A conflict goes to the hero, as with #122.
+- **Badges:** draft, open, approved, changes requested, checks failing, merged, closed, floating above the island (both layouts). One GraphQL query covers the campaign's open PRs, every 60 s while any is open (`ibitsa.pullRequests.pollSeconds`), plus a refresh on demand from the card; polling stops when all are merged or closed.
+- **After a merge:** the island's card offers **Remove worktree**, which also deletes the local branch (never the remote one), during an active campaign too.
+- **Reaching Ibitsa:** the campaign's work is shipped when every island's PR is merged. The heroes walk to Ibitsa on the horizon, and the campaign offers Finish (its record comes in M7).
+- **Testing:** a fake GitHub in the dev host and unit tests; an opt-in live smoke test opens a draft PR on a private sandbox repository (`sandrofi84/ibitsa-sandbox`), reads its badge and closes it.
 
 ---
 
@@ -429,9 +438,9 @@ Shown in the same hover menu, visually distinct:
 - An island still waiting to start is dimmed, and its hero waits in a line at Home Village with a padlock (what it waits for shows on hover); a hero held mid-island (#121) shows the padlock at its task point. The camera follows the selected hero (#125), else the first one working.
 - Heroes are **round tokens** with HP bars; councillors are **square tokens** with a parchment border and name plate, no HP bar.
 - Councillors walk from the hut to a task point when a review starts and return when done (#140): one for each review of the round, standing around the hero (right above, right below, left above, left below, then a step further out), the name plate reaching away from it. A magnifier while the review runs; then a red badge with its blocking findings when it asks for changes (nothing for a pass), or a grey "?" when the review failed. They walk back a moment after the round is over (passed, sent back or escalated); a re-review brings its councillors out again. The hero waits idle at its task point under an hourglass. With reduced motion they appear and leave in place.
-- PR badges float above task points (or islands, for stacked).
+- PR badges float above islands: one PR per island (§5.6).
 - **Ibitsa** sits on the map's horizon as the campaign's destination: visible but out of reach until the campaign's work is shipped.
-- Clicking a task point opens the **task panel** (§5.5); a hero standing on it covers most of it, so a click just below still reaches it. The "Needs you" queue sits at the bottom; the PR card comes with M6.
+- Clicking a task point opens the **task panel** (§5.5); a hero standing on it covers most of it, so a click just below still reaches it. The "Needs you" queue sits at the bottom. An island's **PR card** (§5.6) shows in the task panel and on the island's hover.
 
 ### 7.3 HP and gold
 - **HP** = remaining context window (from adapter context usage; estimated if unavailable). Resting (compaction) restores HP.
@@ -896,6 +905,16 @@ Settled in M5 planning; the details are in §5.5.
 - Loop limit 3, then Accept anyway / Send back / Stop; the hero's `dispute_finding` escalates contradictions.
 - Councillors walk out with magnifiers; the task panel shows verdicts, findings, checks and suggestions.
 - Quick quests: checks only.
+
+### 14.5 M6: pull requests
+Settled in M6 planning; the details are in §5.6.
+- One PR per island; drafts may open early, Mark ready once cleared; quick quests too.
+- GitHub only, through VS Code's GitHub sign-in, behind a `GitHost` port; `origin`'s repository.
+- Every push and PR change is a click; the body is built from the record.
+- Badges above islands, polled every 60 s while a PR is open; a PR card with the actions.
+- PR comments go to the hero's resumed session; its session ends when the PR is ready.
+- Stacked: in order, retarget after a merge, Restack with confirmation.
+- Remove worktree after a merge; every PR merged reaches Ibitsa.
 
 ## 15. Open questions
 1. Name registration: domains (ibitsa.com, ibitsa.dev, questforibitsa.com), GitHub org, npm scope, Marketplace/Open VSX publisher; trademark search (EUIPO TMview, USPTO). Initial checks found no conflicting software use.
