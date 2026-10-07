@@ -11,6 +11,8 @@ import type {
   Decision,
   Effort,
   ElderEvent,
+  PolledPullRequest,
+  PullRequestState,
   RepoView,
   ResearchBrief,
   ReviewEvent,
@@ -198,6 +200,44 @@ export interface GameMaster {
   }): Promise<string>;
   /** The worktree's files, tracked and untracked but not ignored, for @ references (#83). */
   listFiles(request: { worktreePath: string }): Promise<string[]>;
+  /** `origin`'s URL (§5.6, M6); null without one. Game masters that can't push leave these out. */
+  remoteUrl?(): Promise<string | null>;
+  /** Pushes a worktree's branch to `origin`; `force` is `--force-with-lease`. */
+  push?(request: {
+    worktreePath: string;
+    branch: string;
+    force?: boolean;
+  }): Promise<{ ok: true; head: string } | { ok: false; reason: string }>;
+}
+
+/** A comment left on a PR's review, for the hero (#154). */
+export interface PullRequestComment {
+  author: string;
+  body: string;
+  /** Where it was left, for a comment on a line. */
+  path?: string;
+  line?: number;
+}
+
+/**
+ * The git host (spec §5.6, M6): GitHub first, behind this port. Each call names `origin`'s URL; a host
+ * that doesn't serve it, or a user who isn't signed in, fails with a message the user can act on.
+ */
+export interface GitHost {
+  openPullRequest(request: {
+    remoteUrl: string;
+    head: string;
+    base: string;
+    title: string;
+    body: string;
+    draft: boolean;
+  }): Promise<{ number: number; url: string; state: PullRequestState }>;
+  markReady(request: { remoteUrl: string; number: number }): Promise<void>;
+  /** The badge state of each PR; never asks the user to sign in. */
+  poll(request: { remoteUrl: string; numbers: number[] }): Promise<PolledPullRequest[]>;
+  reviewComments(request: { remoteUrl: string; number: number }): Promise<PullRequestComment[]>;
+  /** Change a PR's base, after the PR it was stacked on merged (#154). */
+  retarget(request: { remoteUrl: string; number: number; base: string }): Promise<void>;
 }
 
 export interface Clock {

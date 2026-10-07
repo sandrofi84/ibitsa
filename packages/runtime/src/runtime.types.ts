@@ -1,4 +1,4 @@
-import type { AgentAdapter, Clock, GameMaster, UserSettings } from './ports.types';
+import type { AgentAdapter, Clock, GameMaster, GitHost, UserSettings } from './ports.types';
 import type { FolderWatcher } from './skill-catalog.types';
 
 export interface RuntimeOptions {
@@ -22,6 +22,10 @@ export interface RuntimeOptions {
   councilMode?: () => 'ask' | 'roundTable' | 'chambers';
   /** Councillor ids the user turned off (§4.7, #98); read each time the roster is asked for. */
   disabledCouncillors?: () => string[];
+  /** The git host for pull requests (§5.6, M6); without one, only pushing works. */
+  gitHost?: GitHost;
+  /** `ibitsa.pullRequests.pollSeconds` (§5.6); 60 by default. */
+  pullRequestPollSeconds?: () => number;
   /** How skill folders are watched; injectable for tests. */
   watchFolder?: FolderWatcher;
 }

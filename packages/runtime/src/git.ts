@@ -1,11 +1,23 @@
 import { execFile, spawn } from 'node:child_process';
 import type { CommandResult } from './git.types';
 
-/** Runs git in `cwd`. Never throws: failures come back as `ok: false` with git's message. */
-export function git(cwd: string, args: string[]): Promise<CommandResult> {
+/**
+ * Runs git in `cwd`. Never throws: failures come back as `ok: false` with git's message. `env` is added
+ * to the environment, e.g. so a push can't wait on a terminal prompt.
+ */
+export function git(
+  cwd: string,
+  command: string[] | { args: string[]; env: Record<string, string> },
+): Promise<CommandResult> {
+  const { args, env } = Array.isArray(command) ? { args: command, env: undefined } : command;
   return new Promise((resolve) => {
+    const options = {
+      cwd,
+      maxBuffer: 16 * 1024 * 1024,
+      ...(env ? { env: { ...process.env, ...env } } : {}),
+    };
     // biome-ignore lint/complexity/useMaxParams: Node's execFile callback is (error, stdout, stderr).
-    execFile('git', args, { cwd, maxBuffer: 16 * 1024 * 1024 }, (error, stdout, stderr) => {
+    execFile('git', args, options, (error, stdout, stderr) => {
       resolve({ ok: !error, output: `${stdout}${stderr}`.trim() });
     });
   });

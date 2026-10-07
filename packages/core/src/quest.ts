@@ -265,5 +265,9 @@ export class Quest {
       this.ctx.outbox.effect({ type: 'cancelTimer', timerId: Hero.silenceTimer(hero.id) });
     }
     this.ctx.needsYou.clear();
+    // PRs are polled while the campaign runs (§5.6); after it ends they're followed on the git host.
+    if (state.islands.some((i) => i.remote?.pullRequest)) {
+      this.ctx.outbox.effect({ type: 'watchPullRequests', numbers: [] });
+    }
   }
 }

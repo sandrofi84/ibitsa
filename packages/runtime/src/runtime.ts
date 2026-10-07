@@ -31,6 +31,7 @@ import { councilVersion, reviewPlan, seatable, sittingPlan } from './council';
 import { CouncilTallies } from './council-tallies';
 import type { AgentSession, FrontEnd, ReviewSession, SittingSession } from './ports.types';
 import { ProjectRules } from './project-rules';
+import { PullRequests } from './pull-requests';
 import type { Connection, RuntimeOptions } from './runtime.types';
 import { SkillCatalog, watchFolder } from './skill-catalog';
 import { type CampaignLog, CampaignStore } from './storage';
@@ -69,6 +70,7 @@ export class Runtime {
   private readonly actions: SkillCatalog<ActionInfo> | null;
   private readonly councillors: SkillCatalog<CouncillorInfo> | null;
   private readonly newId: () => string;
+  private readonly pullRequests: PullRequests;
 
   constructor(private readonly options: RuntimeOptions) {
     this.store = new CampaignStore(options.storageDir);
@@ -96,6 +98,13 @@ export class Runtime {
         })
       : null;
     this.newId = options.newId ?? randomUUID;
+    this.pullRequests = new PullRequests({
+      gameMaster: options.gameMaster,
+      gitHost: options.gitHost,
+      clock: options.clock,
+      pollSeconds: options.pullRequestPollSeconds ?? (() => 60),
+      report: (event) => this.input({ kind: 'gm', t: this.t(), event }),
+    });
   }
 
   /**
@@ -140,6 +149,7 @@ export class Runtime {
     this.elderSession?.close();
     this.sitting?.session.close();
     for (const review of this.reviews.values()) review.close();
+    this.pullRequests.dispose();
     this.councillors?.dispose();
     this.frontEnds.clear();
   }
@@ -518,6 +528,13 @@ export class Runtime {
           );
         return;
       }
+      case 'pushBranch':
+      case 'openPullRequest':
+      case 'markPullRequestReady':
+      case 'watchPullRequests':
+      case 'pollPullRequests':
+        this.pullRequests.perform(effect);
+        return;
       case 'setTimer':
         this.arm(effect.timerId, effect.at);
         return;

@@ -24,6 +24,9 @@
     },
     {
       "path": "packages/adapters/agent-claude-sdk"
+    },
+    {
+      "path": "packages/adapters/githost-github"
     }
   ]
 }

@@ -185,6 +185,32 @@ export class GitGameMaster implements GameMaster {
    * conflict is aborted, leaving the worktree as it was, and reported as `conflict` for the hero to
    * resolve. Uncommitted work is never rebased or stashed: that is a `conflict` for the hero too.
    */
+  /** `origin`'s URL, for the git host (§5.6); null without one. */
+  async remoteUrl(): Promise<string | null> {
+    const url = await git(this.options.repoDir, ['remote', 'get-url', 'origin']);
+    return url.ok && url.output ? url.output : null;
+  }
+
+  /**
+   * Pushes the worktree's branch to `origin` (§5.6) with the user's own git credentials, never waiting
+   * on a terminal prompt. `force` is `--force-with-lease`, for a restack (#154).
+   */
+  async push({
+    worktreePath,
+    branch,
+    force = false,
+  }: {
+    worktreePath: string;
+    branch: string;
+    force?: boolean;
+  }): Promise<{ ok: true; head: string } | { ok: false; reason: string }> {
+    const args = ['push', ...(force ? ['--force-with-lease'] : []), '-u', 'origin', branch];
+    const pushed = await git(worktreePath, { args, env: { GIT_TERMINAL_PROMPT: '0' } });
+    if (!pushed.ok) return { ok: false, reason: pushed.output.slice(-OUTPUT_TAIL) };
+    const head = await git(worktreePath, ['rev-parse', 'HEAD']);
+    return head.ok ? { ok: true, head: head.output } : { ok: false, reason: head.output };
+  }
+
   async rebaseWorktree({
     worktreePath,
     onto,

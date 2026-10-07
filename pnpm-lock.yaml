@@ -218,6 +218,15 @@ importers:
         specifier: workspace:*
         version: link:../../protocol
 
+  packages/adapters/githost-github:
+    dependencies:
+      '@ibitsa/protocol':
+        specifier: workspace:*
+        version: link:../../protocol
+      '@ibitsa/runtime':
+        specifier: workspace:*
+        version: link:../../runtime
+
   packages/assets:
     dependencies:
       valibot:
@@ -244,6 +253,9 @@ importers:
       '@ibitsa/core':
         specifier: workspace:*
         version: link:../core
+      '@ibitsa/githost-github':
+        specifier: workspace:*
+        version: link:../adapters/githost-github
       '@ibitsa/protocol':
         specifier: workspace:*
         version: link:../protocol

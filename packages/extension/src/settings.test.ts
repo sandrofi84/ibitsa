@@ -4,6 +4,7 @@ import {
   readCouncilMode,
   readDisabledCouncillors,
   readElderSettings,
+  readPollSeconds,
   readUserSettings,
 } from './settings';
 
@@ -89,5 +90,13 @@ describe('review settings (#139)', () => {
     expect(readChecks(config({ checks: [] }))).toEqual([]);
     expect(readChecks(config({}))).toBeNull();
     expect(readChecks(config({ checks: 'pnpm test' }))).toBeNull();
+  });
+});
+
+describe('readPollSeconds (#152)', () => {
+  it('is 60 by default, whole seconds, and never under 15', () => {
+    expect(readPollSeconds(config({}))).toBe(60);
+    expect(readPollSeconds(config({ 'pullRequests.pollSeconds': 90.5 }))).toBe(90);
+    expect(readPollSeconds(config({ 'pullRequests.pollSeconds': 5 }))).toBe(60);
   });
 });

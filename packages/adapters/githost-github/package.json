@@ -1,0 +1,12 @@
+{
+  "name": "@ibitsa/githost-github",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@ibitsa/protocol": "workspace:*",
+    "@ibitsa/runtime": "workspace:*"
+  }
+}

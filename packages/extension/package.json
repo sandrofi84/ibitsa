@@ -105,6 +105,12 @@
           "minimum": 1,
           "markdownDescription": "Review rounds before a task that keeps getting blocking findings comes to you."
         },
+        "ibitsa.pullRequests.pollSeconds": {
+          "type": "integer",
+          "default": 60,
+          "minimum": 15,
+          "markdownDescription": "How often, in seconds, open pull requests are checked on GitHub for their badges, while a campaign runs."
+        },
         "ibitsa.worktree.setup": {
           "type": "string",
           "default": "",
@@ -184,6 +190,7 @@
     "@anthropic-ai/sdk": "0.131.0",
     "@ibitsa/agent-claude-sdk": "workspace:*",
     "@ibitsa/core": "workspace:*",
+    "@ibitsa/githost-github": "workspace:*",
     "@ibitsa/protocol": "workspace:*",
     "@ibitsa/runtime": "workspace:*",
     "zod": "4.6.5"

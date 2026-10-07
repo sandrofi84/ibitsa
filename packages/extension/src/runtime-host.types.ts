@@ -1,10 +1,12 @@
 import type { Command } from '@ibitsa/protocol';
-import type { AgentAdapter, GameMaster, UserSettings } from '@ibitsa/runtime';
+import type { AgentAdapter, GameMaster, GitHost, UserSettings } from '@ibitsa/runtime';
 import type { Credentials } from './credentials.types';
 
 export interface Dependencies {
   adapter: AgentAdapter;
   gameMaster: GameMaster;
+  /** The git host for pull requests (§5.6); without one, only pushing works. */
+  gitHost?: GitHost;
 }
 
 /** Builds the agent adapter and game master for a workspace. */
@@ -32,6 +34,8 @@ export interface RuntimeHostOptions {
   elder?: () => { model: string; budgetMicroUsd: number };
   /** Councillor ids turned off in `ibitsa.council.disabled` (#98). */
   disabledCouncillors?: () => string[];
+  /** `ibitsa.pullRequests.pollSeconds` (§5.6). */
+  pullRequestPollSeconds?: () => number;
   notify: Notifier;
   /** Is the game tab on screen? Notifications only appear when it isn't. */
   gameVisible: () => boolean;

@@ -365,6 +365,21 @@ describe('pull requests (spec §5.6, M6)', () => {
     expect(run.rejections().at(-1)).toBe('There is no open pull request to refresh.');
   });
 
+  it('stops polling when the quest ends; its PRs are followed on the git host from then on', () => {
+    const run = new Run().started();
+    run.do({
+      type: 'openPullRequest',
+      islandId: run.island().id,
+      title: 'B',
+      body: '',
+      draft: true,
+    });
+    run.gm(opened(run.island().id));
+    run.effects = [];
+    run.do({ type: 'abandonQuest' });
+    expect(run.last('watchPullRequests')).toEqual({ type: 'watchPullRequests', numbers: [] });
+  });
+
   it('after a restart, polls again and drops a push that was under way', () => {
     const run = new Run().started({ plan: STACKED });
     run.do({

@@ -1,4 +1,5 @@
 import { ClaudeAdapter } from '@ibitsa/agent-claude-sdk';
+import { GitHubHost } from '@ibitsa/githost-github';
 import { heroHandle } from '@ibitsa/protocol';
 import { GitGameMaster } from '@ibitsa/runtime';
 import * as vscode from 'vscode';
@@ -10,6 +11,7 @@ import { exportTallies } from './export-tallies';
 import type { ExportTalliesArgs } from './export-tallies.types';
 import type { IbitsaApi } from './extension.types';
 import { GAME_VIEW_TYPE, GamePanel } from './game-panel';
+import { githubToken } from './github-sign-in';
 import { chooseHero } from './hero-choice';
 import { API_KEYS_URL, HostChannel } from './host-channel';
 import { anthropicKeyValidator } from './key-validator';
@@ -24,6 +26,7 @@ import {
   readCouncilMode,
   readDisabledCouncillors,
   readElderSettings,
+  readPollSeconds,
   readUserSettings,
 } from './settings';
 
@@ -49,6 +52,7 @@ export function activate(context: vscode.ExtensionContext): IbitsaApi {
         setupCommand: () => config().get<string>('worktree.setup') ?? '',
         checks: () => readChecks(config()),
       }),
+      gitHost: new GitHubHost({ token: githubToken }),
     };
   };
   let notify: Notifier = async (message) =>
@@ -74,6 +78,8 @@ export function activate(context: vscode.ExtensionContext): IbitsaApi {
           councilMode: () => readCouncilMode(vscode.workspace.getConfiguration('ibitsa')),
           disabledCouncillors: () =>
             readDisabledCouncillors(vscode.workspace.getConfiguration('ibitsa')),
+          pullRequestPollSeconds: () =>
+            readPollSeconds(vscode.workspace.getConfiguration('ibitsa')),
           notify: (message) => notify(message),
           gameVisible: () => GamePanel.visible,
           openGame,
