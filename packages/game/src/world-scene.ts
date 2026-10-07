@@ -79,6 +79,11 @@ export class WorldScene extends Phaser.Scene {
   private lastWheel = 0;
   private dragging = false;
   private questLayer!: Phaser.GameObjects.Container;
+  /**
+   * PR badges, kept above hero tokens and their speech (#162): a hero's bubble beside a badge mustn't
+   * take the click meant for it.
+   */
+  private badgeLayer!: Phaser.GameObjects.Container;
   private hud!: Phaser.GameObjects.Text;
   private empty!: Phaser.GameObjects.Text;
   private readonly heroes = new Map<string, HeroToken>();
@@ -195,6 +200,7 @@ export class WorldScene extends Phaser.Scene {
     const village = this.add.container(0, 0);
     this.drawIsland(village, v);
     this.questLayer = this.add.container(0, 0);
+    this.badgeLayer = this.add.container(0, 0);
     this.empty = this.add.text(330, 120, 'No quest yet', textStyle('#d8ecff')).setOrigin(0.5);
     this.world.add([
       village,
@@ -202,6 +208,7 @@ export class WorldScene extends Phaser.Scene {
       this.add.text(v.x + 22, v.y + 70, 'HOME VILLAGE', textStyle()),
       this.questLayer,
       this.empty,
+      this.badgeLayer,
     ]);
     this.hud = this.add.text(6, 4, '', textStyle());
 
@@ -406,6 +413,7 @@ export class WorldScene extends Phaser.Scene {
               : spot,
         });
         this.heroes.set(hero.id, token);
+        this.world.bringToTop(this.badgeLayer);
       }
       token.update({
         hero,
@@ -462,6 +470,7 @@ export class WorldScene extends Phaser.Scene {
           },
         });
         this.reviewers.set(view.key, token);
+        this.world.bringToTop(this.badgeLayer);
       }
       token.update(view);
     }
@@ -474,6 +483,7 @@ export class WorldScene extends Phaser.Scene {
    */
   private drawIslands(snapshot: Snapshot): void {
     this.questLayer.removeAll(true);
+    this.badgeLayer.removeAll(true);
     const stacked = snapshot.campaign?.branching === 'stacked';
     const islands: MapProbe['islands'] = [];
     this.prSpots.clear();
@@ -570,7 +580,8 @@ export class WorldScene extends Phaser.Scene {
         this.game.events.emit(PULL_REQUEST_HOVERED, { islandId, ...below });
       })
       .on('pointerout', () => this.game.events.emit(PULL_REQUEST_HOVERED, null));
-    this.questLayer.add(text);
+    this.badgeLayer.add(text);
+    this.world.bringToTop(this.badgeLayer);
     this.prSpots.set(islandId, { x: at.x - text.width / 2, y: at.y + text.height / 2 });
   }
 

@@ -72,6 +72,8 @@ if (name === 'live') {
     hostRequests: () => host.channel.requests,
     // The commands the game sent (#139).
     sent: () => host.sent,
+    // The journal's lines so far, as text (#162).
+    journal: () => client.journal.map((e) => ('text' in e ? e.text : `${e.activity} ${e.detail}`)),
     hostEvent: (event: Parameters<typeof host.channel.send>[0]) => host.channel.send(event),
     zoom,
     hero,

@@ -7,6 +7,7 @@ interface Probe {
     islands: { id: string; worktree: string; taskPoints: { state: string }[] }[];
   } | null;
   send(intent: unknown): void;
+  journal(): string[];
   map(): { islands: { pr?: string | null }[]; shipped?: boolean; atIbitsa?: string[] } | null;
   pullRequestOnPage(islandId: string): { x: number; y: number } | null;
   pullRequestPanel(): string | null;
@@ -208,13 +209,15 @@ test('brings the PR comments to the hero, who goes back to the last task (#154)'
   await expect(card.getByText('Open, into main')).toBeVisible({ timeout: 10_000 });
 
   expect(await probe(page, (p) => p.snapshot()?.heroes[0]?.state.kind)).toBe('submitted');
+  const submits = () =>
+    probe(page, (p) => p.journal().filter((line) => line.startsWith('Submitted')).length);
+  const before = await submits();
   await card.getByRole('button', { name: 'Bring the comments to the hero' }).click();
   await expect(card.getByText('Fetching the review comments…')).toBeVisible();
-  // The hero goes back to work on the comments (its session resumed) and, being the scripted
-  // hero, hands the task in again straight away.
-  await expect
-    .poll(() => probe(page, (p) => p.snapshot()?.heroes[0]?.state.kind), { timeout: 10_000 })
-    .toBe('working');
+  // The hero goes back to work on the comments (its session resumed) and, being the scripted hero,
+  // hands the task in again straight away: too quickly to catch it working between snapshots, so
+  // the journal's next "Submitted" line shows it.
+  await expect.poll(submits, { timeout: 15_000 }).toBe(before + 1);
   await expect(card.getByText('Fetching the review comments…')).toBeHidden();
   await expect
     .poll(() => probe(page, (p) => p.snapshot()?.heroes[0]?.state.kind), { timeout: 15_000 })
