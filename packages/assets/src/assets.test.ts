@@ -37,6 +37,7 @@ describe('validatePack', () => {
     expect(result.ok ? [] : result.errors).toEqual([]);
   });
 
+  // Copying the whole pack is slow on Windows CI (it took 5.2 s once): give it room.
   it('rejects a script file', () => {
     const dir = copyPack();
     writeFileSync(join(dir, 'characters', 'evil.js'), 'alert(1)');
@@ -44,7 +45,7 @@ describe('validatePack', () => {
       ok: false,
       errors: ['characters/evil.js: not allowed in a pack (images, audio and pack.json only)'],
     });
-  });
+  }, 20_000);
 
   it('rejects a missing required animation', () => {
     const dir = copyPack();
