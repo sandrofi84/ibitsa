@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { openWelcome } from './home';
 
 interface Probe {
   snapshot(): {
@@ -130,9 +131,9 @@ test("two heroes: choose whom the pane shows, message one, message all, and each
 
 test('one hero looks as before: no hero list (#125)', async ({ page }) => {
   await page.goto('/?fixture=live');
-  await page.getByRole('button', { name: 'New quest' }).click();
+  await openWelcome(page);
   await page.getByLabel('Task').fill('Tidy the README');
-  await page.getByRole('button', { name: 'Skip the elder' }).click();
+  await page.getByRole('button', { name: 'I know the way' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   const pane = page.getByRole('region', { name: 'Hero' });
   await expect(pane.getByRole('heading', { name: /Ranger/ })).toBeVisible();

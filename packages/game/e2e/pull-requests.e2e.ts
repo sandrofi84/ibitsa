@@ -8,7 +8,12 @@ interface Probe {
   } | null;
   send(intent: unknown): void;
   journal(): string[];
-  map(): { islands: { pr?: string | null }[]; shipped?: boolean; atIbitsa?: string[] } | null;
+  map(): {
+    islands: { pr?: string | null }[];
+    shipped?: boolean;
+    atIbitsa?: string[];
+    voyage?: string | null;
+  } | null;
   pullRequestOnPage(islandId: string): { x: number; y: number } | null;
   pullRequestPanel(): string | null;
   pullRequestPreview(): string | null;
@@ -149,6 +154,10 @@ test('a PR from draft to merged: the badge, the card, the preview, Update, Mark 
   await expect.poll(() => probe(page, (p) => p.map()?.shipped)).toBe(true);
   const heroId = await probe(page, (p) => p.snapshot()?.heroes[0]?.id);
   await expect.poll(() => probe(page, (p) => p.map()?.atIbitsa)).toEqual([heroId]);
+  // The heroes sail for Ibitsa, and it fades into the mist (#180).
+  await expect
+    .poll(() => probe(page, (p) => p.map()?.voyage))
+    .toBe('Not Ibitsa. The search goes on.');
 
   // Merged: its worktree and local branch can go, mid-campaign, after a second click (#154).
   await card.getByRole('button', { name: 'Remove worktree' }).click();

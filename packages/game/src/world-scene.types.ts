@@ -26,4 +26,12 @@ export interface MapProbe {
   shipped?: boolean;
   /** Heroes at (or walking to) Ibitsa. */
   atIbitsa?: string[];
+  /** Home Village shows its buildings' labels: no campaign is running (#180). */
+  startScreen?: boolean;
+  /** Islands charted out of the fog so far (#180). */
+  charted?: string[];
+  /** What the mist says once the heroes reach the horizon (#180); null before. */
+  voyage?: string | null;
+  /** The ended campaign's islands have sunk (#180). */
+  sunk?: boolean;
 }

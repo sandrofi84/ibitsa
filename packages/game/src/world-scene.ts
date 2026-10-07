@@ -18,7 +18,7 @@ import {
   reviewerPath,
   reviewerSide,
 } from './layout';
-import type { BridgeLayout, Point, WorldLayout } from './layout.types';
+import type { BridgeLayout, IslandLayout, Point, WorldLayout } from './layout.types';
 import { marker } from './map-markers';
 import { BRIDGE_KEY, PACK_KEY } from './pack-scene';
 import { badgeOf } from './pull-requests';
@@ -91,6 +91,16 @@ export class WorldScene extends Phaser.Scene {
   private readonly reviewers = new Map<string, CouncillorToken>();
   private readonly reviewed = new Set<string>();
   private islandKey = '';
+  /** Islands already charted out of the fog (#180), so each rises once. */
+  private readonly charted = new Set<string>();
+  /** The campaign the map shows, so a new one starts with nothing charted and nothing sunk. */
+  private campaignId: string | null = null;
+  /** The islands have sunk back into the sea after the campaign ended (#180). */
+  private sunk = false;
+  /** Ibitsa has faded into the mist this campaign (#180), so a redraw shows it faded at once. */
+  private misted = false;
+  /** "GUILD HALL" and "COUNCIL HUT" over Home Village's buildings on the start screen (#180). */
+  private startLabels: Phaser.GameObjects.Text[] = [];
   /** The hero the camera follows when chosen in the hero pane (#125); else the first one working. */
   private selected: string | null = null;
   private last: Snapshot | null = null;
@@ -140,6 +150,10 @@ export class WorldScene extends Phaser.Scene {
       reviewers: [...this.reviewers.values()].map((t) => t.probe()),
       shipped: this.last?.campaign?.shipped ?? false,
       atIbitsa: [...this.heroes].flatMap(([heroId, token]) => (token.atIbitsa() ? [heroId] : [])),
+      startScreen: this.startLabels[0]?.visible ?? false,
+      charted: [...this.charted],
+      voyage: this.misted ? VOYAGE_LINE : null,
+      sunk: this.sunk,
     };
   }
 
@@ -149,6 +163,17 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /** The middle of the council hut on the map (#169), for tests that click it. */
+  /** The start screen's labels over the Guild Hall and the council hut (#180). */
+  private labelBuildings(v: WorldLayout['village']): Phaser.GameObjects.Text[] {
+    this.startLabels = [
+      this.add
+        .text(v.guildHall.x + 24, v.guildHall.y - 2, 'GUILD HALL', textStyle('#f2c230'))
+        .setOrigin(0.5, 1),
+      this.add.text(v.hut.x + 32, v.hut.y, 'COUNCIL HUT', textStyle('#f2c230')).setOrigin(0.5, 1),
+    ];
+    return this.startLabels;
+  }
+
   /** The Guild Hall's middle, in world coordinates (tests click it, #179). */
   guildHallSpot(): { x: number; y: number } {
     const { guildHall } = this.layout.village;
@@ -250,6 +275,7 @@ export class WorldScene extends Phaser.Scene {
           if (onCanvas(pointer)) this.game.events.emit(HUT_SELECTED);
         }),
       this.guildHall(v.guildHall),
+      ...this.labelBuildings(v),
       this.add.text(v.x + 22, v.y + 70, 'HOME VILLAGE', textStyle()),
       this.questLayer,
       this.empty,
@@ -422,6 +448,18 @@ export class WorldScene extends Phaser.Scene {
     this.layout = layoutWorld(snapshot);
     this.fitBounds();
     this.empty.setVisible(snapshot.campaign === null);
+    // A new campaign charts its islands afresh; an ended one sinks them (#180).
+    const campaign = snapshot.campaign;
+    if ((campaign?.id ?? null) !== this.campaignId) {
+      this.campaignId = campaign?.id ?? null;
+      this.charted.clear();
+      this.misted = false;
+      this.sunk = false;
+      this.questLayer.setAlpha(1).setY(0);
+      this.badgeLayer.setAlpha(1).setY(0);
+    }
+    const ended = campaign?.status === 'finished' || campaign?.status === 'abandoned';
+    for (const label of this.startLabels) label.setVisible(!campaign || ended);
     this.hud.setText(
       snapshot.campaign
         ? `${snapshot.campaign.title.toUpperCase()}   GOLD ${gold(snapshot.campaign.gold)}${snapshot.campaign.capMicroUsd === null ? '' : ` / ${gold({ kind: 'exact', value: snapshot.campaign.capMicroUsd })}`}${snapshot.campaign.autoApprove ? '   AUTO' : ''}`
@@ -481,7 +519,36 @@ export class WorldScene extends Phaser.Scene {
       }
     }
     this.renderReviewers(snapshot);
+    if (ended && !this.sunk) this.sink();
+    else if (this.sunk) for (const token of this.heroes.values()) token.target().setVisible(false);
     if (this.director.observe(snapshot, this.selected)) this.aimCamera(this.director.current);
+  }
+
+  /**
+   * The campaign ended (§7.1, #180): none of its islands was Ibitsa, so they sink back into the sea with
+   * their heroes, and Home Village is left for the next search. Reduced motion: they're simply gone.
+   */
+  private sink(): void {
+    this.sunk = true;
+    const going = [
+      this.questLayer,
+      this.badgeLayer,
+      ...[...this.heroes.values()].map((t) => t.target()),
+    ];
+    if (reducedMotion()) {
+      for (const g of going) g.setVisible(false);
+      return;
+    }
+    this.tweens.add({
+      targets: going,
+      alpha: 0,
+      y: '+=12',
+      duration: SINK_MS,
+      ease: 'Sine.easeIn',
+      onComplete: () => {
+        for (const g of going) g.setVisible(false).setY(g.y - 12);
+      },
+    });
   }
 
   /**
@@ -536,7 +603,10 @@ export class WorldScene extends Phaser.Scene {
     this.badgeLayer.removeAll(true);
     const stacked = snapshot.campaign?.branching === 'stacked';
     const islands: MapProbe['islands'] = [];
+    let fresh = 0;
     this.prSpots.clear();
+    this.questLayer.setVisible(!this.sunk);
+    this.badgeLayer.setVisible(!this.sunk);
     if (snapshot.campaign) this.drawIbitsa(snapshot.campaign.shipped);
     snapshot.islands.forEach((island, k) => {
       const l = this.layout.islands[k];
@@ -587,6 +657,12 @@ export class WorldScene extends Phaser.Scene {
       // An island still waiting for a slot, a dependency or the island before it looks idle.
       c.setAlpha(dim ? 0.55 : 1);
       this.questLayer.add(c);
+      // Charted out of the fog (#180): a new possible location of Ibitsa rises, one after another.
+      if (snapshot.campaign?.status === 'active' && !this.charted.has(island.id)) {
+        this.charted.add(island.id);
+        if (!reducedMotion())
+          this.chart({ island: c, layout: l, order: fresh++, alpha: dim ? 0.55 : 1 });
+      }
       if (badge)
         this.drawBadge({ islandId: island.id, badge, at: { x: l.x + l.width - 12, y: l.y + 4 } });
     });
@@ -635,25 +711,83 @@ export class WorldScene extends Phaser.Scene {
     this.prSpots.set(islandId, { x: at.x - text.width / 2, y: at.y + text.height / 2 });
   }
 
+  /** A fog bank over a newly charted island, lifting as the island rises (#180). */
+  private chart({
+    island,
+    layout,
+    order,
+    alpha,
+  }: {
+    island: Phaser.GameObjects.Container;
+    layout: IslandLayout;
+    order: number;
+    alpha: number;
+  }): void {
+    const fog = this.add.graphics();
+    fog.fillStyle(0xdfe6ee, 0.9);
+    for (let k = 0; k < 5; k++) {
+      fog.fillEllipse(
+        layout.x + 16 + (k * (layout.width - 32)) / 4,
+        layout.y + 40 + (k % 2) * 14,
+        64,
+        40,
+      );
+    }
+    this.questLayer.add(fog);
+    island.setAlpha(0);
+    const delay = order * CHART_STEP_MS;
+    this.tweens.add({ targets: island, alpha, delay, duration: CHART_MS, ease: 'Sine.easeOut' });
+    this.tweens.add({
+      targets: fog,
+      alpha: 0,
+      delay,
+      duration: CHART_MS * 1.5,
+      onComplete: () => fog.destroy(),
+    });
+  }
+
   /**
-   * Ibitsa on the horizon (§7.2): a far-off castle, out of reach until the campaign is shipped; then its
-   * banner turns gold (#153). Drawn by the game; packs have no art for it yet.
+   * Ibitsa on the horizon (§7.2): a far-off castle, out of reach. Once every PR has merged the heroes sail
+   * for it, and it fades into the mist (#180): "Not Ibitsa. The search goes on." Drawn by the game; packs
+   * have no art for it yet.
    */
   private drawIbitsa(shipped: boolean): void {
     const { x, y } = this.layout.ibitsa;
-    const g = this.add.graphics({ x: x - 16, y: y - 6 });
-    const stone = shipped ? 0xe8dcc0 : 0x9aa6b8;
-    g.fillStyle(stone, shipped ? 1 : 0.7);
-    g.fillRect(0, 8, 32, 16).fillRect(2, 2, 6, 22).fillRect(24, 2, 6, 22).fillRect(12, 0, 8, 24);
-    g.fillStyle(0x1a1420, 0.6).fillRect(14, 16, 4, 8);
-    g.lineStyle(1, 0x5e3b1c).lineBetween(16, 0, 16, -6);
-    g.fillStyle(shipped ? 0xf2c230 : 0x6a6a6a).fillTriangle(16, -6, 22, -4, 16, -2);
-    this.questLayer.add(g);
-    this.questLayer.add(
-      this.add
-        .text(x, y - 14, 'IBITSA', textStyle(shipped ? '#f2c230' : '#c8d0dc'))
-        .setOrigin(0.5, 1),
-    );
+    const castle = this.add.graphics({ x: x - 16, y: y - 6 });
+    castle.fillStyle(0x9aa6b8, 1);
+    castle
+      .fillRect(0, 8, 32, 16)
+      .fillRect(2, 2, 6, 22)
+      .fillRect(24, 2, 6, 22)
+      .fillRect(12, 0, 8, 24);
+    castle.fillStyle(0x1a1420, 0.6).fillRect(14, 16, 4, 8);
+    castle.lineStyle(1, 0x5e3b1c).lineBetween(16, 0, 16, -6);
+    castle.fillStyle(0x6a6a6a).fillTriangle(16, -6, 22, -4, 16, -2);
+    const name = this.add.text(x, y - 14, 'IBITSA', textStyle('#c8d0dc')).setOrigin(0.5, 1);
+    castle.setAlpha(0.7);
+    this.questLayer.add([castle, name]);
+    if (!shipped) return;
+    const mist = this.add.graphics();
+    mist.fillStyle(0xe8eef4, 0.75);
+    for (let k = 0; k < 4; k++) mist.fillEllipse(x - 24 + k * 16, y + 4 - (k % 2) * 8, 40, 22);
+    // Above the castle's name, clear of the heroes who sail up below it.
+    const line = this.add
+      .text(x, y - 28, VOYAGE_LINE, { ...textStyle('#ffffff'), backgroundColor: '#1a1420' })
+      .setOrigin(0.5, 1);
+    this.questLayer.add([mist, line]);
+    if (this.misted || reducedMotion()) {
+      this.misted = true;
+      castle.setAlpha(0.12);
+      name.setAlpha(0.3);
+      return;
+    }
+    this.misted = true;
+    mist.setAlpha(0);
+    line.setAlpha(0);
+    this.tweens.add({ targets: mist, alpha: 1, delay: VOYAGE_MS, duration: MIST_MS });
+    this.tweens.add({ targets: castle, alpha: 0.12, delay: VOYAGE_MS, duration: MIST_MS });
+    this.tweens.add({ targets: name, alpha: 0.3, delay: VOYAGE_MS, duration: MIST_MS });
+    this.tweens.add({ targets: line, alpha: 1, delay: VOYAGE_MS + MIST_MS, duration: 400 });
   }
 
   /** A drawbridge (§9.2): the pack's pieces, or plain planks; a padlock while raised, a mark when behind. */
@@ -740,6 +874,16 @@ export const HERO_SELECTED = 'heroSelected';
 export const TASK_SELECTED = 'taskSelected';
 /** Emitted on `game.events` with the island's id when its PR badge is clicked (#153). */
 export const PULL_REQUEST_SELECTED = 'pullRequestSelected';
+/** What the mist says when the heroes reach the horizon (#180). */
+export const VOYAGE_LINE = 'Not Ibitsa. The search goes on.';
+/** The voyage (#180): the heroes sail before the mist rises; it takes this long to swallow the castle. */
+const VOYAGE_MS = 1_600;
+const MIST_MS = 2_000;
+/** Charting (#180): each island rises this long after the one before, over this long. */
+const CHART_STEP_MS = 350;
+const CHART_MS = 700;
+/** Sinking after the campaign (#180). */
+const SINK_MS = 1_200;
 /** The council hut was clicked on the map (#169). */
 export const HUT_SELECTED = 'hutSelected';
 /** The Guild Hall was clicked on the map (#179). */
@@ -890,7 +1034,7 @@ export class HeroToken {
     this.travel?.stop();
     this.travel = null;
     this.walk([{ x: this.container.x, y: this.container.y }, to]);
-    this.say('Ibitsa!');
+    this.say('Is that Ibitsa?');
   }
 
   /** At (or on the way to) Ibitsa. */

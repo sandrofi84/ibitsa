@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { openWelcome } from './home';
 
 // The command bar (#81): one input at the bottom; the hero pane's box is the same input.
 
@@ -17,9 +18,9 @@ const heroState = (page: Page) => probe(page, (p) => p.snapshot()?.heroes[0]?.st
 
 async function questRunning(page: Page): Promise<void> {
   await page.goto('/?fixture=live');
-  await page.getByRole('button', { name: 'New quest' }).click();
+  await openWelcome(page);
   await page.getByLabel('Task').fill('Tidy the README');
-  await page.getByRole('button', { name: 'Skip the elder' }).click();
+  await page.getByRole('button', { name: 'I know the way' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   await expect.poll(() => heroState(page)).toBe('idle');
 }
@@ -36,7 +37,7 @@ test('with no quest, / focuses the bar and Enter opens the New Quest form with t
   await expect(bar).toBeFocused();
   await page.keyboard.type('Fix the login redirect');
   await page.keyboard.press('Enter');
-  const dialog = page.getByRole('dialog', { name: 'New quest' });
+  const dialog = page.getByRole('dialog', { name: 'Welcome' });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByLabel('Task')).toHaveValue('Fix the login redirect');
 });

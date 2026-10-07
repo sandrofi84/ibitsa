@@ -27,10 +27,9 @@ test('answers the council from the keyboard, asks "Why?", and returns to the map
   const errors = watchErrors(page);
   await page.goto('/?fixture=m3-round-table&autoplay=1&speed=16&mode=interactive');
 
-  // The hut shows by itself while the council sits, without the command bar or New quest.
+  // The hut shows by itself while the council sits, without the command bar.
   await expect.poll(() => probe(page, (p) => p.hut()?.step), { timeout: 20_000 }).toBe('questions');
   await expect(page.locator('.command-bar')).toBeHidden();
-  await expect(page.getByRole('button', { name: 'New quest' })).toBeHidden();
 
   // "Needs you" offers the questions too, and opens the dialogue box.
   const box = page.getByRole('dialog', { name: 'The council asks' });

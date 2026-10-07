@@ -320,7 +320,7 @@ export function startGame(root: HTMLElement, host: Host): Started {
   };
   const showHut = (feed: HutFeed) => {
     game.registry.set(HUT_FEED, feed);
-    // The map's camera buttons, the command bar and New quest have nothing to do in the hut.
+    // The map's camera buttons and the command bar have nothing to do in the hut.
     cameraControls.style.display = 'none';
     document.body.classList.add('in-hut');
     const scenes = game.scene;
@@ -388,7 +388,13 @@ export function startGame(root: HTMLElement, host: Host): Started {
   client.onSnapshot(() => {
     if (chamberHut) chamberFeed();
   });
-  game.events.on(HUT_SELECTED, () => chamber.open());
+  // The council hut (§7.1 screen 9, #180): with no campaign running, the council's welcome; mid-campaign,
+  // its chamber (#169). While a campaign plans, the elder's panel and the sitting have the floor.
+  game.events.on(HUT_SELECTED, () => {
+    const status = client.snapshot?.campaign?.status;
+    if (!status || status === 'finished' || status === 'abandoned') newQuest.open();
+    else chamber.open();
+  });
   // The pack's sounds on what happens, at the user's volumes (#184).
   const soundBoard = mountSoundBoard({ game, client, host });
   // The Guild Hall in Home Village opens Ibitsa's settings (#179).

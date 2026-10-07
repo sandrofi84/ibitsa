@@ -82,7 +82,14 @@ export function mountElderPanel({
     if (elder.status === 'researching') {
       const status = el('p', { className: 'progress', text: elder.progress ?? 'Starting…' });
       status.setAttribute('aria-live', 'polite');
-      return [heading, el('p', { text: 'Researching your task…' }), status, cost, actions(abandon)];
+      // The lore (§1.1, #180): nobody knows where Ibitsa is, so the elder searches the old charts.
+      return [
+        heading,
+        el('p', { text: 'The elder searches the old charts…' }),
+        status,
+        cost,
+        actions(abandon),
+      ];
     }
     if (elder.status === 'failed' || !elder.brief) {
       const error = el('p', { className: 'error', text: elder.error ?? 'The research failed.' });
@@ -145,6 +152,7 @@ export function mountElderPanel({
     recommended.classList.add('recommended');
     return [
       heading,
+      el('p', { className: 'lead', text: "The elder's findings" }),
       el('p', { className: 'task', text: brief.task }),
       verdict,
       section('Files', files),

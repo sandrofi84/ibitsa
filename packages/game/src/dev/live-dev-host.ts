@@ -552,8 +552,9 @@ export class LiveDevHost implements Host {
             return;
           }
           // Asked mid-campaign (#169): the councillor asked answers, else the elder, then the turn ends.
+          // At a chamber's pace, so "The council is thinking…" shows as it would for a real one.
           const asked = effect.resume.prompt?.match(/The user asks (\S+), who answers/)?.[1];
-          this.council(effect.sittingId, [
+          this.slowly(effect.sittingId, [
             {
               type: 'said',
               councillorId: asked ?? 'elder',

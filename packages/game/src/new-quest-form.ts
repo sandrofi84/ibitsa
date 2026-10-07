@@ -6,12 +6,14 @@ import type { Host } from './host.types';
 import type { NewQuestForm } from './new-quest-form.types';
 
 /**
- * The New Quest form (spec §14.1, §4.1) and the first-run API-key card (§11.6). Plain DOM in a native
- * <dialog>, so it is keyboard-accessible. Credentials go over the host channel, never the protocol.
+ * The council's welcome (§1.1, §7.1 screen 9, #180), once the New Quest form (spec §14.1, §4.1), and the
+ * first-run API-key card (§11.6). Plain DOM in a native <dialog>, so it is keyboard-accessible.
+ * Credentials go over the host channel, never the protocol. The council hut opens it when no campaign
+ * runs; "Ibitsa: New Quest" too.
  *
- * It opens on the task alone: **Ask the elder** researches it first (#101); **Skip the elder** shows the
- * hero's fields for a quick quest straight away. After the elder's brief it opens again with the hero's
- * fields for the quick quest.
+ * The elder asks what you want to do on Ibitsa (the task): **Help me find it** researches it first
+ * (#101); **I know the way** shows the hero's fields for a quick quest straight away. After the elder's
+ * brief it opens again with the hero's fields for the quick quest.
  */
 export function mountNewQuestForm({
   client,
@@ -20,13 +22,8 @@ export function mountNewQuestForm({
   client: GameClient;
   host: Host;
 }): NewQuestForm {
-  const opener = button({ label: 'New quest', onClick: () => open() });
-  opener.className = 'new-quest-button';
-  opener.hidden = true;
-  document.body.appendChild(opener);
-
-  const dialog = el('dialog', { className: 'new-quest' });
-  dialog.setAttribute('aria-label', 'New quest');
+  const dialog = el('dialog', { className: 'new-quest council-welcome' });
+  dialog.setAttribute('aria-label', 'Welcome');
   document.body.appendChild(dialog);
 
   let snapshot: Snapshot | null = null;
@@ -40,7 +37,6 @@ export function mountNewQuestForm({
   const planning = () => snapshot?.campaign?.status === 'planning';
   client.onSnapshot((s) => {
     snapshot = s;
-    opener.hidden = active() || planning();
     if (active() && dialog.open) dialog.close();
     if (dialog.open && !renderOnboarding) refreshBranches();
   });
@@ -76,7 +72,7 @@ export function mountNewQuestForm({
   const description = el('textarea');
   description.rows = 5;
   description.required = true;
-  description.placeholder = 'What should the hero do? The first line becomes the quest title.';
+  description.placeholder = 'The task. Its first line becomes the quest title.';
   const classSelect = el('select');
   for (const c of HERO_CLASSES) {
     const option = new Option(`${c.label} (${c.model})`, c.id);
@@ -108,9 +104,9 @@ export function mountNewQuestForm({
     wrapper.append(el('span', { text: label }), control);
     return wrapper;
   };
-  const start = el('button', { text: 'Ask the elder' });
+  const start = el('button', { text: 'Help me find it' });
   start.type = 'submit';
-  const skip = button({ label: 'Skip the elder', onClick: () => setMode('quest') });
+  const skip = button({ label: 'I know the way', onClick: () => setMode('quest') });
   const heroFields = el('div', { className: 'hero-fields' });
   heroFields.append(
     field('Hero class', classSelect),
@@ -121,10 +117,17 @@ export function mountNewQuestForm({
   );
   const askNote = el('p', {
     className: 'note',
-    text: 'The elder reads the code and writes a short brief first, for a few cents. Then you choose a quick quest or the council.',
+    text: 'The elder searches the old charts (reads the code) and writes a short brief, for a few cents. Then you choose a quick quest or the council.',
   });
+  // The elder speaks (§1.1): the welcome, then the question the task answers.
+  const speech = el('div', { className: 'elder-speech' });
+  speech.append(
+    el('p', { className: 'speaker', text: 'Elder' }),
+    el('p', { text: 'We heard you are looking for Ibitsa…' }),
+    el('p', { text: '…what do you want to do there?' }),
+  );
   form.append(
-    el('h2', { text: 'New quest' }),
+    speech,
     field('Task', description),
     askNote,
     heroFields,
@@ -143,7 +146,7 @@ export function mountNewQuestForm({
     heroFields.hidden = !quest;
     askNote.hidden = quest;
     skip.hidden = quest;
-    start.textContent = quest ? 'Start quest' : 'Ask the elder';
+    start.textContent = quest ? 'Start quest' : 'Help me find it';
     heroName.required = quest;
     refreshBranches();
     if (quest) classSelect.focus();
