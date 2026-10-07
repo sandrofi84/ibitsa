@@ -56,6 +56,8 @@ if (name === 'live') {
     // `pr=demo` (#153): the fake GitHub polls every few seconds, unless `prPoll=off` (tests use Refresh).
     // `gitHost=noOrigin|gitlab|signedOut` (#162): what the git host allows, as the runtime reports it.
     ...gitHostParam(params.get('gitHost')),
+    // `kept=1` (#168): a council kept from an earlier campaign.
+    ...(params.get('kept') === '1' ? { keptCouncil: { from: 'Payments' } } : {}),
     pullRequestPollMs:
       (params.get('pr') === 'demo' || params.get('pr') === 'stacked') &&
       params.get('prPoll') !== 'off'

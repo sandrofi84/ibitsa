@@ -109,6 +109,23 @@ export interface ElderStart {
   /** A model alias or id; Haiku by default. */
   model: string;
   maxBudgetMicroUsd: number;
+  /** An index of past campaigns' records (§4.1, #168): it reads only those that look related. */
+  pastRecords: readonly PastRecord[];
+  /** The council's context kept from an earlier campaign (§4.9), named by that campaign; else null. */
+  keptCouncil: { from: string } | null;
+}
+
+/** One past campaign in the elder's index (#168): enough to judge it, and where its record is. */
+export interface PastRecord {
+  campaignId: string;
+  title: string;
+  /** `YYYY-MM-DD`, when its record was written. */
+  date: string;
+  status: 'finished' | 'abandoned';
+  /** The plan's summary, when it had one. */
+  summary: string | null;
+  /** The record, relative to the repository. */
+  path: string;
 }
 
 /** The elder's lessons (§4.9, #167): a short session on a cheap model, from the reviews' material. */

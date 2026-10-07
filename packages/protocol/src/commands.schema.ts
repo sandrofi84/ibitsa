@@ -174,6 +174,8 @@ export const CommandSchema = v.variant('type', [
     councillorEfforts: v.optional(v.record(id, EffortSchema)),
     /** Convened the other way, to compare with this earlier sitting (§4.10). */
     comparisonOf: v.optional(id),
+    /** A council's context was kept (§4.9) but this sitting starts fresh, forgetting it (#168). */
+    freshCouncil: v.optional(v.boolean()),
   }),
   /** "How useful was the council?" (§4.10): 1–5 and an optional note, once the sitting has ended. */
   v.strictObject({

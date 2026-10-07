@@ -1,4 +1,11 @@
-import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import {
+  appendFileSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { type GameMasterEvent, parseLog, RESTART_PROMPT, SILENCE_MS, view } from '@ibitsa/core';
@@ -1226,6 +1233,36 @@ describe('the elder (#101)', () => {
     task: 'Fix the login redirect',
   } as const;
 
+  it("gives the elder the past campaigns' records and the kept council's campaign (#168)", async () => {
+    const env = withElder();
+    const folder = join(env.repoDir ?? '', '.ibitsa', 'campaigns', 'camp-old');
+    mkdirSync(folder, { recursive: true });
+    writeFileSync(
+      join(folder, 'record.md'),
+      '# Campaign record: Sign-in\n\n**Finished.**\n\nEmail sign-in.\n\n## What shipped\n',
+    );
+    new KeptCouncil(env.storageDir).keep({ sessionId: 'council-old', from: 'Sign-in' });
+    env.connection.receive(consult);
+    await flush();
+    expect(env.starts[0]?.start).toMatchObject({
+      pastRecords: [
+        {
+          campaignId: 'camp-old',
+          title: 'Sign-in',
+          status: 'finished',
+          summary: 'Email sign-in.',
+          path: '.ibitsa/campaigns/camp-old/record.md',
+        },
+      ],
+      keptCouncil: { from: 'Sign-in' },
+    });
+    await env.settle();
+    const snapshot = env.received
+      .flatMap((m) => (m.type === 'snapshot' ? [m.snapshot] : []))
+      .at(-1);
+    expect(snapshot?.keptCouncil).toEqual({ from: 'Sign-in' });
+  });
+
   it('starts a planning campaign and an elder in the repository with the roster and the default cap', async () => {
     const env = withElder();
     env.connection.receive(consult);
@@ -1238,6 +1275,8 @@ describe('the elder (#101)', () => {
         councillors: [tester],
         model: 'haiku',
         maxBudgetMicroUsd: 250_000,
+        pastRecords: [],
+        keptCouncil: null,
       },
     ]);
   });
@@ -1888,7 +1927,7 @@ describe('the campaign record and the council context (#167)', () => {
     runtime.start();
     const received: CoreMessage[] = [];
     const connection = runtime.connect({ post: (m) => received.push(m) });
-    const convene = () =>
+    const convene = (extra: { freshCouncil?: boolean } = {}) =>
       connection.receive({
         type: 'conveneCouncil',
         commandId: 'k',
@@ -1896,6 +1935,7 @@ describe('the campaign record and the council context (#167)', () => {
         mode: 'roundTable',
         roster: ['security'],
         effort: 'light',
+        ...extra,
       });
     return {
       storageDir,
@@ -1910,10 +1950,20 @@ describe('the campaign record and the council context (#167)', () => {
 
   it("resumes the council's kept session in the next campaign's first sitting, once", async () => {
     const { storageDir, runtime, starts, convene } = councilRuntime();
-    new KeptCouncil(storageDir).keep('council-old');
+    new KeptCouncil(storageDir).keep({ sessionId: 'council-old', from: 'Sign-in' });
     convene();
     await flush();
     expect(starts[0]?.resume).toEqual({ sessionId: 'council-old', kept: true });
+    expect(new KeptCouncil(storageDir).peek()).toBeNull();
+    runtime.dispose();
+  });
+
+  it('starts fresh when asked to, forgetting the kept council (#168)', async () => {
+    const { storageDir, runtime, starts, convene } = councilRuntime();
+    new KeptCouncil(storageDir).keep({ sessionId: 'council-old', from: 'Sign-in' });
+    convene({ freshCouncil: true });
+    await flush();
+    expect(starts[0]).not.toHaveProperty('resume');
     expect(new KeptCouncil(storageDir).peek()).toBeNull();
     runtime.dispose();
   });
@@ -1923,7 +1973,7 @@ describe('the campaign record and the council context (#167)', () => {
     convene();
     await flush();
     emit({ type: 'sessionStarted', sessionId: 'council-1' });
-    new KeptCouncil(storageDir).keep('council-older');
+    new KeptCouncil(storageDir).keep({ sessionId: 'council-older', from: 'Sign-in' });
     connection.receive({ type: 'abandonQuest', commandId: 'a' });
     await flush();
     const md = readFileSync(join(repoDir, '.ibitsa', 'campaigns', 'camp-1', 'record.md'), 'utf8');

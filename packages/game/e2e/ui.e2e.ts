@@ -730,3 +730,33 @@ test('after a sitting: rate the council, then convene it the other way to compar
   await expect(box).toBeVisible({ timeout: 15_000 });
   expect(errors).toEqual([]);
 });
+
+test('the elder names related campaigns and suggests starting the kept council fresh (#168)', async ({
+  page,
+}) => {
+  await page.goto('/?fixture=live&kept=1');
+  await page.getByRole('button', { name: 'New quest' }).click();
+  await page.getByLabel('Task').fill('Fix the login redirect');
+  await page.getByRole('button', { name: 'Ask the elder' }).click();
+  const elder = page.getByRole('region', { name: 'Elder' });
+  await expect(elder.getByRole('heading', { name: 'Related campaigns' })).toBeVisible();
+  await expect(elder).toContainText('Slugs It touched the same router.');
+  await expect(elder).toContainText(
+    'Unrelated to the council\'s kept context: "Payments" was about payments. Start fresh when you convene.',
+  );
+  await elder.getByRole('button', { name: 'Convene council' }).click();
+  const convene = page.getByRole('dialog', { name: 'Convene the council' });
+  const fresh = convene.getByRole('checkbox', { name: /Start fresh instead of resuming/ });
+  await expect(fresh).toBeChecked();
+  await expect(convene).toContainText('The elder: "Payments" was about payments.');
+  await page.screenshot({ path: 'test-results/convene-kept.png' });
+  await convene.getByRole('button', { name: 'Convene' }).click();
+  const sent = await page.evaluate(() =>
+    (
+      window as unknown as { __ibitsa: { sent(): { type: string; freshCouncil?: boolean }[] } }
+    ).__ibitsa
+      .sent()
+      .filter((c) => c.type === 'conveneCouncil'),
+  );
+  expect(sent).toEqual([expect.objectContaining({ freshCouncil: true })]);
+});

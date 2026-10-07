@@ -8,9 +8,12 @@ import { type ResearchBrief, ResearchBriefSchema } from './elder.schema';
 export function checkBrief({
   input,
   councillors,
+  campaigns = [],
 }: {
   input: unknown;
   councillors: readonly string[];
+  /** Past campaigns' ids the elder was shown (#168): related ones must be among them. */
+  campaigns?: readonly string[];
 }): { ok: true; brief: ResearchBrief } | { ok: false; problems: string[] } {
   const parsed = v.safeParse(ResearchBriefSchema, input);
   if (!parsed.success) {
@@ -28,8 +31,16 @@ export function checkBrief({
     ...brief.slices.map((s) => s.councillorId),
     ...brief.councillorEfforts.map((e) => e.councillorId),
   ];
-  const problems = [...new Set(named)]
-    .filter((id) => !councillors.includes(id))
-    .map((id) => `"${id}" isn't a councillor. Choose from: ${councillors.join(', ') || 'none'}.`);
+  const problems = [
+    ...[...new Set(named)]
+      .filter((id) => !councillors.includes(id))
+      .map((id) => `"${id}" isn't a councillor. Choose from: ${councillors.join(', ') || 'none'}.`),
+    ...(brief.relatedCampaigns ?? [])
+      .filter((c) => !campaigns.includes(c.campaignId))
+      .map(
+        (c) =>
+          `"${c.campaignId}" isn't a past campaign. Choose from: ${campaigns.join(', ') || 'none'}.`,
+      ),
+  ];
   return problems.length > 0 ? { ok: false, problems } : { ok: true, brief };
 }

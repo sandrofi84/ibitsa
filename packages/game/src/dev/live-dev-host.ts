@@ -55,6 +55,7 @@ export class LiveDevHost implements Host {
   private readonly listeners: ((m: CoreMessage) => void)[] = [];
   private readonly repo: RepoView | null;
   private readonly gitHost: GitHostView | undefined;
+  private readonly keptCouncil: { from: string } | null;
   private diffs = 0;
   /** Every command the game sent, oldest first. */
   readonly sent: Command[] = [];
@@ -89,6 +90,7 @@ export class LiveDevHost implements Host {
     reviews = false,
     pullRequestPollMs = null,
     gitHost,
+    keptCouncil = null,
   }: {
     credentialsReady: boolean;
     repo: RepoView | null;
@@ -104,10 +106,13 @@ export class LiveDevHost implements Host {
     pullRequestPollMs?: number | null;
     /** Dev only (#162): what the git host allows, as the runtime would report it. */
     gitHost?: GitHostView;
+    /** Dev only (#168): a council kept from an earlier campaign; the elder then finds the task unrelated. */
+    keptCouncil?: { from: string } | null;
   }) {
     this.channel = new FakeHostChannel({ credentialsReady });
     this.repo = repo;
     this.gitHost = gitHost;
+    this.keptCouncil = keptCouncil;
     this.sandboxed = sandboxed;
     this.demoReview =
       review === 'demo'
@@ -618,7 +623,7 @@ export class LiveDevHost implements Host {
         ]);
         return;
       case 'startElder':
-        this.elder(effect.elderId, elderScript(effect.task));
+        this.elder(effect.elderId, elderScript({ task: effect.task, kept: this.keptCouncil }));
         return;
       case 'startSession':
       case 'resumeSession':
@@ -791,6 +796,7 @@ export class LiveDevHost implements Host {
         ...view(this.state),
         repo: this.repo,
         ...(this.gitHost ? { gitHost: this.gitHost } : {}),
+        keptCouncil: this.keptCouncil,
         projectRules: this.projectRules,
         sandboxed: this.sandboxed,
         councillors: LIVE_COUNCILLORS,
@@ -810,7 +816,13 @@ export class LiveDevHost implements Host {
  * A scripted elder (#101): a moment of reading, then a brief recommending a quick quest. A task that
  * mentions "fail" runs out of gold instead, so the failure path can be played too.
  */
-function elderScript(task: string): ElderEvent[] {
+function elderScript({
+  task,
+  kept,
+}: {
+  task: string;
+  kept: { from: string } | null;
+}): ElderEvent[] {
   const reading: ElderEvent[] = [
     { type: 'sessionStarted', sessionId: 'live-elder' },
     { type: 'activity', text: 'Reading README.md' },
@@ -839,6 +851,15 @@ function elderScript(task: string): ElderEvent[] {
         effort: { level: 'light', reason: 'A small change.' },
         councillorEfforts: [{ councillorId: 'tester', level: 'light', reason: 'One case.' }],
         quickQuest: { recommended: true, reason: 'One small, clear change.' },
+        // With a kept council (#168): a past campaign that bears on it, and the kept work unrelated.
+        ...(kept
+          ? {
+              relatedCampaigns: [
+                { campaignId: 'c-slugs', title: 'Slugs', why: 'It touched the same router.' },
+              ],
+              keptContext: { related: false, reason: `"${kept.from}" was about payments.` },
+            }
+          : {}),
       },
     },
     { type: 'usage', totalCost: 42_000 },

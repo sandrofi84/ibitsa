@@ -12,9 +12,21 @@ export class KeptCouncil {
     this.file = join(storageDir, 'council.json');
   }
 
-  keep(sessionId: string): void {
+  /** `from` names the campaign whose council it was (#168), for the elder and the convene form. */
+  keep({ sessionId, from }: { sessionId: string; from: string }): void {
     mkdirSync(join(this.file, '..'), { recursive: true });
-    writeFileSync(this.file, `${JSON.stringify({ sessionId })}\n`);
+    writeFileSync(this.file, `${JSON.stringify({ sessionId, from })}\n`);
+  }
+
+  /** The campaign the kept context comes from (#168); null when nothing is kept. */
+  keptFrom(): string | null {
+    if (!this.peek()) return null;
+    try {
+      const { from } = JSON.parse(readFileSync(this.file, 'utf8')) as { from?: unknown };
+      return typeof from === 'string' ? from : 'an earlier campaign';
+    } catch {
+      return null;
+    }
   }
 
   /** The kept session's id, if any, without forgetting it (the elder may mention it, #168). */

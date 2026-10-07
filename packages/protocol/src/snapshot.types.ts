@@ -30,6 +30,8 @@ export interface Snapshot {
   councilMode?: 'ask' | 'roundTable' | 'chambers';
   /** What the git host allows here (§5.6, #162); absent until known. Added by the runtime. */
   gitHost?: GitHostView;
+  /** The council's context kept from an earlier campaign (§4.9, #168), named by it. Added by the runtime. */
+  keptCouncil?: { from: string } | null;
 }
 
 export interface RepoView {

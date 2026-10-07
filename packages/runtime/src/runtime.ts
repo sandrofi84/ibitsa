@@ -626,8 +626,18 @@ export class Runtime {
     const { model, budgetMicroUsd } = this.options.elder?.() ?? DEFAULT_ELDER;
     try {
       this.elderSession?.close();
+      const from = this.keptCouncil.keptFrom();
       this.elderSession = start(
-        { cwd, task, councillors, model, maxBudgetMicroUsd: budgetMicroUsd },
+        {
+          cwd,
+          task,
+          councillors,
+          model,
+          maxBudgetMicroUsd: budgetMicroUsd,
+          // Past campaigns' records, and a kept council's campaign, for the elder to weigh (#168).
+          pastRecords: new CampaignDocuments(cwd).pastRecords(),
+          keptCouncil: from ? { from } : null,
+        },
         report,
       );
     } catch (e) {
@@ -681,7 +691,8 @@ export class Runtime {
         // Kept as it is: a lighter context next time is a nicety, not a promise.
       }
     }
-    this.keptCouncil.keep(sessionId);
+    this.keptCouncil.keep({ sessionId, from: this.state.campaign?.title ?? 'an earlier campaign' });
+    this.scheduleSnapshot();
   }
 
   /** A reviewer on its effort's model and cap (or its councillor's own model), given its diff (M5). */
@@ -743,8 +754,10 @@ export class Runtime {
     }
     const plan = sittingPlan(effect);
     // The council's context kept from the last campaign (#167): this sitting resumes it, once.
-    // A kept council (#167) is taken by the next fresh sitting, not by a resume (#169).
-    const kept = effect.resume ? null : this.keptCouncil.take();
+    // A kept council (#167) is taken by the next new sitting, not by a resume (#169), unless the user
+    // chose to start fresh (#168), which forgets it.
+    if (effect.fresh) this.keptCouncil.forget();
+    const kept = effect.resume || effect.fresh ? null : this.keptCouncil.take();
     try {
       this.sitting?.session.close();
       const session = start(
@@ -990,6 +1003,7 @@ export class Runtime {
       ...snapshot,
       ...(this.repo === undefined ? {} : { repo: this.repo }),
       ...(this.gitHost ? { gitHost: this.gitHost } : {}),
+      keptCouncil: this.keptCouncilView(),
     };
   }
 
@@ -1004,6 +1018,12 @@ export class Runtime {
       .catch(() => {
         // No scan, no repo field: the form shows what it knows.
       });
+  }
+
+  /** The council's context kept from an earlier campaign (#168), for the convene form. */
+  private keptCouncilView(): { from: string } | null {
+    const from = this.keptCouncil.keptFrom();
+    return from ? { from } : null;
   }
 
   /** What stands in the way of pushing and PRs here, before any click (#162). */

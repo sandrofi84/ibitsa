@@ -1,7 +1,8 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { CampaignRecordData } from '@ibitsa/core';
 import { type CodePointer, type Plan, planIslands, type ResearchBrief } from '@ibitsa/protocol';
+import type { PastRecord } from './ports.types';
 
 /**
  * A campaign's documents in the workspace repository (spec §8.3): `.ibitsa/campaigns/<id>/`. Ibitsa
@@ -43,6 +44,42 @@ export class CampaignDocuments {
   saveRecord({ campaignId, record }: { campaignId: string; record: CampaignRecordData }): string {
     writeFileSync(join(this.folder(campaignId), 'record.md'), recordMarkdown(record));
     return ['.ibitsa', 'campaigns', campaignId, 'record.md'].join('/');
+  }
+
+  /**
+   * The elder's index of past campaigns (§4.1, #168): every `record.md` under `.ibitsa/campaigns`,
+   * newest first, at most `limit`. Its title, status and summary are read from the record's top.
+   */
+  pastRecords(limit = 20): PastRecord[] {
+    const root = join(this.repoDir, '.ibitsa', 'campaigns');
+    if (!existsSync(root)) return [];
+    const records = readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
+      const file = join(root, entry.name, 'record.md');
+      if (!entry.isDirectory() || !existsSync(file)) return [];
+      const lines = readFileSync(file, 'utf8').split('\n');
+      const title = lines[0]?.replace(/^# Campaign record: /, '').trim() || entry.name;
+      const summary = lines.slice(1, 6).find((l) => l.trim() && !/^(#|\*\*)/.test(l.trim()));
+      const written = statSync(file).mtime;
+      return [
+        {
+          written: written.getTime(),
+          record: {
+            campaignId: entry.name,
+            title,
+            date: written.toISOString().slice(0, 10),
+            status: lines.some((l) => l.startsWith('**Abandoned.**'))
+              ? ('abandoned' as const)
+              : ('finished' as const),
+            summary: summary?.trim() ?? null,
+            path: `.ibitsa/campaigns/${entry.name}/record.md`,
+          },
+        },
+      ];
+    });
+    return records
+      .sort((a, b) => b.written - a.written)
+      .slice(0, limit)
+      .map((r) => r.record);
   }
 
   private folder(campaignId: string): string {

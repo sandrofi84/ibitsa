@@ -1,4 +1,4 @@
-import type { Effort, SittingMode, Snapshot } from '@ibitsa/protocol';
+import type { Effort, ResearchBrief, SittingMode, Snapshot } from '@ibitsa/protocol';
 import type { GameClient } from './client';
 import type { ConveneForm } from './convene-form.types';
 import { button, el } from './dom';
@@ -48,6 +48,26 @@ export function estimatedCap({
  * chambers, an effort for each councillor. The elder's recommendations come pre-set with its reasons;
  * without a brief, the last selection in this project does. Plain DOM in a native <dialog>.
  */
+/**
+ * The kept council's choice in the convene form (#168): null when nothing is kept. Fresh is ticked
+ * when the elder found the task unrelated to the kept council's work.
+ */
+export function keptCouncilChoice({
+  kept,
+  brief,
+}: {
+  kept: { from: string } | null;
+  brief: ResearchBrief | null | undefined;
+}): { from: string; fresh: boolean; note: string | null } | null {
+  if (!kept) return null;
+  const verdict = brief?.keptContext;
+  return {
+    from: kept.from,
+    fresh: verdict ? !verdict.related : false,
+    note: verdict ? `The elder: ${verdict.reason}` : null,
+  };
+}
+
 export function mountConveneForm({
   client,
   view,
@@ -164,6 +184,17 @@ export function mountConveneForm({
     });
     const cap = el('p', { className: 'cap' });
     cap.setAttribute('aria-live', 'polite');
+    // A council kept from an earlier campaign (#168): resume it, or start fresh as the elder suggests.
+    const kept = keptCouncilChoice({ kept: client.snapshot?.keptCouncil ?? null, brief });
+    const fresh = el('input');
+    fresh.type = 'checkbox';
+    fresh.checked = kept?.fresh ?? false;
+    const keptField = el('label', { className: 'kept-council' });
+    keptField.append(
+      fresh,
+      ` Start fresh instead of resuming the council kept from "${kept?.from}"`,
+    );
+    const keptNote = el('p', { className: 'note', text: kept?.note ?? '' });
 
     const convene = el('button', { text: 'Convene' });
     convene.type = 'submit';
@@ -194,6 +225,7 @@ export function mountConveneForm({
       roster,
       effortField,
       effortNote,
+      ...(kept ? [keptField, keptNote] : []),
       cap,
       error,
       el('div', { className: 'actions' }),
@@ -219,6 +251,7 @@ export function mountConveneForm({
         mode,
         roster: ids,
         effort: effort.value as Effort,
+        ...(kept && fresh.checked ? { freshCouncil: true } : {}),
         ...(mode === 'chambers'
           ? {
               councillorEfforts: Object.fromEntries(

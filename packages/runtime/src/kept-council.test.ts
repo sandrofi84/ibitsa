@@ -19,7 +19,7 @@ describe('KeptCouncil (#167)', () => {
     const dir = temp();
     const kept = new KeptCouncil(dir);
     expect(kept.peek()).toBeNull();
-    kept.keep('council-1');
+    kept.keep({ sessionId: 'council-1', from: 'Sign-in' });
     expect(new KeptCouncil(dir).peek()).toBe('council-1');
     expect(kept.take()).toBe('council-1');
     expect(kept.take()).toBeNull();
@@ -28,7 +28,7 @@ describe('KeptCouncil (#167)', () => {
   it('forgets on Empty, and ignores a file it cannot read', () => {
     const dir = temp();
     const kept = new KeptCouncil(dir);
-    kept.keep('council-1');
+    kept.keep({ sessionId: 'council-1', from: 'Sign-in' });
     kept.forget();
     expect(kept.peek()).toBeNull();
     writeFileSync(join(dir, 'council.json'), 'not json');
