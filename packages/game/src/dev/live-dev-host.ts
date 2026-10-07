@@ -484,6 +484,8 @@ function livePlan({ summary, councillorId }: { summary: string; councillorId: st
         decisions: ['D1'],
       },
     ],
+    islands: [{ id: 'I1', title: 'The redirect fix', tasks: ['T1', 'T2'] }],
+    branching: 'separate',
     decisions: [
       {
         id: 'D1',

@@ -480,6 +480,10 @@ test('the brief convenes a round table; its approved plan becomes a quest, task 
   await expect(plan.getByRole('list', { name: 'Book of Decisions' })).toContainText(
     'D1 Test the fix Yes.',
   );
+  await expect(plan.getByRole('list', { name: 'Islands' })).toContainText(
+    'I1 The redirect fix: T1, T2',
+  );
+  await expect(plan).toContainText('Separate: every island branches from the base.');
   await expect.poll(() => probe(page, (p) => p.hut()?.decisions)).toBe(1);
   await page.screenshot({ path: 'test-results/round-table-plan.png' });
   await plan.getByRole('button', { name: 'Ask for changes' }).click();

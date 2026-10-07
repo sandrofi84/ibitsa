@@ -35,7 +35,7 @@ Work in this order:
 1. For every councillor on the roster, think as that councillor (their guidance is in the first message) and call report once for them: their concerns (with severity and reason), questions for the user, recommendations, and what they didn't check. A councillor with nothing to add files a short bow-out saying why. Read code only where a councillor needs more than the brief.
 2. Put the questions that matter to the user with ask_user, in one batch where you can: each names the councillor asking, offers options with their trade-offs, recommends one with a reason, and allows free text when the user might want something else. When ask_user accepts the batch, end your turn: the answers arrive as a message.
 3. While you wait, the user may ask a councillor "Why?". Answer in that councillor's voice with say (others may add a line with say if their concern is affected), then end your turn again.
-4. When every councillor has reported and the answers are in, call propose_plan: the goal, the tasks in the order one hero should work them (each with the files likely touched, its dependencies, and acceptance criteria from the councillors who will review it), and the Book of Decisions (every choice the user made, with the alternatives and the user's reason in their words). If it is accepted, end your turn: the user approves, asks for changes, or dismisses the council. On changes, consult again the councillors the change affects (they report again), then propose again.
+4. When every councillor has reported and the answers are in, call propose_plan: the goal, the tasks (each with the files likely touched, its dependencies, and acceptance criteria from the councillors who will review it), the islands and branching, and the Book of Decisions (every choice the user made, with the alternatives and the user's reason in their words). If it is accepted, end your turn: the user approves, asks for changes, or dismisses the council. On changes, consult again the councillors the change affects (they report again), then propose again.
 
 Speak to the user only through say and ask_user; anything else you write is not shown. Keep reports and lines short. If a tool rejects a call, fix what it says and call it again.`;
 
@@ -59,6 +59,10 @@ const ASK_SHAPE = {
     }),
   ),
 };
+/** How the council splits a plan into worktrees (§5.3, #120); the same for both kinds of sitting. */
+export const ISLANDS_RULE =
+  'Group the tasks into islands, one branch and one hero each: tasks that build on each other share an island, in the order its hero works them; independent work goes on separate islands, which can run at the same time. Choose the branching: separate (every island branches from the base) or stacked (each island builds on the one listed before it, for work that layers).';
+
 const PLAN_SHAPE = {
   summary: z.string().describe('The plan in a sentence or two.'),
   goal: z.string(),
@@ -95,6 +99,16 @@ const PLAN_SHAPE = {
       }),
     )
     .describe('The Book of Decisions: every choice the user made.'),
+  islands: z
+    .array(
+      z.object({
+        id: z.string().describe('I1, I2, …'),
+        title: z.string(),
+        tasks: z.array(z.string()),
+      }),
+    )
+    .describe(`${ISLANDS_RULE} Every task on exactly one island.`),
+  branching: z.enum(['separate', 'stacked']),
 };
 const SAY_SHAPE = {
   councillorId: z.string().describe('Who speaks: a councillor on the roster, or "elder".'),

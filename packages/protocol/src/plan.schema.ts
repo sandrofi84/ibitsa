@@ -44,6 +44,18 @@ export const DecisionSchema = v.strictObject({
 });
 export type Decision = v.InferOutput<typeof DecisionSchema>;
 
+/** One worktree and one party (§5.1, #120): its tasks, in the order its hero works them. */
+export const IslandSchema = v.strictObject({
+  id: v.pipe(v.string(), v.regex(/^I\d+$/, 'Island ids look like I1, I2, …')),
+  title: text,
+  tasks: v.pipe(v.array(taskId), v.minLength(1)),
+});
+export type Island = v.InferOutput<typeof IslandSchema>;
+
+/** Separate: every island branches from the base. Stacked: each from the island listed before it (§5.3). */
+export const BranchingSchema = v.picklist(['separate', 'stacked']);
+export type Branching = v.InferOutput<typeof BranchingSchema>;
+
 export const PlanSchema = v.strictObject({
   /** The plan in a sentence or two. */
   summary: text,
@@ -52,5 +64,8 @@ export const PlanSchema = v.strictObject({
   tasks: v.pipe(v.array(PlanTaskSchema), v.minLength(1), v.maxLength(20)),
   /** The Book of Decisions. */
   decisions: v.array(DecisionSchema),
+  /** How the tasks split into worktrees (#120). Without it, one island holds every task. */
+  islands: v.optional(v.pipe(v.array(IslandSchema), v.minLength(1), v.maxLength(8))),
+  branching: v.optional(BranchingSchema),
 });
 export type Plan = v.InferOutput<typeof PlanSchema>;
