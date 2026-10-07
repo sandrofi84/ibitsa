@@ -882,8 +882,8 @@ Settled in [#9](https://github.com/sandrofi84/ibitsa/issues/9); see [ADR 0001](a
 | M3 | Elder & council | Research brief with field slices, convening (round table or separate chambers, per-councillor effort), `report` and `ask_user` with voices and "Why?", plan + decision records saved, approval loop, quick-quest path, tallies and "convene the other way", council hut with 32×32 sheets (§14.2). |
 | M4 | Parties & map | Plans with islands and branching, multiple worktrees and parallel parties, separate and stacked layouts (both stacked start modes), bridges, party assembly, blocked states, several heroes in the UI, a campaign cap (§14.3). |
 | M5 | Review loop | Deterministic checks, concurrent reviewers, verdicts, loop limit, escalation, councillors walking on the map, the task panel (§5.5, §14.4). |
-| M6 | PRs | Git-host adapter, PR per task, stacked bases, badges with polling. |
-| M7 | Campaign lifecycle | Campaign record, keep/compact/empty, mid-campaign council and amendments, resume after restart. |
+| M6 | PRs | A git-host port (GitHub), a PR per island with drafts and ready for review, stacked bases and restacking, badges with polling, PR comments to the hero (§5.6, §14.5). |
+| M7 | Campaign lifecycle | Campaign record, keep/compact/empty, mid-campaign council and amendments, resume after restart (§4.8, §4.9, §12, §14.6). |
 | M8 | Customization | Settings layers, Guild Hall, councillor editing, class/model mapping, asset & sound packs with validator and recolor, sounds. |
 | M9 | Agent-agnostic | ACP adapter with capability fallbacks. |
 | M10 | Release | Real art, accessibility pass, docs, Marketplace + Open VSX publishing. |
