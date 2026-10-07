@@ -13,6 +13,7 @@ import {
 } from '@ibitsa/core';
 import {
   type AgentEvent,
+  type ChronicleEntry,
   type Command,
   type CoreMessage,
   type CouncilEvent,
@@ -188,6 +189,10 @@ export class LiveDevHost implements Host {
       for (const reply of this.devActions.create({ draft, overwrite })) {
         this.emit({ ...reply, seq: ++this.seq });
       }
+      return;
+    }
+    if (command.type === 'requestChronicle') {
+      this.emit({ type: 'chronicle', seq: ++this.seq, campaigns: LIVE_CHRONICLE });
       return;
     }
     if (command.type === 'requestJournal') {
@@ -881,6 +886,30 @@ function elderScript({
     { type: 'usage', totalCost: 42_000 },
   ];
 }
+
+/** Two past campaigns for the Guild Hall's Chronicle (#179). */
+const LIVE_CHRONICLE: ChronicleEntry[] = [
+  {
+    campaignId: 'c-slugs',
+    title: 'Slugs without accents',
+    date: '2026-10-05',
+    status: 'finished',
+    summary: 'Make slugify strip accents.',
+    path: '.ibitsa/campaigns/c-slugs/record.md',
+    pullRequests: [{ number: 12, url: 'https://github.com/ibitsa/demo/pull/12', state: 'merged' }],
+    gold: 1_240_000,
+  },
+  {
+    campaignId: 'c-payments',
+    title: 'Payments',
+    date: '2026-09-28',
+    status: 'abandoned',
+    summary: null,
+    path: '.ibitsa/campaigns/c-payments/record.md',
+    pullRequests: [],
+    gold: null,
+  },
+];
 
 /** The built-in roster, as the runtime would list it from Ibitsa's plugin (#98). */
 const LIVE_COUNCILLORS: CouncillorInfo[] = [

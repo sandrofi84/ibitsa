@@ -273,6 +273,8 @@ describe('the elder session (#101)', () => {
               status: 'finished',
               summary: 'Email sign-in.',
               path: '.ibitsa/campaigns/c-old/record.md',
+              pullRequests: [],
+              gold: null,
             },
           ],
           keptCouncil: { from: 'Sign-in' },

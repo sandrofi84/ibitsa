@@ -1,4 +1,4 @@
-import type { HostEvent, HostRequest } from '@ibitsa/protocol';
+import type { HostEvent, HostRequest, RuleKey, SettingView } from '@ibitsa/protocol';
 
 /** The files the standalone build's worktree pretends to hold, for @ references (#83). */
 export const DEMO_FILES = [
@@ -18,6 +18,8 @@ export class FakeHostChannel {
   readonly requests: HostRequest[] = [];
   private ready: boolean;
   private readonly listeners: ((event: HostEvent) => void)[] = [];
+  /** The Guild Hall's rules (#179), as VS Code would hold them, at each layer. */
+  private readonly rules: SettingView[] = DEMO_RULES.map((r) => ({ ...r }));
 
   constructor({ credentialsReady }: { credentialsReady: boolean }) {
     this.ready = credentialsReady;
@@ -47,7 +49,25 @@ export class FakeHostChannel {
         return;
       case 'openApiKeyPage':
       case 'openWorktree':
+      case 'openSettings':
+      case 'openFile':
         return;
+      case 'readSettings':
+        this.emitRules();
+        return;
+      case 'writeSetting':
+      case 'resetSetting': {
+        const rule = this.rules.find((r) => r.key === request.key);
+        if (!rule) return;
+        const value = request.type === 'writeSetting' ? request.value : undefined;
+        if (value === undefined) delete rule[request.layer];
+        else rule[request.layer] = value;
+        rule.layer =
+          rule.workspace !== undefined ? 'workspace' : rule.user !== undefined ? 'user' : 'default';
+        rule.value = rule.workspace ?? rule.user ?? rule.defaultValue;
+        this.emitRules();
+        return;
+      }
     }
   }
 
@@ -56,9 +76,68 @@ export class FakeHostChannel {
     this.emit(event);
   }
 
+  private emitRules(): void {
+    this.emit({ channel: 'host', type: 'settings', rules: this.rules.map((r) => ({ ...r })) });
+  }
+
   private emit(event: HostEvent): void {
     queueMicrotask(() => {
       for (const l of this.listeners) l(event);
     });
   }
 }
+
+/** The Rule book as a fresh VS Code would show it: defaults everywhere, the loop limit set by you. */
+const rule = (r: Omit<SettingView, 'value' | 'layer'> & { key: RuleKey }): SettingView => ({
+  ...r,
+  value: r.workspace ?? r.user ?? r.defaultValue,
+  layer: r.workspace !== undefined ? 'workspace' : r.user !== undefined ? 'user' : 'default',
+});
+const DEMO_RULES: SettingView[] = [
+  rule({
+    key: 'review.loopLimit',
+    description: 'Review rounds before a task that keeps getting blocking findings comes to you.',
+    kind: 'integer',
+    nullable: false,
+    minimum: 1,
+    defaultValue: 3,
+    user: 4,
+  }),
+  rule({
+    key: 'checks',
+    description: 'Commands run as checks when a hero submits a task.',
+    kind: 'list',
+    nullable: true,
+    defaultValue: null,
+  }),
+  rule({
+    key: 'parties.maxParallel',
+    description: 'How many parties work at the same time.',
+    kind: 'integer',
+    nullable: false,
+    minimum: 1,
+    defaultValue: 2,
+  }),
+  rule({
+    key: 'hero.budgetUsd',
+    description: "A hero's gold pouch in US dollars.",
+    kind: 'number',
+    nullable: true,
+    defaultValue: null,
+  }),
+  rule({
+    key: 'council.mode',
+    description: 'How the council sits when you convene it.',
+    kind: 'choice',
+    choices: ['ask', 'roundTable', 'chambers'],
+    nullable: false,
+    defaultValue: 'ask',
+  }),
+  rule({
+    key: 'worktree.setup',
+    description: 'A command run in each new worktree before the hero starts.',
+    kind: 'text',
+    nullable: false,
+    defaultValue: '',
+  }),
+];

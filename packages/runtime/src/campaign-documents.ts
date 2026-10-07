@@ -5,6 +5,7 @@ import {
   type Amendment,
   type CodePointer,
   type Plan,
+  type PullRequestState,
   planIslands,
   type ResearchBrief,
 } from '@ibitsa/protocol';
@@ -90,6 +91,15 @@ export class CampaignDocuments {
       const title = lines[0]?.replace(/^# Campaign record: /, '').trim() || entry.name;
       const summary = lines.slice(1, 6).find((l) => l.trim() && !/^(#|\*\*)/.test(l.trim()));
       const written = statSync(file).mtime;
+      const pullRequests = lines.flatMap((l) => {
+        const m = l.match(/^Pull request \[#(\d+)\]\((.+?)\): (\w+)\.$/);
+        return m?.[1] && m[2] && m[3]
+          ? [{ number: Number(m[1]), url: m[2], state: m[3] as PullRequestState }]
+          : [];
+      });
+      const goldAt = lines.indexOf('## Gold');
+      const goldLine = goldAt < 0 ? undefined : lines.slice(goldAt + 1).find((l) => l.trim());
+      const dollars = goldLine?.match(/^\$(\d+(?:\.\d+)?)/)?.[1];
       return [
         {
           written: written.getTime(),
@@ -102,6 +112,8 @@ export class CampaignDocuments {
               : ('finished' as const),
             summary: summary?.trim() ?? null,
             path: `.ibitsa/campaigns/${entry.name}/record.md`,
+            pullRequests,
+            gold: dollars === undefined ? null : Math.round(Number(dollars) * 1_000_000),
           },
         },
       ];

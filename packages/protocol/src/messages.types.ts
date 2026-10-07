@@ -1,4 +1,5 @@
 import type { ActionInfo, ActionPreview } from './actions.types';
+import type { ChronicleEntry } from './chronicle.types';
 import type { JournalEntry } from './journal.types';
 import type { ActivityKind, Snapshot } from './snapshot.types';
 
@@ -24,7 +25,9 @@ export type CoreMessage =
   | { type: 'preview'; seq: number; preview: ActionPreview; heroId?: string }
   /** Answers `createAction` (#86): written, or refused (`clash` when the name is taken). */
   | { type: 'actionCreated'; seq: number; name: string }
-  | { type: 'actionRejected'; seq: number; name: string; reason: string; clash: boolean };
+  | { type: 'actionRejected'; seq: number; name: string; reason: string; clash: boolean }
+  /** Answers `requestChronicle` (#179): past campaigns, newest first. */
+  | { type: 'chronicle'; seq: number; campaigns: ChronicleEntry[] };
 
 /** Fire-and-forget effects (animation, sound, toast). Carry no state: dropping any cue must be harmless. */
 export type Cue =

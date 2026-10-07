@@ -1,3 +1,5 @@
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { ClaudeAdapter } from '@ibitsa/agent-claude-sdk';
 import { GitHubHost } from '@ibitsa/githost-github';
 import { heroHandle } from '@ibitsa/protocol';
@@ -12,6 +14,8 @@ import type { ExportTalliesArgs } from './export-tallies.types';
 import type { IbitsaApi } from './extension.types';
 import { GAME_VIEW_TYPE, GamePanel } from './game-panel';
 import { githubToken } from './github-sign-in';
+import { GuildSettings } from './guild-settings';
+import type { ExtensionManifest } from './guild-settings.types';
 import { chooseHero } from './hero-choice';
 import { API_KEYS_URL, HostChannel } from './host-channel';
 import { anthropicKeyValidator } from './key-validator';
@@ -95,6 +99,33 @@ export function activate(context: vscode.ExtensionContext): IbitsaApi {
     openApiKeyPage: () => void vscode.env.openExternal(vscode.Uri.parse(API_KEYS_URL)),
     openWorktree: () => void vscode.commands.executeCommand('ibitsa.openWorktree'),
     post: (event) => GamePanel.postHost(event),
+    // The Guild Hall (#179): the Rule book over VS Code's own settings layers.
+    settings: new GuildSettings({
+      schema: (context.extension.packageJSON as ExtensionManifest).contributes.configuration
+        .properties,
+      inspect: (key) => config().inspect(key),
+      update: ({ key, value, layer }) =>
+        config().update(
+          key,
+          value,
+          layer === 'user'
+            ? vscode.ConfigurationTarget.Global
+            : vscode.ConfigurationTarget.Workspace,
+        ),
+    }),
+    openSettings: () =>
+      void vscode.commands.executeCommand(
+        'workbench.action.openSettings',
+        `@ext:${context.extension.id}`,
+      ),
+    openFile: (path) => void vscode.window.showTextDocument(vscode.Uri.file(path)),
+    openable: {
+      workspace: workspaceDir,
+      roots: [
+        join(homedir(), '.claude', 'skills'),
+        vscode.Uri.joinPath(context.extensionUri, 'dist', 'plugin').fsPath,
+      ],
+    },
   });
   if (testing) {
     GamePanel.testLog = [];

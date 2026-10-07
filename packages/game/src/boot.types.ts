@@ -1,5 +1,6 @@
 import type { CameraState } from './camera-director.types';
 import type { GameClient } from './client';
+import type { GuildTab } from './guild-hall.types';
 import type { HeroSelection } from './hero-selection';
 import type { HutRendered } from './hut-scene.types';
 import type { HutFeed } from './hut-view.types';
@@ -46,6 +47,10 @@ export interface Started {
   hutOnPage(): { x: number; y: number } | null;
   /** Whether the council's chamber is open (#169). */
   councilChamber(): boolean;
+  /** Where the Guild Hall is on the page, while the map shows (#179). */
+  guildHallOnPage(): { x: number; y: number } | null;
+  /** The Guild Hall's open tab, or null (#179). */
+  guildHall(): GuildTab | null;
   /** The island whose PR card is open on its own, or null (#153). */
   pullRequestPanel(): string | null;
   /** The island the PR preview is open for, or null (#153). */

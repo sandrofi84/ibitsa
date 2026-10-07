@@ -149,6 +149,37 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /** The middle of the council hut on the map (#169), for tests that click it. */
+  /** The Guild Hall's middle, in world coordinates (tests click it, #179). */
+  guildHallSpot(): { x: number; y: number } {
+    const { guildHall } = this.layout.village;
+    return { x: guildHall.x + 24, y: guildHall.y + 24 };
+  }
+
+  /**
+   * The Guild Hall (§7.1, #179): the pack's building, or one drawn here when the pack has none. A
+   * click opens Ibitsa's settings.
+   */
+  private guildHall(at: { x: number; y: number }): Phaser.GameObjects.GameObject {
+    const open = (pointer: Phaser.Input.Pointer) => {
+      if (onCanvas(pointer)) this.game.events.emit(GUILD_HALL_SELECTED);
+    };
+    if (this.textures.exists('building:guildHall')) {
+      return this.add
+        .image(at.x, at.y, 'building:guildHall')
+        .setOrigin(0)
+        .setInteractive({ useHandCursor: true })
+        .on('pointerdown', open);
+    }
+    const g = this.add.graphics({ x: at.x, y: at.y });
+    g.fillStyle(0x9a9a9a).fillRect(4, 20, 40, 26);
+    g.fillStyle(0x4a5d82).fillTriangle(0, 21, 24, 2, 48, 21);
+    g.fillStyle(0x2a1a10).fillRect(19, 32, 10, 14);
+    g.fillStyle(0x2f5fb0).fillRect(8, 22, 6, 10);
+    return g
+      .setInteractive(new Phaser.Geom.Rectangle(0, 0, 48, 48), Phaser.Geom.Rectangle.Contains)
+      .on('pointerdown', open);
+  }
+
   hutSpot(): { x: number; y: number } {
     const { hut } = this.layout.village;
     return { x: hut.x + 32, y: hut.y + 32 };
@@ -218,6 +249,7 @@ export class WorldScene extends Phaser.Scene {
         .on('pointerdown', (pointer: Phaser.Input.Pointer) => {
           if (onCanvas(pointer)) this.game.events.emit(HUT_SELECTED);
         }),
+      this.guildHall(v.guildHall),
       this.add.text(v.x + 22, v.y + 70, 'HOME VILLAGE', textStyle()),
       this.questLayer,
       this.empty,
@@ -705,6 +737,8 @@ export const TASK_SELECTED = 'taskSelected';
 export const PULL_REQUEST_SELECTED = 'pullRequestSelected';
 /** The council hut was clicked on the map (#169). */
 export const HUT_SELECTED = 'hutSelected';
+/** The Guild Hall was clicked on the map (#179). */
+export const GUILD_HALL_SELECTED = 'guildHallSelected';
 
 /**
  * Phaser hears presses anywhere in the window, so a click on a panel lying over the map (a card's

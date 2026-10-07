@@ -12,6 +12,7 @@ import { mountConveneForm } from './convene-form';
 import { consultedSitting, mountCouncilChamber } from './council-chamber';
 import { mountCouncilDialogue } from './council-dialogue-box';
 import { mountElderPanel } from './elder-panel';
+import { mountGuildHall } from './guild-hall';
 import { mountHeroPane } from './hero-pane';
 import { HeroSelection } from './hero-selection';
 import { reportDiagnostics } from './host';
@@ -36,6 +37,7 @@ import { mountTaskPanel } from './task-panel';
 import { ViewState } from './view-state';
 import { fitViewport } from './viewport';
 import {
+  GUILD_HALL_SELECTED,
   HEIGHT,
   HERO_SELECTED,
   HUT_SELECTED,
@@ -111,6 +113,8 @@ export function startGame(root: HTMLElement, host: Host): Started {
       pullRequestOnPage: () => null,
       hutOnPage: () => null,
       councilChamber: () => false,
+      guildHallOnPage: () => null,
+      guildHall: () => null,
       pullRequestPanel: () => null,
       pullRequestPreview: () => null,
       map: () => null,
@@ -354,6 +358,9 @@ export function startGame(root: HTMLElement, host: Host): Started {
     if (chamberHut) chamberFeed();
   });
   game.events.on(HUT_SELECTED, () => chamber.open());
+  // The Guild Hall in Home Village opens Ibitsa's settings (#179).
+  const guildHall = mountGuildHall({ client, host });
+  game.events.on(GUILD_HALL_SELECTED, () => guildHall.open());
   // The hut shows while the council sits (§7.1 screen 2), and the map comes back after.
   let sittingHut = false;
   client.onSnapshot((snapshot) => {
@@ -391,6 +398,13 @@ export function startGame(root: HTMLElement, host: Host): Started {
     const rect = game.canvas.getBoundingClientRect();
     return { x: rect.left + at.x * game.scale.zoom, y: rect.top + at.y * game.scale.zoom };
   };
+  const guildHallOnPage = () => {
+    const scene = world();
+    if (!scene?.sys.isActive()) return null;
+    const at = scene.toCanvas(scene.guildHallSpot());
+    const rect = game.canvas.getBoundingClientRect();
+    return { x: rect.left + at.x * game.scale.zoom, y: rect.top + at.y * game.scale.zoom };
+  };
   const pullRequestOnPage = (islandId: string) => {
     const scene = world();
     const spot = scene?.pullRequestSpot(islandId);
@@ -414,6 +428,8 @@ export function startGame(root: HTMLElement, host: Host): Started {
     pullRequestOnPage,
     hutOnPage,
     councilChamber: () => chamber.shown(),
+    guildHallOnPage,
+    guildHall: () => guildHall.shown(),
     pullRequestPanel: () => prPanel.shown(),
     pullRequestPreview: () => pullRequests.preview.shown(),
   };

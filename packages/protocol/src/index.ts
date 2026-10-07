@@ -10,6 +10,7 @@ export type {
   CouncilContextChoice,
   LessonsEvent,
 } from './campaign-record.types';
+export type { ChronicleEntry } from './chronicle.types';
 export { parseCommand } from './commands';
 export {
   type Command,
@@ -30,8 +31,14 @@ export {
 export type { ElderEvent, ElderStatus, ElderView } from './elder.types';
 export { heroHandle } from './heroes';
 export { parseHostRequest } from './host-channel';
-export { type HostRequest, HostRequestSchema } from './host-channel.schema';
-export type { HostEvent } from './host-channel.types';
+export {
+  type HostRequest,
+  HostRequestSchema,
+  RULE_BOOK,
+  type RuleKey,
+  type SettingValue,
+} from './host-channel.schema';
+export type { HostEvent, SettingView } from './host-channel.types';
 export type { JournalEntry, JournalEntryBody } from './journal.types';
 export { PROTOCOL_VERSION } from './messages';
 export type { CoreMessage, Cue } from './messages.types';

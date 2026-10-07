@@ -1,3 +1,4 @@
+import { isAbsolute, relative, resolve } from 'node:path';
 import { type HostEvent, parseHostRequest } from '@ibitsa/protocol';
 import type { HostChannelDeps } from './host-channel.types';
 
@@ -46,10 +47,55 @@ export class HostChannel {
       case 'openWorktree':
         this.deps.openWorktree();
         return;
+      case 'readSettings':
+        this.postRules();
+        return;
+      case 'writeSetting':
+        await this.deps.settings.write(request);
+        this.postRules();
+        return;
+      case 'resetSetting':
+        await this.deps.settings.reset(request);
+        this.postRules();
+        return;
+      case 'openSettings':
+        this.deps.openSettings();
+        return;
+      case 'openFile': {
+        const path = openablePath({ path: request.path, ...this.deps.openable });
+        if (path) this.deps.openFile(path);
+        return;
+      }
     }
+  }
+
+  private postRules(): void {
+    this.post({ channel: 'host', type: 'settings', rules: this.deps.settings.rules() });
   }
 
   private post(event: HostEvent): void {
     this.deps.post(event);
   }
+}
+
+/**
+ * The file the webview asked to open, if it's inside the workspace or one of the allowed folders (the
+ * webview is untrusted, #179): relative paths are the workspace's. Null otherwise.
+ */
+export function openablePath({
+  path,
+  workspace,
+  roots,
+}: {
+  path: string;
+  workspace: string | undefined;
+  roots: readonly string[];
+}): string | null {
+  const absolute = isAbsolute(path) ? resolve(path) : workspace ? resolve(workspace, path) : null;
+  if (!absolute) return null;
+  const inside = (root: string) => {
+    const r = relative(resolve(root), absolute);
+    return r !== '' && !r.startsWith('..') && !isAbsolute(r);
+  };
+  return [...(workspace ? [workspace] : []), ...roots].some(inside) ? absolute : null;
 }

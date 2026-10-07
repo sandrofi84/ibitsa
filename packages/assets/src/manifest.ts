@@ -11,6 +11,8 @@ export const SPEC = {
   island: { height: 96, leftCap: 48, middle: 32, rightCap: 48 },
   taskPoint: 16,
   hut: 64,
+  /** The Guild Hall (#179): optional in a pack; the game draws its own without one. */
+  guildHall: 48,
   dialogueFrame: 24,
   activityIcon: 12,
   /** A drawbridge row: a left end, a repeatable segment and a right end, 24 tall (§9.2, #124). */

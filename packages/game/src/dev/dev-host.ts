@@ -113,6 +113,11 @@ export class DevHost implements Host {
       }
       return;
     }
+    if (command.type === 'requestChronicle') {
+      // A replay has no past campaigns (#179).
+      this.emit({ type: 'chronicle', seq: ++this.seq, campaigns: [] });
+      return;
+    }
     if (command.type === 'requestJournal') {
       const page = this.journal.page({ before: command.before, limit: command.limit });
       this.emit({ type: 'journal', seq: ++this.seq, ...page });

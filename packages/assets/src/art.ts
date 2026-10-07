@@ -630,6 +630,35 @@ export function hut(): Raster {
   return img;
 }
 
+/**
+ * The Guild Hall (§7.1, #179): Ibitsa's settings, in Home Village beside the hut. A stone hall with a
+ * slate roof, a banner and a door, 48×48.
+ */
+export function guildHall(): Raster {
+  const img = new Raster(48, 48);
+  const stone = hex('#9a9a9a');
+  const stoneDark = hex('#6e6e6e');
+  img.rect({ x: 4, y: 20, w: 40, h: 26, color: stone });
+  for (let y = 22; y < 46; y += 4) img.rect({ x: 4, y, w: 40, h: 1, color: stoneDark });
+  for (let r = 0; r < 18; r++) {
+    const half = 6 + r;
+    img.rect({
+      x: 24 - half,
+      y: r + 2,
+      w: half * 2,
+      h: 1,
+      color: r % 3 === 0 ? hex('#3a4a6a') : hex('#4a5d82'),
+    });
+  }
+  img.rect({ x: 19, y: 32, w: 10, h: 14, color: hex('#2a1a10') });
+  img.rect({ x: 26, y: 39, w: 1, h: 2, color: hex('#f2c230') });
+  // The banner: Ibitsa's gold on blue, hanging from the roof's edge.
+  img.rect({ x: 8, y: 22, w: 6, h: 10, color: hex('#2f5fb0') });
+  img.rect({ x: 10, y: 25, w: 2, h: 3, color: hex('#f2c230') });
+  img.rect({ x: 34, y: 24, w: 6, h: 5, color: SAND });
+  return img;
+}
+
 /** 24×24 9-slice dialogue frame with an 8 px inset. */
 export function dialogueFrame(): Raster {
   const img = new Raster(24, 24);
