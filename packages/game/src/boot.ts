@@ -15,6 +15,7 @@ import { mountElderPanel } from './elder-panel';
 import { mountGuildHall } from './guild-hall';
 import { mountHeroPane } from './hero-pane';
 import { HeroSelection } from './hero-selection';
+import { setHeroClasses } from './heroes';
 import { reportDiagnostics } from './host';
 import type { Diagnostics, Host } from './host.types';
 import { HutScene } from './hut-scene';
@@ -31,6 +32,7 @@ import {
   mountPullRequestPanel,
   mountPullRequestPreview,
 } from './pull-request-card';
+import { setRecolor } from './recolor';
 import { mountRestartNotice } from './restart-notice';
 import { isSitting, rememberCouncillors, SittingFeed } from './sitting-hut';
 import { mountSoundBoard } from './sound-board';
@@ -96,6 +98,11 @@ export function startGame(root: HTMLElement, host: Host): Started {
   const client = new GameClient(host);
   // First, so every panel's titles and portraits follow this snapshot's councillors (#103).
   client.onSnapshot((snapshot) => rememberCouncillors(snapshot.councillors));
+  // The classes in play (#182), for every class list and the heroes' looks.
+  client.onSnapshot((snapshot) => {
+    setHeroClasses(snapshot.classes);
+    setRecolor(snapshot.recolor);
+  });
   if (!hasWebGL(root)) {
     root.innerHTML =
       '<p class="notice">Ibitsa needs WebGL, and it isn’t available here, so the game can’t start. ' +

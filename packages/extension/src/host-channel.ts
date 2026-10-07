@@ -99,6 +99,29 @@ export class HostChannel {
       case 'newCouncillor':
         this.deps.council.create(request);
         return;
+      case 'readArmory':
+        this.postArmory();
+        return;
+      case 'writeClass':
+        await this.deps.armory.writeClass({
+          id: request.id,
+          value: request.class,
+          layer: request.layer,
+        });
+        this.postArmory();
+        return;
+      case 'resetClass':
+        await this.deps.armory.resetClass(request);
+        this.postArmory();
+        return;
+      case 'writeRecolor':
+        await this.deps.armory.writeRecolor(request);
+        this.postArmory();
+        return;
+      case 'resetRecolor':
+        await this.deps.armory.resetRecolor(request);
+        this.postArmory();
+        return;
     }
   }
 
@@ -113,6 +136,10 @@ export class HostChannel {
 
   private postCouncil(): void {
     this.post({ channel: 'host', type: 'councilSettings', council: this.deps.council.view() });
+  }
+
+  private postArmory(): void {
+    this.post({ channel: 'host', type: 'armory', armory: this.deps.armory.view() });
   }
 
   private postRules(): void {

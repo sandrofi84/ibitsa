@@ -18,7 +18,8 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       // Unit-testable code only. Phaser scenes, the DOM panel and boot are covered by Playwright;
-      // the extension by VS Code integration tests.
+      // the extension by VS Code integration tests. The dev build's fake host channel too: it stands
+      // in for the extension in Playwright's runs, which exercise it.
       include: [
         'packages/core/src/**',
         'packages/protocol/src/**',
@@ -49,7 +50,6 @@ export default defineConfig({
         'packages/game/src/dev/live-dev-host.ts',
         'packages/game/src/dev/demo-review.ts',
         'packages/game/src/dev/fake-github.ts',
-        'packages/game/src/dev/fake-host-channel.ts',
       ],
       exclude: ['**/*.test.ts', '**/*.types.ts', '**/*.schema.ts', '**/*.d.ts', '**/index.ts'],
       reporter: ['text', 'html', 'json-summary'],

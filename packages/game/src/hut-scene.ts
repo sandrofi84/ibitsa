@@ -5,6 +5,7 @@ import type { HutRendered, SeatObjects } from './hut-scene.types';
 import { councilPose, HUT_FEED, HUT_STEPS, seatHut } from './hut-view';
 import type { HutFeed, HutView } from './hut-view.types';
 import { PACK_KEY } from './pack-scene';
+import { recoloredCharacter, recolorOf } from './recolor';
 
 const W = 480;
 const H = 270;
@@ -180,8 +181,15 @@ export class HutScene extends Phaser.Scene {
               existing,
             );
       const look = councilLook(this.character(c.appearance), councilPose(view, c.id));
-      if (objects.sprite.texture.key !== look.texture) objects.sprite.setTexture(look.texture);
-      objects.sprite.setScale(look.scale).play(look.animation, true);
+      // Recolored as the councillor's settings say (#182): a copy of its sheet, with its animations.
+      const texture = recoloredCharacter({
+        scene: this,
+        key: look.texture,
+        recolor: recolorOf(`councillor:${c.id}`),
+      });
+      const animation = `${texture}${look.animation.slice(look.texture.length)}`;
+      if (objects.sprite.texture.key !== texture) objects.sprite.setTexture(texture);
+      objects.sprite.setScale(look.scale).play(animation, true);
       const speaking = view.speaker === c.id;
       objects.glow.setVisible(speaking);
       objects.label.setColor(speaking ? GOLD : CREAM);

@@ -5,4 +5,6 @@ export interface HeroClass {
   model: string;
   /** Suggested names; the user may type their own. */
   names: string[];
+  /** The pack character its heroes look like (#182). */
+  appearance: string;
 }

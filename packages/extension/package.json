@@ -170,6 +170,36 @@
           "exclusiveMinimum": 0,
           "markdownDescription": "The most one question to the council mid-campaign (`@council`, `@<councillor>` or the hut) may spend, in dollars."
         },
+        "ibitsa.classes": {
+          "type": "object",
+          "default": {},
+          "markdownDescription": "Hero classes by id: `{ \"name\", \"model\", \"appearance\" }`. Remaps the built-ins (`paladin`, `barbarian`, `ranger`, `rogue`) or adds new classes. Edit them in the Guild Hall's Armory.",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              },
+              "appearance": {
+                "type": "string"
+              },
+              "names": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "ibitsa.recolor": {
+          "type": "object",
+          "default": {},
+          "markdownDescription": "Recolors by `class:<id>` or `councillor:<id>`: `{ \"hue\": -180…180, \"preset\": \"none\" | \"gold\" | \"frost\" | \"ember\" | \"verdant\" | \"shadow\" }`. Edit them in the Guild Hall's Armory."
+        },
         "ibitsa.council.disabled": {
           "type": "array",
           "items": {

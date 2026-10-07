@@ -1,5 +1,5 @@
 import { type Effort, type Plan, planIslands } from '@ibitsa/protocol';
-import { DEFAULT_CLASS, HERO_CLASSES } from './heroes';
+import { DEFAULT_CLASS, heroClasses } from './heroes';
 import type { CapInput, PartyRow, ReviewEffortOption } from './parties.types';
 
 /**
@@ -37,9 +37,11 @@ export function heroNameFor({
   classId: string;
   taken: readonly string[];
 }): string {
-  const heroClass = HERO_CLASSES.find((c) => c.id === classId);
+  const heroClass = heroClasses().find((c) => c.id === classId);
   const label = heroClass?.label ?? 'Hero';
-  const names = heroClass?.names.map((n) => `${label} ${n}`) ?? [label];
+  // A class with no suggested names (one added in the Armory, #182) names its heroes after itself.
+  const suggested = heroClass?.names.map((n) => `${label} ${n}`) ?? [];
+  const names = suggested.length > 0 ? suggested : [label];
   const free = names.find((n) => !taken.includes(n));
   if (free) return free;
   for (let n = 2; ; n++) {

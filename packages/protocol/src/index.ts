@@ -11,6 +11,15 @@ export type {
   LessonsEvent,
 } from './campaign-record.types';
 export type { ChronicleEntry } from './chronicle.types';
+export { DEFAULT_CLASSES, modelName, resolveClasses, resolveRecolor } from './classes';
+export {
+  type ClassSetting,
+  RECOLOR_PRESETS,
+  type Recolor,
+  type RecolorMap,
+  type RecolorPreset,
+} from './classes.schema';
+export type { HeroClassView } from './classes.types';
 export { parseCommand } from './commands';
 export {
   type Command,
@@ -45,6 +54,8 @@ export {
   SOUND_SETTINGS,
 } from './host-channel.schema';
 export type {
+  ArmoryLayer,
+  ArmoryView,
   CouncilSettingsView,
   HostEvent,
   PackView,

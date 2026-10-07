@@ -2,6 +2,7 @@ import type { SittingView, Snapshot } from '@ibitsa/protocol';
 import type { ChamberLine, CouncilChamber, CouncilChamberOptions } from './council-chamber.types';
 import { button, el } from './dom';
 import { councilHandles } from './mentions';
+import { recolorFilter, recolorOf } from './recolor';
 import { councillorAppearance, councillorTitle } from './sitting-hut';
 
 /** The chamber shows the latest lines; the whole dialogue is in the sitting. */
@@ -86,6 +87,7 @@ export function mountCouncilChamber({
         const img = el('img', { className: 'portrait' });
         img.src = src;
         img.alt = '';
+        img.style.filter = recolorFilter(recolorOf(`councillor:${line.speaker}`));
         item.append(img);
       }
       item.append(el('strong', { text: `${line.name}: ` }), el('span', { text: line.text }));

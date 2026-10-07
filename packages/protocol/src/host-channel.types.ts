@@ -1,3 +1,5 @@
+import type { Recolor } from './classes.schema';
+import type { HeroClassView } from './classes.types';
 import type { CouncillorOverrides } from './councillors.types';
 import type { SettingKey, SettingValue } from './host-channel.schema';
 
@@ -58,7 +60,9 @@ export type HostEvent =
   /** Load this pack's files now (#183); null is the bundled default. Ends in `/`. */
   | { channel: 'host'; type: 'packChanged'; base: string | null }
   /** The Roster's settings (#181), after `readCouncilSettings` or a change. */
-  | { channel: 'host'; type: 'councilSettings'; council: CouncilSettingsView };
+  | { channel: 'host'; type: 'councilSettings'; council: CouncilSettingsView }
+  /** The Armory (#182), after `readArmory` or a write. */
+  | { channel: 'host'; type: 'armory'; armory: ArmoryView };
 
 /**
  * The Roster's settings (#181): who's turned off (`ibitsa.council.disabled`) and each councillor's
@@ -69,4 +73,13 @@ export interface CouncilSettingsView {
   disabledLayer: 'default' | 'user' | 'workspace';
   overrides: CouncillorOverrides;
   overridesLayer: 'default' | 'user' | 'workspace';
+}
+
+/** Where a class's or a recolor's setting comes from (§8.1): none set means the built-in. */
+export type ArmoryLayer = 'default' | 'user' | 'workspace';
+
+/** The Guild Hall's Armory (#182): the classes and recolors in play, each with its layer. */
+export interface ArmoryView {
+  classes: (HeroClassView & { layer: ArmoryLayer })[];
+  recolor: { target: string; recolor: Recolor; layer: ArmoryLayer }[];
 }

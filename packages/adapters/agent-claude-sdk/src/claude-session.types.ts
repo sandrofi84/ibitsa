@@ -6,6 +6,8 @@ export interface ClaudeSessionInit {
   adapter: ClaudeAdapterOptions;
   cwd: string;
   classId: string;
+  /** The class's model from the classes in play (#182); without one, the built-in mapping. */
+  model?: string;
   session: { sessionId: string } | { resume: string };
   prompt?: string;
   maxBudgetMicroUsd?: number;

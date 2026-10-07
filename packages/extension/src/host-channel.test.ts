@@ -1,6 +1,7 @@
 import { resolve } from 'node:path';
 import type { HostEvent } from '@ibitsa/protocol';
 import { describe, expect, it, vi } from 'vitest';
+import { Armory } from './armory';
 import type { Credentials } from './credentials.types';
 import { GuildCouncil } from './guild-council';
 import { GuildSettings } from './guild-settings';
@@ -43,6 +44,7 @@ function setup(overrides: Partial<HostChannelDeps> = {}) {
       roots: { home: '/home/me', workspace: '/ws', plugin: '/ext/plugin' },
       open: () => {},
     }),
+    armory: new Armory({ inspect: () => undefined, update: async () => {} }),
     ...overrides,
   };
   return { channel: new HostChannel(deps), deps, posted };
@@ -277,5 +279,56 @@ describe('the Roster on the host channel (#181)', () => {
       layer: 'user',
     });
     expect(create).not.toHaveBeenCalled();
+  });
+});
+
+describe('the Armory on the host channel (#182)', () => {
+  it('sends the armory on request, and again after each write or reset', async () => {
+    const update = vi.fn(async () => {});
+    const { channel, posted } = setup({ armory: new Armory({ inspect: () => undefined, update }) });
+    await channel.receive({ channel: 'host', type: 'readArmory' });
+    await channel.receive({
+      channel: 'host',
+      type: 'writeClass',
+      id: 'bard',
+      class: { name: 'Bard', model: 'opus' },
+      layer: 'user',
+    });
+    await channel.receive({ channel: 'host', type: 'resetClass', id: 'bard', layer: 'user' });
+    await channel.receive({
+      channel: 'host',
+      type: 'writeRecolor',
+      target: 'class:ranger',
+      recolor: { hue: 90, preset: 'none' },
+      layer: 'workspace',
+    });
+    await channel.receive({
+      channel: 'host',
+      type: 'resetRecolor',
+      target: 'class:ranger',
+      layer: 'workspace',
+    });
+    expect(posted.map((e) => e.type)).toEqual(['armory', 'armory', 'armory', 'armory', 'armory']);
+    expect(update).toHaveBeenCalledTimes(4);
+  });
+
+  it('refuses a class id or recolor target that does not check out', async () => {
+    const update = vi.fn(async () => {});
+    const { channel } = setup({ armory: new Armory({ inspect: () => undefined, update }) });
+    await channel.receive({
+      channel: 'host',
+      type: 'writeClass',
+      id: 'Not An Id',
+      class: {},
+      layer: 'user',
+    });
+    await channel.receive({
+      channel: 'host',
+      type: 'writeRecolor',
+      target: 'anything',
+      recolor: {},
+      layer: 'user',
+    });
+    expect(update).not.toHaveBeenCalled();
   });
 });

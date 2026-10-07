@@ -1,4 +1,5 @@
 import type { HostEvent } from '@ibitsa/protocol';
+import type { Armory } from './armory';
 import type { Credentials } from './credentials.types';
 import type { GuildCouncil } from './guild-council';
 import type { GuildSettings } from './guild-settings';
@@ -33,4 +34,6 @@ export interface HostChannelDeps {
   packBase(dir: string): string;
   /** Folders whose files the webview may open: the workspace, the skills folders, the plugin (#179). */
   openable: { workspace: string | undefined; roots: readonly string[] };
+  /** The Guild Hall's Armory (#182): classes and recolors. */
+  armory: Armory;
 }

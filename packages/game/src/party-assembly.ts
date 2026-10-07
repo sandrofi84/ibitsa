@@ -7,7 +7,7 @@ import {
 } from '@ibitsa/protocol';
 import type { GameClient } from './client';
 import { button, el } from './dom';
-import { HERO_CLASSES } from './heroes';
+import { heroClasses } from './heroes';
 import {
   capFromInput,
   heroNameFor,
@@ -167,7 +167,7 @@ export function partyFields({
   box.append(el('legend', { text: `${row.islandId} ${row.title}` }));
   box.append(el('p', { className: 'tasks', text: row.tasks.join(' · ') }));
   const classSelect = el('select');
-  for (const c of HERO_CLASSES) classSelect.add(new Option(`${c.label} (${c.model})`, c.id));
+  for (const c of heroClasses()) classSelect.add(new Option(`${c.label} (${c.model})`, c.id));
   classSelect.value = row.classId;
   const name = el('input');
   name.value = row.heroName;

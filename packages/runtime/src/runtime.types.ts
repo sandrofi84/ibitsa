@@ -1,3 +1,4 @@
+import type { HeroClassView, RecolorMap } from '@ibitsa/protocol';
 import type { AgentAdapter, Clock, GameMaster, GitHost, UserSettings } from './ports.types';
 import type { FolderWatcher } from './skill-catalog.types';
 
@@ -26,6 +27,10 @@ export interface RuntimeOptions {
   gitHost?: GitHost;
   /** `ibitsa.pullRequests.pollSeconds` (§5.6); 60 by default. */
   pullRequestPollSeconds?: () => number;
+  /** The hero classes in play (§5.2, #182); the built-ins by default. Read each time it's needed. */
+  classes?: () => HeroClassView[];
+  /** `ibitsa.recolor` (#182), for the snapshot. */
+  recolor?: () => RecolorMap;
   /** How skill folders are watched; injectable for tests. */
   watchFolder?: FolderWatcher;
 }
