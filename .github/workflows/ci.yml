@@ -1,11 +1,18 @@
-# CI (spec §13): every PR and push to main. Ubuntu runs everything; macOS and Windows run the unit and
-# integration tests (sandbox and platform behaviour, §11.6). Platform packaging and publishing at M10.
+# CI (spec §13): every PR and push to main, except docs-only changes. Ubuntu runs everything, with the
+# game's end-to-end tests split across parallel shards; macOS and Windows run the unit and integration
+# tests (sandbox and platform behaviour, §11.6). Platform packaging and publishing at M10.
 name: CI
 
 on:
   pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
   push:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -55,22 +62,51 @@ jobs:
       - name: Build extension and game
         run: pnpm -r build
 
-      - name: Install Playwright browser
-        run: pnpm --filter @ibitsa/game exec playwright install --with-deps chromium
-
-      - name: End-to-end tests against the standalone game (Playwright)
-        run: pnpm --filter @ibitsa/game test:e2e
-
       - name: Extension integration tests (VS Code under xvfb)
         working-directory: packages/extension
         run: xvfb-run -a -s "-screen 0 1920x1080x24" pnpm test:integration
+
+  e2e:
+    # The game's end-to-end tests against the standalone build, a third each. Microsoft's Playwright
+    # image has Chromium and its system libraries, so nothing is installed per run; its tag must match
+    # @playwright/test in packages/game/package.json (checked below).
+    name: e2e (${{ matrix.shard }}/3)
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --ipc=host
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Playwright matches the container
+        run: |
+          want=$(node -p "require('./packages/game/package.json').devDependencies['@playwright/test']")
+          [ "v$want" = "v1.63.0" ] || { echo "::error::@playwright/test is $want; update the e2e container tag to v$want-noble"; exit 1; }
+
+      - name: End-to-end tests against the standalone game (Playwright)
+        run: pnpm --filter @ibitsa/game test:e2e --shard=${{ matrix.shard }}/3
 
       # Every run, not only failures: the screenshots are the visual evidence for a PR's changes.
       - name: Upload Playwright screenshots and results
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-results
+          name: playwright-results-${{ matrix.shard }}
           path: packages/game/test-results/
           if-no-files-found: ignore
           retention-days: 14
@@ -79,8 +115,8 @@ jobs:
         if: always()
         run: |
           {
-            echo "### Screenshots"
-            echo "In the **playwright-results** artifact of this run:"
+            echo "### Screenshots, shard ${{ matrix.shard }}/3"
+            echo "In the **playwright-results-${{ matrix.shard }}** artifact of this run:"
             find packages/game/test-results -maxdepth 1 -name '*.png' -printf '- %f\n' | sort
           } >> "$GITHUB_STEP_SUMMARY"
 
