@@ -241,16 +241,52 @@ export class GitGameMaster implements GameMaster {
 
   async removeWorktree({
     worktreePath,
+    branch,
   }: {
     worktreePath: string;
+    branch?: string;
   }): Promise<{ ok: true } | { ok: false; reason: string }> {
     const status = await git(worktreePath, ['status', '--porcelain']);
     if (status.ok && status.output !== '') {
       return { ok: false, reason: 'The worktree has uncommitted changes.' };
     }
-    // Without --force, git also refuses a dirty worktree; the branch is kept either way.
+    // Without --force, git also refuses a dirty worktree. The branch is kept unless named: a merged
+    // island's (#154), deleted with -D since a squash merge leaves it unmerged as far as git knows.
     const removed = await git(this.options.repoDir, ['worktree', 'remove', worktreePath]);
-    return removed.ok ? { ok: true } : { ok: false, reason: removed.output };
+    if (!removed.ok) return { ok: false, reason: removed.output };
+    if (branch) await git(this.options.repoDir, ['branch', '-D', branch]);
+    return { ok: true };
+  }
+
+  /**
+   * Stacked (#154): the island this one built on merged, so move its branch onto `origin/<onto>`,
+   * dropping the commits up to `upstream` (the merged island's last push). Aborts on a conflict;
+   * uncommitted work is left alone.
+   */
+  async restack({
+    worktreePath,
+    onto,
+    upstream,
+  }: {
+    worktreePath: string;
+    onto: string;
+    upstream: string;
+  }): Promise<'restacked' | 'conflict' | 'uncommitted'> {
+    const status = await git(worktreePath, ['status', '--porcelain']);
+    if (!status.ok || status.output !== '') return 'uncommitted';
+    const fetched = await git(worktreePath, {
+      args: ['fetch', 'origin', onto],
+      env: { GIT_TERMINAL_PROMPT: '0' },
+    });
+    if (!fetched.ok) throw new Error(fetched.output);
+    const rebased = await git(worktreePath, ['rebase', '--onto', `origin/${onto}`, upstream]);
+    if (rebased.ok) return 'restacked';
+    // Only conflicted files make it the hero's to resolve; anything else (no identity, a bad commit) is
+    // an error the user sees.
+    const conflicted = await git(worktreePath, ['diff', '--name-only', '--diff-filter=U']);
+    await git(worktreePath, ['rebase', '--abort']);
+    if (conflicted.ok && conflicted.output !== '') return 'conflict';
+    throw new Error(rebased.output.slice(-OUTPUT_TAIL));
   }
 
   /** `../<repo>.ibitsa/<branch>` next to the repository (spec §5.3). */

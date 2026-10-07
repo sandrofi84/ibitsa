@@ -34,6 +34,7 @@ export function pullRequestCard({ island, onAction }: PullRequestCardOptions): H
     card.append(p);
   }
   if (model.busy) card.append(el('p', { className: 'note pr-busy', text: model.busy }));
+  if (model.restack) card.append(el('p', { className: 'note pr-restack', text: model.restack }));
   if (model.error) {
     const error = el('p', { className: 'pr-error', text: model.error });
     error.setAttribute('role', 'alert');
@@ -41,7 +42,19 @@ export function pullRequestCard({ island, onAction }: PullRequestCardOptions): H
   }
   const buttons = el('div', { className: 'pr-actions' });
   for (const action of model.actions) {
-    const b = button({ label: action.label, onClick: () => onAction(action.id) });
+    // A button that asks to confirm says so on the first click and acts on the second.
+    let armed = false;
+    const b = button({
+      label: action.label,
+      onClick: () => {
+        if (action.confirm && !armed) {
+          armed = true;
+          b.textContent = action.confirm;
+          return;
+        }
+        onAction(action.id);
+      },
+    });
     if (action.disabled) {
       b.disabled = true;
       b.title = action.disabled;
@@ -78,6 +91,15 @@ export function actOn({
         return;
       case 'refresh':
         client.send({ type: 'refreshPullRequests' });
+        return;
+      case 'comments':
+        client.send({ type: 'bringPullRequestComments', islandId });
+        return;
+      case 'restack':
+        client.send({ type: 'restackIsland', islandId });
+        return;
+      case 'remove':
+        client.send({ type: 'removeWorktree', islandId });
         return;
     }
   };

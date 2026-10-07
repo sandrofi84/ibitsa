@@ -472,3 +472,90 @@ describe('push (#152)', () => {
     expect(pushed.ok ? '' : pushed.reason).toMatch(/origin/);
   });
 });
+
+describe('restack and removing a merged island (#154)', () => {
+  /** A repo with origin, island 1 (`ibitsa/back`) pushed, and island 2 built on it with its own commit. */
+  async function stacked() {
+    const dir = repo();
+    const remote = join(dir, '..', 'remote.git');
+    run(dir, 'init', '-q', '--bare', remote);
+    run(dir, 'remote', 'add', 'origin', remote);
+    run(dir, 'push', '-q', 'origin', 'main');
+    // The game master's own git (the rebase) needs an identity; CI machines have none.
+    run(dir, 'config', 'user.name', 'Test');
+    run(dir, 'config', 'user.email', 'test@example.com');
+    const master = gm(dir);
+    const commit = (path: string, file: string) => {
+      writeFileSync(join(path, file), file);
+      run(path, 'add', '.');
+      run(path, 'commit', '-q', '-m', file);
+    };
+    const back = await master.createWorktree({
+      islandId: 'i1',
+      branch: 'ibitsa/back',
+      baseRef: 'main',
+    });
+    const backPath = back.type === 'worktreeCreated' ? back.path : '';
+    commit(backPath, 'back.txt');
+    await master.push({ worktreePath: backPath, branch: 'ibitsa/back' });
+    const upstream = run(backPath, 'rev-parse', 'HEAD');
+    const front = await master.createWorktree({
+      islandId: 'i2',
+      branch: 'ibitsa/front',
+      baseRef: 'ibitsa/back',
+    });
+    const frontPath = front.type === 'worktreeCreated' ? front.path : '';
+    commit(frontPath, 'front.txt');
+    // Island 1 is squash-merged into main on the host.
+    run(dir, 'merge', '-q', '--squash', 'ibitsa/back');
+    run(dir, 'commit', '-q', '-m', 'Back (#1)');
+    run(dir, 'push', '-q', 'origin', 'main');
+    return { dir, master, backPath, frontPath, upstream, commit };
+  }
+
+  it("moves the later branch onto origin's base, dropping the merged commits", async () => {
+    const { master, frontPath, upstream } = await stacked();
+    expect(await master.restack({ worktreePath: frontPath, onto: 'main', upstream })).toBe(
+      'restacked',
+    );
+    expect(run(frontPath, 'log', '--format=%s', 'origin/main..HEAD')).toBe('front.txt');
+    expect(run(frontPath, 'log', '-1', '--format=%s', 'HEAD~1')).toBe('Back (#1)');
+  });
+
+  it('aborts on a conflict and leaves uncommitted work alone', async () => {
+    const { dir, master, frontPath, upstream } = await stacked();
+    writeFileSync(join(frontPath, 'wip.txt'), 'wip');
+    expect(await master.restack({ worktreePath: frontPath, onto: 'main', upstream })).toBe(
+      'uncommitted',
+    );
+    rmSync(join(frontPath, 'wip.txt'));
+    // main and the front branch both change back.txt: moving the front branch conflicts.
+    writeFileSync(join(dir, 'back.txt'), 'changed on main');
+    run(dir, 'commit', '-q', '-am', 'edit back on main');
+    run(dir, 'push', '-q', 'origin', 'main');
+    writeFileSync(join(frontPath, 'back.txt'), 'changed on front');
+    run(frontPath, 'commit', '-q', '-am', 'edit back');
+    const before = run(frontPath, 'rev-parse', 'HEAD');
+    expect(await master.restack({ worktreePath: frontPath, onto: 'main', upstream })).toBe(
+      'conflict',
+    );
+    expect(run(frontPath, 'rev-parse', 'HEAD')).toBe(before);
+    expect(run(frontPath, 'status', '--porcelain')).toBe('');
+  });
+
+  it("fails with git's message when the rebase can't start, rather than calling it a conflict", async () => {
+    const { master, frontPath } = await stacked();
+    await expect(
+      master.restack({ worktreePath: frontPath, onto: 'main', upstream: 'no-such-commit' }),
+    ).rejects.toThrow(/no-such-commit/);
+  });
+
+  it("removes a merged island's worktree with its local branch", async () => {
+    const { dir, master, backPath } = await stacked();
+    expect(await master.removeWorktree({ worktreePath: backPath, branch: 'ibitsa/back' })).toEqual({
+      ok: true,
+    });
+    expect(existsSync(backPath)).toBe(false);
+    expect(run(dir, 'branch', '--list', 'ibitsa/back')).toBe('');
+  });
+});

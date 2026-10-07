@@ -373,7 +373,10 @@ export class Runtime {
         return;
       case 'removeWorktree':
         void this.options.gameMaster
-          .removeWorktree({ worktreePath: effect.worktreePath })
+          .removeWorktree({
+            worktreePath: effect.worktreePath,
+            ...(effect.branch ? { branch: effect.branch } : {}),
+          })
           .catch((e: unknown) => ({ ok: false as const, reason: String(e) }))
           .then((result) =>
             this.input({
@@ -533,6 +536,9 @@ export class Runtime {
       case 'markPullRequestReady':
       case 'watchPullRequests':
       case 'pollPullRequests':
+      case 'fetchPullRequestComments':
+      case 'retargetPullRequest':
+      case 'restack':
         this.pullRequests.perform(effect);
         return;
       case 'setTimer':

@@ -13,7 +13,8 @@ const NEXT: Partial<Record<PullRequestState, PullRequestState>> = {
  * Dev only (#153): GitHub for the live host. It answers pushes, opened PRs and drafts marked ready as
  * the runtime would (#152), and each poll moves a PR ready for review one step along open → approved →
  * merged, so a campaign can be played to Ibitsa. With `pr=demo` it polls on a timer; otherwise only on
- * Refresh. A draft stays a draft until it's marked ready.
+ * Refresh. A draft stays a draft until it's marked ready. Review comments, retargets and restacks
+ * (#154) always succeed.
  */
 export class FakeGitHub {
   private readonly input: FakeGitHubOptions['input'];
@@ -62,6 +63,32 @@ export class FakeGitHub {
         return true;
       case 'pollPullRequests':
         this.poll(effect.numbers);
+        return true;
+      // #154: a reviewer's comment, retargeting after a stacked merge, and a clean restack.
+      case 'fetchPullRequestComments':
+        this.later({
+          type: 'pullRequestComments',
+          islandId: effect.islandId,
+          comments: [
+            {
+              author: 'octo-reviewer',
+              body: 'Name the helper after what it strips.',
+              path: 'src/slug.ts',
+              line: 3,
+            },
+          ],
+        });
+        return true;
+      case 'retargetPullRequest':
+        this.later({ type: 'pullRequestRetargeted', islandId: effect.islandId, base: effect.base });
+        return true;
+      case 'restack':
+        this.later({
+          type: 'restacked',
+          islandId: effect.islandId,
+          outcome: 'restacked',
+          head: effect.push ? this.head() : null,
+        });
         return true;
       default:
         return false;

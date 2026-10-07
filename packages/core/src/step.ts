@@ -121,6 +121,12 @@ function command(ctx: StepContext, command: Command): void {
     case 'refreshPullRequests':
       new PullRequest(ctx).refresh(command.commandId);
       return;
+    case 'bringPullRequestComments':
+      new PullRequest(ctx).bringComments(command);
+      return;
+    case 'restackIsland':
+      new PullRequest(ctx).restack(command);
+      return;
     case 'setAutoApprove':
       quest.setAutoApprove(command);
       return;
@@ -230,6 +236,9 @@ function gameMaster(ctx: StepContext, event: GameMasterEvent): void {
     case 'pullRequestOpened':
     case 'pullRequestReady':
     case 'remoteFailed':
+    case 'pullRequestComments':
+    case 'pullRequestRetargeted':
+    case 'restacked':
     case 'pullRequestsPolled':
       new PullRequest(ctx).handle(event);
       return;

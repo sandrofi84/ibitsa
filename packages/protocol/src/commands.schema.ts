@@ -233,6 +233,10 @@ export const CommandSchema = v.variant('type', [
   v.strictObject({ type: v.literal('markPullRequestReady'), commandId: id, islandId: id }),
   /** Poll the git host now rather than at the next interval. */
   v.strictObject({ type: v.literal('refreshPullRequests'), commandId: id }),
+  /** Fetch the PR's review comments and send them to the island's hero (#154). */
+  v.strictObject({ type: v.literal('bringPullRequestComments'), commandId: id, islandId: id }),
+  /** Stacked, after the island it built on merged: move the branch onto that island's base (#154). */
+  v.strictObject({ type: v.literal('restackIsland'), commandId: id, islandId: id }),
   /** Push the island's branch without a PR, to any remote. */
   v.strictObject({ type: v.literal('pushBranch'), commandId: id, islandId: id }),
 ]);

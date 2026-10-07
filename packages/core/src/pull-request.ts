@@ -1,4 +1,9 @@
-import type { Command, PolledPullRequest, PullRequestDraft } from '@ibitsa/protocol';
+import type {
+  Command,
+  PolledPullRequest,
+  PullRequestComment,
+  PullRequestDraft,
+} from '@ibitsa/protocol';
 import { Campaign } from './campaign';
 import { Hero } from './hero';
 import type { GameMasterEvent } from './inputs.types';
@@ -131,14 +136,32 @@ export class PullRequest {
     return parts.filter((p) => p !== '').join('\n\n');
   }
 
-  /** The branch the PR merges into: the island before (stacked), else the island's base. */
+  /**
+   * The branch the PR merges into: the island before (stacked), else the island's base. An island
+   * before that merged no longer counts: its own base takes its place (#154).
+   */
   private static base({ state, island }: { state: CoreState; island: Island }): string {
-    return state.islands.find((i) => i.id === island.basedOn)?.branch ?? island.baseRef;
+    const before = PullRequest.before({ state, island });
+    return before.island?.branch ?? before.root.baseRef;
+  }
+
+  /** The nearest island before this one that hasn't merged, and the last one that has (or itself). */
+  private static before({ state, island }: { state: CoreState; island: Island }): {
+    island: Island | undefined;
+    root: Island;
+  } {
+    let root = island;
+    let before = state.islands.find((i) => i.id === island.basedOn);
+    while (before?.remote?.pullRequest?.state === 'merged') {
+      root = before;
+      before = state.islands.find((i) => i.id === root.basedOn);
+    }
+    return { island: before, root };
   }
 
   /** Core's reasons a PR can't open yet; null when it can. */
   private static blocked({ state, island }: { state: CoreState; island: Island }): string | null {
-    const before = state.islands.find((i) => i.id === island.basedOn);
+    const before = PullRequest.before({ state, island }).island;
     if (before && !before.remote?.pullRequest)
       return `Open the pull request of ${before.name} first.`;
     if (island.remote?.busy) return 'Wait for the push to finish.';
@@ -192,12 +215,65 @@ export class PullRequest {
       return;
     }
     if (this.busy({ island, commandId: command.commandId })) return;
+    // The hero rebased it by hand after a restack conflicted: the branch was rewritten.
+    const force = island.remote?.restack?.conflict === true;
     this.start({ island, busy: 'pushing' });
     this.ctx.outbox.effect({
       type: 'pushBranch',
       islandId: island.id,
       worktreePath: island.worktreePath,
       branch: island.branch,
+      ...(force ? { force } : {}),
+    });
+  }
+
+  /** Bring the PR's review comments to the island's hero (#154). */
+  bringComments(command: Extract<Command, { type: 'bringPullRequestComments' }>): void {
+    const island = this.island(command);
+    if (!island) return;
+    const pr = island.remote?.pullRequest;
+    if (!pr || SETTLED.has(pr.state)) {
+      this.ctx.outbox.reject(command.commandId, 'There is no open pull request to read.');
+      return;
+    }
+    if (!this.ctx.state.heroes.some((h) => h.islandId === island.id)) {
+      this.ctx.outbox.reject(command.commandId, 'No hero works on this island.');
+      return;
+    }
+    if (this.busy({ island, commandId: command.commandId })) return;
+    this.start({ island, busy: 'fetchingComments' });
+    this.ctx.outbox.effect({
+      type: 'fetchPullRequestComments',
+      islandId: island.id,
+      number: pr.number,
+    });
+  }
+
+  /** Stacked, after the island it built on merged: move the branch onto that island's base (#154). */
+  restack(command: Extract<Command, { type: 'restackIsland' }>): void {
+    const island = this.island(command);
+    if (!island?.worktreePath) return;
+    const restack = island.remote?.restack;
+    if (!restack || restack.conflict) {
+      this.ctx.outbox.reject(
+        command.commandId,
+        restack
+          ? 'The hero is resolving the rebase; push it with Update PR.'
+          : 'Nothing to restack.',
+      );
+      return;
+    }
+    if (this.busy({ island, commandId: command.commandId })) return;
+    const pr = island.remote?.pullRequest;
+    this.start({ island, busy: 'restacking' });
+    this.ctx.outbox.effect({
+      type: 'restack',
+      islandId: island.id,
+      worktreePath: island.worktreePath,
+      branch: island.branch,
+      onto: restack.onto,
+      upstream: restack.upstream,
+      push: pr !== null && pr !== undefined && !SETTLED.has(pr.state),
     });
   }
 
@@ -243,6 +319,9 @@ export class PullRequest {
           | 'pullRequestOpened'
           | 'pullRequestReady'
           | 'remoteFailed'
+          | 'pullRequestComments'
+          | 'pullRequestRetargeted'
+          | 'restacked'
           | 'pullRequestsPolled';
       }
     >,
@@ -261,6 +340,16 @@ export class PullRequest {
         return;
       case 'branchPushed':
         remote.pushedHead = event.head;
+        if (remote.restack?.conflict) remote.restack = null;
+        return;
+      case 'pullRequestComments':
+        this.comments({ island, comments: event.comments });
+        return;
+      case 'pullRequestRetargeted':
+        if (remote.pullRequest) remote.pullRequest.base = event.base;
+        return;
+      case 'restacked':
+        this.restacked({ island, outcome: event.outcome, head: event.head });
         return;
       case 'pullRequestOpened':
         remote.pushedHead = event.head;
@@ -295,14 +384,85 @@ export class PullRequest {
   private polled(pullRequests: PolledPullRequest[]): void {
     let settled = false;
     for (const polled of pullRequests) {
-      const pr = this.ctx.state.islands
-        .map((i) => i.remote?.pullRequest)
-        .find((p) => p?.number === polled.number);
-      if (!pr || pr.state === polled.state) continue;
+      const island = this.ctx.state.islands.find(
+        (i) => i.remote?.pullRequest?.number === polled.number,
+      );
+      const pr = island?.remote?.pullRequest;
+      if (!island || !pr || pr.state === polled.state) continue;
       pr.state = polled.state;
       if (SETTLED.has(polled.state)) settled = true;
+      if (polled.state === 'merged') this.merged(island);
     }
     if (settled) this.watch();
+  }
+
+  /**
+   * Stacked (#154): an island merged, so the ones built on it move onto its base. Their PRs are
+   * retargeted at once; moving the branch (Restack) waits for the user's click.
+   */
+  private merged(island: Island): void {
+    const upstream = island.remote?.pushedHead;
+    if (!upstream) return;
+    const state = this.ctx.state;
+    for (const next of state.islands.filter((i) => i.basedOn === island.id)) {
+      if (!next.worktreePath || next.worktreeRemoved) continue;
+      const onto = PullRequest.base({ state, island: next });
+      next.remote ??= { pushedHead: null, busy: null, error: null, pullRequest: null };
+      next.remote.restack = { onto, upstream, conflict: false };
+      const pr = next.remote.pullRequest;
+      if (!pr || SETTLED.has(pr.state) || next.remote.busy) continue;
+      next.remote.busy = 'retargeting';
+      this.ctx.outbox.effect({
+        type: 'retargetPullRequest',
+        islandId: next.id,
+        number: pr.number,
+        base: onto,
+      });
+    }
+  }
+
+  /** The PR's review comments go to the hero, who goes back to the island's last task. */
+  private comments({ island, comments }: { island: Island; comments: PullRequestComment[] }) {
+    const remote = island.remote;
+    const record = this.ctx.state.heroes.find((h) => h.islandId === island.id);
+    if (!remote || !record) return;
+    if (comments.length === 0) {
+      remote.error = 'The pull request has no review comments yet.';
+      return;
+    }
+    const lines = comments.map((c) => {
+      const where = c.path ? ` (${c.path}${c.line ? `:${c.line}` : ''})` : '';
+      return `- ${c.author}${where}: ${c.body}`;
+    });
+    const number = remote.pullRequest?.number;
+    new Hero({ record, ctx: this.ctx }).reopen(
+      `Review comments on pull request #${number}:\n\n${lines.join('\n')}\n\nAddress them, commit, and call submit_task again. The user pushes your commits to the pull request.`,
+    );
+  }
+
+  private restacked({
+    island,
+    outcome,
+    head,
+  }: {
+    island: Island;
+    outcome: 'restacked' | 'conflict';
+    head: string | null;
+  }): void {
+    const remote = island.remote;
+    const restack = remote?.restack;
+    if (!remote || !restack) return;
+    if (outcome === 'restacked') {
+      remote.restack = null;
+      if (head) remote.pushedHead = head;
+      return;
+    }
+    restack.conflict = true;
+    const record = this.ctx.state.heroes.find((h) => h.islandId === island.id);
+    if (!record) return;
+    new Hero({ record, ctx: this.ctx }).tell(
+      `The branch you built on was merged, and moving your branch onto ${restack.onto} conflicts. Run \`git fetch origin ${restack.onto}\` and \`git rebase --onto origin/${restack.onto} ${restack.upstream}\`, resolve the conflicts, run the tests and finish the rebase. The user then pushes it to the pull request.`,
+    );
   }
 
   /** The PR is ready for review: the hero's work on the island is over, so its session ends. */

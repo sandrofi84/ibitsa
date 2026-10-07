@@ -284,6 +284,11 @@ export interface TaskReview {
   suggestions: (Finding & { councillorId: string })[];
   /** The hero's summary from its last submit. */
   summary: string;
+  /**
+   * The round PR comments reopened the task at (#154): every councillor with criteria reviews that
+   * round, and the loop limit counts from it.
+   */
+  followUpRound?: number;
 }
 
 export interface ReviewRecord {

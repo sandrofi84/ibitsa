@@ -1,5 +1,5 @@
-import type { PolledPullRequest, PullRequestState } from '@ibitsa/protocol';
-import type { GitHost, PullRequestComment } from '@ibitsa/runtime';
+import type { PolledPullRequest, PullRequestComment, PullRequestState } from '@ibitsa/protocol';
+import type { GitHost } from '@ibitsa/runtime';
 import type { GitHubHostOptions, GitHubRepository, PolledNode } from './github-host.types';
 
 const API_VERSION = '2022-11-28';

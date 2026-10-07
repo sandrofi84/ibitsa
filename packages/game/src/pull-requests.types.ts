@@ -11,9 +11,11 @@ export interface PullRequestBadge {
 
 /** A button on the PR card; `disabled` says why it can't be used now. */
 export interface PullRequestAction {
-  id: 'open' | 'update' | 'markReady' | 'push' | 'refresh';
+  id: 'open' | 'update' | 'markReady' | 'push' | 'refresh' | 'comments' | 'restack' | 'remove';
   label: string;
   disabled: string | null;
+  /** A second click confirms (#154): what the button says after the first. */
+  confirm?: string;
 }
 
 /** What the PR card shows for an island. */
@@ -25,5 +27,7 @@ export interface PullRequestCardModel {
   /** What's under way (pushing, opening, marking ready). */
   busy: string | null;
   error: string | null;
+  /** Stacked, after the island before merged (#154): what restacking does, or what the hero is fixing. */
+  restack: string | null;
   actions: PullRequestAction[];
 }

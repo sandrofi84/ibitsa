@@ -276,6 +276,25 @@ export class Hero {
   }
 
   /**
+   * PR comments (#154): back to the island's last task, told what to change. Its next submit is checked
+   * and reviewed again; a session that ended resumes.
+   */
+  reopen(text: string): void {
+    const r = this.record;
+    const task = this.task();
+    if (!task) return;
+    task.state = 'active';
+    if (task.review) Review.reopen(task.review);
+    r.submitted = null;
+    this.continueWith({ text, priority: 'next' });
+  }
+
+  /** A message from the game master (#154), reviving a session that ended. */
+  tell(text: string): void {
+    this.continueWith({ text, priority: 'next' });
+  }
+
+  /**
    * Its island's PR is ready for review (§5.6): the session closes. A message later (PR comments,
    * #154) resumes it by its id, like any hero whose session isn't live.
    */

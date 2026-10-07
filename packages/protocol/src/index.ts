@@ -43,6 +43,7 @@ export {
 export type {
   IslandRemoteView,
   PolledPullRequest,
+  PullRequestComment,
   PullRequestDraft,
   PullRequestState,
 } from './pull-request.types';

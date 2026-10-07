@@ -5,6 +5,7 @@ import type {
   CouncilEvent,
   ElderEvent,
   PolledPullRequest,
+  PullRequestComment,
   PullRequestState,
   ReviewEvent,
 } from '@ibitsa/protocol';
@@ -49,6 +50,16 @@ export type GameMasterEvent =
   | { type: 'pullRequestReady'; islandId: string; head: string }
   /** A push or PR action failed: shown on the island's PR card. */
   | { type: 'remoteFailed'; islandId: string; message: string }
+  /** The PR's review comments (#154), oldest first. */
+  | { type: 'pullRequestComments'; islandId: string; comments: PullRequestComment[] }
+  | { type: 'pullRequestRetargeted'; islandId: string; base: string }
+  /** The result of `restack`: moved (and pushed: `head`), or aborted on a conflict. */
+  | {
+      type: 'restacked';
+      islandId: string;
+      outcome: 'restacked' | 'conflict';
+      head: string | null;
+    }
   /** The git host's answer for the PRs being watched. */
   | { type: 'pullRequestsPolled'; pullRequests: PolledPullRequest[] }
   /** The runtime rebuilt state after a restart; every live session is gone (spec §12). */

@@ -53,7 +53,11 @@ if (name === 'live') {
     // `reviews=1`: submitted tasks are checked and reviewed by scripted councillors (#141).
     reviews: params.get('reviews') === '1',
     // `pr=demo` (#153): the fake GitHub polls every few seconds, unless `prPoll=off` (tests use Refresh).
-    pullRequestPollMs: params.get('pr') === 'demo' && params.get('prPoll') !== 'off' ? 4_000 : null,
+    pullRequestPollMs:
+      (params.get('pr') === 'demo' || params.get('pr') === 'stacked') &&
+      params.get('prPoll') !== 'off'
+        ? 4_000
+        : null,
   });
   const started = startGame(root, host);
   const { client, zoom, hero, camera, hut, selectHero, map, selection, taskOnPage, taskPanel } =
@@ -86,6 +90,8 @@ if (name === 'live') {
   if (campaign === 'separate' || campaign === 'stacked') host.demoCampaign(campaign);
   // `&pr=demo`: a one-island campaign to play a PR from draft to merged, and on to Ibitsa (#153).
   if (params.get('pr') === 'demo') host.pullRequestDemo();
+  // `&pr=stacked`: two stacked islands, to merge the first PR and restack the second (#154).
+  if (params.get('pr') === 'stacked') host.pullRequestDemo('stacked');
   // `&reviewScript=pass|stubborn|revisit|dispute|failing|broken`: straight into a reviewed task (#141).
   const reviewScript = params.get('reviewScript');
   if (reviewScript) host.scriptedReviews(reviewScript);
