@@ -6,6 +6,7 @@ import {
   initialState,
   Journal,
   type LogRecord,
+  type QuestSettings,
   step,
   view,
 } from '@ibitsa/core';
@@ -16,11 +17,13 @@ import {
   type CouncilEvent,
   type CouncillorInfo,
   type ElderEvent,
+  type Finding,
   type HostEvent,
   type HostRequest,
   type Plan,
   PROTOCOL_VERSION,
   type RepoView,
+  type ReviewEvent,
 } from '@ibitsa/protocol';
 import type { Host } from '../host.types';
 import { MemoryViewStorage } from '../view-state';
@@ -61,8 +64,14 @@ export class LiveDevHost implements Host {
   private readonly heroes: number;
   /** True while that campaign is set up, so its council isn't also played by the script. */
   private settingUp = false;
-  /** Dev only (#140): scripted checks and verdicts, while reviews are on. */
+  /** Dev only (#140): paced checks and verdicts for watching councillors walk out (`review=demo`). */
   private readonly demoReview: DemoReview | null;
+  /** The settings every dev campaign starts from: the defaults plus the page's params. */
+  private readonly settings: QuestSettings;
+  /** Task points whose "failing check" already failed once (#141). */
+  private readonly checksFailed = new Set<string>();
+  /** How many reviews each task's round has started, so the first can be the one that asks (#141). */
+  private readonly reviewsStarted = new Map<string, number>();
 
   constructor({
     credentialsReady,
@@ -71,6 +80,7 @@ export class LiveDevHost implements Host {
     campaignBudgetUsd,
     heroes = 0,
     review,
+    reviews = false,
   }: {
     credentialsReady: boolean;
     repo: RepoView | null;
@@ -78,8 +88,10 @@ export class LiveDevHost implements Host {
     /** A campaign cap, as `ibitsa.campaign.budgetUsd` would set it (#126). */
     campaignBudgetUsd?: number;
     heroes?: number;
-    /** Dev only (#140): `demo` turns reviews on and answers them with a scripted verdict. */
+    /** Dev only (#140): `demo` turns reviews on and answers them with a paced scripted verdict. */
     review?: 'demo';
+    /** Reviews on (#141): submitted tasks are checked and reviewed by scripted councillors. */
+    reviews?: boolean;
   }) {
     this.channel = new FakeHostChannel({ credentialsReady });
     this.repo = repo;
@@ -88,18 +100,18 @@ export class LiveDevHost implements Host {
       review === 'demo'
         ? new DemoReview({ input: (input) => this.input(input), t: () => this.t() })
         : null;
-    if (campaignBudgetUsd !== undefined || this.demoReview) {
+    this.settings = {
+      ...DEFAULT_SETTINGS,
+      reviews: reviews || this.demoReview !== null,
+      ...(campaignBudgetUsd === undefined
+        ? {}
+        : { campaignBudgetMicroUsd: Math.round(campaignBudgetUsd * 1_000_000) }),
+    };
+    if (campaignBudgetUsd !== undefined || this.settings.reviews) {
       this.state = step(this.state, {
         kind: 'gm',
         t: 0,
-        event: {
-          type: 'questSettings',
-          ...DEFAULT_SETTINGS,
-          reviews: this.demoReview !== null,
-          ...(campaignBudgetUsd === undefined
-            ? {}
-            : { campaignBudgetMicroUsd: Math.round(campaignBudgetUsd * 1_000_000) }),
-        },
+        event: { type: 'questSettings', ...this.settings },
       }).state;
     }
     this.heroes = heroes;
@@ -178,12 +190,7 @@ export class LiveDevHost implements Host {
     this.input({
       kind: 'gm',
       t: this.t(),
-      event: {
-        type: 'questSettings',
-        ...DEFAULT_SETTINGS,
-        reviews: this.demoReview !== null,
-        maxParallel: count,
-      },
+      event: { type: 'questSettings', ...this.settings, maxParallel: count },
     });
     this.input({
       kind: 'command',
@@ -260,50 +267,89 @@ export class LiveDevHost implements Host {
   }
 
   /**
-   * Straight into a campaign of three islands (#124), for seeing the map without the elder or council:
-   * an approved plan is stepped into core without carrying out its effects (no scripted sitting), then
-   * the campaign starts for real. Two parties work at once, so the third island waits.
+   * Straight into a campaign of three islands (#124), for seeing the map without the elder or council.
+   * Two parties work at once, so the third island waits.
    */
   demoCampaign(branching: 'separate' | 'stacked'): void {
+    this.approvedCampaign({
+      settings: { ...this.settings, maxParallel: 2 },
+      // With the demo reviews on (#140), three councillors set criteria, so three walk out to each task.
+      plan: demoPlan({
+        branching,
+        reviewers: this.demoReview ? ['security', 'tester', 'architect'] : [],
+      }),
+      parties: [
+        { islandId: 'I1', heroName: 'Ranger Ilse', classId: 'ranger' },
+        { islandId: 'I2', heroName: 'Rogue Vex', classId: 'rogue' },
+        { islandId: 'I3', heroName: 'Paladin Aric', classId: 'paladin' },
+      ],
+    });
+  }
+
+  /**
+   * Dev only (#141): straight into a one-task campaign with reviews on, for playing the review loop
+   * without the elder or council. The scenario picks the script: `pass` (changes once, then a pass),
+   * `stubborn` (changes until the loop limit of 2), `revisit` (a suggestion asks to revisit D1),
+   * `dispute` (the hero disputes the findings), `failing` (a check fails once) or `broken` (a reviewer
+   * can't finish).
+   */
+  scriptedReviews(scenario: string): void {
+    this.approvedCampaign({
+      settings: {
+        ...this.settings,
+        reviews: true,
+        maxParallel: 1,
+        loopLimit: scenario === 'stubborn' ? 2 : DEFAULT_SETTINGS.loopLimit,
+      },
+      plan: reviewPlan(REVIEW_TITLES[scenario] ?? 'Fix the redirect'),
+      parties: [{ islandId: 'I1', heroName: 'Ranger Ilse', classId: 'ranger' }],
+    });
+  }
+
+  /**
+   * An approved plan stepped into core without carrying out its effects (no scripted sitting), then the
+   * campaign started for real.
+   */
+  private approvedCampaign({
+    settings,
+    plan,
+    parties,
+  }: {
+    settings: QuestSettings;
+    plan: Plan;
+    parties: { islandId: string; heroName: string; classId: string }[];
+  }): void {
     const quietly = (input: CoreInput) => {
       this.state = step(this.state, input).state;
     };
     const t = this.t();
-    quietly({
-      kind: 'gm',
-      t,
-      event: {
-        type: 'questSettings',
-        ...DEFAULT_SETTINGS,
-        reviews: this.demoReview !== null,
-        maxParallel: 2,
-      },
-    });
+    // Every councillor with criteria sits, as the plan's criteria must come from the roster.
+    const criteria = plan.tasks.flatMap((task) => task.criteria.map((c) => c.councillorId));
+    const roster = [...new Set(['tester', ...criteria])];
+    quietly({ kind: 'gm', t, event: { type: 'questSettings', ...settings } });
     const command = (c: Record<string, unknown>) =>
       quietly({
         kind: 'command',
         t,
         command: { commandId: `demo-${++this.diffs}`, ...c } as Command,
       });
-    // With reviews on (#140), three councillors set criteria, so three walk out to review each task.
-    const roster = this.demoReview ? ['security', 'tester', 'architect'] : ['tester'];
     command({
       type: 'conveneCouncil',
-      task: 'Ship sign-in',
+      task: plan.goal,
       mode: 'roundTable',
       roster,
       effort: 'light',
     });
     const sittingId = this.state.sitting?.id ?? '';
     const council = (event: CouncilEvent) => quietly({ kind: 'council', t, sittingId, event });
-    for (const councillorId of roster)
+    for (const councillorId of roster) {
       council({
         type: 'reportFiled',
         toolUseId: `demo-report-${councillorId}`,
         councillorId,
         report: { concerns: [], questions: [], recommendations: [], notChecked: [] },
       });
-    const plan = demoPlan({ branching, reviewers: this.demoReview ? roster : [] });
+    }
     council({ type: 'planProposed', toolUseId: 'demo-plan', plan });
     command({ type: 'approvePlan', version: 1 });
     this.input({
@@ -313,11 +359,7 @@ export class LiveDevHost implements Host {
         type: 'startCampaign',
         commandId: `demo-${++this.diffs}`,
         baseRef: 'main',
-        parties: [
-          { islandId: 'I1', heroName: 'Ranger Ilse', classId: 'ranger' },
-          { islandId: 'I2', heroName: 'Rogue Vex', classId: 'rogue' },
-          { islandId: 'I3', heroName: 'Paladin Aric', classId: 'paladin' },
-        ],
+        parties,
       },
     });
   }
@@ -389,6 +431,25 @@ export class LiveDevHost implements Host {
       },
       { type: 'turnEnded', queuedTurns: 0 },
     ];
+  }
+
+  private reviewer(reviewId: string, events: ReviewEvent[]): void {
+    events.forEach((event, i) => {
+      setTimeout(
+        () => this.input({ kind: 'review', t: this.t(), reviewId, event }),
+        STEP_MS * (i + 1),
+      );
+    });
+  }
+
+  /** The task point a hero is on, from core's state. */
+  private taskOf(heroId: string) {
+    const hero = this.state.heroes.find((h) => h.id === heroId);
+    return this.taskPoint(hero?.taskPointId ?? '');
+  }
+
+  private taskPoint(taskPointId: string) {
+    return this.state.islands.flatMap((i) => i.taskPoints).find((tp) => tp.id === taskPointId);
   }
 
   private submission(): AgentEvent[] {
@@ -507,7 +568,35 @@ export class LiveDevHost implements Host {
           ...this.turn('I looked around and made a first change. What next?'),
         ]);
         return;
-      case 'sendMessage':
+      case 'sendMessage': {
+        // Sent back on a "dispute" task (#141), the hero disputes the open findings instead of fixing them.
+        const task = this.taskOf(effect.heroId);
+        if (/dispute_finding/.test(effect.text) && /dispute/i.test(task?.title ?? '')) {
+          const latest = new Map<string, { id: string; changes: boolean }>();
+          for (const r of task?.review?.reviews ?? []) {
+            if (r.status === 'done')
+              latest.set(r.councillorId, { id: r.id, changes: r.verdict?.verdict === 'changes' });
+          }
+          this.agent(effect.heroId, [
+            { type: 'turnStarted' },
+            {
+              type: 'findingDisputed',
+              reviewIds: [...latest.values()].filter((r) => r.changes).map((r) => r.id),
+              reason: 'The finding asks for what decision D1 settled.',
+            },
+            { type: 'turnEnded', queuedTurns: 0 },
+          ]);
+          return;
+        }
+        // Told a check failed (#141), it fixes it and waits for orders rather than handing it straight
+        // back, so the failure can be read in the task panel; asking it to submit hands it in again.
+        if (/^The check `/.test(effect.text)) {
+          this.agent(effect.heroId, [
+            { type: 'turnStarted' },
+            ...this.turn('I fixed the failing test. Tell me to submit when you are ready.'),
+          ]);
+          return;
+        }
         // Asking it to submit hands the task in, so the Finish flow can be played too (a planned quest's next
         // task says to commit and submit, and is handed in straight away); asking it only to
         // commit asks your permission first, offering "Always allow" (#62).
@@ -526,9 +615,13 @@ export class LiveDevHost implements Host {
         }
         this.agent(effect.heroId, [
           { type: 'turnStarted' },
-          ...(/submit/i.test(effect.text) ? this.submission() : this.turn(`Done: ${effect.text}`)),
+          // Once the user settles a dispute (#141), it hands the task in again.
+          ...(/submit|disputed findings/i.test(effect.text)
+            ? this.submission()
+            : this.turn(`Done: ${effect.text}`)),
         ]);
         return;
+      }
       case 'answerPermission':
         if (effect.always === 'project' && effect.rules) {
           this.projectRules = [...new Set([...this.projectRules, ...effect.rules])];
@@ -567,9 +660,38 @@ export class LiveDevHost implements Host {
             heroId: effect.heroId,
             toolUseId: effect.toolUseId,
             ok: true,
+            head: `head-${++this.diffs}`,
           },
         });
         return;
+      case 'runChecks': {
+        // A "failing check" task fails its tests once, so the fix-and-resubmit path can be played (#141).
+        const failing =
+          /failing check/i.test(this.taskPoint(effect.taskPointId)?.title ?? '') &&
+          !this.checksFailed.has(effect.taskPointId);
+        if (failing) this.checksFailed.add(effect.taskPointId);
+        setTimeout(
+          () =>
+            this.input({
+              kind: 'gm',
+              t: this.t(),
+              event: {
+                type: 'checksRan',
+                taskPointId: effect.taskPointId,
+                results: scriptedChecks(failing),
+              },
+            }),
+          STEP_MS,
+        );
+        return;
+      }
+      case 'startReview': {
+        const key = `${effect.taskPointId}:${effect.round}`;
+        const started = this.reviewsStarted.get(key) ?? 0;
+        this.reviewsStarted.set(key, started + 1);
+        this.reviewer(effect.reviewId, scriptedReview({ effect, first: started === 0 }));
+        return;
+      }
       case 'removeWorktree':
         this.input({
           kind: 'gm',
@@ -739,6 +861,125 @@ function livePlan({ summary, councillorId }: { summary: string; councillorId: st
       },
     ],
   };
+}
+
+/** Each review scenario's task title (#141): the keyword in it picks the script. */
+const REVIEW_TITLES: Record<string, string> = {
+  stubborn: 'Fix the redirect (stubborn review)',
+  revisit: 'Fix the redirect (revisit)',
+  dispute: 'Fix the redirect (dispute)',
+  failing: 'Fix the redirect (failing check)',
+  broken: 'Fix the redirect (broken reviewer)',
+};
+
+/** One task on one island (#141), with criteria for two councillors and a decision on it. */
+function reviewPlan(title: string): Plan {
+  return {
+    summary: 'One task, reviewed by the tester and security.',
+    goal: 'Fix the login redirect so it no longer loops.',
+    tasks: [
+      {
+        id: 'T1',
+        title,
+        description: 'Stop the login redirect from looping.',
+        files: ['src/app.ts'],
+        dependsOn: [],
+        criteria: [
+          { councillorId: 'tester', items: ['Signing in lands on the page you asked for.'] },
+          { councillorId: 'security', items: ['It never redirects off the site.'] },
+        ],
+        decisions: ['D1'],
+      },
+    ],
+    islands: [{ id: 'I1', title: 'The redirect fix', tasks: ['T1'] }],
+    branching: 'separate',
+    decisions: [
+      {
+        id: 'D1',
+        title: 'Test the fix',
+        raisedBy: 'tester',
+        chosen: 'Yes',
+        alternatives: [{ option: 'No', rejectedBecause: 'Nothing would guard it.' }],
+        why: 'It is cheap here.',
+        affects: ['T1'],
+      },
+    ],
+  };
+}
+
+/** The scripted checks (#141): tests and lint, the tests failing when asked to. */
+export function scriptedChecks(failing: boolean) {
+  return [
+    {
+      command: 'pnpm test',
+      ok: !failing,
+      output: failing
+        ? 'FAIL src/app.test.ts > redirects after sign-in\nExpected "/settings", got "/"\n\n1 failed, 11 passed'
+        : '12 passed',
+    },
+    { command: 'pnpm lint', ok: true, output: 'No problems.' },
+  ];
+}
+
+/**
+ * A scripted reviewer (#141). The first reviewer of round 1 asks for changes (a blocking finding on its
+ * first criterion) and leaves a suggestion; everyone else, and every later round, passes. A "stubborn"
+ * task's first reviewer asks every round, a "revisit" task's suggestion asks to revisit a decision, and a
+ * "broken reviewer" task's first reviewer can't finish.
+ */
+export function scriptedReview({
+  effect,
+  first,
+}: {
+  effect: Extract<Effect, { type: 'startReview' }>;
+  first: boolean;
+}): ReviewEvent[] {
+  const text = effect.task.title;
+  const opening: ReviewEvent[] = [
+    { type: 'sessionStarted', sessionId: `live-${effect.reviewId}` },
+    { type: 'usage', totalCost: 40_000 },
+  ];
+  if (first && /broken reviewer/i.test(text)) {
+    return [
+      ...opening,
+      { type: 'error', message: 'The reviewer ran out of gold before finishing.' },
+    ];
+  }
+  const findings: Finding[] = [];
+  if (first && (effect.round === 1 || /stubborn/i.test(text))) {
+    const [criterion] = effect.criteria;
+    findings.push({
+      severity: 'blocking',
+      ...(criterion ? { criterion } : { kind: 'bug' as const }),
+      file: 'src/app.ts',
+      line: 12,
+      message: 'Signing in still lands on the home page.',
+    });
+  }
+  if (first && effect.round === 1) {
+    findings.push({
+      severity: 'suggestion',
+      file: 'src/app.ts',
+      message: 'Name the redirect helper after what it guards.',
+    });
+    const [decision] = effect.decisions;
+    if (/revisit/i.test(text) && decision) {
+      findings.push({
+        severity: 'suggestion',
+        message: 'A test may cost more than it saves here.',
+        revisit: decision.id,
+      });
+    }
+  }
+  const blocking = findings.some((f) => f.severity === 'blocking');
+  return [
+    ...opening,
+    {
+      type: 'verdictSubmitted',
+      toolUseId: `v-${effect.reviewId}`,
+      verdict: { verdict: blocking ? 'changes' : 'pass', findings },
+    },
+  ];
 }
 
 /** The dev campaign's heroes (#125): a name and a class each. */

@@ -1,9 +1,10 @@
-import type { NeedsYouItem, Snapshot } from '@ibitsa/protocol';
+import type { Finding, NeedsYouItem, Snapshot } from '@ibitsa/protocol';
 import type { GameClient } from './client';
 import type { CommandIntent } from './client.types';
 import { button, el } from './dom';
 import type { NeedsYouPanelOptions } from './needs-you-panel.types';
 import { councillorTitle, isSitting } from './sitting-hut';
+import { findingText } from './task-review';
 
 /**
  * The "Needs you" queue (spec §6.4) as plain DOM below the map: keyboard-accessible, readable text,
@@ -13,6 +14,7 @@ export function mountNeedsYouPanel({
   client,
   openCouncil,
   selectHero,
+  openTask,
 }: NeedsYouPanelOptions): void {
   const panel = document.createElement('section');
   panel.className = 'needs-you';
@@ -32,7 +34,7 @@ export function mountNeedsYouPanel({
     panel.replaceChildren(
       ...(council ? [council] : []),
       ...snapshot.needsYou.map((item) => {
-        const box = renderItem({ item, snapshot, client });
+        const box = renderItem({ item, snapshot, client, openTask });
         // Clicking an item (not one of its buttons) shows its hero in the pane (#125).
         box.addEventListener('click', (e) => {
           if (!(e.target as HTMLElement).closest('button')) selectHero?.(item.heroId);
@@ -96,10 +98,12 @@ function renderItem({
   item,
   snapshot,
   client,
+  openTask,
 }: {
   item: NeedsYouItem;
   snapshot: Snapshot;
   client: GameClient;
+  openTask?: ((taskPointId: string) => void) | undefined;
 }): HTMLElement {
   const hero = snapshot.heroes.find((h) => h.id === item.heroId)?.name ?? 'A hero';
   const box = el('article', { className: `item ${item.kind}` });
@@ -248,7 +252,103 @@ function renderItem({
         }),
       );
       break;
+    case 'reviewEscalation': {
+      // The loop limit, or a reviewer that couldn't finish (§5.5, #141): the user settles it.
+      box.append(
+        el('p', {
+          text:
+            item.reason === 'loopLimit'
+              ? `${hero}'s review went round too many times.`
+              : `A reviewer of ${hero}'s task couldn't finish.`,
+        }),
+        findings(item.findings),
+      );
+      const note = el('textarea');
+      note.rows = 2;
+      note.setAttribute('aria-label', 'A note for the hero (optional)');
+      note.placeholder = 'A note for the hero (optional)';
+      actions.append(
+        intentButton({
+          label: 'Accept anyway',
+          intent: () => ({ type: 'resolveReview', itemId: item.id, decision: 'accept' }),
+          client,
+        }),
+        note,
+        intentButton({
+          label: 'Send back',
+          intent: () => ({
+            type: 'resolveReview',
+            itemId: item.id,
+            decision: 'sendBack',
+            ...(note.value.trim() ? { note: note.value.trim() } : {}),
+          }),
+          client,
+        }),
+        intentButton({
+          label: 'Stop',
+          intent: () => ({ type: 'resolveReview', itemId: item.id, decision: 'stop' }),
+          client,
+        }),
+      );
+      if (openTask)
+        actions.append(button({ label: 'Open task', onClick: () => openTask(item.taskPointId) }));
+      break;
+    }
+    case 'revisitDecision':
+      // A recorded decision is the user's to reopen (§4.5): this only tells them; the council changes it.
+      box.append(
+        el('p', {
+          text: `${councillorTitle(item.councillorId)} asks to revisit ${item.decisionId}: ${item.message}`,
+        }),
+        el('p', {
+          className: 'muted',
+          text: 'The decision stands. To change it, talk to the council.',
+        }),
+      );
+      actions.append(
+        intentButton({
+          label: 'Dismiss',
+          intent: () => ({ type: 'dismissItem', itemId: item.id }),
+          client,
+        }),
+      );
+      break;
+    case 'dispute': {
+      box.append(
+        el('p', { text: `${hero} disputes the review: ${item.reason}` }),
+        findings(item.findings),
+      );
+      const note = el('textarea');
+      note.rows = 2;
+      note.setAttribute('aria-label', 'A note for the hero (optional)');
+      note.placeholder = 'A note for the hero (optional)';
+      const decide = (decision: 'drop' | 'keep') => () => ({
+        type: 'resolveDispute' as const,
+        itemId: item.id,
+        decision,
+        ...(note.value.trim() ? { note: note.value.trim() } : {}),
+      });
+      actions.append(
+        note,
+        intentButton({ label: 'Drop the findings', intent: decide('drop'), client }),
+        intentButton({ label: 'Keep them', intent: decide('keep'), client }),
+      );
+      if (openTask)
+        actions.append(button({ label: 'Open task', onClick: () => openTask(item.taskPointId) }));
+      break;
+    }
   }
   box.append(actions);
   return box;
+}
+
+/** The findings an escalation or a dispute is about, by councillor. */
+function findings(list: (Finding & { councillorId: string })[]): HTMLElement {
+  const ul = el('ul', { className: 'findings' });
+  for (const f of list) {
+    const li = el('li');
+    li.append(el('strong', { text: councillorTitle(f.councillorId) }), `: ${findingText(f)}`);
+    ul.append(li);
+  }
+  return ul;
 }

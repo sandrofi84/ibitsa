@@ -512,7 +512,9 @@ export class Hero {
     this.followBase(worktreePath);
     if (r.cap?.enforcement === 'native' && this.overBudget()) this.outOfGold();
     const paused = r.stalled !== null || r.outOfGold || r.error !== null;
-    if (!r.submitted && !paused) {
+    // A task under review (M5) isn't waiting for orders: the review sends it back or passes it.
+    const reviewing = this.task()?.state === 'underReview';
+    if (!r.submitted && !paused && !reviewing) {
       this.ctx.needsYou.ask({ kind: 'reply', heroId: r.id, text: r.lastMessage ?? '' });
     }
   }

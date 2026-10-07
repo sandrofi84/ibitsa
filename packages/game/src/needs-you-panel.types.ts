@@ -6,4 +6,6 @@ export interface NeedsYouPanelOptions {
   openCouncil: () => void;
   /** Shows that hero in the hero pane when one of its items is clicked (#125). */
   selectHero?: (heroId: string) => void;
+  /** Opens a task's checks and reviews in the task panel (#141). */
+  openTask?: (taskPointId: string) => void;
 }

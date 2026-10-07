@@ -23,9 +23,17 @@ import { PACK_KEY, PackScene } from './pack-scene';
 import { mountPartyAssembly } from './party-assembly';
 import { mountPlanReview } from './plan-review';
 import { isSitting, rememberCouncillors, SittingFeed } from './sitting-hut';
+import { mountTaskPanel } from './task-panel';
 import { ViewState } from './view-state';
 import { fitViewport } from './viewport';
-import { HEIGHT, HERO_SELECTED, RIGHT_INSET, WIDTH, WorldScene } from './world-scene';
+import {
+  HEIGHT,
+  HERO_SELECTED,
+  RIGHT_INSET,
+  TASK_SELECTED,
+  WIDTH,
+  WorldScene,
+} from './world-scene';
 
 function hasWebGL(root: HTMLElement): boolean {
   if (root.dataset.forceNoWebgl === 'true') return false;
@@ -86,6 +94,8 @@ export function startGame(root: HTMLElement, host: Host): Started {
       showHut: () => {},
       hut: () => null,
       selectHero: () => {},
+      taskOnPage: () => null,
+      taskPanel: () => null,
       map: () => null,
       selection: null,
     };
@@ -113,10 +123,13 @@ export function startGame(root: HTMLElement, host: Host): Started {
   // Which hero the pane shows and the bar speaks to (#125); the map follows it too.
   const selection = new HeroSelection(view);
   client.onSnapshot((snapshot) => selection.update(snapshot));
+  // A task's checks and reviews (#141): from the map, the hero pane and Needs you.
+  const taskPanel = mountTaskPanel({ client });
   mountNeedsYouPanel({
     client,
     openCouncil: () => councilDialogue.focus(),
     selectHero: (heroId) => selection.select(heroId),
+    openTask: (taskPointId) => taskPanel.open(taskPointId),
   });
   const newQuest = mountNewQuestForm({ client, host });
   const newActionForm = mountNewActionForm({ client });
@@ -146,6 +159,7 @@ export function startGame(root: HTMLElement, host: Host): Started {
     onHistoryChange: saveHistory,
     newAction,
     selection,
+    openTask: (taskPointId) => taskPanel.open(taskPointId),
   });
   const commandBar = mountCommandBar({
     client,
@@ -193,6 +207,7 @@ export function startGame(root: HTMLElement, host: Host): Started {
     const covered = rect.width > 0 ? Math.max(0, window.innerWidth - rect.left) : 0;
     game.registry.set(RIGHT_INSET, covered);
   }).observe(heroPane.element);
+  game.events.on(TASK_SELECTED, (taskPointId: string) => taskPanel.open(taskPointId));
   game.events.on(HERO_SELECTED, (heroId: string) => {
     selection.select(heroId);
     heroPane.open();
@@ -289,6 +304,14 @@ export function startGame(root: HTMLElement, host: Host): Started {
   // Choosing a hero in the pane, on the map or in "Needs you" (#125) points the map camera at it (#124).
   selection.onSelect((heroId) => selectHero(heroId));
   const map = () => world()?.mapProbe() ?? null;
+  const taskOnPage = (taskPointId: string) => {
+    const scene = world();
+    const spot = scene?.taskSpot(taskPointId);
+    if (!scene || !spot) return null;
+    const at = scene.toCanvas(spot);
+    const rect = game.canvas.getBoundingClientRect();
+    return { x: rect.left + at.x * game.scale.zoom, y: rect.top + at.y * game.scale.zoom };
+  };
   return {
     client,
     zoom: () => diagnostics.zoom,
@@ -299,5 +322,7 @@ export function startGame(root: HTMLElement, host: Host): Started {
     selectHero,
     map,
     selection,
+    taskOnPage,
+    taskPanel: () => taskPanel.shown(),
   };
 }
