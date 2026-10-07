@@ -562,7 +562,15 @@ export function messageText({
         message.text && message.text !== 'Why?' ? `\nThey added: ${message.text}` : '';
       return `The user asked ${message.councillorId} "Why?" about: "${message.question}" (questionId ${message.questionId}).${followUp}\n\nAnswer in ${message.councillorId}'s voice with say, using that questionId. Others may add a line with say if their concern is affected. Then end your turn: the questions are still open.`;
     }
+    case 'answered':
+      return answeredText(message.answers);
   }
+}
+
+/** Answers to questions asked before a reload (#166): the ask_user call they belonged to was lost. */
+export function answeredText(answers: { question: string; answer: string }[]): string {
+  const lines = answers.map((a) => `- ${a.question}\n  ${a.answer}`);
+  return `VS Code reloaded while your questions were open. The user has answered them:\n\n${lines.join('\n')}\n\nCarry on with these answers.`;
 }
 
 /** The user's answers, each under its question. */

@@ -178,7 +178,7 @@ export class Journal {
               })
             : [];
         case 'runtimeRestarted':
-          return line(firstHero, { kind: 'event', text: 'VS Code reloaded; the session stopped.' });
+          return restartLines({ t, state });
         case 'worktreeRemoved':
           return line(null, { kind: 'event', text: 'Worktree removed.' });
         case 'pullRequestOpened':
@@ -248,4 +248,40 @@ function itemText(
     case 'reply':
       return null;
   }
+}
+
+/**
+ * After a reload (#166): a line for each hero that resumed and each check or review that starts
+ * over, read from the state core left; just "VS Code reloaded." when nothing was running.
+ */
+function restartLines({ t, state }: { t: number; state: CoreState }): JournalEntry[] {
+  const lines: JournalEntry[] = state.heroes
+    .filter((h) => h.sessionLive)
+    .map((h) => ({
+      t,
+      heroId: h.id,
+      kind: 'event',
+      text: 'VS Code reloaded; resumed the session.',
+    }));
+  for (const island of state.islands) {
+    const heroId = state.heroes.find((h) => h.islandId === island.id)?.id ?? null;
+    for (const task of island.taskPoints) {
+      const review = task.review;
+      if (task.state !== 'underReview' || !review) continue;
+      if (review.phase === 'checks') {
+        lines.push({ t, heroId, kind: 'event', text: 'VS Code reloaded; the checks run again.' });
+      }
+      for (const r of review.reviews.filter((r) => r.status === 'running')) {
+        lines.push({
+          t,
+          heroId,
+          kind: 'event',
+          text: `VS Code reloaded; ${r.councillorId}'s review starts over.`,
+        });
+      }
+    }
+  }
+  return lines.length > 0
+    ? lines
+    : [{ t, heroId: state.heroes[0]?.id ?? null, kind: 'event', text: 'VS Code reloaded.' }];
 }

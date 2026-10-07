@@ -4,7 +4,7 @@ export type { Effect } from './effects.types';
 export { Elder } from './elder';
 export { LOG_VERSION, LogFormatError, parseLog, serializeLine } from './event-log';
 export type { EventLog, LogHeader, LogRecord } from './event-log.types';
-export { CONTINUE_PROMPT, Hero, SILENCE_MS } from './hero';
+export { CONTINUE_PROMPT, Hero, RESTART_PROMPT, SILENCE_MS } from './hero';
 export type { CoreInput, GameMasterEvent } from './inputs.types';
 export { JOURNAL_PAGE, Journal } from './journal';
 export { describePermission } from './needs-you';

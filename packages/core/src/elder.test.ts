@@ -176,12 +176,17 @@ describe('the elder (spec §4.1, #101)', () => {
     expect(sitting.rejections()).toEqual(['The council is sitting.']);
   });
 
-  it('marks research cut short by a reload as failed, so it can be asked again', () => {
-    const run = new Run().consult().restart();
-    expect(run.view()).toMatchObject({
-      status: 'failed',
-      error: 'The research stopped when VS Code reloaded. Ask the elder again.',
+  it('starts research cut short by a reload again (#166)', () => {
+    const run = new Run().consult();
+    run.effects = [];
+    run.restart();
+    expect(run.view()).toMatchObject({ status: 'researching' });
+    expect(run.effects).toContainEqual({
+      type: 'startElder',
+      elderId: run.view().id,
+      task: expect.any(String),
     });
+    expect(run.cues).toContainEqual(expect.objectContaining({ type: 'resumed', elder: true }));
   });
 
   it('stops the research when the planning campaign is abandoned', () => {

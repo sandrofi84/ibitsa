@@ -1,7 +1,7 @@
 import type { AgentEvent, Command, Cue, HeroView } from '@ibitsa/protocol';
 import { describe, expect, it } from 'vitest';
 import type { Effect } from './effects.types';
-import { CONTINUE_PROMPT } from './hero';
+import { CONTINUE_PROMPT, RESTART_PROMPT } from './hero';
 import type { CoreInput, GameMasterEvent } from './inputs.types';
 import { DEFAULT_SETTINGS, initialState } from './state';
 import type { CoreState, QuestSettings } from './state.types';
@@ -147,11 +147,9 @@ describe('always allow (#62)', () => {
     });
     expect(h.state.heroes[0]?.allowRules).toEqual(['Bash(npm run lint:*)']);
 
-    h.gm({ type: 'runtimeRestarted' });
+    // The hero was working, so a reload resumes it on its own, with its rules (#166).
     h.drain();
-    const error = h.items().find((i) => i.kind === 'error');
-    h.command({ type: 'resumeHero', commandId: 'r', heroId: 'h4' });
-    expect(error).toBeDefined();
+    h.gm({ type: 'runtimeRestarted' });
     expect(h.effects).toContainEqual(
       expect.objectContaining({ type: 'resumeSession', allowRules: ['Bash(npm run lint:*)'] }),
     );
@@ -276,7 +274,10 @@ describe('rest (#82)', () => {
       reason: 'The hero is already resting.',
     });
 
-    const restarted = quest().gm({ type: 'runtimeRestarted' });
+    // A hero waiting for orders keeps no live session after a reload (#166).
+    const restarted = quest()
+      .agent({ type: 'turnEnded', queuedTurns: 0 })
+      .gm({ type: 'runtimeRestarted' });
     restarted.command({ type: 'restHero', commandId: 'b', heroId: 'h4' });
     expect(restarted.cues).toContainEqual({
       type: 'commandRejected',
@@ -583,7 +584,7 @@ describe('errors', () => {
 });
 
 describe('after a restart', () => {
-  it('marks working heroes unknown, drops requests the old process held, and offers to resume', () => {
+  it('resumes a hero who was working, drops requests the old process held, and says so (#166)', () => {
     const h = quest().agent({
       type: 'permission',
       requestId: 'p',
@@ -592,30 +593,41 @@ describe('after a restart', () => {
     });
     h.drain();
     h.gm({ type: 'runtimeRestarted' });
-    expect(h.hero().state).toEqual({
-      kind: 'unknown',
-      reason: 'Session not resumed after a restart.',
-    });
-    expect(h.items()).toEqual([
-      {
-        kind: 'error',
-        id: 'n6',
-        heroId: 'h4',
-        message: 'The session stopped when VS Code reloaded.',
-      },
-    ]);
+    expect(h.items()).toEqual([]);
     expect(h.effects).toContainEqual({ type: 'cancelTimer', timerId: 'silence:h4' });
-    h.drain();
-    h.command({ type: 'resumeHero', commandId: 'r', heroId: 'h4' });
     expect(h.effects).toContainEqual({
       type: 'resumeSession',
       heroId: 'h4',
       sessionId: 's1',
       cwd: '/wt',
       classId: 'ranger',
-      prompt: CONTINUE_PROMPT,
+      prompt: RESTART_PROMPT,
+    });
+    expect(h.cues).toContainEqual({
+      type: 'resumed',
+      heroIds: ['h4'],
+      checks: 0,
+      reviews: 0,
+      council: false,
+      elder: false,
     });
     expect(h.hero().state.kind).not.toBe('unknown');
+  });
+
+  it('leaves a hero that was waiting for orders until its next message, and says nothing (#166)', () => {
+    const h = quest().agent({ type: 'turnEnded', queuedTurns: 0 });
+    h.drain();
+    h.gm({ type: 'runtimeRestarted' });
+    expect(h.effects.map((e) => e.type)).not.toContain('resumeSession');
+    expect(h.cues.map((c) => c.type)).not.toContain('resumed');
+    expect(h.items().map((i) => i.kind)).not.toContain('error');
+  });
+
+  it("doesn't resume a hero that had stopped on an error or an empty pouch", () => {
+    const h = quest().agent({ type: 'error', message: 'boom' });
+    h.drain();
+    h.gm({ type: 'runtimeRestarted' });
+    expect(h.effects.map((e) => e.type)).not.toContain('resumeSession');
   });
 
   it('leaves a submitted hero alone, but resumes its session before a message', () => {

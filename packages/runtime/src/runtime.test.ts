@@ -1,7 +1,7 @@
 import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { type GameMasterEvent, parseLog, SILENCE_MS, view } from '@ibitsa/core';
+import { type GameMasterEvent, parseLog, RESTART_PROMPT, SILENCE_MS, view } from '@ibitsa/core';
 import type {
   AgentEvent,
   Command,
@@ -806,8 +806,8 @@ describe('always allow (#62)', () => {
       always: 'quest',
     });
     first.runtime.dispose();
+    // The hero was working, so the reload resumes it on its own (#166).
     const second = setup(first.storageDir);
-    second.connection.receive({ type: 'resumeHero', commandId: 'r', heroId: 'h4' });
     expect(second.adapter.resumed[0]?.allowRules).toEqual(['Bash(npm run lint:*)']);
   });
 });
@@ -900,8 +900,7 @@ describe('the journal (#58)', () => {
       'Quest started: Fix the login redirect',
       'Worktree ready on ibitsa/fix-the-login-redirect.',
       'Before the reload.',
-      'VS Code reloaded; the session stopped.',
-      'Error: The session stopped when VS Code reloaded.',
+      'VS Code reloaded; resumed the session.',
     ]);
 
     second.connection.receive({ type: 'abandonQuest', commandId: 'a' });
@@ -915,7 +914,7 @@ describe('the journal (#58)', () => {
 });
 
 describe('recovery', () => {
-  it('rebuilds the campaign from the log without carrying out effects again, then marks the hero not resumed', async () => {
+  it('rebuilds the campaign from the log without carrying out effects again, then resumes the hero who was working (#166)', async () => {
     const first = await arrived();
     first.session.emit({
       type: 'activityStarted',
@@ -931,32 +930,28 @@ describe('recovery', () => {
     const after = view(second.runtime.snapshotState);
     expect(after.campaign).toEqual(before.campaign);
     expect(after.islands).toEqual(before.islands);
-    expect(after.heroes[0]?.state).toEqual({
-      kind: 'unknown',
-      reason: 'Session not resumed after a restart.',
-    });
-    expect(after.needsYou.map((i) => i.kind)).toEqual(['error']);
+    expect(after.heroes[0]?.state.kind).toBe('working');
+    expect(after.needsYou).toEqual([]);
     expect(second.gameMaster.requests).toEqual([]);
-    expect(second.adapter.sessions).toEqual([]);
-    expect(logOf(first.storageDir).records.at(-1)).toMatchObject({
-      kind: 'gm',
-      event: { type: 'runtimeRestarted' },
-    });
-  });
-
-  it('resumes the session by id when you choose resume', async () => {
-    const first = await arrived();
-    first.runtime.dispose();
-    const second = setup(first.storageDir);
-    second.connection.receive({ type: 'resumeHero', commandId: 'r', heroId: 'h4' });
     expect(second.adapter.resumed).toEqual([
       expect.objectContaining({
         heroId: 'h4',
         sessionId: first.session.start.sessionId,
         cwd: '/wt/ibitsa/fix-the-login-redirect',
+        prompt: RESTART_PROMPT,
       }),
     ]);
     expect(second.clock.pending).toBeGreaterThan(0); // silence timer armed for the resumed session
+    // The game connects after the reload: its first hello hears what resumed, once.
+    second.connection.receive({ type: 'hello', protocolVersion: 1 });
+    second.connection.receive({ type: 'hello', protocolVersion: 1 });
+    expect(second.received.filter((m) => m.type === 'cue' && m.cue.type === 'resumed')).toEqual([
+      expect.objectContaining({ cue: expect.objectContaining({ heroIds: ['h4'] }) }),
+    ]);
+    expect(logOf(first.storageDir).records.at(-1)).toMatchObject({
+      kind: 'gm',
+      event: { type: 'runtimeRestarted' },
+    });
   });
 
   it('tolerates a torn last line', async () => {
@@ -1278,7 +1273,7 @@ describe('the elder (#101)', () => {
     expect(env.adapter.sessions[0]?.start.prompt).toContain('- src/auth.ts:10-40: the redirect');
   });
 
-  it('keeps a planning campaign across a reload, marking the cut-short research as failed', async () => {
+  it('keeps a planning campaign across a reload, starting the cut-short research again (#166)', async () => {
     const env = withElder();
     env.connection.receive(consult);
     await flush();
@@ -1289,7 +1284,7 @@ describe('the elder (#101)', () => {
     again.connect({ post: (m) => received.push(m) }).receive({ type: 'hello', protocolVersion: 1 });
     const snapshot = received.flatMap((m) => (m.type === 'snapshot' ? [m.snapshot] : [])).at(-1);
     expect(snapshot?.campaign?.status).toBe('planning');
-    expect(snapshot?.elder).toMatchObject({ status: 'failed' });
+    expect(snapshot?.elder).toMatchObject({ status: 'researching' });
   });
 
   it('fails the research without a repository or an agent that can research', async () => {

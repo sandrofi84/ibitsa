@@ -499,4 +499,30 @@ describe('the review loop (spec §5.5, M5)', () => {
     run.verdict(run.reviews()[0]?.reviewId ?? '', PASS);
     expect(view(run.state).islands[1]?.worktree).toBe('creating');
   });
+
+  it('runs the checks again and starts running reviewers over after a reload (#166)', () => {
+    const checking = new Run().started().submit('abc');
+    checking.effects = [];
+    checking.gm({ type: 'runtimeRestarted' });
+    expect(checking.effects).toContainEqual({
+      type: 'runChecks',
+      taskPointId: checking.task().id,
+      worktreePath: '/wt',
+    });
+    expect(checking.cues).toContainEqual(
+      expect.objectContaining({ type: 'resumed', checks: 1, reviews: 0 }),
+    );
+
+    const reviewing = new Run().started().submit('abc').checks();
+    const [security, tester] = reviewing.reviews();
+    reviewing.verdict(security?.reviewId ?? '', PASS);
+    reviewing.effects = [];
+    reviewing.gm({ type: 'runtimeRestarted' });
+    // Only the reviewer still running starts over, with the same review and what it was given.
+    expect(reviewing.reviews()).toEqual([tester]);
+    expect(reviewing.cues).toContainEqual(
+      expect.objectContaining({ type: 'resumed', checks: 0, reviews: 1, heroIds: [] }),
+    );
+    expect(reviewing.task().state).toBe('underReview');
+  });
 });

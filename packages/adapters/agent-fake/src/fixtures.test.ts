@@ -105,13 +105,12 @@ describe('m1-demo', () => {
   const output = replayThroughCore(parseLog(m1Demo));
   const at = (mark: string) => output.marks.find((m) => m.mark === mark)?.snapshot;
 
-  it('survives a reload: the hero shows as not resumed until you resume it', () => {
-    expect(at('reloaded')?.heroes[0]?.state).toEqual({
-      kind: 'unknown',
-      reason: 'Session not resumed after a restart.',
-    });
-    expect(at('reloaded')?.needsYou.map((i) => i.kind)).toEqual(['error']);
-    expect(at('resumed')?.needsYou).toEqual([]);
+  // Recorded before M7: the reload made the user press Resume. Under M7's rule (#166) the session
+  // resumes on its own, so that click is gone from the log and the later answer names the item's new id.
+  it('survives a reload: the hero resumes on its own, with nothing for you to do', () => {
+    expect(at('reloaded')?.needsYou).toEqual([]);
+    expect(at('reloaded')?.heroes[0]?.state.kind).not.toBe('unknown');
+    expect(at('resumed')?.heroes[0]?.state.kind).toBe('working');
   });
 
   it('submits, finishes and removes the worktree', () => {

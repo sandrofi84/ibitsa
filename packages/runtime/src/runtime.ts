@@ -59,6 +59,8 @@ export class Runtime {
   private repo: RepoView | null | undefined;
   /** What the git host allows here (#162), refreshed with the repo scan and after each PR result. */
   private gitHost: GitHostView | undefined;
+  /** What the last reload resumed, until a front end has been told (#166). */
+  private resumedCue: Extract<Cue, { type: 'resumed' }> | null = null;
   private log: CampaignLog | null = null;
   /** The running campaign's journal, built from its log (#58); front ends page through it. */
   private journal = new Journal();
@@ -189,6 +191,8 @@ export class Runtime {
     if (command.type === 'hello') {
       frontEnd.post({ type: 'welcome', seq: ++this.seq, protocolVersion: PROTOCOL_VERSION });
       frontEnd.post({ type: 'snapshot', seq: ++this.seq, snapshot: this.snapshot() });
+      if (this.resumedCue) this.postTo(frontEnd, this.resumedCue);
+      this.resumedCue = null;
       this.rescanRepo();
       return;
     }
@@ -761,6 +765,8 @@ export class Runtime {
         report,
       );
       this.sitting = { id: sittingId, session };
+      // A resumed session's council version was noted when it first started.
+      if (effect.resume) return;
     } catch (e) {
       report({ type: 'error', message: String(e) });
       return;
@@ -815,6 +821,8 @@ export class Runtime {
   // ---------- output ----------
 
   private broadcastCue(cue: Cue): void {
+    // What a reload resumed is decided before any front end connects: kept for the first hello (#166).
+    if (cue.type === 'resumed' && this.frontEnds.size === 0) this.resumedCue = cue;
     const message: CoreMessage = { type: 'cue', seq: ++this.seq, cue };
     for (const f of this.frontEnds) f.post(message);
   }

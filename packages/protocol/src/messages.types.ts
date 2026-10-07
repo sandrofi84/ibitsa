@@ -33,4 +33,13 @@ export type Cue =
   | { type: 'activityFinished'; heroId: string; kind: ActivityKind; outcome: 'ok' | 'failed' }
   | { type: 'retrying'; heroId: string; reason: string }
   /** The hero said something; the game shows an excerpt in a speech bubble (#57). */
-  | { type: 'heroSaid'; heroId: string; text: string };
+  | { type: 'heroSaid'; heroId: string; text: string }
+  /** VS Code reloaded (#166): what resumed on its own, for a one-time banner. */
+  | {
+      type: 'resumed';
+      heroIds: string[];
+      reviews: number;
+      checks: number;
+      council: boolean;
+      elder: boolean;
+    };

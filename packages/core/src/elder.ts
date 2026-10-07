@@ -88,9 +88,14 @@ export class Elder {
     this.event({ record, event: input.event });
   }
 
-  /** VS Code reloaded: the research session is gone, and the user can ask again. */
-  restarted(): void {
-    this.fail('The research stopped when VS Code reloaded. Ask the elder again.');
+  /** VS Code reloaded: the research session is gone, so it starts again (#166). Returns whether it did. */
+  restarted(): boolean {
+    const record = this.ctx.state.elder;
+    if (record?.status !== 'researching') return false;
+    record.progress = null;
+    record.sessionId = null;
+    this.ctx.outbox.effect({ type: 'startElder', elderId: record.id, task: record.task });
+    return true;
   }
 
   /** The campaign ended (abandoned): stop the research if it's still going. */

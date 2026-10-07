@@ -166,6 +166,8 @@ export interface HeroRecord {
   campaignCapped: boolean;
   /** False after a restart until the session is resumed. */
   sessionLive: boolean;
+  /** Stop was pressed and the interrupted turn hasn't ended yet (#166). */
+  stopping?: boolean;
   stalled: string | null;
   /** The gold pouch, if a cap is set and can be enforced. */
   cap: { microUsd: number; enforcement: 'native' | 'turnEnd' } | null;
@@ -206,6 +208,11 @@ export interface SittingRecord {
   endedAt: number | null;
   /** Noted by the runtime when the session starts (§4.10). */
   councilVersion: string | null;
+  /**
+   * After a reload (#166): its lead session isn't running. It resumes when the user next acts, or at
+   * once if it was deliberating; questions asked before the reload are answered as a message.
+   */
+  dormant?: boolean;
   comparisonOf: string | null;
   rating: SittingRating | null;
   usage: { byModel: ModelUsage[]; byCouncillor: { councillorId: string; tokens: number }[] };

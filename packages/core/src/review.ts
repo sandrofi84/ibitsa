@@ -93,13 +93,7 @@ export class Review {
       return;
     }
     review.phase = 'reviewing';
-    const plan = Sitting.approvedPlan(this.ctx.state);
-    const planTask = plan?.tasks.find((t) => t.id === task.planTaskId);
-    const decisions = plan?.decisions.filter((d) => planTask?.decisions.includes(d.id)) ?? [];
     for (const councillorId of reviewers) {
-      const before = review.reviews
-        .filter((r) => r.councillorId === councillorId && r.status === 'done')
-        .at(-1);
       const record: ReviewRecord = {
         id: newId(this.ctx.state, 'r'),
         councillorId,
@@ -113,23 +107,72 @@ export class Review {
         waived: false,
       };
       review.reviews.push(record);
-      this.ctx.outbox.effect({
-        type: 'startReview',
-        reviewId: record.id,
-        taskPointId: task.id,
-        councillorId,
-        effort: record.effort,
-        round: review.round,
-        worktreePath: island.worktreePath ?? '',
-        from: this.startOf({ island, task }),
-        to: task.submitHead ?? null,
-        since: before?.head ?? null,
-        task: { title: task.title, description: task.description },
-        criteria: planTask?.criteria.find((c) => c.councillorId === councillorId)?.items ?? [],
-        decisions,
-        checks: results,
-      });
+      this.startReviewer({ island, task, record });
     }
+  }
+
+  /**
+   * VS Code reloaded (§12, #166): checks that were running run again, and reviewers that were running
+   * start over with a fresh session. Returns how many of each, for the restart notice.
+   */
+  restarted(): { checks: number; reviews: number } {
+    const restarted = { checks: 0, reviews: 0 };
+    for (const island of this.ctx.state.islands) {
+      for (const task of island.taskPoints) {
+        const review = task.review;
+        if (!review || !island.worktreePath || task.state !== 'underReview') continue;
+        if (review.phase === 'checks') {
+          restarted.checks++;
+          this.ctx.outbox.effect({
+            type: 'runChecks',
+            taskPointId: task.id,
+            worktreePath: island.worktreePath,
+          });
+        } else if (review.phase === 'reviewing') {
+          for (const record of review.reviews.filter((r) => r.status === 'running')) {
+            restarted.reviews++;
+            this.startReviewer({ island, task, record });
+          }
+        }
+      }
+    }
+    return restarted;
+  }
+
+  /** A reviewer's session, for a review record in the task's current round. */
+  private startReviewer({
+    island,
+    task,
+    record,
+  }: {
+    island: Island;
+    task: TaskPoint;
+    record: ReviewRecord;
+  }): void {
+    const review = task.review;
+    if (!review) return;
+    const plan = Sitting.approvedPlan(this.ctx.state);
+    const planTask = plan?.tasks.find((t) => t.id === task.planTaskId);
+    const decisions = plan?.decisions.filter((d) => planTask?.decisions.includes(d.id)) ?? [];
+    const before = review.reviews
+      .filter((r) => r.councillorId === record.councillorId && r.status === 'done')
+      .at(-1);
+    this.ctx.outbox.effect({
+      type: 'startReview',
+      reviewId: record.id,
+      taskPointId: task.id,
+      councillorId: record.councillorId,
+      effort: record.effort,
+      round: record.round,
+      worktreePath: island.worktreePath ?? '',
+      from: this.startOf({ island, task }),
+      to: task.submitHead ?? null,
+      since: before?.head ?? null,
+      task: { title: task.title, description: task.description },
+      criteria: planTask?.criteria.find((c) => c.councillorId === record.councillorId)?.items ?? [],
+      decisions,
+      checks: review.checks ?? [],
+    });
   }
 
   handle({ reviewId, event }: Extract<CoreInput, { kind: 'review' }>): void {

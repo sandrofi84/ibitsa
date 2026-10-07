@@ -14,7 +14,6 @@
 {"kind":"agent","t":9503,"heroId":"h4","event":{"type":"activityStarted","toolUseId":"toolu_0198Hjr56tE6kRofrs95tju9","kind":"read","detail":"slug.test.mjs"}}
 {"kind":"agent","t":9517,"heroId":"h4","event":{"type":"activityFinished","toolUseId":"toolu_0198Hjr56tE6kRofrs95tju9","outcome":"ok"}}
 {"kind":"gm","t":14333,"event":{"type":"runtimeRestarted"},"mark":"reloaded"}
-{"kind":"command","t":34232,"command":{"type":"resumeHero","commandId":"ui-1","heroId":"h4"}}
 {"kind":"agent","t":36078,"heroId":"h4","event":{"type":"sessionStarted","sessionId":"f1ad8dca-4a45-4934-98e7-d077221553a5"},"mark":"resumed"}
 {"kind":"agent","t":37736,"heroId":"h4","event":{"type":"activityStarted","toolUseId":"toolu_01YQ1uXxTuzp8N4UZgbYgGic","kind":"run","detail":"node --version; cat package.json; tail -5 ~/ibitsa-demo-notes.md"}}
 {"kind":"agent","t":38301,"heroId":"h4","event":{"type":"activityFinished","toolUseId":"toolu_01YQ1uXxTuzp8N4UZgbYgGic","outcome":"ok"}}
@@ -27,7 +26,7 @@
 {"kind":"agent","t":47102,"heroId":"h4","event":{"type":"message","text":"The default node (v14) doesn't support `--test`, so I'll run the tests with node 24."}}
 {"kind":"agent","t":47660,"heroId":"h4","event":{"type":"activityStarted","toolUseId":"toolu_012yNsUko59sP6sg2t2PJLH3","kind":"test","detail":"PATH=~/.nvm/versions/node/v24.21.0/bin:$PATH npm test 2>&1 | tail -20"}}
 {"kind":"agent","t":47685,"heroId":"h4","event":{"type":"permission","requestId":"toolu_012yNsUko59sP6sg2t2PJLH3","tool":"Bash","input":{"command":"PATH=~/.nvm/versions/node/v24.21.0/bin:$PATH npm test 2>&1 | tail -20","description":"Run tests with node 24"},"description":"Run tests with node 24"}}
-{"kind":"command","t":50063,"command":{"type":"answerPermission","commandId":"ui-2","itemId":"n7","decision":"allow"}}
+{"kind":"command","t":50063,"command":{"type":"answerPermission","commandId":"ui-2","itemId":"n6","decision":"allow"}}
 {"kind":"agent","t":50739,"heroId":"h4","event":{"type":"activityFinished","toolUseId":"toolu_012yNsUko59sP6sg2t2PJLH3","outcome":"ok"}}
 {"kind":"agent","t":52402,"heroId":"h4","event":{"type":"activityStarted","toolUseId":"toolu_01BiHR8TkX2arENxgyUYhdEU","kind":"run","detail":"git add slug.mjs slug.test.mjs && git commit -q -m \"fix: strip accents in slugify"}}
 {"kind":"agent","t":52565,"heroId":"h4","event":{"type":"activityFinished","toolUseId":"toolu_01BiHR8TkX2arENxgyUYhdEU","outcome":"ok"}}

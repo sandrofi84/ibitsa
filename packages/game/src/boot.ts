@@ -29,6 +29,7 @@ import {
   mountPullRequestPanel,
   mountPullRequestPreview,
 } from './pull-request-card';
+import { mountRestartNotice } from './restart-notice';
 import { isSitting, rememberCouncillors, SittingFeed } from './sitting-hut';
 import { mountTaskPanel } from './task-panel';
 import { ViewState } from './view-state';
@@ -150,6 +151,7 @@ export function startGame(root: HTMLElement, host: Host): Started {
     selectHero: (heroId) => selection.select(heroId),
     openTask: (taskPointId) => taskPanel.open(taskPointId),
   });
+  mountRestartNotice({ client });
   const newQuest = mountNewQuestForm({ client, host });
   const newActionForm = mountNewActionForm({ client });
   const newAction = () => newActionForm.open();
