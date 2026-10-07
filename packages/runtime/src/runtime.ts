@@ -472,6 +472,22 @@ export class Runtime {
         }
         return;
       }
+      case 'saveAmendment': {
+        const campaignId = this.log?.header.campaignId;
+        if (this.options.repoDir && campaignId) {
+          try {
+            new CampaignDocuments(this.options.repoDir).saveAmendment({
+              campaignId,
+              version: effect.version,
+              plan: effect.plan,
+              amendments: effect.amendments,
+            });
+          } catch {
+            // The amendment is still in the log and the game; only the files are missing.
+          }
+        }
+        return;
+      }
       case 'saveBrief': {
         const campaignId = this.log?.header.campaignId;
         if (this.options.repoDir && campaignId) {

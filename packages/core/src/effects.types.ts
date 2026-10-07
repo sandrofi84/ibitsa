@@ -1,4 +1,5 @@
 import type {
+  Amendment,
   CheckResult,
   CouncilAnswer,
   CouncilContextChoice,
@@ -140,6 +141,17 @@ export type Effect =
   | { type: 'saveBrief'; elderId: string; brief: ResearchBrief }
   /** Write the approved plan to the campaign folder (`plan.json`, `plan.md`); Ibitsa never commits it. */
   | { type: 'savePlan'; sittingId: string; version: number; plan: Plan }
+  /**
+   * An amendment was approved (#170): `plan.json` and `plan.md` get the amended plan, `plan` (plan
+   * `version` with every approved amendment applied), and an "Amendment N" section for each of them.
+   */
+  | {
+      type: 'saveAmendment';
+      sittingId: string;
+      version: number;
+      plan: Plan;
+      amendments: { number: number; amendment: Amendment }[];
+    }
   /** Start a sitting's lead session (spec §4.3); its output comes back as `council` inputs. */
   | {
       type: 'startSitting';

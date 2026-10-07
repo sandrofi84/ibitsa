@@ -80,6 +80,10 @@ export interface IslandView {
   remote: IslandRemoteView | null;
   /** What the PR preview starts from, until a PR is open; null once there is one. */
   pullRequestDraft: PullRequestDraft | null;
+  /** The plan island it stands for, e.g. `I2` (#170); absent for a quick quest and older logs. */
+  planIslandId?: string;
+  /** Added by an amendment (#170): it waits for its party, assembled with `assembleParty`. */
+  awaitingParty?: boolean;
 }
 
 /** §7.2 task point states, plus M1's done-without-review (§14.1). */

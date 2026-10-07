@@ -1,3 +1,4 @@
+import type { AmendmentView } from './amendment.types';
 import type { Effort, SittingMode } from './commands.schema';
 import type { Plan } from './plan.schema';
 import type { MicroUsd, Reading } from './values.types';
@@ -48,6 +49,8 @@ export type CouncilEvent =
   | { type: 'reportFiled'; toolUseId: string; councillorId: string; report: CouncilReport }
   | { type: 'questionsAsked'; toolUseId: string; questions: CouncilQuestion[] }
   | { type: 'planProposed'; toolUseId: string; plan: PlanProposal }
+  /** A change to the approved plan mid-campaign (§4.8, #170), as the model wrote it; core checks it. */
+  | { type: 'amendmentProposed'; toolUseId: string; amendment: unknown }
   /**
    * A councillor (or the elder) speaking to the user outside a question, e.g. answering "Why?" (§4.4).
    * `questionId` ties it to the question it explains; other councillors chiming in say so too.
@@ -106,6 +109,8 @@ export interface SittingView {
   comparisonOf: string | null;
   /** Talking to the council once its plan is approved (§4.8, #169), oldest first. */
   consultations: ConsultationView[];
+  /** Changes to the approved plan (§4.8, #170), oldest first; at most one is `proposed`. */
+  amendments: AmendmentView[];
 }
 
 /** One question to the council mid-campaign; its answers are dialogue lines. */

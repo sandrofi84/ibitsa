@@ -227,6 +227,28 @@ describe('the round table (#103)', () => {
     });
   });
 
+  it("proposes an amendment mid-campaign and hands core's verdict back (#170)", async () => {
+    const replies: ToolReply[] = [];
+    const amendment = { summary: 'Add a logout', tasks: [], removeTasks: ['T2'] };
+    const { events, session } = run(async function* ({ call, next }) {
+      await next();
+      replies.push(await call('propose_amendment', amendment));
+      yield result('success');
+    });
+    await until(() => events.some((e) => e.type === 'amendmentProposed'));
+    expect(events.at(-1)).toEqual({ type: 'amendmentProposed', toolUseId: 'tu1', amendment });
+    session.completeTool({ toolUseId: 'tu1', accepted: true });
+    await until(() => replies.length === 1);
+    expect(replies[0]).toEqual({
+      content: [
+        {
+          type: 'text',
+          text: 'The amendment is with the user. Say briefly why it helps, then end your turn.',
+        },
+      ],
+    });
+  });
+
   it('asks, ends its turn, hears "Why?" and the answers as messages, and speaks through say', async () => {
     const replies: ToolReply[] = [];
     const { events, session, inputs } = run(async function* ({ call, next }) {

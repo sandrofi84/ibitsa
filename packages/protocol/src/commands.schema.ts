@@ -227,6 +227,27 @@ export const CommandSchema = v.variant('type', [
     version: positiveInt,
     text: v.pipe(v.string(), v.trim(), v.nonEmpty()),
   }),
+  /** Approve Amendment `number` (§4.8, #170): it changes the plan and the islands. */
+  v.strictObject({ type: v.literal('approveAmendment'), commandId: id, number: positiveInt }),
+  /** Send Amendment `number` back to the council with a note; it proposes again. */
+  v.strictObject({
+    type: v.literal('requestAmendmentChange'),
+    commandId: id,
+    number: positiveInt,
+    text: v.pipe(v.string(), v.trim(), v.nonEmpty()),
+  }),
+  /** Drop Amendment `number`: the plan stays as it is. */
+  v.strictObject({ type: v.literal('discardAmendment'), commandId: id, number: positiveInt }),
+  /** The party of an island an amendment added (#170): its hero, gold cap and review efforts. */
+  v.strictObject({
+    type: v.literal('assembleParty'),
+    commandId: id,
+    islandId: id,
+    heroName: v.pipe(v.string(), v.nonEmpty()),
+    classId: id,
+    budgetMicroUsd: v.optional(v.nullable(positiveInt)),
+    reviewEfforts: v.optional(v.record(id, EffortSchema)),
+  }),
   v.strictObject({ type: v.literal('dismissCouncil'), commandId: id }),
   /** Refused unless the worktree is clean. */
   v.strictObject({ type: v.literal('removeWorktree'), commandId: id, islandId: id }),

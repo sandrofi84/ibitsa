@@ -1,4 +1,10 @@
-import { type Plan, planIslands, type Snapshot } from '@ibitsa/protocol';
+import {
+  applyAmendment,
+  type Effort,
+  type Plan,
+  planIslands,
+  type Snapshot,
+} from '@ibitsa/protocol';
 import type { GameClient } from './client';
 import { button, el } from './dom';
 import { HERO_CLASSES } from './heroes';
@@ -10,7 +16,13 @@ import {
   REVIEW_EFFORTS,
   reviewEffortsFor,
 } from './parties';
-import type { PartyAssembly, PartyAssemblyOptions } from './party-assembly.types';
+import type { PartyRow } from './parties.types';
+import type {
+  NewParty,
+  PartyAssembly,
+  PartyAssemblyOptions,
+  PartyFields,
+} from './party-assembly.types';
 import { councillorTitle } from './sitting-hut';
 
 /**
@@ -42,69 +54,15 @@ export function mountPartyAssembly({
     const error = el('p', { className: 'error' });
     error.setAttribute('role', 'alert');
 
-    const rows = partyRows(plan).map((row) => {
-      const box = el('fieldset', { className: 'party' });
-      box.append(el('legend', { text: `${row.islandId} ${row.title}` }));
-      box.append(el('p', { className: 'tasks', text: row.tasks.join(' · ') }));
-      const classSelect = el('select');
-      for (const c of HERO_CLASSES) classSelect.add(new Option(`${c.label} (${c.model})`, c.id));
-      classSelect.value = row.classId;
-      const name = el('input');
-      name.value = row.heroName;
-      let named = false;
-      name.oninput = () => {
-        named = true;
-      };
-      classSelect.onchange = () => {
-        if (named) return;
-        const taken = rows.filter((p) => p.name !== name).map((p) => p.name.value);
-        name.value = heroNameFor({ classId: classSelect.value, taken });
-      };
-      const cap = el('input');
-      cap.inputMode = 'decimal';
-      cap.placeholder = 'Default';
-      const noCap = el('input');
-      noCap.type = 'checkbox';
-      noCap.onchange = () => {
-        cap.disabled = noCap.checked;
-      };
-      const noCapLabel = el('label', { className: 'inline' });
-      noCapLabel.append(noCap, ' No cap');
-      // One review effort per reviewing councillor (§5.5, #139): Light by default.
-      const efforts = row.councillors.map((councillorId) => {
-        const select = el('select');
-        for (const e of REVIEW_EFFORTS) select.add(new Option(e.label, e.id));
-        select.value = 'light';
-        return { councillorId, select };
-      });
-      const reviews = el('div', { className: 'reviews' });
-      if (efforts.length === 0) {
-        reviews.append(
-          el('p', {
-            className: 'note',
-            text: 'Nobody reviews this island: its checks are enough.',
-          }),
-        );
-      } else {
-        reviews.append(el('p', { className: 'note', text: 'Reviewed by:' }));
-        for (const e of efforts) {
-          reviews.append(
-            field({
-              label: `${councillorTitle(e.councillorId)}, review effort`,
-              control: e.select,
-            }),
-          );
-        }
-      }
-      box.append(
-        field({ label: 'Hero class', control: classSelect }),
-        field({ label: 'Hero name', control: name }),
-        field({ label: 'Gold cap in dollars', control: cap }),
-        noCapLabel,
-        reviews,
+    const rows: PartyFields[] = [];
+    for (const row of partyRows(plan)) {
+      rows.push(
+        partyFields({
+          row,
+          taken: (self) => rows.filter((p) => p !== self).map((p) => p.name.value),
+        }),
       );
-      return { row, box, classSelect, name, cap, noCap, efforts };
-    });
+    }
 
     const base = el('select');
     const repo = snapshot?.repo;
@@ -170,20 +128,7 @@ export function mountPartyAssembly({
         error.textContent = problem;
         return;
       }
-      const chosen = rows.map((r, i) => {
-        const cap = caps[i];
-        const budget = cap?.ok ? cap.budgetMicroUsd : undefined;
-        return {
-          islandId: r.row.islandId,
-          heroName: r.name.value.trim(),
-          classId: r.classSelect.value,
-          ...(budget === undefined ? {} : { budgetMicroUsd: budget }),
-          ...reviewEffortsFor({
-            councillors: r.row.councillors,
-            chosen: Object.fromEntries(r.efforts.map((e) => [e.councillorId, e.select.value])),
-          }),
-        };
-      });
+      const chosen = rows.map((r) => ({ islandId: r.row.islandId, ...partyChoice(r) }));
       const intent = {
         type: 'startCampaign' as const,
         baseRef: base.value,
@@ -201,6 +146,166 @@ export function mountPartyAssembly({
   }
 
   return { open };
+}
+
+/**
+ * One island's party (§7.1 screen 4): hero class and name, gold cap, and a review effort for each
+ * councillor who reviews it. `taken` names the other parties' heroes, for a fresh default name.
+ */
+export function partyFields({
+  row,
+  taken,
+}: {
+  row: PartyRow;
+  taken: (self: PartyFields) => string[];
+}): PartyFields {
+  const box = el('fieldset', { className: 'party' });
+  box.append(el('legend', { text: `${row.islandId} ${row.title}` }));
+  box.append(el('p', { className: 'tasks', text: row.tasks.join(' · ') }));
+  const classSelect = el('select');
+  for (const c of HERO_CLASSES) classSelect.add(new Option(`${c.label} (${c.model})`, c.id));
+  classSelect.value = row.classId;
+  const name = el('input');
+  name.value = row.heroName;
+  let named = false;
+  name.oninput = () => {
+    named = true;
+  };
+  const cap = el('input');
+  cap.inputMode = 'decimal';
+  cap.placeholder = 'Default';
+  const noCap = el('input');
+  noCap.type = 'checkbox';
+  noCap.onchange = () => {
+    cap.disabled = noCap.checked;
+  };
+  const noCapLabel = el('label', { className: 'inline' });
+  noCapLabel.append(noCap, ' No cap');
+  // One review effort per reviewing councillor (§5.5, #139): Light by default.
+  const efforts = row.councillors.map((councillorId) => {
+    const select = el('select');
+    for (const e of REVIEW_EFFORTS) select.add(new Option(e.label, e.id));
+    select.value = 'light';
+    return { councillorId, select };
+  });
+  const reviews = el('div', { className: 'reviews' });
+  if (efforts.length === 0) {
+    reviews.append(
+      el('p', {
+        className: 'note',
+        text: 'Nobody reviews this island: its checks are enough.',
+      }),
+    );
+  } else {
+    reviews.append(el('p', { className: 'note', text: 'Reviewed by:' }));
+    for (const e of efforts) {
+      reviews.append(
+        field({
+          label: `${councillorTitle(e.councillorId)}, review effort`,
+          control: e.select,
+        }),
+      );
+    }
+  }
+  box.append(
+    field({ label: 'Hero class', control: classSelect }),
+    field({ label: 'Hero name', control: name }),
+    field({ label: 'Gold cap in dollars', control: cap }),
+    noCapLabel,
+    reviews,
+  );
+  const fields: PartyFields = { row, box, classSelect, name, cap, noCap, efforts };
+  classSelect.onchange = () => {
+    if (!named) name.value = heroNameFor({ classId: classSelect.value, taken: taken(fields) });
+  };
+  return fields;
+}
+
+/** What a party's fields say: its hero, gold cap and review efforts, as a command takes them. */
+export function partyChoice(fields: PartyFields): {
+  heroName: string;
+  classId: string;
+  budgetMicroUsd?: number | null;
+  reviewEfforts?: Record<string, Effort>;
+} {
+  const cap = capFromInput({ text: fields.cap.value, noCap: fields.noCap.checked });
+  const budget = cap.ok ? cap.budgetMicroUsd : undefined;
+  return {
+    heroName: fields.name.value.trim(),
+    classId: fields.classSelect.value,
+    ...(budget === undefined ? {} : { budgetMicroUsd: budget }),
+    ...reviewEffortsFor({
+      councillors: fields.row.councillors,
+      chosen: Object.fromEntries(fields.efforts.map((e) => [e.councillorId, e.select.value])),
+    }),
+  };
+}
+
+/**
+ * The party of an island an amendment added (#170): the same fields as party assembly, for that one
+ * island; **Assemble** sends `assembleParty`, and the island waits for a slot like the others.
+ */
+export function mountNewParty({ client }: { client: GameClient }): NewParty {
+  const dialog = el('dialog', { className: 'party-assembly new-party' });
+  dialog.setAttribute('aria-label', 'Assemble the new party');
+  document.body.appendChild(dialog);
+
+  function open(islandId: string): void {
+    const snapshot = client.snapshot;
+    const island = snapshot?.islands.find((i) => i.id === islandId);
+    const plan = snapshot ? amendedPlan(snapshot) : undefined;
+    const row = plan && partyRows(plan).find((r) => r.islandId === island?.planIslandId);
+    if (!island?.awaitingParty || !row || dialog.open) return;
+    const heroes = snapshot?.heroes.map((h) => h.name) ?? [];
+    const fields = partyFields({
+      row: { ...row, heroName: heroNameFor({ classId: row.classId, taken: heroes }) },
+      taken: () => heroes,
+    });
+    const error = el('p', { className: 'error' });
+    error.setAttribute('role', 'alert');
+    const form = el('form');
+    const assemble = el('button', { text: 'Assemble' });
+    assemble.type = 'submit';
+    const actions = el('div', { className: 'actions' });
+    actions.append(assemble, button({ label: 'Cancel', onClick: () => dialog.close() }));
+    form.append(
+      el('h2', { text: `A party for ${island.name}` }),
+      el('p', {
+        className: 'note',
+        text: 'An amendment added this island. Once its party is assembled it starts when a slot is free.',
+      }),
+      fields.box,
+      error,
+      actions,
+    );
+    form.onsubmit = (e) => {
+      e.preventDefault();
+      const cap = capFromInput({ text: fields.cap.value, noCap: fields.noCap.checked });
+      const problem =
+        namesProblem([...heroes, fields.name.value]) ?? (cap.ok ? undefined : cap.problem);
+      if (problem) {
+        error.textContent = problem;
+        return;
+      }
+      dialog.close();
+      client.send({ type: 'assembleParty', islandId, ...partyChoice(fields) });
+    };
+    dialog.replaceChildren(form);
+    dialog.showModal();
+    fields.classSelect.focus();
+  }
+
+  return { open };
+}
+
+/** The approved plan with its approved amendments, as core has it (#170). */
+export function amendedPlan(snapshot: Snapshot): Plan | undefined {
+  const sitting = snapshot.sitting;
+  const plan = sitting?.plans.filter((p) => p.outcome.kind === 'approved').at(-1)?.plan;
+  if (!sitting || !plan) return undefined;
+  return sitting.amendments
+    .filter((a) => a.outcome.kind === 'approved')
+    .reduce((p, a) => applyAmendment({ plan: p, amendment: a.amendment }), plan);
 }
 
 function field({ label, control }: { label: string; control: HTMLElement }): HTMLLabelElement {

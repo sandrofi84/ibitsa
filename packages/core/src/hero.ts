@@ -492,6 +492,12 @@ export class Hero {
     this.record.heldFor = [];
     const task = this.task();
     if (task) task.state = 'active';
+    // Its session ended (a ready PR, a reload): the task resumes it (#170).
+    if (!this.record.sessionLive) {
+      this.revive(this.prompt());
+      this.watchSilence();
+      return;
+    }
     this.ctx.outbox.effect({
       type: 'sendMessage',
       heroId: this.id,

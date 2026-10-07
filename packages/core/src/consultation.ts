@@ -2,6 +2,7 @@ import type { Command, CouncilEvent } from '@ibitsa/protocol';
 import { Hero } from './hero';
 import { NeedsYou } from './needs-you';
 import { Outbox } from './outbox';
+import { PlanAmendment } from './plan-amendment';
 import { newId } from './state';
 import type { ConsultationRecord, CoreState, Island, SittingRecord } from './state.types';
 import type { StepContext } from './step.types';
@@ -80,7 +81,7 @@ export class Consultation {
       'The plan is approved and the heroes are at work. Nothing you do here stops them.',
       `${who}\n${text}`,
       `Where the campaign stands:\n${status}`,
-      "Answer with say, in the voice of each councillor who speaks; read the code if you must. In separate chambers you may dispatch a councillor's chamber with the question: ask it to answer in its final message, not with a report. Don't file reports, ask questions or propose a plan. Then end your turn.",
+      "Answer with say, in the voice of each councillor who speaks; read the code if you must. In separate chambers you may dispatch a councillor's chamber with the question: ask it to answer in its final message, not with a report. Don't file reports, ask questions or propose a whole plan. If the plan should change, call propose_amendment with the change and say why: only work not started may change (rework is a new task), and the user approves it. Then end your turn.",
     ].join('\n\n---\n\n');
   }
 
@@ -101,16 +102,69 @@ export class Consultation {
       this.ctx.outbox.reject(command.commandId, problem ?? 'There is no council to ask.');
       return;
     }
+    const to = command.councillorId ? `@${command.councillorId} ` : '';
+    this.resume({
+      record,
+      councillorId: command.councillorId ?? null,
+      line: `${to}${command.text}`,
+      prompt: Consultation.prompt({
+        text: command.text,
+        councillorId: command.councillorId ?? null,
+        status: Consultation.status(state),
+      }),
+    });
+  }
+
+  /**
+   * A turn of the council's own about something the user did, e.g. asking for changes to an amendment
+   * (#170): like a question, one at a time and capped. Returns whether it started.
+   */
+  followUp({
+    commandId,
+    line,
+    prompt,
+  }: {
+    commandId: string;
+    line: string;
+    prompt: string;
+  }): boolean {
+    const record = this.ctx.state.sitting;
+    if (!record?.sessionId || record.status !== 'approved' || Consultation.running(record)) {
+      this.ctx.outbox.reject(commandId, 'The council is still answering the last question.');
+      return false;
+    }
+    this.resume({
+      record,
+      councillorId: null,
+      line,
+      prompt: `${prompt}\n\n---\n\nWhere the campaign stands:\n${Consultation.status(this.ctx.state)}`,
+    });
+    return true;
+  }
+
+  /** The lead session resumes for one turn, with the user's line in the dialogue. */
+  private resume({
+    record,
+    councillorId,
+    line,
+    prompt,
+  }: {
+    record: SittingRecord;
+    councillorId: string | null;
+    line: string;
+    prompt: string;
+  }): void {
+    const state = this.ctx.state;
+    if (!record.sessionId) return;
     const consultation: ConsultationRecord = {
       id: newId(state, 'q'),
-      councillorId: command.councillorId ?? null,
+      councillorId,
       status: 'asking',
       error: null,
       gold: { kind: 'unknown' },
     };
     record.consultations = [...(record.consultations ?? []), consultation];
-    const to = command.councillorId ? `@${command.councillorId} ` : '';
-    addLine({ record, speaker: YOU, text: `${to}${command.text}` });
+    addLine({ record, speaker: YOU, text: line });
     this.ctx.outbox.effect({
       type: 'startSitting',
       sittingId: record.id,
@@ -119,14 +173,7 @@ export class Consultation {
       effort: record.effort,
       roster: record.roster.map(({ councillorId, effort }) => ({ councillorId, effort })),
       brief: state.elder?.status === 'briefed' ? state.elder.brief : null,
-      resume: {
-        sessionId: record.sessionId,
-        prompt: Consultation.prompt({
-          text: command.text,
-          councillorId: consultation.councillorId,
-          status: Consultation.status(state),
-        }),
-      },
+      resume: { sessionId: record.sessionId, prompt },
       maxBudgetMicroUsd: state.settings.consultBudgetMicroUsd,
     });
   }
@@ -154,8 +201,11 @@ export class Consultation {
         return;
       case 'sessionStarted':
         return;
+      case 'amendmentProposed':
+        new PlanAmendment(this.ctx).propose({ record, event });
+        return;
       default:
-        // Reports, questions and plans belong to planning (amendments come with #170).
+        // Reports, questions and whole plans belong to planning.
         this.refuse({ record, toolUseId: event.toolUseId });
     }
   }

@@ -7,6 +7,7 @@ import { Hero } from './hero';
 import type { CoreInput, GameMasterEvent } from './inputs.types';
 import { NeedsYou } from './needs-you';
 import { Outbox } from './outbox';
+import { PlanAmendment } from './plan-amendment';
 import { PullRequest } from './pull-request';
 import { Quest } from './quest';
 import { Review } from './review';
@@ -164,6 +165,18 @@ function command(ctx: StepContext, command: Command): void {
       return;
     case 'consultCouncil':
       new Consultation(ctx).ask(command);
+      return;
+    case 'approveAmendment':
+      new PlanAmendment(ctx).approve(command);
+      return;
+    case 'requestAmendmentChange':
+      new PlanAmendment(ctx).requestChange(command);
+      return;
+    case 'discardAmendment':
+      new PlanAmendment(ctx).discard(command);
+      return;
+    case 'assembleParty':
+      new PlanAmendment(ctx).assembleParty(command);
       return;
     case 'requestPlanChange':
       new Sitting(ctx).requestChange(command);

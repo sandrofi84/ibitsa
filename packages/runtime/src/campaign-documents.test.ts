@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { CampaignRecordData } from '@ibitsa/core';
@@ -253,6 +253,47 @@ describe('the index of past records (#168)', () => {
       ]);
       expect(docs.pastRecords(1)).toHaveLength(1);
       expect(new CampaignDocuments(join(repo, 'nowhere')).pastRecords()).toEqual([]);
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('an approved amendment (#170)', () => {
+  it('rewrites plan.json and plan.md as the amended plan, with a section per amendment', () => {
+    const repo = mkdtempSync(join(tmpdir(), 'ibitsa-amend-'));
+    try {
+      const amendment = {
+        summary: 'Drop the form; add a logout',
+        tasks: [{ ...plan.tasks[1], id: 'T3', title: 'Logout', description: 'Add a logout.' }],
+        removeTasks: ['T2'],
+        addToIslands: [{ islandId: 'I1', tasks: ['T3'] }],
+        islands: [{ id: 'I3', title: 'Docs', tasks: ['T3'] }],
+        decisions: [plan.decisions[0]],
+      } as never;
+      const dir = new CampaignDocuments(repo).saveAmendment({
+        campaignId: 'c1',
+        version: 2,
+        plan,
+        amendments: [{ number: 1, amendment }],
+      });
+      const json = JSON.parse(readFileSync(join(dir, 'plan.json'), 'utf8'));
+      expect(json).toMatchObject({ version: 2, summary: 'Sign-in', amendments: [{ number: 1 }] });
+      const md = readFileSync(join(dir, 'plan.md'), 'utf8');
+      expect(md.startsWith('# Plan v2')).toBe(true);
+      expect(md).toContain(
+        [
+          '## Amendment 1',
+          '',
+          'Drop the form; add a logout',
+          '',
+          '- **T3 · Logout:** Add a logout.',
+          '- **T2:** removed',
+          '- **I1** gains T3',
+          '- New island **I3 · Docs:** T3',
+          '- Decision **D1 · Methods:** Email. Ship first',
+        ].join('\n'),
+      );
     } finally {
       rmSync(repo, { recursive: true, force: true });
     }

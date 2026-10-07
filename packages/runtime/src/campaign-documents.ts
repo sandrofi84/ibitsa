@@ -1,7 +1,13 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { CampaignRecordData } from '@ibitsa/core';
-import { type CodePointer, type Plan, planIslands, type ResearchBrief } from '@ibitsa/protocol';
+import {
+  type Amendment,
+  type CodePointer,
+  type Plan,
+  planIslands,
+  type ResearchBrief,
+} from '@ibitsa/protocol';
 import type { PastRecord } from './ports.types';
 
 /**
@@ -37,6 +43,30 @@ export class CampaignDocuments {
     writeFileSync(join(dir, 'plan.json'), json);
     writeFileSync(join(dir, `plan-v${version}.json`), json);
     writeFileSync(join(dir, 'plan.md'), planMarkdown({ version, plan }));
+    return dir;
+  }
+
+  /**
+   * An approved amendment (#170): `plan.json` and `plan.md` become the amended plan, with an
+   * "Amendment N" section for each amendment approved so far; `plan-v<n>.json` keeps the plan as first
+   * approved. Returns the folder.
+   */
+  saveAmendment({
+    campaignId,
+    version,
+    plan,
+    amendments,
+  }: {
+    campaignId: string;
+    version: number;
+    plan: Plan;
+    amendments: { number: number; amendment: Amendment }[];
+  }): string {
+    const dir = this.folder(campaignId);
+    const json = `${JSON.stringify({ version, ...plan, amendments }, null, 2)}\n`;
+    writeFileSync(join(dir, 'plan.json'), json);
+    const sections = amendments.map((a) => amendmentMarkdown(a)).join('');
+    writeFileSync(join(dir, 'plan.md'), `${planMarkdown({ version, plan })}${sections}`);
     return dir;
   }
 
@@ -87,6 +117,27 @@ export class CampaignDocuments {
     mkdirSync(dir, { recursive: true });
     return dir;
   }
+}
+
+/** One approved amendment as a section after the plan (#170): what it said and what it changed. */
+export function amendmentMarkdown({
+  number,
+  amendment,
+}: {
+  number: number;
+  amendment: Amendment;
+}): string {
+  const lines = ['', `## Amendment ${number}`, '', amendment.summary, ''];
+  for (const t of amendment.tasks) lines.push(`- **${t.id} · ${t.title}:** ${t.description}`);
+  for (const id of amendment.removeTasks) lines.push(`- **${id}:** removed`);
+  for (const a of amendment.addToIslands)
+    lines.push(`- **${a.islandId}** gains ${a.tasks.join(', ')}`);
+  for (const i of amendment.islands)
+    lines.push(`- New island **${i.id} · ${i.title}:** ${i.tasks.join(', ')}`);
+  for (const d of amendment.decisions)
+    lines.push(`- Decision **${d.id} · ${d.title}:** ${d.chosen}. ${d.why}`);
+  lines.push('');
+  return lines.join('\n');
 }
 
 /** The research brief as markdown, in the brief's fixed order (spec §4.1). */

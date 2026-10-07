@@ -53,6 +53,8 @@ export function view(state: CoreState): Snapshot {
         ? { ...i.remote, pullRequest: i.remote.pullRequest && { ...i.remote.pullRequest } }
         : null,
       pullRequestDraft: PullRequest.draft({ state, island: i }),
+      ...(i.planIslandId ? { planIslandId: i.planIslandId } : {}),
+      ...(i.awaitingParty ? { awaitingParty: true } : {}),
     })),
     heroes: state.heroes.map((record) => new Hero({ record, ctx }).view()),
     needsYou: state.needsYou.map((item): NeedsYouItem => {
