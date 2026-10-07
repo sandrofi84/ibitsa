@@ -20,6 +20,7 @@ export function view(state: CoreState): Snapshot {
       branching: state.campaign.branching,
       stackedStart: state.campaign.stackedStart,
       capMicroUsd: state.settings.campaignBudgetMicroUsd,
+      maxParallel: state.settings.maxParallel,
       gold: Quest.totalGold([
         ...(state.elder && state.elder.gold.kind !== 'unknown' ? [state.elder] : []),
         ...state.heroes,

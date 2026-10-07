@@ -86,6 +86,7 @@ describe('slashMenu (#84)', () => {
         branching: 'separate' as const,
         stackedStart: null,
         capMicroUsd: null,
+        maxParallel: 2,
       },
       elder: null,
       sitting: null,

@@ -90,6 +90,8 @@ export class Campaign {
     state.islands = [];
     state.heroes = [];
     for (const planIsland of islands) {
+      // A plan without islands is one island, named like a quick quest after the campaign.
+      const title = plan.islands ? planIsland.title : campaign.title;
       const before = state.islands.at(-1);
       const id = newId(state, 'i');
       const taskPoints = planIsland.tasks.flatMap((taskId) => {
@@ -115,9 +117,9 @@ export class Campaign {
       const basedOn = branching === 'stacked' && before ? before : null;
       state.islands.push({
         id,
-        name: planIsland.title,
+        name: title,
         branch: unique({
-          branch: `ibitsa/${Quest.slug(planIsland.title) || 'island'}`,
+          branch: `ibitsa/${Quest.slug(title) || 'island'}`,
           taken: branches,
         }),
         baseRef: basedOn ? basedOn.branch : command.baseRef,

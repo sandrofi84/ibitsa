@@ -1154,3 +1154,62 @@ body.in-hut:has(.council-dialogue:not([hidden])) .needs-you {
 .elder-panel .other-way {
   margin-top: 8px;
 }
+
+/* Party assembly (#123): the convene form's look, one fieldset per island. */
+.party-assembly {
+  width: min(520px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  box-sizing: border-box;
+  background: #efe0b8;
+  border: 2px solid #8a6a3a;
+  border-radius: 4px;
+  color: #1a1420;
+  font:
+    13px / 1.4 system-ui,
+    sans-serif;
+}
+
+.party-assembly::backdrop {
+  background: rgba(10, 8, 20, 0.5);
+}
+
+.party-assembly h2 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+
+.party-assembly fieldset {
+  margin: 8px 0;
+  border: 1px solid #8a6a3a;
+  border-radius: 3px;
+}
+
+.party-assembly label {
+  display: block;
+  margin: 4px 0;
+}
+
+.party-assembly label > span {
+  display: block;
+  font-weight: 600;
+}
+
+.party-assembly label.inline {
+  display: inline-block;
+}
+
+.party-assembly .note,
+.party-assembly .tasks {
+  color: #4a3a2a;
+  margin: 2px 0;
+}
+
+.party-assembly .error {
+  color: #8a1a1a;
+}
+
+.party-assembly .actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}

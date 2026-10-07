@@ -150,6 +150,7 @@
           "branching": "separate",
           "stackedStart": null,
           "capMicroUsd": null,
+          "maxParallel": 2,
           "gold": {
             "kind": "unknown"
           }
@@ -216,6 +217,7 @@
           "branching": "separate",
           "stackedStart": null,
           "capMicroUsd": null,
+          "maxParallel": 2,
           "gold": {
             "kind": "unknown"
           }
@@ -276,6 +278,7 @@
           "branching": "separate",
           "stackedStart": null,
           "capMicroUsd": null,
+          "maxParallel": 2,
           "gold": {
             "kind": "exact",
             "value": 161964
@@ -339,6 +342,7 @@
       "branching": "separate",
       "stackedStart": null,
       "capMicroUsd": null,
+      "maxParallel": 2,
       "gold": {
         "kind": "exact",
         "value": 161964

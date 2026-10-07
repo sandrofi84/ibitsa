@@ -206,7 +206,7 @@ ask_user({
 - **Approve**, **Change** with free-text context, or **Dismiss the council**, in the **plan review** in the hut (#104): the summary and goal, the tasks in the order the hero will work them (files, dependencies, criteria per councillor, decisions kept to) and the Book of Decisions. The hut's Book of Decisions shows how many decisions the plan records.
 - A change goes to the elder, who revises. In separate chambers the elder consults again only the councillors the change affects; each consultation is recorded and costed, and the every-councillor-reported rule still holds. No cap on revisions; each shows what it cost.
 - Each approved version is saved; amendments later in the campaign create new versions with a visible diff.
-- **Until parties exist (M4)**, an approved plan is carried out by one hero who works its tasks in order on one branch (§14.2): the elder panel shows the approved plan with **Start the quest**, which opens the New Quest form (the plan's summary read-only, the first task's suggested class) and sends `startPlannedQuest`.
+- The elder panel shows the approved plan with **Assemble the parties** (§7.1 screen 4, #123), which sends `startCampaign`: a party per island, each hero working its island's tasks in order.
 
 ### 4.7 Councillor definitions
 - Each councillor is **one class with two modes**:
@@ -241,7 +241,7 @@ Built so round table and separate chambers, and later changes to either, can be 
   - **Rating:** after a plan is approved (or the council dismissed), the elder panel asks "How useful was the council?" 1–5 with an optional note; optional, and can be changed.
   - **Council version:** noted by the runtime when the session starts: a hash of the mode, the roster's skill-file hashes and the adapter's `councilPromptVersion` (itself a hash of the council's instruction texts), so editing a councillor or a prompt starts a new group without anyone bumping a number.
   - Quest outcomes (tasks redone, review findings, whether a raised concern mattered) are added once reviews exist (M5).
-- **Convene the other way:** after a sitting, the elder panel offers the same task and councillors in the other mode, marked as a comparison (`comparisonOf`). It costs a second sitting, so it asks first. **Start the quest** carries out the latest approved plan.
+- **Convene the other way:** after a sitting, the elder panel offers the same task and councillors in the other mode, marked as a comparison (`comparisonOf`). It costs a second sitting, so it asks first. **Assemble the parties** carries out the latest approved plan.
 - **"Ibitsa: Export Council Tallies"** (Command Palette) replays every campaign log in the workspace and writes JSON (everything) or CSV (one row per sitting). An in-game view can follow once there is data worth showing.
 
 ---
@@ -406,7 +406,7 @@ Shown in the same hover menu, visually distinct:
 1. **Elder's recommendation:** the **elder panel**, docked where the hero pane goes while the campaign plans: research progress and gold, then the brief's summary (task, quick-quest verdict, files, findings, recommended councillors) with **Quick quest** and **Convene council** (the recommended one in bold), or the error and what to do. Convening (§4.2: round table or separate chambers, councillor checkboxes with reasons, effort) follows from it.
 2. **Council hut (interior):** side-on room (Alex Kidd shop style), councillors as **32×32** characters behind a long table (§9.2), active speaker highlighted, "!" for who wants to speak, RPG dialogue box with portrait, options, "Why?", free text. Step tracker: Goal › Research › Questions › Plan › Dispatch. Book of Decisions on the table. In separate chambers, councillors first **study** at the table (think animation, a small book, a progress mark above each) and look up when their report is in; then the dialogue starts. A round table skips the study stage.
 3. **Plan review:** in the hut (#104): plan, tasks in order with criteria, Book of Decisions; Approve / Ask for changes / Dismiss.
-4. **Party assembly** (M4): one row per island: hero class and name (from the plan's suggested class), the reviewing councillors (whoever wrote criteria for its tasks; used from M5) and the hero's gold cap; for stacked plans, how islands start (§5.3). No cost forecast yet. Then **Start the campaign**.
+4. **Party assembly** (M4, #123): a dialog from the elder panel's **Assemble the parties**: one row per island with its tasks, hero class and name (from the island's first task's suggested class; names unique across rows), the reviewing councillors (whoever wrote criteria for its tasks; used from M5) and the hero's gold cap in dollars (empty keeps the default pouch; "No cap" for none); the base branch with the uncommitted-changes note; for stacked plans, how islands start (§5.3); how many parties work at once. No cost forecast yet. Then **Start the campaign** (after the API-key card, if there's no key yet).
 5. **World map (overworld):** see §7.2.
 6. **Party panel:** compact lineup usable as a bottom panel next to the terminal (a `WebviewView`, from M4).
 
@@ -874,7 +874,7 @@ Settled in M4 planning.
 - **Several heroes in the UI:** the hero pane shows the selected hero (click its token, island or tab); the collapsed tab lists every hero with a state dot; `@<hero name>` targets one, `@all` every hero.
 - **Ending:** **Finish** once every island is submitted; **Abandon** ends everything; parties can be stopped one by one; worktrees are removed per island.
 - **Campaign cap:** `ibitsa.campaign.budgetUsd` (empty by default): when every hero plus the elder and council together reach it, every working hero stops (interrupted) and asks, as an out-of-gold item marked as the campaign's; raising it (`raiseCampaignBudget`) lets them carry on. It counts what has been reported, so a hero that hasn't reported yet counts as nothing spent, and it's checked at each cost report (it may overshoot by a turn).
-- **Starting:** `startCampaign` (#121) carries out the approved plan: one island and one hero per plan island (class, name and optional gold pouch per party), the base branch, and for stacked plans the start mode. `startPlannedQuest` (one hero, every task) stays until party assembly (#123) replaces it.
+- **Starting:** `startCampaign` (#121) carries out the approved plan: one island and one hero per plan island (class, name and optional gold pouch per party), the base branch, and for stacked plans the start mode. Party assembly sends it (#123); the one-hero `startPlannedQuest` is gone. A plan without islands is one island named after the campaign.
 
 ## 15. Open questions
 1. Name registration: domains (ibitsa.com, ibitsa.dev, questforibitsa.com), GitHub org, npm scope, Marketplace/Open VSX publisher; trademark search (EUIPO TMview, USPTO). Initial checks found no conflicting software use.

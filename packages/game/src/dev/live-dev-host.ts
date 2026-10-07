@@ -459,7 +459,10 @@ const LIVE_COUNCILLORS: CouncillorInfo[] = [
   hash: id,
 }));
 
-/** A small valid plan (#104): two tasks in order, a decision raised by the asking councillor. */
+/**
+ * A small valid plan (#104, #123): two tasks on two islands, the second waiting on the first, and a
+ * decision raised by the asking councillor. Separate, unless the summary asks for a stack.
+ */
 function livePlan({ summary, councillorId }: { summary: string; councillorId: string }): Plan {
   return {
     summary,
@@ -484,8 +487,11 @@ function livePlan({ summary, councillorId }: { summary: string; councillorId: st
         decisions: ['D1'],
       },
     ],
-    islands: [{ id: 'I1', title: 'The redirect fix', tasks: ['T1', 'T2'] }],
-    branching: 'separate',
+    islands: [
+      { id: 'I1', title: 'The redirect fix', tasks: ['T1'] },
+      { id: 'I2', title: 'The redirect test', tasks: ['T2'] },
+    ],
+    branching: /stack/i.test(summary) ? 'stacked' : 'separate',
     decisions: [
       {
         id: 'D1',

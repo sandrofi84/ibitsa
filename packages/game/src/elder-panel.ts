@@ -57,7 +57,7 @@ export function mountElderPanel({
 
   /** The approved plan (#104): what the hero will work through, and Start the quest. */
   function renderPlan({ plan, sitting }: { plan: Plan; sitting: SittingView }): HTMLElement[] {
-    const start = button({ label: 'Start the quest', onClick: () => options.startPlan(plan) });
+    const start = button({ label: 'Assemble the parties', onClick: () => options.assemble(plan) });
     start.classList.add('recommended');
     return [
       el('h2', { text: "The council's plan" }),

@@ -5,9 +5,9 @@ import { expect, type Page, test } from '@playwright/test';
 
 interface Probe {
   snapshot(): {
-    campaign: { status: string } | null;
-    heroes: { state: { kind: string }; queuedMessages: number }[];
-    islands: { taskPoints: { state: string }[] }[];
+    campaign: { status: string; branching: string; stackedStart: string | null } | null;
+    heroes: { name: string; classId: string; state: { kind: string }; queuedMessages: number }[];
+    islands: { id: string; basedOn: string | null; taskPoints: { state: string }[] }[];
     sitting: { mode: string; comparisonOf: string | null; rating: unknown } | null;
   } | null;
   hut(): { decisions: number } | null;
@@ -481,7 +481,10 @@ test('the brief convenes a round table; its approved plan becomes a quest, task 
     'D1 Test the fix Yes.',
   );
   await expect(plan.getByRole('list', { name: 'Islands' })).toContainText(
-    'I1 The redirect fix: T1, T2',
+    'I1 The redirect fix: T1',
+  );
+  await expect(plan.getByRole('list', { name: 'Islands' })).toContainText(
+    'I2 The redirect test: T2',
   );
   await expect(plan).toContainText('Separate: every island branches from the base.');
   await expect.poll(() => probe(page, (p) => p.hut()?.decisions)).toBe(1);
@@ -493,25 +496,85 @@ test('the brief convenes a round table; its approved plan becomes a quest, task 
   await plan.getByRole('button', { name: 'Approve' }).click();
   await expect(plan).toBeHidden();
 
-  // The approved plan waits in the elder panel; Start the quest carries it out (#104).
+  // The approved plan waits in the elder panel; party assembly carries it out (#104, #123).
   await expect(elder.getByRole('heading', { name: "The council's plan" })).toBeVisible();
   await expect(elder).toContainText('Approved. Revised: Two tasks');
-  await elder.getByRole('button', { name: 'Start the quest' }).click();
-  const form = page.getByRole('dialog', { name: 'New quest' });
-  await expect(form.getByLabel('Task')).toHaveJSProperty('readOnly', true);
-  await form.getByRole('button', { name: 'Start quest' }).click();
+  await elder.getByRole('button', { name: 'Assemble the parties' }).click();
+  const assembly = page.getByRole('dialog', { name: 'Assemble the parties' });
+  await expect(assembly.getByRole('group', { name: 'I1 The redirect fix' })).toBeVisible();
+  const second = assembly.getByRole('group', { name: 'I2 The redirect test' });
+  await expect(second.getByLabel('Hero name')).toHaveValue('Ranger Rowan');
+  await expect(second).toContainText('Reviewed by: Tester');
+  await expect(assembly).toContainText('Up to 2 parties work at once');
+  await assembly.getByRole('button', { name: 'Start the campaign' }).click();
+  await expect(assembly).toBeHidden();
   await expect.poll(() => heroState(page)).toBe('idle');
-  expect(
-    await probe(page, (p) => p.snapshot()?.islands[0]?.taskPoints.map((t) => t.state)),
-  ).toEqual(['active', 'locked']);
-  // Asked to submit, the hero hands in task 1, gets task 2 as a message, and hands that in too.
+  // The second island waits for the first island's task (#121).
+  expect(await probe(page, (p) => p.snapshot()?.heroes.map((h) => h.state.kind))).toEqual([
+    'idle',
+    'blocked',
+  ]);
+  // Asked to submit, hero 1 hands in task 1; island 2 starts and its hero gets to work.
   const pane = page.getByRole('region', { name: 'Hero' });
   await pane.getByLabel('Message to the hero').fill('Submit it');
   await pane.getByRole('button', { name: 'Send now' }).click();
   await expect.poll(() => heroState(page), { timeout: 10_000 }).toBe('submitted');
-  expect(
-    await probe(page, (p) => p.snapshot()?.islands[0]?.taskPoints.map((t) => t.state)),
-  ).toEqual(['doneUnreviewed', 'doneUnreviewed']);
+  await expect
+    .poll(() => probe(page, (p) => p.snapshot()?.heroes[1]?.state.kind), { timeout: 10_000 })
+    .toBe('idle');
+  expect(errors).toEqual([]);
+});
+
+test('party assembly: a stacked plan, its heroes, and how its islands start (#123)', async ({
+  page,
+}) => {
+  const errors = watchErrors(page);
+  await page.goto('/?fixture=live');
+  await page.getByRole('button', { name: 'New quest' }).click();
+  await page.getByLabel('Task').fill('Fix the login redirect');
+  await page.getByRole('button', { name: 'Ask the elder' }).click();
+  const elder = page.getByRole('region', { name: 'Elder' });
+  await elder.getByRole('button', { name: 'Convene council' }).click();
+  await page
+    .getByRole('dialog', { name: 'Convene the council' })
+    .getByRole('button', { name: 'Convene' })
+    .click();
+  const box = page.getByRole('dialog', { name: 'The council asks' });
+  await box.getByRole('radio', { name: /Yes/ }).click();
+  await box.getByRole('button', { name: 'Send answers' }).click();
+  const plan = page.getByRole('region', { name: "The council's plan" });
+  await plan.getByRole('button', { name: 'Ask for changes' }).click();
+  await plan.getByLabel('What should change?').fill('Stack them');
+  await plan.getByRole('button', { name: 'Ask for changes' }).click();
+  await expect(plan).toContainText('Stacked: each island builds on the one before it.');
+  await plan.getByRole('button', { name: 'Approve' }).click();
+
+  await elder.getByRole('button', { name: 'Assemble the parties' }).click();
+  const assembly = page.getByRole('dialog', { name: 'Assemble the parties' });
+  const modes = assembly.getByRole('group', { name: 'How the stacked islands start' });
+  await expect(
+    modes.getByRole('radio', { name: /Each island when the one before is cleared/ }),
+  ).toBeChecked();
+  await modes.getByRole('radio', { name: /Start them all now/ }).check();
+  const first = assembly.getByRole('group', { name: 'I1 The redirect fix' });
+  await first.getByLabel('Hero class').selectOption('rogue');
+  await expect(first.getByLabel('Hero name')).toHaveValue('Rogue Vex');
+  await first.getByLabel('Gold cap in dollars').fill('lots');
+  await assembly.getByRole('button', { name: 'Start the campaign' }).click();
+  await expect(assembly.getByRole('alert')).toHaveText('"lots" isn\'t an amount of dollars.');
+  await first.getByLabel('Gold cap in dollars').fill('2.5');
+  await assembly.getByRole('group', { name: 'I2 The redirect test' }).getByLabel('No cap').check();
+  await page.screenshot({ path: 'test-results/party-assembly.png' });
+  await assembly.getByRole('button', { name: 'Start the campaign' }).click();
+
+  await expect.poll(() => probe(page, (p) => p.snapshot()?.campaign?.status)).toBe('active');
+  const snapshot = await probe(page, (p) => p.snapshot());
+  expect(snapshot?.campaign).toMatchObject({ branching: 'stacked', stackedStart: 'together' });
+  expect(snapshot?.heroes.map((h) => [h.name, h.classId])).toEqual([
+    ['Rogue Vex', 'rogue'],
+    ['Ranger Rowan', 'ranger'],
+  ]);
+  expect(snapshot?.islands[1]?.basedOn).toBe(snapshot?.islands[0]?.id);
   expect(errors).toEqual([]);
 });
 
