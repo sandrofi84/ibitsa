@@ -4,6 +4,8 @@ export const DEFAULT_SETTINGS: QuestSettings = {
   budgetMicroUsd: null,
   budget: 'native',
   stall: { testFailures: 4, fileEdits: 12, noProgressTurns: 6 },
+  maxParallel: 2,
+  campaignBudgetMicroUsd: null,
 };
 
 export function initialState(): CoreState {

@@ -43,14 +43,24 @@ export interface CampaignView {
   gold: Reading<MicroUsd>;
   /** Auto mode (#63): permissions inside the worktree and the sandbox are allowed without asking. */
   autoApprove: boolean;
+  /** How the islands branch (§5.3); separate for a quick quest. */
+  branching: 'separate' | 'stacked';
+  /** Stacked only: each island when the one before is cleared, or all at once (#121). */
+  stackedStart: 'cleared' | 'together' | null;
+  /** `ibitsa.campaign.budgetUsd` (§14.3); null for none. */
+  capMicroUsd: MicroUsd | null;
 }
 
 export interface IslandView {
   id: string;
   name: string;
   branch: string;
-  /** The hero's worktree: being created, there, or removed after the quest (#40). */
-  worktree: 'creating' | 'ready' | 'removed';
+  /** The hero's worktree: not started yet (#121), being created, there, or removed after the quest (#40). */
+  worktree: 'waiting' | 'creating' | 'ready' | 'removed';
+  /** Stacked: the island this one builds on (#121). */
+  basedOn: string | null;
+  /** Stacked, all at once: the branch it builds on has moved on and rebasing conflicted (#121). */
+  behind: boolean;
   taskPoints: TaskPointView[];
 }
 
@@ -73,8 +83,11 @@ export type ExecutionState =
   | { kind: 'resting' }
   /** What the hero is doing is in `HeroView.activity`. */
   | { kind: 'working' }
-  /** M4. */
-  | { kind: 'blocked' }
+  /**
+   * Can't start yet (#121): every parallel slot is taken, the island before it (stacked) isn't cleared,
+   * or its next task depends on a task on another island that isn't done.
+   */
+  | { kind: 'blocked'; reason: 'slot' | 'previousIsland' | 'dependency' }
   | { kind: 'submitted'; summary: string }
   | { kind: 'idle' }
   | { kind: 'traveling' };
@@ -128,6 +141,8 @@ export type NeedsYouItem =
       heroId: string;
       cap: MicroUsd;
       capEnforcement: 'native' | 'turnEnd';
+      /** `campaign` when the whole campaign's cap stopped the hero (§14.3, #121). */
+      scope?: 'hero' | 'campaign';
     }
   /** resumeHero or stopHero */
   | { kind: 'error'; id: string; heroId: string; message: string };

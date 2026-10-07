@@ -208,7 +208,11 @@ export class Runtime {
     };
     const { budgetCap, costReported } = this.options.adapter.capabilities;
     return {
-      ...user,
+      budgetMicroUsd: user.budgetMicroUsd,
+      stall: user.stall,
+      maxParallel: user.maxParallel ?? DEFAULT_SETTINGS.maxParallel,
+      campaignBudgetMicroUsd:
+        user.campaignBudgetMicroUsd ?? DEFAULT_SETTINGS.campaignBudgetMicroUsd,
       budget: budgetCap
         ? ('native' as const)
         : costReported
@@ -457,6 +461,20 @@ export class Runtime {
         this.sittingFor(effect.sittingId)?.close();
         if (this.sitting?.id === effect.sittingId) this.sitting = null;
         return;
+      case 'rebaseWorktree': {
+        const rebase = this.options.gameMaster.rebaseWorktree?.bind(this.options.gameMaster);
+        if (!rebase) return;
+        void rebase({ worktreePath: effect.worktreePath, onto: effect.onto })
+          .catch(() => 'conflict' as const)
+          .then((outcome) =>
+            this.input({
+              kind: 'gm',
+              t: this.t(),
+              event: { type: 'worktreeRebased', islandId: effect.islandId, outcome },
+            }),
+          );
+        return;
+      }
       case 'setTimer':
         this.arm(effect.timerId, effect.at);
         return;

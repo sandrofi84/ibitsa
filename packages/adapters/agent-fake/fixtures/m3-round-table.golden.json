@@ -10,6 +10,9 @@
           "title": "Add email sign-in",
           "status": "planning",
           "autoApprove": false,
+          "branching": "separate",
+          "stackedStart": null,
+          "capMicroUsd": null,
           "gold": {
             "kind": "exact",
             "value": 0
@@ -71,6 +74,9 @@
           "title": "Add email sign-in",
           "status": "planning",
           "autoApprove": false,
+          "branching": "separate",
+          "stackedStart": null,
+          "capMicroUsd": null,
           "gold": {
             "kind": "exact",
             "value": 0
@@ -178,6 +184,9 @@
           "title": "Add email sign-in",
           "status": "planning",
           "autoApprove": false,
+          "branching": "separate",
+          "stackedStart": null,
+          "capMicroUsd": null,
           "gold": {
             "kind": "exact",
             "value": 0
@@ -360,6 +369,9 @@
           "title": "Add email sign-in",
           "status": "planning",
           "autoApprove": false,
+          "branching": "separate",
+          "stackedStart": null,
+          "capMicroUsd": null,
           "gold": {
             "kind": "exact",
             "value": 0
@@ -631,6 +643,9 @@
           "title": "Add email sign-in",
           "status": "planning",
           "autoApprove": false,
+          "branching": "separate",
+          "stackedStart": null,
+          "capMicroUsd": null,
           "gold": {
             "kind": "exact",
             "value": 0
@@ -903,6 +918,9 @@
           "title": "Add email sign-in",
           "status": "planning",
           "autoApprove": false,
+          "branching": "separate",
+          "stackedStart": null,
+          "capMicroUsd": null,
           "gold": {
             "kind": "exact",
             "value": 0
@@ -1337,6 +1355,9 @@
       "title": "Add email sign-in",
       "status": "planning",
       "autoApprove": false,
+      "branching": "separate",
+      "stackedStart": null,
+      "capMicroUsd": null,
       "gold": {
         "kind": "exact",
         "value": 0

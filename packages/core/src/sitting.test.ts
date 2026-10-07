@@ -39,7 +39,15 @@ class Council {
   /** Sittings belong to a planning campaign (the elder's); convening without one is tested on its own. */
   state: CoreState = {
     ...initialState(),
-    campaign: { id: 'c0', title: 'Add sign-in', status: 'planning', autoApprove: false },
+    campaign: {
+      id: 'c0',
+      title: 'Add sign-in',
+      status: 'planning',
+      autoApprove: false,
+      branching: 'separate',
+      stackedStart: null,
+      baseRef: null,
+    },
   };
   cues: Cue[] = [];
   effects: Effect[] = [];

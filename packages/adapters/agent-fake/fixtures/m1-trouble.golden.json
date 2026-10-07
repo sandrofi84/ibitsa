@@ -142,6 +142,9 @@
           "title": "Make the date parser accept ISO week dates",
           "status": "active",
           "autoApprove": false,
+          "branching": "separate",
+          "stackedStart": null,
+          "capMicroUsd": null,
           "gold": {
             "kind": "unknown"
           }
@@ -154,6 +157,8 @@
             "name": "Make the date parser accept ISO week dates",
             "branch": "ibitsa/make-the-date-parser-accept-iso-week-dates",
             "worktree": "ready",
+            "basedOn": null,
+            "behind": false,
             "taskPoints": [
               {
                 "id": "t3",
@@ -197,6 +202,9 @@
           "title": "Make the date parser accept ISO week dates",
           "status": "active",
           "autoApprove": false,
+          "branching": "separate",
+          "stackedStart": null,
+          "capMicroUsd": null,
           "gold": {
             "kind": "exact",
             "value": 61000
@@ -210,6 +218,8 @@
             "name": "Make the date parser accept ISO week dates",
             "branch": "ibitsa/make-the-date-parser-accept-iso-week-dates",
             "worktree": "ready",
+            "basedOn": null,
+            "behind": false,
             "taskPoints": [
               {
                 "id": "t3",
@@ -264,6 +274,9 @@
           "title": "Make the date parser accept ISO week dates",
           "status": "active",
           "autoApprove": false,
+          "branching": "separate",
+          "stackedStart": null,
+          "capMicroUsd": null,
           "gold": {
             "kind": "exact",
             "value": 301500
@@ -277,6 +290,8 @@
             "name": "Make the date parser accept ISO week dates",
             "branch": "ibitsa/make-the-date-parser-accept-iso-week-dates",
             "worktree": "ready",
+            "basedOn": null,
+            "behind": false,
             "taskPoints": [
               {
                 "id": "t3",
@@ -331,6 +346,9 @@
           "title": "Make the date parser accept ISO week dates",
           "status": "active",
           "autoApprove": false,
+          "branching": "separate",
+          "stackedStart": null,
+          "capMicroUsd": null,
           "gold": {
             "kind": "exact",
             "value": 301500
@@ -344,6 +362,8 @@
             "name": "Make the date parser accept ISO week dates",
             "branch": "ibitsa/make-the-date-parser-accept-iso-week-dates",
             "worktree": "ready",
+            "basedOn": null,
+            "behind": false,
             "taskPoints": [
               {
                 "id": "t3",
@@ -392,6 +412,9 @@
           "title": "Make the date parser accept ISO week dates",
           "status": "active",
           "autoApprove": false,
+          "branching": "separate",
+          "stackedStart": null,
+          "capMicroUsd": null,
           "gold": {
             "kind": "exact",
             "value": 352000
@@ -405,6 +428,8 @@
             "name": "Make the date parser accept ISO week dates",
             "branch": "ibitsa/make-the-date-parser-accept-iso-week-dates",
             "worktree": "ready",
+            "basedOn": null,
+            "behind": false,
             "taskPoints": [
               {
                 "id": "t3",
@@ -450,6 +475,9 @@
       "title": "Make the date parser accept ISO week dates",
       "status": "active",
       "autoApprove": false,
+      "branching": "separate",
+      "stackedStart": null,
+      "capMicroUsd": null,
       "gold": {
         "kind": "exact",
         "value": 352000
@@ -463,6 +491,8 @@
         "name": "Make the date parser accept ISO week dates",
         "branch": "ibitsa/make-the-date-parser-accept-iso-week-dates",
         "worktree": "ready",
+        "basedOn": null,
+        "behind": false,
         "taskPoints": [
           {
             "id": "t3",

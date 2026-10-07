@@ -56,7 +56,15 @@ export class Elder {
     const title = Quest.title(command.task);
     if (state.campaign?.status === 'planning') state.campaign.title = title;
     else {
-      state.campaign = { id: newId(state, 'c'), title, status: 'planning', autoApprove: false };
+      state.campaign = {
+        id: newId(state, 'c'),
+        title,
+        status: 'planning',
+        autoApprove: false,
+        branching: 'separate',
+        stackedStart: null,
+        baseRef: null,
+      };
     }
     const elderId = newId(state, 'e');
     state.elder = {

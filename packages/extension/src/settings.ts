@@ -6,10 +6,17 @@ const DEFAULT_STALL = { testFailures: 4, fileEdits: 12, noProgressTurns: 6 };
 /** `ibitsa.*` settings → what the runtime logs before each quest. The budget is in dollars in settings. */
 export function readUserSettings(config: ConfigReader): UserSettings {
   const budgetUsd = config.get<number | null>('hero.budgetUsd');
+  const parallel = config.get<number>('parties.maxParallel');
+  const campaignUsd = config.get<number | null>('campaign.budgetUsd');
   return {
     budgetMicroUsd:
       typeof budgetUsd === 'number' && budgetUsd > 0 ? Math.round(budgetUsd * 1_000_000) : null,
     stall: DEFAULT_STALL,
+    maxParallel: typeof parallel === 'number' && parallel >= 1 ? Math.floor(parallel) : 2,
+    campaignBudgetMicroUsd:
+      typeof campaignUsd === 'number' && campaignUsd > 0
+        ? Math.round(campaignUsd * 1_000_000)
+        : null,
   };
 }
 

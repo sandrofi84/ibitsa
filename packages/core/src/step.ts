@@ -1,4 +1,5 @@
 import type { Command } from '@ibitsa/protocol';
+import { Campaign } from './campaign';
 import { Elder } from './elder';
 import { Hero } from './hero';
 import type { CoreInput, GameMasterEvent } from './inputs.types';
@@ -6,6 +7,7 @@ import { NeedsYou } from './needs-you';
 import { Outbox } from './outbox';
 import { Quest } from './quest';
 import { Sitting } from './sitting';
+import { DEFAULT_SETTINGS } from './state';
 import type { CoreState } from './state.types';
 import type { StepContext, StepResult } from './step.types';
 
@@ -41,6 +43,9 @@ export function step(state: CoreState, input: CoreInput): StepResult {
       break;
     }
   }
+  // A campaign with several parties: start what can start, and the campaign's cap (#121).
+  new Campaign(ctx).schedule();
+  new Campaign(ctx).checkCap();
   return { state: draft, cues: outbox.cues, effects: outbox.effects };
 }
 
@@ -72,6 +77,12 @@ function command(ctx: StepContext, command: Command): void {
       return;
     case 'startPlannedQuest':
       quest.startPlanned(command);
+      return;
+    case 'startCampaign':
+      new Campaign(ctx).start(command);
+      return;
+    case 'raiseCampaignBudget':
+      new Campaign(ctx).raiseCap(command);
       return;
     case 'finishQuest':
       quest.finish(command.commandId);
@@ -151,7 +162,8 @@ function gameMaster(ctx: StepContext, event: GameMasterEvent): void {
   switch (event.type) {
     case 'questSettings': {
       const { type: _type, ...settings } = event;
-      ctx.state.settings = settings;
+      // Logs from before a setting existed get its default.
+      ctx.state.settings = { ...DEFAULT_SETTINGS, ...settings };
       return;
     }
     case 'worktreeCreated':
@@ -176,6 +188,9 @@ function gameMaster(ctx: StepContext, event: GameMasterEvent): void {
       return;
     case 'worktreeRemoveFailed':
       ctx.outbox.reject(event.commandId, event.reason);
+      return;
+    case 'worktreeRebased':
+      new Campaign(ctx).rebased(event);
       return;
     case 'councilVersionNoted':
       new Sitting(ctx).versionNoted(event);

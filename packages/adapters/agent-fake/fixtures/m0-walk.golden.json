@@ -98,6 +98,9 @@
           "title": "Fix the login redirect",
           "status": "active",
           "autoApprove": false,
+          "branching": "separate",
+          "stackedStart": null,
+          "capMicroUsd": null,
           "gold": {
             "kind": "unknown"
           }
@@ -110,6 +113,8 @@
             "name": "Fix the login redirect",
             "branch": "ibitsa/fix-the-login-redirect",
             "worktree": "creating",
+            "basedOn": null,
+            "behind": false,
             "taskPoints": [
               {
                 "id": "t3",
@@ -151,6 +156,9 @@
           "title": "Fix the login redirect",
           "status": "active",
           "autoApprove": false,
+          "branching": "separate",
+          "stackedStart": null,
+          "capMicroUsd": null,
           "gold": {
             "kind": "unknown"
           }
@@ -163,6 +171,8 @@
             "name": "Fix the login redirect",
             "branch": "ibitsa/fix-the-login-redirect",
             "worktree": "ready",
+            "basedOn": null,
+            "behind": false,
             "taskPoints": [
               {
                 "id": "t3",
@@ -206,6 +216,9 @@
           "title": "Fix the login redirect",
           "status": "active",
           "autoApprove": false,
+          "branching": "separate",
+          "stackedStart": null,
+          "capMicroUsd": null,
           "gold": {
             "kind": "exact",
             "value": 42000
@@ -219,6 +232,8 @@
             "name": "Fix the login redirect",
             "branch": "ibitsa/fix-the-login-redirect",
             "worktree": "ready",
+            "basedOn": null,
+            "behind": false,
             "taskPoints": [
               {
                 "id": "t3",
@@ -267,6 +282,9 @@
           "title": "Fix the login redirect",
           "status": "active",
           "autoApprove": false,
+          "branching": "separate",
+          "stackedStart": null,
+          "capMicroUsd": null,
           "gold": {
             "kind": "exact",
             "value": 97000
@@ -280,6 +298,8 @@
             "name": "Fix the login redirect",
             "branch": "ibitsa/fix-the-login-redirect",
             "worktree": "ready",
+            "basedOn": null,
+            "behind": false,
             "taskPoints": [
               {
                 "id": "t3",
@@ -336,6 +356,9 @@
           "title": "Fix the login redirect",
           "status": "active",
           "autoApprove": false,
+          "branching": "separate",
+          "stackedStart": null,
+          "capMicroUsd": null,
           "gold": {
             "kind": "exact",
             "value": 108000
@@ -349,6 +372,8 @@
             "name": "Fix the login redirect",
             "branch": "ibitsa/fix-the-login-redirect",
             "worktree": "ready",
+            "basedOn": null,
+            "behind": false,
             "taskPoints": [
               {
                 "id": "t3",
@@ -394,6 +419,9 @@
       "title": "Fix the login redirect",
       "status": "active",
       "autoApprove": false,
+      "branching": "separate",
+      "stackedStart": null,
+      "capMicroUsd": null,
       "gold": {
         "kind": "exact",
         "value": 108000
@@ -407,6 +435,8 @@
         "name": "Fix the login redirect",
         "branch": "ibitsa/fix-the-login-redirect",
         "worktree": "ready",
+        "basedOn": null,
+        "behind": false,
         "taskPoints": [
           {
             "id": "t3",

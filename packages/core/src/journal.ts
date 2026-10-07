@@ -93,6 +93,11 @@ export class Journal {
           return line(null, { kind: 'event', text: `You asked the elder: ${title(c.task)}` });
         case 'startQuest':
           return line(null, { kind: 'event', text: `Quest started: ${title(c.description)}` });
+        case 'startCampaign':
+          return line(null, {
+            kind: 'event',
+            text: `The campaign begins: ${c.parties.length} ${c.parties.length === 1 ? 'party' : 'parties'}.`,
+          });
         case 'startPlannedQuest':
           return line(null, { kind: 'event', text: "The council's plan begins." });
         case 'approvePlan':
@@ -167,6 +172,13 @@ export class Journal {
               ? 'The submit check passed.'
               : `The submit check failed: ${e.reason ?? 'no reason given'}`,
           });
+        case 'worktreeRebased':
+          return e.outcome === 'conflict'
+            ? line(null, {
+                kind: 'event',
+                text: 'Rebasing onto the island before conflicted; the hero was asked to resolve it.',
+              })
+            : [];
         case 'runtimeRestarted':
           return line(firstHero, { kind: 'event', text: 'VS Code reloaded; the session stopped.' });
         case 'worktreeRemoved':

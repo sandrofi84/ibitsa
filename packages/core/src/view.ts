@@ -13,7 +13,13 @@ export function view(state: CoreState): Snapshot {
   const ctx = { state, outbox, needsYou: new NeedsYou({ state, outbox }), t: 0 };
   return {
     campaign: state.campaign && {
-      ...state.campaign,
+      id: state.campaign.id,
+      title: state.campaign.title,
+      status: state.campaign.status,
+      autoApprove: state.campaign.autoApprove,
+      branching: state.campaign.branching,
+      stackedStart: state.campaign.stackedStart,
+      capMicroUsd: state.settings.campaignBudgetMicroUsd,
       gold: Quest.totalGold([
         ...(state.elder && state.elder.gold.kind !== 'unknown' ? [state.elder] : []),
         ...state.heroes,
@@ -25,7 +31,15 @@ export function view(state: CoreState): Snapshot {
       id: i.id,
       name: i.name,
       branch: i.branch,
-      worktree: i.worktreeRemoved ? 'removed' : i.worktreePath ? 'ready' : 'creating',
+      worktree: i.worktreeRemoved
+        ? 'removed'
+        : i.worktreePath
+          ? 'ready'
+          : i.launched
+            ? 'creating'
+            : 'waiting',
+      basedOn: i.basedOn,
+      behind: i.behind,
       taskPoints: i.taskPoints.map(({ id, title, state }) => ({ id, title, state })),
     })),
     heroes: state.heroes.map((record) => new Hero({ record, ctx }).view()),

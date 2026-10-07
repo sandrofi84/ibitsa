@@ -1666,3 +1666,42 @@ describe('council tallies (#106)', () => {
     expect(runtime.exportTallies('csv').split('\n')[1]).toBe('');
   });
 });
+
+describe('rebasing a stacked island (#121)', () => {
+  it("asks the game master to rebase and logs the outcome; does nothing when it can't", async () => {
+    const env = await arrived();
+    const calls: unknown[] = [];
+    Object.assign(env.gameMaster, {
+      rebaseWorktree: async (r: unknown) => {
+        calls.push(r);
+        return 'conflict' as const;
+      },
+    });
+    const perform = (env.runtime as unknown as { perform(e: unknown): void }).perform.bind(
+      env.runtime,
+    );
+    perform({ type: 'rebaseWorktree', islandId: 'i2', worktreePath: '/wt/x', onto: 'ibitsa/a' });
+    await flush();
+    expect(calls).toEqual([{ worktreePath: '/wt/x', onto: 'ibitsa/a' }]);
+    const rebased = logOf(env.storageDir).records.find(
+      (r) => r.kind === 'gm' && r.event.type === 'worktreeRebased',
+    );
+    expect(rebased?.kind === 'gm' && rebased.event).toEqual({
+      type: 'worktreeRebased',
+      islandId: 'i2',
+      outcome: 'conflict',
+    });
+    Object.assign(env.gameMaster, {
+      rebaseWorktree: async () => Promise.reject(new Error('git broke')),
+    });
+    perform({ type: 'rebaseWorktree', islandId: 'i2', worktreePath: '/wt/x', onto: 'ibitsa/a' });
+    await flush();
+    const plain = setup();
+    (plain.runtime as unknown as { perform(e: unknown): void }).perform({
+      type: 'rebaseWorktree',
+      islandId: 'i2',
+      worktreePath: '/wt/x',
+      onto: 'ibitsa/a',
+    });
+  });
+});

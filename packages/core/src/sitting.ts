@@ -78,6 +78,9 @@ export class Sitting {
         title: Quest.title(command.task),
         status: 'planning',
         autoApprove: false,
+        branching: 'separate',
+        stackedStart: null,
+        baseRef: null,
       };
     }
     const efforts = command.councillorEfforts ?? {};

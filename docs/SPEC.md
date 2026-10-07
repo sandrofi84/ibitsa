@@ -250,7 +250,8 @@ Built so round table and separate chambers, and later changes to either, can be 
 
 ### 5.1 Composition
 - One party per worktree/branch. The plan groups its tasks into **islands** (one worktree each) and picks the **branching** strategy (§5.3, M4 planning).
-- **Parallel parties:** at most `ibitsa.parties.maxParallel` (default 2) work at once; further islands wait for a free slot and start by themselves. A hero whose task depends on a task on another island is **blocked** (padlock, no spend) until that island is cleared, then starts by itself when a slot is free.
+- **Parallel parties:** at most `ibitsa.parties.maxParallel` (default 2) work at once; further islands wait for a free slot and start by themselves, in plan order. A party holds its slot from its worktree until its last task is submitted.
+- **Blocked** (#121), with a reason: waiting for a slot, for the island before it (stacked), or for a **task** on another island to be done (until reviews, M5: submitted). An island whose first task waits doesn't start; a hero whose next task waits is held after submitting the one before and gets it, as a message, once the other task is done. Blocked heroes have no session running and spend nothing. Core schedules this after every step, so nothing that frees a slot or finishes a task is missed.
 - **One lead hero writes to a worktree.** Parallel help inside a task uses the lead's own subagents, or the plan splits it into another worktree/party.
 - Councillors who "join the party" are the ones who will review that party's work. The same councillor class may join several parties (each review is its own instance).
 
@@ -871,7 +872,8 @@ Settled in M4 planning.
 - **Stacked start:** your choice in party assembly (§5.3).
 - **Several heroes in the UI:** the hero pane shows the selected hero (click its token, island or tab); the collapsed tab lists every hero with a state dot; `@<hero name>` targets one, `@all` every hero.
 - **Ending:** **Finish** once every island is submitted; **Abandon** ends everything; parties can be stopped one by one; worktrees are removed per island.
-- **Campaign cap:** `ibitsa.campaign.budgetUsd` (empty by default): when every hero plus the elder and council together reach it, every hero stops and asks.
+- **Campaign cap:** `ibitsa.campaign.budgetUsd` (empty by default): when every hero plus the elder and council together reach it, every working hero stops (interrupted) and asks, as an out-of-gold item marked as the campaign's; raising it (`raiseCampaignBudget`) lets them carry on. It counts what has been reported, so a hero that hasn't reported yet counts as nothing spent, and it's checked at each cost report (it may overshoot by a turn).
+- **Starting:** `startCampaign` (#121) carries out the approved plan: one island and one hero per plan island (class, name and optional gold pouch per party), the base branch, and for stacked plans the start mode. `startPlannedQuest` (one hero, every task) stays until party assembly (#123) replaces it.
 
 ## 15. Open questions
 1. Name registration: domains (ibitsa.com, ibitsa.dev, questforibitsa.com), GitHub org, npm scope, Marketplace/Open VSX publisher; trademark search (EUIPO TMview, USPTO). Initial checks found no conflicting software use.

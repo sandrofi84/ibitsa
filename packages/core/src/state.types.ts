@@ -27,6 +27,10 @@ export interface QuestSettings {
   budget: 'native' | 'turnEnd' | 'none';
   /** Stall thresholds (spec §10 item 11). */
   stall: { testFailures: number; fileEdits: number; noProgressTurns: number };
+  /** How many parties may work at once (§5.1, #121). */
+  maxParallel: number;
+  /** The whole campaign's cap (§14.3); `null` = none. */
+  campaignBudgetMicroUsd: number | null;
 }
 
 /** Core's own state. Plain JSON so it can be cloned, compared and rebuilt by replay. */
@@ -52,6 +56,11 @@ export interface Campaign {
   status: 'planning' | 'active' | 'finished' | 'abandoned';
   /** Auto mode (#63): permissions inside the hard limits are allowed without asking. */
   autoApprove: boolean;
+  /** How the islands branch (§5.3, #121). */
+  branching: 'separate' | 'stacked';
+  stackedStart: 'cleared' | 'together' | null;
+  /** The base the first (or every separate) island branches from; null before any island. */
+  baseRef: string | null;
 }
 
 export interface Island {
@@ -62,6 +71,12 @@ export interface Island {
   worktreePath: string | null;
   /** Set once "Remove worktree" succeeds; `worktreePath` is null both before creation and after. */
   worktreeRemoved: boolean;
+  /** Whether its worktree has been asked for: an island waits for a slot, a dependency or (stacked) the one before (#121). */
+  launched: boolean;
+  /** Stacked: the island it branches from (#121). */
+  basedOn: string | null;
+  /** Stacked, all at once: rebasing onto `basedOn` conflicted and the hero was asked to resolve it. */
+  behind: boolean;
   /** `description` is the task text the hero is started with; `briefing` follows it, from the elder's brief. */
   taskPoints: {
     id: string;
@@ -69,6 +84,9 @@ export interface Island {
     description: string;
     briefing?: string;
     state: TaskPointState;
+    /** The plan task it stands for, and the plan tasks it waits on (#121). */
+    planTaskId?: string;
+    dependsOn?: string[];
   }[];
 }
 
@@ -103,6 +121,10 @@ export interface HeroRecord {
   sessionId: string | null;
   /** "Always allow for this quest" rules (#62), passed again when the session resumes. */
   allowRules: string[];
+  /** Plan tasks on other islands its current task waits on; it gets the task once they're done (#121). */
+  heldFor: string[];
+  /** Stopped by the campaign's cap rather than its own pouch (#121). */
+  campaignCapped: boolean;
   /** False after a restart until the session is resumed. */
   sessionLive: boolean;
   stalled: string | null;
@@ -190,6 +212,7 @@ export type PendingItem =
       heroId: string;
       cap: MicroUsd;
       capEnforcement: 'native' | 'turnEnd';
+      scope?: 'hero' | 'campaign';
     }
   | { kind: 'error'; id: string; heroId: string; message: string };
 
