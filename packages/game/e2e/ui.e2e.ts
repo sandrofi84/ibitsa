@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { openWelcome } from './home';
 
 // The New Quest form, the onboarding card and the hero pane (#37), against the real core and a
 // scripted fake runtime (`?fixture=live`).
@@ -27,6 +28,7 @@ interface Probe {
     sitting: { mode: string; comparisonOf: string | null; rating: unknown } | null;
   } | null;
   hut(): { decisions: number } | null;
+  map(): { startScreen?: boolean; sunk?: boolean } | null;
   sent(): { type: string; parties?: unknown }[];
   hostRequests(): { type: string; key?: string }[];
   hero: {
@@ -59,10 +61,10 @@ function watchErrors(page: Page): string[] {
 test('start a quest, message the hero, stop, and finish', async ({ page }) => {
   const errors = watchErrors(page);
   await page.goto('/?fixture=live');
-  await page.getByRole('button', { name: 'New quest' }).click();
-  const form = page.getByRole('dialog', { name: 'New quest' });
+  await openWelcome(page);
+  const form = page.getByRole('dialog', { name: 'Welcome' });
   await form.getByLabel('Task').fill('Fix the login redirect\nIt loops forever.');
-  await page.getByRole('button', { name: 'Skip the elder' }).click();
+  await page.getByRole('button', { name: 'I know the way' }).click();
   await expect(form.getByText('2 uncommitted changes')).toBeVisible();
   await form.getByLabel('Hero class').selectOption('rogue');
   await expect(form.getByLabel('Hero name')).toHaveValue('Rogue Vex');
@@ -74,7 +76,8 @@ test('start a quest, message the hero, stop, and finish', async ({ page }) => {
   const pane = page.getByRole('region', { name: 'Hero' });
   await expect(pane.getByRole('heading', { name: 'Rogue Vex' })).toBeVisible();
   await expect(pane).toContainText('Fix the login redirect');
-  await expect(page.getByRole('button', { name: 'New quest' })).toBeHidden();
+  // A quest runs: Home Village no longer shows the start screen's labels (#180).
+  await expect.poll(() => probe(page, (p) => p.map()?.startScreen)).toBe(false);
   await expect.poll(() => heroState(page)).toBe('idle');
 
   await pane.getByLabel('Message to the hero').fill('Add a test for it');
@@ -94,21 +97,26 @@ test('start a quest, message the hero, stop, and finish', async ({ page }) => {
     'Worktree removed. The branch ibitsa/fix-the-login-redirect is kept.',
   );
   await expect(pane.getByRole('button', { name: /worktree/ })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'New quest' })).toBeVisible();
+  // The quest's island has sunk and Home Village is ready for the next search (#180).
+  await expect.poll(() => probe(page, (p) => p.map()?.startScreen)).toBe(true);
+  await expect.poll(() => probe(page, (p) => p.map()?.sunk)).toBe(true);
   expect(errors).toEqual([]);
 });
 
 test('the form and the pane work from the keyboard alone', async ({ page }) => {
   await page.goto('/?fixture=live');
-  const opener = page.getByRole('button', { name: 'New quest' });
-  await expect(opener).toBeVisible();
-  await opener.focus();
-  await page.keyboard.press('Enter');
+  // "Ibitsa: New Quest" from the Command Palette opens the council's welcome (#180).
+  await page.evaluate(() =>
+    (window as unknown as { __ibitsa: { hostEvent(e: unknown): void } }).__ibitsa.hostEvent({
+      channel: 'host',
+      type: 'openNewQuest',
+    }),
+  );
   await expect(page.getByLabel('Task')).toBeFocused();
   await page.keyboard.type('Tidy the README');
-  // Task → Ask the elder → Skip the elder, which moves on to the hero's class; then name → branch → Start.
+  // Task → Help me find it → I know the way, which moves on to the hero's class; then name → branch → Start.
   for (let i = 0; i < 2; i++) await page.keyboard.press('Tab');
-  await expect(page.getByRole('button', { name: 'Skip the elder' })).toBeFocused();
+  await expect(page.getByRole('button', { name: 'I know the way' })).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page.getByLabel('Hero class')).toBeFocused();
   for (let i = 0; i < 3; i++) await page.keyboard.press('Tab');
@@ -139,10 +147,10 @@ test('without credentials the onboarding card comes first; a rejected key says w
   page,
 }) => {
   await page.goto('/?fixture=live&credentials=none');
-  await page.getByRole('button', { name: 'New quest' }).click();
-  const dialog = page.getByRole('dialog', { name: 'New quest' });
+  await openWelcome(page);
+  const dialog = page.getByRole('dialog', { name: 'Welcome' });
   await dialog.getByLabel('Task').fill('Fix the login redirect');
-  await page.getByRole('button', { name: 'Skip the elder' }).click();
+  await page.getByRole('button', { name: 'I know the way' }).click();
   await dialog.getByRole('button', { name: 'Start quest' }).click();
 
   await expect(
@@ -174,9 +182,9 @@ test('the hero pane docks right, collapses to a tab, and opens when you click th
   page,
 }) => {
   await page.goto('/?fixture=live');
-  await page.getByRole('button', { name: 'New quest' }).click();
+  await openWelcome(page);
   await page.getByLabel('Task').fill('Tidy the README');
-  await page.getByRole('button', { name: 'Skip the elder' }).click();
+  await page.getByRole('button', { name: 'I know the way' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   await expect.poll(() => heroState(page)).toBe('idle');
 
@@ -212,9 +220,9 @@ test('the hero pane docks right, collapses to a tab, and opens when you click th
 test('nothing overlaps at a larger panel size', async ({ page }) => {
   await page.setViewportSize({ width: 1400, height: 900 });
   await page.goto('/?fixture=live');
-  await page.getByRole('button', { name: 'New quest' }).click();
+  await openWelcome(page);
   await page.getByLabel('Task').fill('Tidy the README');
-  await page.getByRole('button', { name: 'Skip the elder' }).click();
+  await page.getByRole('button', { name: 'I know the way' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   await expect.poll(() => heroState(page)).toBe('idle');
   await page.screenshot({ path: 'test-results/ui-pane-1400.png' });
@@ -226,9 +234,9 @@ test('speech bubbles: a message excerpt that fades, then "Ready for review!" unt
   page,
 }) => {
   await page.goto('/?fixture=live');
-  await page.getByRole('button', { name: 'New quest' }).click();
+  await openWelcome(page);
   await page.getByLabel('Task').fill('Tidy the README');
-  await page.getByRole('button', { name: 'Skip the elder' }).click();
+  await page.getByRole('button', { name: 'I know the way' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   const speech = () => probe(page, (p) => p.hero.speech());
 
@@ -264,9 +272,9 @@ test('the journal lists what happened, newest last, and stays open across collap
   page,
 }) => {
   await page.goto('/?fixture=live');
-  await page.getByRole('button', { name: 'New quest' }).click();
+  await openWelcome(page);
   await page.getByLabel('Task').fill('Tidy the README');
-  await page.getByRole('button', { name: 'Skip the elder' }).click();
+  await page.getByRole('button', { name: 'I know the way' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   await expect.poll(() => heroState(page)).toBe('idle');
 
@@ -306,9 +314,9 @@ test('always allow: for this quest, or in this project with a way to take it bac
   page,
 }) => {
   await page.goto('/?fixture=live');
-  await page.getByRole('button', { name: 'New quest' }).click();
+  await openWelcome(page);
   await page.getByLabel('Task').fill('Tidy the README');
-  await page.getByRole('button', { name: 'Skip the elder' }).click();
+  await page.getByRole('button', { name: 'I know the way' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   await expect.poll(() => heroState(page)).toBe('idle');
   const pane = page.getByRole('region', { name: 'Hero' });
@@ -340,9 +348,9 @@ test('auto mode allows the hero without asking, says so, and asks again once off
   page,
 }) => {
   await page.goto('/?fixture=live');
-  await page.getByRole('button', { name: 'New quest' }).click();
+  await openWelcome(page);
   await page.getByLabel('Task').fill('Tidy the README');
-  await page.getByRole('button', { name: 'Skip the elder' }).click();
+  await page.getByRole('button', { name: 'I know the way' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   await expect.poll(() => heroState(page)).toBe('idle');
   const pane = page.getByRole('region', { name: 'Hero' });
@@ -371,9 +379,9 @@ test('auto mode allows the hero without asking, says so, and asks again once off
 
 test('without a sandbox, turning auto mode on asks once more (#63)', async ({ page }) => {
   await page.goto('/?fixture=live&sandbox=none');
-  await page.getByRole('button', { name: 'New quest' }).click();
+  await openWelcome(page);
   await page.getByLabel('Task').fill('Tidy the README');
-  await page.getByRole('button', { name: 'Skip the elder' }).click();
+  await page.getByRole('button', { name: 'I know the way' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   await expect.poll(() => heroState(page)).toBe('idle');
   const pane = page.getByRole('region', { name: 'Hero' });
@@ -390,9 +398,9 @@ test('rest compacts the session: the hero rests, then waits for orders again (#8
   page,
 }) => {
   await page.goto('/?fixture=live');
-  await page.getByRole('button', { name: 'New quest' }).click();
+  await openWelcome(page);
   await page.getByLabel('Task').fill('Tidy the README');
-  await page.getByRole('button', { name: 'Skip the elder' }).click();
+  await page.getByRole('button', { name: 'I know the way' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   await expect.poll(() => heroState(page)).toBe('idle');
   const pane = page.getByRole('region', { name: 'Hero' });
@@ -406,16 +414,17 @@ test('rest compacts the session: the hero rests, then waits for orders again (#8
 test('the elder researches first, then its brief starts a quick quest (#101)', async ({ page }) => {
   const errors = watchErrors(page);
   await page.goto('/?fixture=live');
-  await page.getByRole('button', { name: 'New quest' }).click();
-  const form = page.getByRole('dialog', { name: 'New quest' });
+  await openWelcome(page);
+  const form = page.getByRole('dialog', { name: 'Welcome' });
   await expect(form.getByLabel('Hero class')).toBeHidden();
   await form.getByLabel('Task').fill('Fix the login redirect\nIt loops forever.');
-  await form.getByRole('button', { name: 'Ask the elder' }).click();
+  await form.getByRole('button', { name: 'Help me find it' }).click();
   await expect(form).toBeHidden();
 
+  // While it works the panel says "The elder searches the old charts…" (checked in the failed-brief
+  // test: this scripted research can finish before a look).
   const elder = page.getByRole('region', { name: 'Elder' });
-  await expect(elder).toContainText('Researching your task…');
-  await expect(page.getByRole('button', { name: 'New quest' })).toBeHidden();
+  await expect(elder).toContainText("The elder's findings");
   await expect(elder.getByRole('heading', { name: 'Files' })).toBeVisible();
   await expect(elder).toContainText('A quick quest will do. One small, clear change.');
   await expect(elder).toContainText('src/app.ts:1-40 where the change goes');
@@ -438,19 +447,19 @@ test('a failed brief offers asking again, a quick quest anyway, or abandoning (#
   page,
 }) => {
   await page.goto('/?fixture=live');
-  await page.getByRole('button', { name: 'New quest' }).click();
+  await openWelcome(page);
   await page.getByLabel('Task').fill('Make it fail');
-  await page.getByRole('button', { name: 'Ask the elder' }).click();
+  await page.getByRole('button', { name: 'Help me find it' }).click();
   const elder = page.getByRole('region', { name: 'Elder' });
   await expect(elder.getByRole('alert')).toHaveText(
     'The elder ran out of gold before finishing the brief.',
   );
   await elder.getByRole('button', { name: 'Ask again' }).click();
-  await expect(elder).toContainText('Researching your task…');
+  await expect(elder).toContainText('The elder searches the old charts…');
   await expect(elder.getByRole('alert')).toBeVisible();
   await elder.getByRole('button', { name: 'Abandon' }).click();
   await expect(elder).toBeHidden();
-  await expect(page.getByRole('button', { name: 'New quest' })).toBeVisible();
+  await expect.poll(() => probe(page, (p) => p.map()?.startScreen)).toBe(true);
 });
 
 test('the brief convenes a round table; its approved plan becomes a quest, task by task (#103, #104)', async ({
@@ -458,9 +467,9 @@ test('the brief convenes a round table; its approved plan becomes a quest, task 
 }) => {
   const errors = watchErrors(page);
   await page.goto('/?fixture=live');
-  await page.getByRole('button', { name: 'New quest' }).click();
+  await openWelcome(page);
   await page.getByLabel('Task').fill('Fix the login redirect');
-  await page.getByRole('button', { name: 'Ask the elder' }).click();
+  await page.getByRole('button', { name: 'Help me find it' }).click();
   const elder = page.getByRole('region', { name: 'Elder' });
   await elder.getByRole('button', { name: 'Convene council' }).click();
 
@@ -579,9 +588,9 @@ test('the brief convenes a round table; its approved plan becomes a quest, task 
 
 test("the campaign's cap stops the hero and can be raised (#126)", async ({ page }) => {
   await page.goto('/?fixture=live&campaignCap=0.04');
-  await page.getByRole('button', { name: 'New quest' }).click();
+  await openWelcome(page);
   await page.getByLabel('Task').fill('Tidy the README');
-  await page.getByRole('button', { name: 'Skip the elder' }).click();
+  await page.getByRole('button', { name: 'I know the way' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   await expect.poll(() => heroState(page)).toBe('idle');
   expect(await probe(page, (p) => p.snapshot()?.campaign?.capMicroUsd)).toBe(40_000);
@@ -604,9 +613,9 @@ test('party assembly: a stacked plan, its heroes, and how its islands start (#12
 }) => {
   const errors = watchErrors(page);
   await page.goto('/?fixture=live');
-  await page.getByRole('button', { name: 'New quest' }).click();
+  await openWelcome(page);
   await page.getByLabel('Task').fill('Fix the login redirect');
-  await page.getByRole('button', { name: 'Ask the elder' }).click();
+  await page.getByRole('button', { name: 'Help me find it' }).click();
   const elder = page.getByRole('region', { name: 'Elder' });
   await elder.getByRole('button', { name: 'Convene council' }).click();
   await page
@@ -657,9 +666,9 @@ test('separate chambers: an effort per councillor, the study stage, then the que
 }) => {
   const errors = watchErrors(page);
   await page.goto('/?fixture=live');
-  await page.getByRole('button', { name: 'New quest' }).click();
+  await openWelcome(page);
   await page.getByLabel('Task').fill('Fix the login redirect');
-  await page.getByRole('button', { name: 'Ask the elder' }).click();
+  await page.getByRole('button', { name: 'Help me find it' }).click();
   const elder = page.getByRole('region', { name: 'Elder' });
   await elder.getByRole('button', { name: 'Convene council' }).click();
 
@@ -694,9 +703,9 @@ test('after a sitting: rate the council, then convene it the other way to compar
 }) => {
   const errors = watchErrors(page);
   await page.goto('/?fixture=live');
-  await page.getByRole('button', { name: 'New quest' }).click();
+  await openWelcome(page);
   await page.getByLabel('Task').fill('Fix the login redirect');
-  await page.getByRole('button', { name: 'Ask the elder' }).click();
+  await page.getByRole('button', { name: 'Help me find it' }).click();
   const elder = page.getByRole('region', { name: 'Elder' });
   await elder.getByRole('button', { name: 'Convene council' }).click();
   await page
@@ -737,9 +746,9 @@ test('the elder names related campaigns and suggests starting the kept council f
   page,
 }) => {
   await page.goto('/?fixture=live&kept=1');
-  await page.getByRole('button', { name: 'New quest' }).click();
+  await openWelcome(page);
   await page.getByLabel('Task').fill('Fix the login redirect');
-  await page.getByRole('button', { name: 'Ask the elder' }).click();
+  await page.getByRole('button', { name: 'Help me find it' }).click();
   const elder = page.getByRole('region', { name: 'Elder' });
   await expect(elder.getByRole('heading', { name: 'Related campaigns' })).toBeVisible();
   await expect(elder).toContainText('Slugs It touched the same router.');

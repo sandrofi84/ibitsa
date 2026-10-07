@@ -101,6 +101,10 @@ export function mountPartyAssembly({
       el('h2', { text: 'Assemble the parties' }),
       el('p', {
         className: 'note',
+        text: 'The council charted these possible locations of Ibitsa. Who sets out for each?',
+      }),
+      el('p', {
+        className: 'note',
         text: `${branching === 'stacked' ? 'Stacked: each island builds on the one before.' : 'Separate: every island branches from the base.'} Up to ${parallel} ${parallel === 1 ? 'party works' : 'parties work'} at once; the others wait and start by themselves.`,
       }),
       ...rows.map((r) => r.box),

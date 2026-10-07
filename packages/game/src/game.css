@@ -278,26 +278,6 @@ body {
   color: #f2c230;
 }
 
-/* ---------- New quest button ---------- */
-
-.new-quest-button {
-  position: fixed;
-  top: 8px;
-  left: 12px;
-  font:
-    13px / 1.4 system-ui,
-    sans-serif;
-  padding: 4px 12px;
-  border: 1px solid #5e3b1c;
-  background: #efe0b8;
-  border-radius: 3px;
-  cursor: pointer;
-}
-
-.new-quest-button:focus-visible {
-  outline: 2px solid #1a1420;
-}
-
 /* ---------- New Quest dialog and onboarding card ---------- */
 
 .new-quest {
@@ -930,9 +910,8 @@ dialog.new-action {
 
 /* ---------- Council dialogue (#102) ---------- */
 
-/* The command bar and New quest have nothing to do in the hut; the dialogue box takes their place. */
-body.in-hut .command-bar,
-body.in-hut .new-quest-button {
+/* The command bar has nothing to do in the hut; the dialogue box takes its place. */
+body.in-hut .command-bar {
   display: none;
 }
 
@@ -1899,4 +1878,26 @@ body.in-hut:has(.council-chamber:not([hidden])) .needs-you {
 
 .guild-hall .sound-levels label {
   min-width: 60px;
+}
+
+/* The council's welcome (§7.1 screen 9, #180): the New Quest dialog in the council's dialogue frame. */
+.new-quest.council-welcome {
+  border: 3px solid #5a3e1c;
+  box-shadow: 0 0 0 2px #1a1420;
+}
+
+.council-welcome .elder-speech {
+  margin: 0 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed #8a6a3a;
+}
+
+.council-welcome .elder-speech p {
+  margin: 0 0 2px;
+  font-style: italic;
+}
+
+.council-welcome .elder-speech .speaker {
+  font-style: normal;
+  font-weight: bold;
 }

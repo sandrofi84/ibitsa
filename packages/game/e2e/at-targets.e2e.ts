@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { openWelcome } from './home';
 
 // @ targets and file references in the command bar (#83), against the live standalone mode, whose
 // worktree pretends to hold README.md, package.json, src/app.ts, src/auth/… and a test.
@@ -14,9 +15,9 @@ const heroState = (page: Page) =>
 
 async function questRunning(page: Page): Promise<void> {
   await page.goto('/?fixture=live');
-  await page.getByRole('button', { name: 'New quest' }).click();
+  await openWelcome(page);
   await page.getByLabel('Task').fill('Tidy the README');
-  await page.getByRole('button', { name: 'Skip the elder' }).click();
+  await page.getByRole('button', { name: 'I know the way' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   await expect.poll(() => heroState(page)).toBe('idle');
 }

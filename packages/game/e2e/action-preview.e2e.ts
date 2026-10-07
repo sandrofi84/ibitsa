@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { openWelcome } from './home';
 
 // The action preview (#85): see what an action sends, and edit it for one message.
 
@@ -17,9 +18,9 @@ const heroState = (page: Page) => probe(page, (p) => p.snapshot()?.heroes[0]?.st
 
 test('preview an action, edit it, and send the edited text', async ({ page }) => {
   await page.goto('/?fixture=live');
-  await page.getByRole('button', { name: 'New quest' }).click();
+  await openWelcome(page);
   await page.getByLabel('Task').fill('Tidy the README');
-  await page.getByRole('button', { name: 'Skip the elder' }).click();
+  await page.getByRole('button', { name: 'I know the way' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   await expect.poll(() => heroState(page)).toBe('idle');
 
@@ -49,9 +50,9 @@ test('an action sent unedited goes as /name args; unknown ones show no preview',
   page,
 }) => {
   await page.goto('/?fixture=live');
-  await page.getByRole('button', { name: 'New quest' }).click();
+  await openWelcome(page);
   await page.getByLabel('Task').fill('Tidy the README');
-  await page.getByRole('button', { name: 'Skip the elder' }).click();
+  await page.getByRole('button', { name: 'I know the way' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   await expect.poll(() => heroState(page)).toBe('idle');
   const bar = page.getByRole('combobox', { name: 'Command bar' });

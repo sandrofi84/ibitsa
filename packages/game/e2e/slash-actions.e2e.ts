@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { openWelcome } from './home';
 
 // The / menu (#84): actions from the hero's folder, Ibitsa's built-ins first.
 
@@ -17,9 +18,9 @@ const heroState = (page: Page) => probe(page, (p) => p.snapshot()?.heroes[0]?.st
 
 test('pick /test by keyboard, add an argument, send it to the hero', async ({ page }) => {
   await page.goto('/?fixture=live');
-  await page.getByRole('button', { name: 'New quest' }).click();
+  await openWelcome(page);
   await page.getByLabel('Task').fill('Tidy the README');
-  await page.getByRole('button', { name: 'Skip the elder' }).click();
+  await page.getByRole('button', { name: 'I know the way' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   await expect.poll(() => heroState(page)).toBe('idle');
 
@@ -42,9 +43,9 @@ test('pick /test by keyboard, add an argument, send it to the hero', async ({ pa
 
 test('the / menu only opens for the first word, or right after the recipient', async ({ page }) => {
   await page.goto('/?fixture=live');
-  await page.getByRole('button', { name: 'New quest' }).click();
+  await openWelcome(page);
   await page.getByLabel('Task').fill('Tidy the README');
-  await page.getByRole('button', { name: 'Skip the elder' }).click();
+  await page.getByRole('button', { name: 'I know the way' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   await expect.poll(() => heroState(page)).toBe('idle');
   const bar = page.getByRole('combobox', { name: 'Command bar' });

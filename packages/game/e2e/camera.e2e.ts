@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { openWelcome } from './home';
 
 // The focus camera (#59): zooms in on the working hero, zooms out to the whole map, comes back when
 // something needs you, and leaves the DOM panels where they are.
@@ -127,9 +128,9 @@ test('while following, the hero sits in the middle of the map you can see, left 
 
 test('bubbles keep their size when the map zooms (#75)', async ({ page }) => {
   await page.goto('/?fixture=live');
-  await page.getByRole('button', { name: 'New quest' }).click();
+  await openWelcome(page);
   await page.getByLabel('Task').fill('Tidy the README');
-  await page.getByRole('button', { name: 'Skip the elder' }).click();
+  await page.getByRole('button', { name: 'I know the way' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   await expect.poll(() => heroState(page)).toBe('idle');
   const pane = page.getByRole('region', { name: 'Hero' });

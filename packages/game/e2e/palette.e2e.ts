@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { openWelcome } from './home';
 
 // What the Command Palette's commands do in the game (#87): the extension sends host events.
 
@@ -15,9 +16,9 @@ const probe = <T>(page: Page, read: (p: Probe) => T) =>
 
 test('Message Hero… focuses the bar; Run Action… fills it, with its preview', async ({ page }) => {
   await page.goto('/?fixture=live');
-  await page.getByRole('button', { name: 'New quest' }).click();
+  await openWelcome(page);
   await page.getByLabel('Task').fill('Tidy the README');
-  await page.getByRole('button', { name: 'Skip the elder' }).click();
+  await page.getByRole('button', { name: 'I know the way' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   await expect.poll(() => probe(page, (p) => p.snapshot()?.heroes[0]?.state.kind)).toBe('idle');
   const bar = page.getByRole('combobox', { name: 'Command bar' });
