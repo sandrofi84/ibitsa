@@ -234,7 +234,6 @@ function gameMaster(ctx: StepContext, event: GameMasterEvent): void {
       new PullRequest(ctx).handle(event);
       return;
     case 'runtimeRestarted':
-      // A finished quest's PRs are still polled.
       new PullRequest(ctx).restarted();
       if (ctx.state.campaign?.status === 'planning') {
         new Elder(ctx).restarted();

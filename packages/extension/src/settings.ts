@@ -22,6 +22,12 @@ export function readUserSettings(config: ConfigReader): UserSettings {
   };
 }
 
+/** `ibitsa.pullRequests.pollSeconds`: how often open PRs are polled (§5.6); 60, and at least 15. */
+export function readPollSeconds(config: ConfigReader): number {
+  const seconds = config.get<number>('pullRequests.pollSeconds');
+  return typeof seconds === 'number' && seconds >= 15 ? Math.floor(seconds) : 60;
+}
+
 /** `ibitsa.council.disabled`: councillor ids the council never seats (§4.7, #98). */
 export function readDisabledCouncillors(config: ConfigReader): string[] {
   const ids = config.get<unknown>('council.disabled');

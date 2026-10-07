@@ -17,6 +17,8 @@ export type {
   ElderStart,
   FrontEnd,
   GameMaster,
+  GitHost,
+  PullRequestComment,
   ReviewSession,
   ReviewStart,
   SessionResume,

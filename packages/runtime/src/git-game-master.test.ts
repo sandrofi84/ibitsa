@@ -433,3 +433,42 @@ describe('taskDiff (#137)', () => {
     ).toContain('The diff nope..HEAD could not be read');
   });
 });
+
+describe('push (#152)', () => {
+  it("pushes a worktree's branch to origin and says what it pushed", async () => {
+    const dir = repo();
+    const remote = join(dir, '..', 'remote.git');
+    run(dir, 'init', '-q', '--bare', remote);
+    run(dir, 'remote', 'add', 'origin', remote);
+    const master = gm(dir);
+    expect(await master.remoteUrl()).toBe(remote);
+    const event = await master.createWorktree({
+      islandId: 'i1',
+      branch: 'ibitsa/x',
+      baseRef: 'main',
+    });
+    const path = event.type === 'worktreeCreated' ? event.path : '';
+    writeFileSync(join(path, 'x.txt'), 'x');
+    run(path, 'add', '.');
+    run(path, 'commit', '-q', '-m', 'x');
+    const pushed = await master.push({ worktreePath: path, branch: 'ibitsa/x' });
+    expect(pushed).toEqual({ ok: true, head: run(path, 'rev-parse', 'HEAD') });
+    expect(run(remote, 'rev-parse', 'ibitsa/x')).toBe(run(path, 'rev-parse', 'HEAD'));
+
+    // A rewritten branch needs --force-with-lease.
+    run(path, 'commit', '-q', '--amend', '-m', 'x again');
+    expect((await master.push({ worktreePath: path, branch: 'ibitsa/x' })).ok).toBe(false);
+    expect(
+      await master.push({ worktreePath: path, branch: 'ibitsa/x', force: true }),
+    ).toMatchObject({ ok: true });
+  });
+
+  it("fails with git's message without origin", async () => {
+    const dir = repo();
+    const master = gm(dir);
+    expect(await master.remoteUrl()).toBeNull();
+    const pushed = await master.push({ worktreePath: dir, branch: 'main' });
+    expect(pushed.ok).toBe(false);
+    expect(pushed.ok ? '' : pushed.reason).toMatch(/origin/);
+  });
+});
