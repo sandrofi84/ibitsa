@@ -1,3 +1,4 @@
+import type { CampaignEndView } from './campaign-record.types';
 import type { CouncillorInfo } from './councillors.types';
 import type { ElderView } from './elder.types';
 import type { GitHostView, IslandRemoteView, PullRequestDraft } from './pull-request.types';
@@ -58,6 +59,8 @@ export interface CampaignView {
   maxParallel: number;
   /** Every island's PR is merged (§5.6): the heroes reach Ibitsa and Finish is offered. */
   shipped: boolean;
+  /** Once it's finished or abandoned (#167): the record and the council's context; null before. */
+  ending: CampaignEndView | null;
 }
 
 export interface IslandView {

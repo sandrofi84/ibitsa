@@ -1,6 +1,7 @@
 import type {
   ActivityKind,
   AskUserQuestion,
+  CampaignEndView,
   CheckResult,
   CouncilAnswer,
   CouncilQuestion,
@@ -69,6 +70,22 @@ export interface Campaign {
   stackedStart: 'cleared' | 'together' | null;
   /** The base the first (or every separate) island branches from; null before any island. */
   baseRef: string | null;
+  /** Once it's finished or abandoned (§4.9, #167): its record and the council's context. */
+  ending?: CampaignEnd;
+  /** "Revisit D…?" requests the user dismissed (§5.5): the record lists them as deferred. */
+  revisitsDismissed?: { councillorId: string; decisionId: string; message: string }[];
+}
+
+/** The end of a campaign (§4.9): plain data; `CampaignRecord` gives it behaviour. */
+export interface CampaignEnd {
+  record: CampaignEndView['record'];
+  recordPath: string | null;
+  recordError: string | null;
+  /** The elder's lessons session, while it runs; null when there was nothing to learn from. */
+  lessonsId: string | null;
+  lessons: string[] | null;
+  lessonsGold: Reading<MicroUsd>;
+  councilContext: CampaignEndView['councilContext'];
 }
 
 export interface Island {

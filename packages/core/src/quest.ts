@@ -1,5 +1,6 @@
 import type { Command, MicroUsd, Plan, PlanTask, Reading } from '@ibitsa/protocol';
 import { taskOrder } from '@ibitsa/protocol';
+import { CampaignRecord } from './campaign-record';
 import { Elder } from './elder';
 import { Hero } from './hero';
 import { Sitting } from './sitting';
@@ -284,5 +285,7 @@ export class Quest {
     if (state.islands.some((i) => i.remote?.pullRequest)) {
       this.ctx.outbox.effect({ type: 'watchPullRequests', numbers: [] });
     }
+    // Every campaign gets its record (§4.9, #167).
+    new CampaignRecord(this.ctx).begin(status);
   }
 }

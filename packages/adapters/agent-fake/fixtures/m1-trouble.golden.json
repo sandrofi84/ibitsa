@@ -147,6 +147,7 @@
           "capMicroUsd": null,
           "maxParallel": 2,
           "shipped": false,
+          "ending": null,
           "gold": {
             "kind": "unknown"
           }
@@ -218,6 +219,7 @@
           "capMicroUsd": null,
           "maxParallel": 2,
           "shipped": false,
+          "ending": null,
           "gold": {
             "kind": "exact",
             "value": 61000
@@ -301,6 +303,7 @@
           "capMicroUsd": null,
           "maxParallel": 2,
           "shipped": false,
+          "ending": null,
           "gold": {
             "kind": "exact",
             "value": 301500
@@ -384,6 +387,7 @@
           "capMicroUsd": null,
           "maxParallel": 2,
           "shipped": false,
+          "ending": null,
           "gold": {
             "kind": "exact",
             "value": 301500
@@ -461,6 +465,7 @@
           "capMicroUsd": null,
           "maxParallel": 2,
           "shipped": false,
+          "ending": null,
           "gold": {
             "kind": "exact",
             "value": 352000
@@ -535,6 +540,7 @@
       "capMicroUsd": null,
       "maxParallel": 2,
       "shipped": false,
+      "ending": null,
       "gold": {
         "kind": "exact",
         "value": 352000

@@ -1,4 +1,5 @@
 import type { NeedsYouItem, Snapshot } from '@ibitsa/protocol';
+import { CampaignRecord } from './campaign-record';
 import { Elder } from './elder';
 import { Hero } from './hero';
 import { NeedsYou } from './needs-you';
@@ -24,11 +25,10 @@ export function view(state: CoreState): Snapshot {
       capMicroUsd: state.settings.campaignBudgetMicroUsd,
       maxParallel: state.settings.maxParallel,
       shipped: PullRequest.shipped(state),
-      gold: Quest.totalGold([
-        ...(state.elder && state.elder.gold.kind !== 'unknown' ? [state.elder] : []),
-        ...state.heroes,
-        ...Review.spenders(state.islands).filter((r) => r.gold.kind !== 'unknown'),
-      ]),
+      ending: state.campaign.ending
+        ? CampaignRecord.view({ ending: state.campaign.ending, state })
+        : null,
+      gold: CampaignRecord.gold(state),
     },
     elder: state.elder && Elder.view(state.elder),
     sitting: state.sitting && Sitting.view(state.sitting),

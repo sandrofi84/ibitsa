@@ -11,6 +11,7 @@ import type {
   Decision,
   Effort,
   ElderEvent,
+  LessonsEvent,
   PolledPullRequest,
   PullRequestComment,
   PullRequestState,
@@ -79,6 +80,13 @@ export interface AgentAdapter {
   }): Promise<{ text: string; notes: string[] } | null>;
   /** The elder's research session (spec §4.1, #101); adapters that can't run it leave it out. */
   startElder?(start: ElderStart, onEvent: (event: ElderEvent) => void): { close(): void };
+  /** The elder's lessons at a campaign's end (§4.9, #167); without it the record has no lessons. */
+  startLessons?(start: LessonsStart, onEvent: (event: LessonsEvent) => void): { close(): void };
+  /**
+   * Compact a council's lead session so the next campaign can resume it lighter (§4.9, #167).
+   * Adapters that can't leave it out; Compact then keeps the session as it is.
+   */
+  compactCouncil?(request: { cwd: string; sessionId: string }): Promise<void>;
   /** A reviewer's session (§5.5, M5); #138 adds it to the Claude adapter. */
   startReview?(start: ReviewStart, onEvent: (event: ReviewEvent) => void): ReviewSession;
   /** A short hash of the adapter's council prompts, part of the council version (§4.10, #106). */
@@ -103,6 +111,17 @@ export interface ElderStart {
   maxBudgetMicroUsd: number;
 }
 
+/** The elder's lessons (§4.9, #167): a short session on a cheap model, from the reviews' material. */
+export interface LessonsStart {
+  cwd: string;
+  /** The campaign's title, for the prompt. */
+  title: string;
+  /** What happened in the reviews, one line each (core's `CampaignRecord.material`). */
+  material: string;
+  model: string;
+  maxBudgetMicroUsd: number;
+}
+
 /** Starting a sitting's lead session (spec §4.3): read-only, capped, with the council's tools. */
 export interface SittingStart {
   /** The workspace repository the council plans for. */
@@ -116,6 +135,11 @@ export interface SittingStart {
   /** From the sitting's effort (§4.2); in separate chambers, the chairing elder's. */
   model: string;
   maxBudgetMicroUsd: number;
+  /**
+   * Resume an earlier lead session instead of starting one (#166). `kept` (#167): the council's context
+   * was kept from the last campaign, so the new sitting's usual opening goes to the resumed session.
+   */
+  resume?: { sessionId: string; prompt?: string; kept?: boolean };
 }
 
 /** A running sitting: core's answers to its tool calls and what the user did go back through it. */

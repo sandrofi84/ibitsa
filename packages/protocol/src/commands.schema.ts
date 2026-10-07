@@ -237,6 +237,12 @@ export const CommandSchema = v.variant('type', [
   v.strictObject({ type: v.literal('bringPullRequestComments'), commandId: id, islandId: id }),
   /** Stacked, after the island it built on merged: move the branch onto that island's base (#154). */
   v.strictObject({ type: v.literal('restackIsland'), commandId: id, islandId: id }),
+  /** After Finish (§4.9, #167): what happens to the council's context. */
+  v.strictObject({
+    type: v.literal('chooseCouncilContext'),
+    commandId: id,
+    choice: v.picklist(['empty', 'compact', 'keep']),
+  }),
   /** Push the island's branch without a PR, to any remote. */
   v.strictObject({ type: v.literal('pushBranch'), commandId: id, islandId: id }),
 ]);

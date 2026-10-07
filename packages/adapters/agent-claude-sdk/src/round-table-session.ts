@@ -392,6 +392,8 @@ export class RoundTableSession implements SittingSession {
       },
       maxTurns: MAX_TURNS,
       maxBudgetUsd: start.maxBudgetMicroUsd / 1_000_000,
+      // A council whose context was kept from the last campaign picks up its session (#167).
+      ...(start.resume ? { resume: start.resume.sessionId } : {}),
       ...(claudeCodePath ? { pathToClaudeCodeExecutable: claudeCodePath } : {}),
     };
   }

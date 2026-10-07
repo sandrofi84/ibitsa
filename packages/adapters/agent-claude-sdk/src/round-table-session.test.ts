@@ -368,6 +368,23 @@ describe('the round table (#103)', () => {
   });
 });
 
+describe('a council whose context was kept (#167)', () => {
+  it('resumes the kept session, and starts fresh otherwise', async () => {
+    const kept = run(
+      async function* () {
+        yield result('success');
+      },
+      { resume: { sessionId: 'council-old', kept: true } },
+    );
+    const fresh = run(async function* () {
+      yield result('success');
+    });
+    await flush();
+    expect(kept.calls[0]?.options.resume).toBe('council-old');
+    expect(fresh.calls[0]?.options).not.toHaveProperty('resume');
+  });
+});
+
 describe('what a sitting cost (#106)', () => {
   it('reports cost per model, and tokens per councillor from the chambers it started', async () => {
     const assistant = (m: Record<string, unknown>) => message({ type: 'assistant', ...m });

@@ -1,13 +1,19 @@
 // Carries out core effects (git, adapters, timers), writes the event log, rebuilds state on start
 // (spec §11.2, §12; ADR 0001). Node, no vscode imports.
 
-export { briefMarkdown, CampaignDocuments, planMarkdown } from './campaign-documents';
+export {
+  briefMarkdown,
+  CampaignDocuments,
+  planMarkdown,
+  recordMarkdown,
+} from './campaign-documents';
 export { councilVersion } from './council';
 export type { CouncilVersionInput } from './council.types';
 export { CouncilTallies } from './council-tallies';
 export type { ExportedTally } from './council-tallies.types';
 export { GitGameMaster } from './git-game-master';
 export type { GitGameMasterOptions } from './git-game-master.types';
+export { KeptCouncil } from './kept-council';
 export type {
   AgentAdapter,
   AgentSession,
@@ -18,6 +24,7 @@ export type {
   FrontEnd,
   GameMaster,
   GitHost,
+  LessonsStart,
   ReviewSession,
   ReviewStart,
   SessionResume,

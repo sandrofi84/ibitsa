@@ -5,6 +5,7 @@ import {
   type CoreState,
   DEFAULT_SETTINGS,
   type Effect,
+  type GameMasterEvent,
   initialState,
   Journal,
   type LogRecord,
@@ -16,11 +17,13 @@ import {
   type CheckResult,
   type Command,
   type CoreMessage,
+  type CouncilContextChoice,
   type CouncilEvent,
   type CouncillorInfo,
   type Cue,
   type ElderEvent,
   type GitHostView,
+  type LessonsEvent,
   PROTOCOL_VERSION,
   parseCommand,
   type RepoView,
@@ -30,6 +33,7 @@ import {
 import { CampaignDocuments } from './campaign-documents';
 import { councilVersion, reviewPlan, seatable, sittingPlan } from './council';
 import { CouncilTallies } from './council-tallies';
+import { KeptCouncil } from './kept-council';
 import type { AgentSession, FrontEnd, ReviewSession, SittingSession } from './ports.types';
 import { ProjectRules } from './project-rules';
 import { PullRequests } from './pull-requests';
@@ -40,6 +44,8 @@ import { type CampaignLog, CampaignStore } from './storage';
 /** Snapshots go out at most this often (spec §11.2.1: throttled, ~10/s). */
 /** The elder's defaults (spec §4.1): the smallest model, a quarter of a dollar. */
 const DEFAULT_ELDER = { model: 'haiku', budgetMicroUsd: 250_000 };
+/** The elder's lessons at a campaign's end (§4.9): Haiku, about $0.05. */
+const LESSONS = { model: 'haiku', maxBudgetMicroUsd: 50_000 };
 
 export const SNAPSHOT_INTERVAL_MS = 100;
 
@@ -74,6 +80,9 @@ export class Runtime {
   private readonly councillors: SkillCatalog<CouncillorInfo> | null;
   private readonly newId: () => string;
   private readonly pullRequests: PullRequests;
+  /** The council's lead session kept for the next campaign (#167). */
+  private readonly keptCouncil: KeptCouncil;
+  private lessonsSession: { close(): void } | null = null;
 
   constructor(private readonly options: RuntimeOptions) {
     this.store = new CampaignStore(options.storageDir);
@@ -101,6 +110,7 @@ export class Runtime {
         })
       : null;
     this.newId = options.newId ?? randomUUID;
+    this.keptCouncil = new KeptCouncil(options.storageDir);
     this.pullRequests = new PullRequests({
       gameMaster: options.gameMaster,
       gitHost: options.gitHost,
@@ -156,6 +166,7 @@ export class Runtime {
     this.elderSession?.close();
     this.sitting?.session.close();
     for (const review of this.reviews.values()) review.close();
+    this.lessonsSession?.close();
     this.pullRequests.dispose();
     this.councillors?.dispose();
     this.frontEnds.clear();
@@ -473,6 +484,31 @@ export class Runtime {
       case 'startSitting':
         this.startSitting(effect);
         return;
+      case 'startLessons':
+        this.startLessons(effect);
+        return;
+      case 'writeRecord': {
+        const campaignId = this.log?.header.campaignId;
+        const event: GameMasterEvent =
+          this.options.repoDir && campaignId
+            ? (() => {
+                try {
+                  const path = new CampaignDocuments(this.options.repoDir).saveRecord({
+                    campaignId,
+                    record: effect.record,
+                  });
+                  return { type: 'recordWritten', path };
+                } catch (e) {
+                  return { type: 'recordFailed', message: String(e) };
+                }
+              })()
+            : { type: 'recordFailed', message: 'There is no workspace folder to write it to.' };
+        this.input({ kind: 'gm', t: this.t(), event });
+        return;
+      }
+      case 'councilContext':
+        void this.councilContext(effect);
+        return;
       case 'sittingMessage':
         this.sittingFor(effect.sittingId)?.message(effect.message);
         return;
@@ -594,6 +630,55 @@ export class Runtime {
     }
   }
 
+  /** The elder's lessons at the campaign's end (§4.9, #167), on Haiku with a small cap. */
+  private startLessons({ lessonsId, material }: { lessonsId: string; material: string }): void {
+    const report = (event: LessonsEvent) =>
+      this.input({ kind: 'lessons', t: this.t(), lessonsId, event });
+    const start = this.options.adapter.startLessons?.bind(this.options.adapter);
+    const cwd = this.options.repoDir;
+    if (!start || !cwd) {
+      report({ type: 'error', message: 'This agent cannot write lessons.' });
+      return;
+    }
+    try {
+      this.lessonsSession?.close();
+      this.lessonsSession = start(
+        {
+          cwd,
+          title: this.state.campaign?.title ?? 'Campaign',
+          material,
+          ...LESSONS,
+        },
+        report,
+      );
+    } catch (e) {
+      report({ type: 'error', message: String(e) });
+    }
+  }
+
+  /** After Finish (§4.9, #167): keep the lead session for the next campaign, compact it first, or forget it. */
+  private async councilContext({
+    choice,
+    sessionId,
+  }: {
+    choice: CouncilContextChoice;
+    sessionId: string | null;
+  }): Promise<void> {
+    if (choice === 'empty' || !sessionId) {
+      this.keptCouncil.forget();
+      return;
+    }
+    const cwd = this.options.repoDir;
+    if (choice === 'compact' && cwd) {
+      try {
+        await this.options.adapter.compactCouncil?.({ cwd, sessionId });
+      } catch {
+        // Kept as it is: a lighter context next time is a nicety, not a promise.
+      }
+    }
+    this.keptCouncil.keep(sessionId);
+  }
+
   /** A reviewer on its effort's model and cap (or its councillor's own model), given its diff (M5). */
   private async startReview(effect: Extract<Effect, { type: 'startReview' }>): Promise<void> {
     const { reviewId } = effect;
@@ -652,6 +737,8 @@ export class Runtime {
       return;
     }
     const plan = sittingPlan(effect);
+    // The council's context kept from the last campaign (#167): this sitting resumes it, once.
+    const kept = this.keptCouncil.take();
     try {
       this.sitting?.session.close();
       const session = start(
@@ -663,6 +750,7 @@ export class Runtime {
           roster: plan.roster,
           model: plan.model,
           maxBudgetMicroUsd: plan.maxBudgetMicroUsd,
+          ...(kept ? { resume: { sessionId: kept, kept: true } } : {}),
         },
         report,
       );
