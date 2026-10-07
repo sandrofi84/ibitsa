@@ -9,6 +9,9 @@ import {
   layoutWorld,
   overviewCenter,
   pathTo,
+  reviewerPath,
+  reviewerSide,
+  reviewerSpot,
   villageSpot,
   WORLD,
 } from './layout';
@@ -240,6 +243,36 @@ describe('bridgeState', () => {
     expect(bridgeState({ snapshot: s, to: 'b' })).toEqual({ lowered: true, behind: true });
     expect(bridgeState({ snapshot: s, to: 'c' })).toEqual({ lowered: false, behind: false });
     expect(bridgeState({ snapshot: s, to: 'nowhere' })).toEqual({ lowered: false, behind: false });
+  });
+});
+
+describe('reviewers on the map (#140)', () => {
+  const layout = layoutWorld(snapshot({ islands: [island('a', { tasks: 2 })] }));
+
+  it('stand around the hero, right then left, above then below, clear of the task points beside', () => {
+    const hero = heroSpot(layout, 'a-t0');
+    const spots = [0, 1, 2, 3].map((index) => reviewerSpot(layout, { taskPointId: 'a-t0', index }));
+    expect(spots).toEqual([
+      { x: hero.x + 18, y: hero.y - 14 },
+      { x: hero.x + 18, y: hero.y + 14 },
+      { x: hero.x - 18, y: hero.y - 14 },
+      { x: hero.x - 18, y: hero.y + 14 },
+    ]);
+    // A 16-pixel token never reaches the hero standing on the next task point.
+    const next = heroSpot(layout, 'a-t1');
+    expect(Math.max(...spots.map((s) => s.x)) + 9).toBeLessThan(next.x - 8);
+    expect([0, 1, 2, 3, 4].map(reviewerSide)).toEqual([1, 1, -1, -1, 1]);
+    expect(reviewerSpot(layout, { taskPointId: 'a-t0', index: 4 })).toEqual({
+      x: hero.x + 38,
+      y: hero.y - 14,
+    });
+  });
+
+  it('walk from the council hut along the hero path, ending at their place', () => {
+    const path = reviewerPath(layout, { taskPointId: 'a-t0', index: 1 });
+    const hero = pathTo(layout, 'a-t0');
+    expect(path.slice(0, -1)).toEqual(hero.slice(0, -1));
+    expect(path.at(-1)).toEqual(reviewerSpot(layout, { taskPointId: 'a-t0', index: 1 }));
   });
 });
 

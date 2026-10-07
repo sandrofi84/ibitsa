@@ -294,7 +294,7 @@ Each hero is always in exactly one state, mapped from agent events (settled in [
 | resting | `status: 'compacting'` until `compact_result` | rest animation |
 | working: *kind* | `PreToolUse` until `PostToolUse`/`PostToolUseFailure`; `think` while mid-turn with no tool running | animation per kind (below) |
 | blocked | dependency not done (M4) | padlock; at drawbridge if stacked |
-| under review | its task is being checked or reviewed (M5) | idle at task point; councillors there with magnifiers |
+| under review | its task is being checked or reviewed (M5) | idle at task point under an hourglass; councillors there with magnifiers |
 | submitted | hero called `submit_task({ summary })` | idle at task point; councillors walk out |
 | idle | turn ended without `submit_task`, or after a stop | idle at task point; last message as a "Needs you" `reply` |
 | traveling | dispatched, until the session's `system`/`init` message | walking along path; the game may speed the walk so the token arrives within ~1 s, never shows work before `init` |
@@ -427,7 +427,7 @@ Shown in the same hover menu, visually distinct:
 - Islands are 96 px tall, so the 480×270 world holds two rows (#124): Home Village sits on the bottom row at the left. **Separate** islands fan out from it column by column, bottom then top, the first beside the village; each has its own dotted path, through the sea channel between the rows. Four fit the world; beyond that it widens and the camera pans (the overview shows it from the village's side). **Stacked** islands run along the bottom row joined by **drawbridges** (raised with a padlock until the island before is cleared, or, all at once, until the island has started; lowered after; an orange "behind" mark when a later branch must catch up), then up a bridge and back along the top row after four. A stacked hero walks across the islands and bridges before its own. Task points run along a path on each island.
 - An island still waiting to start is dimmed, and its hero waits in a line at Home Village with a padlock (what it waits for shows on hover); a hero held mid-island (#121) shows the padlock at its task point. The camera follows the selected hero (#125), else the first one working.
 - Heroes are **round tokens** with HP bars; councillors are **square tokens** with a parchment border and name plate, no HP bar.
-- Councillors walk from the hut to a task point when a review starts and return when done.
+- Councillors walk from the hut to a task point when a review starts and return when done (#140): one for each review of the round, standing around the hero (right above, right below, left above, left below, then a step further out), the name plate reaching away from it. A magnifier while the review runs; then a red badge with its blocking findings when it asks for changes (nothing for a pass), or a grey "?" when the review failed. They walk back a moment after the round is over (passed, sent back or escalated); a re-review brings its councillors out again. The hero waits idle at its task point under an hourglass. With reduced motion they appear and leave in place.
 - PR badges float above task points (or islands, for stacked).
 - **Ibitsa** sits on the map's horizon as the campaign's destination: visible but out of reach until the campaign's work is shipped.
 - Bottom area: selected task detail (council verdicts, PR card) and the "Needs you" queue.
@@ -497,7 +497,7 @@ Any item can be **extended**, **replaced** or **disabled**. The UI shows where e
 | Map tileset | 16×16 tiles | Water (4-frame loop), shoreline, grass, path dots |
 | Island pieces | 96 px tall: left cap 48w, repeatable middle 32w, right cap 48w | Islands stretch to fit task count |
 | Bridge | 24 tall: a 32-wide repeatable segment and two 8-wide ends; rows `lowered`, `raised` (#124) | Optional; without it the game draws plain planks. A bridge between rows is the same turned a quarter. |
-| Map markers | 12×12, left to right: `padlock`, `behind` (#124) | Optional; without them the game draws its own |
+| Map markers | 12×12, left to right: `padlock`, `behind` (#124), then `magnifier`, `hourglass` (#140) | Optional; without them the game draws its own. A strip needs `padlock` and `behind`; the review markers may be left out |
 | Task point | 16×16 | locked, active, done, under review |
 | Buildings | multiples of 16 (hut 64×64) | Village, council hut |
 | Hut interior | 480×270 background + table foreground layer | |

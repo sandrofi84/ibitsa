@@ -355,6 +355,48 @@ describe('LiveDevHost: a demo campaign of three islands (#124)', () => {
   });
 });
 
+describe('LiveDevHost: demo reviews (#140)', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it('checks, then three councillors review; one sends it back, and the second round passes', async () => {
+    const host = new LiveDevHost({ credentialsReady: true, repo, review: 'demo' });
+    const messages: CoreMessage[] = [];
+    host.onMessage((m) => messages.push(m));
+    const snapshot = () =>
+      (messages.filter((m) => m.type === 'snapshot').at(-1) as { snapshot: Snapshot }).snapshot;
+    const review = () => snapshot().islands[0]?.taskPoints[0]?.review;
+    host.demoCampaign('separate');
+    await vi.advanceTimersByTimeAsync(5_000);
+    const heroId = snapshot().heroes[0]?.id ?? '';
+    host.send({ type: 'sendMessage', commandId: 'm', heroId, text: 'submit it', priority: 'now' });
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(review()?.phase).toBe('reviewing');
+    expect(review()?.checks?.map((c) => c.ok)).toEqual([true]);
+    expect(review()?.reviews.map((r) => [r.councillorId, r.status])).toEqual([
+      ['security', 'running'],
+      ['tester', 'running'],
+      ['architect', 'running'],
+    ]);
+    expect(snapshot().heroes[0]?.state.kind).toBe('underReview');
+
+    // Round 1: security asks for changes with two blocking findings; the hero fixes it and resubmits.
+    await vi.advanceTimersByTimeAsync(6_000);
+    const first = review()?.reviews.filter((r) => r.round === 1);
+    expect(first?.map((r) => r.verdict?.verdict)).toEqual(['changes', 'pass', 'pass']);
+    expect(first?.[0]?.verdict?.findings.filter((f) => f.severity === 'blocking')).toHaveLength(2);
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(review()?.round).toBe(2);
+    expect(
+      review()
+        ?.reviews.filter((r) => r.round === 2)
+        .map((r) => r.councillorId),
+    ).toEqual(['security']);
+    expect(review()?.phase).toBe('passed');
+    expect(snapshot().islands[0]?.taskPoints[0]?.state).toBe('done');
+  });
+});
+
 describe('LiveDevHost: several heroes (#125)', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());

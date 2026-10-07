@@ -6,8 +6,8 @@ import {
   ACTIVITY_KINDS,
   BRIDGE_FRAMES,
   COUNCIL_ANIMATIONS,
-  MARKER_KINDS,
   REQUIRED_ANIMATIONS,
+  REQUIRED_MARKERS,
   SPEC,
 } from './manifest.ts';
 import { readPngSize } from './png.ts';
@@ -213,7 +213,7 @@ export function validatePack(dir: string): PackValidation {
   const mk = manifest.markers;
   if (mk) {
     if (mk.size !== SPEC.marker) errors.push(`markers: size ${mk.size}, expected ${SPEC.marker}`);
-    for (const kind of MARKER_KINDS) {
+    for (const kind of REQUIRED_MARKERS) {
       if (!mk.kinds.includes(kind)) errors.push(`markers: missing "${kind}"`);
     }
     checkImage({
