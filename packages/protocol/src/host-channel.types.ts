@@ -19,6 +19,25 @@ export interface SettingView {
   workspace?: SettingValue;
 }
 
+/** An asset pack in the Guild Hall's Packs tab (§9.3, #183). */
+export interface PackView {
+  /** `default`, `user:<folder>` or `project:<folder>`. */
+  id: string;
+  name: string;
+  scope: 'builtin' | 'user' | 'project';
+  /** The validator's errors; a pack with any can't be used. */
+  errors: string[];
+  /** A character's walk, for the live preview; null when the pack has none to show. */
+  preview: {
+    sheet: string;
+    frameWidth: number;
+    frameHeight: number;
+    row: number;
+    frames: number;
+    fps: number;
+  } | null;
+}
+
 /** Extension → webview messages that are not core messages (#37). */
 export type HostEvent =
   /** Whether a hero can start: credentials found, or development mode (spec §11.6). */
@@ -32,4 +51,8 @@ export type HostEvent =
   /** "Ibitsa: Run Action…": the chosen action, ready in the bar with its preview (#87). */
   | { channel: 'host'; type: 'fillCommandBar'; text: string }
   /** The Rule book's rules (#179), after `readSettings` or a write. */
-  | { channel: 'host'; type: 'settings'; rules: SettingView[] };
+  | { channel: 'host'; type: 'settings'; rules: SettingView[] }
+  /** The packs found, and the one in use (#183). */
+  | { channel: 'host'; type: 'packs'; packs: PackView[]; active: string }
+  /** Load this pack's files now (#183); null is the bundled default. Ends in `/`. */
+  | { channel: 'host'; type: 'packChanged'; base: string | null };

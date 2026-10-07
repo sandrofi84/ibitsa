@@ -62,6 +62,13 @@ export const HostRequestSchema = v.variant('type', [
     layer: SettingLayerSchema,
   }),
   v.strictObject({ channel: v.literal('host'), type: v.literal('openSettings') }),
+  // Asset packs (#183): the packs found, and using one (`default`, `user:<folder>` or `project:<folder>`).
+  v.strictObject({ channel: v.literal('host'), type: v.literal('readPacks') }),
+  v.strictObject({
+    channel: v.literal('host'),
+    type: v.literal('usePack'),
+    id: v.pipe(v.string(), v.regex(/^(default|(user|project):[\w.-]{1,100})$/)),
+  }),
   /** Open a file in the editor: a record, a skill. Relative paths are the workspace's (#179). */
   v.strictObject({
     channel: v.literal('host'),

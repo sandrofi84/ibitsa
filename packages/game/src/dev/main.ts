@@ -95,6 +95,7 @@ if (name === 'live') {
     hutOnPage: started.hutOnPage,
     guildHallOnPage: started.guildHallOnPage,
     guildHall: started.guildHall,
+    packLoads: started.packLoads,
     councilChamber: started.councilChamber,
     pullRequestPanel: started.pullRequestPanel,
     pullRequestPreview: started.pullRequestPreview,

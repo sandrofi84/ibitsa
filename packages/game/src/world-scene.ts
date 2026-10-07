@@ -260,8 +260,13 @@ export class WorldScene extends Phaser.Scene {
     this.setUpCamera();
 
     const client = this.registry.get('client') as GameClient;
-    client.onSnapshot((s) => this.render(s));
-    client.onCue((c) => this.cue(c));
+    const offSnapshot = client.onSnapshot((s) => this.render(s));
+    const offCue = client.onCue((c) => this.cue(c));
+    // Restarted when the pack changes (#183): the old scene stops listening.
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      offSnapshot();
+      offCue();
+    });
   }
 
   private setUpCamera(): void {

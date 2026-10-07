@@ -7,6 +7,10 @@ export const PACK_KEY = 'pack';
 /** Texture keys of the pack's optional drawbridge and map markers (#124). */
 export const BRIDGE_KEY = 'bridge';
 export const MARKERS_KEY = 'markers';
+/** Registry: where the active pack's files are (#183), ending in `/`. */
+export const PACK_BASE = 'packBase';
+/** Registry: the texture and animation keys the pack loaded, so a switch can drop them (#183). */
+export const PACK_KEYS = 'packKeys';
 
 /** Loads the art pack described by its engine-neutral manifest (spec §9.3), then starts the world. */
 export class PackScene extends Phaser.Scene {
@@ -15,10 +19,20 @@ export class PackScene extends Phaser.Scene {
   }
 
   private url(path: string): string {
-    return `${this.registry.get('assetBase') as string}pack/${path}`;
+    return `${this.registry.get(PACK_BASE) as string}${path}`;
   }
 
+  /** What was there before this pack, so the keys it adds can be told apart. */
+  private before: { textures: Set<string>; anims: Set<string> } = {
+    textures: new Set(),
+    anims: new Set(),
+  };
+
   preload(): void {
+    this.before = {
+      textures: new Set(this.textures.getTextureKeys()),
+      anims: new Set(this.anims.toJSON().anims.map((a) => a.key)),
+    };
     this.load.json(PACK_KEY, this.url('pack.json'));
   }
 
@@ -63,6 +77,17 @@ export class PackScene extends Phaser.Scene {
 
     this.load.once(Phaser.Loader.Events.COMPLETE, () => {
       this.defineFrames(manifest);
+      this.registry.set(
+        'packLoads',
+        ((this.registry.get('packLoads') as number | undefined) ?? 0) + 1,
+      );
+      this.registry.set(PACK_KEYS, {
+        textures: this.textures.getTextureKeys().filter((k) => !this.before.textures.has(k)),
+        anims: this.anims
+          .toJSON()
+          .anims.map((a) => a.key)
+          .filter((k) => !this.before.anims.has(k)),
+      });
       // The hut when one was asked for before the pack loaded (`Started.showHut`), else the map.
       this.scene.start(this.registry.has(HUT_FEED) ? 'hut' : 'world');
     });

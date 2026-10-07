@@ -61,12 +61,37 @@ export class HostChannel {
       case 'openSettings':
         this.deps.openSettings();
         return;
+      case 'readPacks':
+        this.postPacks();
+        return;
+      case 'usePack': {
+        // The default, or a pack that's there and passes the validator; anything else is ignored.
+        const dir = request.id === 'default' ? null : this.deps.packs.dir(request.id);
+        if (request.id !== 'default' && !dir) return;
+        await this.deps.setActivePack(request.id);
+        this.post({
+          channel: 'host',
+          type: 'packChanged',
+          base: dir ? this.deps.packBase(dir) : null,
+        });
+        this.postPacks();
+        return;
+      }
       case 'openFile': {
         const path = openablePath({ path: request.path, ...this.deps.openable });
         if (path) this.deps.openFile(path);
         return;
       }
     }
+  }
+
+  private postPacks(): void {
+    this.post({
+      channel: 'host',
+      type: 'packs',
+      packs: this.deps.packs.list(),
+      active: this.deps.activePack(),
+    });
   }
 
   private postRules(): void {

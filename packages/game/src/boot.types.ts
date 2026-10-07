@@ -51,6 +51,8 @@ export interface Started {
   guildHallOnPage(): { x: number; y: number } | null;
   /** The Guild Hall's open tab, or null (#179). */
   guildHall(): GuildTab | null;
+  /** How many times a pack has loaded: 1, then one more per switch (#183). */
+  packLoads(): number;
   /** The island whose PR card is open on its own, or null (#153). */
   pullRequestPanel(): string | null;
   /** The island the PR preview is open for, or null (#153). */

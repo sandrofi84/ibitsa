@@ -183,6 +183,11 @@
           "type": "string",
           "default": "",
           "markdownDescription": "Path to a `claude` executable to use instead of the one bundled with the extension. Empty uses the bundled one."
+        },
+        "ibitsa.pack": {
+          "type": "string",
+          "default": "default",
+          "markdownDescription": "The asset pack the game draws with: `default`, or `user:<folder>` (in `~/.ibitsa/packs/`) or `project:<folder>` (in `.ibitsa/packs/`). Choose it in the Guild Hall's Packs tab."
         }
       }
     }
@@ -195,6 +200,7 @@
     "@anthropic-ai/claude-agent-sdk": "0.3.289",
     "@anthropic-ai/sdk": "0.131.0",
     "@ibitsa/agent-claude-sdk": "workspace:*",
+    "@ibitsa/assets": "workspace:*",
     "@ibitsa/core": "workspace:*",
     "@ibitsa/githost-github": "workspace:*",
     "@ibitsa/protocol": "workspace:*",

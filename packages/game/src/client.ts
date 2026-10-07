@@ -59,13 +59,16 @@ export class GameClient {
     return commandId;
   }
 
-  onSnapshot(listener: (s: Snapshot) => void): void {
+  /** Returns a function that stops listening, for a scene that's restarted (a pack switch, #183). */
+  onSnapshot(listener: (s: Snapshot) => void): () => void {
     this.snapshotListeners.push(listener);
     if (this.snapshot) listener(this.snapshot);
+    return () => remove({ list: this.snapshotListeners, item: listener });
   }
 
-  onCue(listener: (c: Cue) => void): void {
+  onCue(listener: (c: Cue) => void): () => void {
     this.cueListeners.push(listener);
+    return () => remove({ list: this.cueListeners, item: listener });
   }
 
   /** Asks the runtime for the `/` menu's actions; the answer, and any later change, arrive as `actions`. */
@@ -261,4 +264,9 @@ export class GameClient {
     this.journalStart = start;
     for (const l of this.journalListeners) l();
   }
+}
+
+function remove<T>({ list, item }: { list: T[]; item: T }): void {
+  const i = list.indexOf(item);
+  if (i >= 0) list.splice(i, 1);
 }

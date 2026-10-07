@@ -250,6 +250,9 @@ importers:
       '@ibitsa/agent-claude-sdk':
         specifier: workspace:*
         version: link:../adapters/agent-claude-sdk
+      '@ibitsa/assets':
+        specifier: workspace:*
+        version: link:../assets
       '@ibitsa/core':
         specifier: workspace:*
         version: link:../core

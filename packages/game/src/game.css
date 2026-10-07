@@ -1846,3 +1846,24 @@ body.in-hut:has(.council-chamber:not([hidden])) .needs-you {
   background: #2f5fb0;
   color: #fff;
 }
+
+/* The Packs tab (#183): a pack's walking preview, its errors, and the one in use. */
+.guild-hall .pack-preview {
+  display: inline-block;
+  vertical-align: middle;
+  margin: 0 8px;
+  border: 1px solid #8a6a3a;
+  background-color: #5dab3c;
+}
+
+.guild-hall .pack-sprite {
+  display: block;
+  transform-origin: 0 0;
+  image-rendering: pixelated;
+  background-repeat: no-repeat;
+}
+
+.guild-hall .pack-errors {
+  color: #a32020;
+  margin: 4px 0 0;
+}

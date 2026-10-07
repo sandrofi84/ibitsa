@@ -1,13 +1,21 @@
-import type { ChronicleEntry, RuleKey, SettingValue, SettingView } from '@ibitsa/protocol';
+import type {
+  ChronicleEntry,
+  PackView,
+  RuleKey,
+  SettingValue,
+  SettingView,
+} from '@ibitsa/protocol';
 import type { GameClient } from './client';
 import { button, el } from './dom';
 import type { GuildHall, GuildTab } from './guild-hall.types';
+import { packsTab } from './guild-packs';
 import type { Host } from './host.types';
 
 const TABS: { id: GuildTab; label: string }[] = [
   { id: 'rules', label: 'Rule book' },
   { id: 'spells', label: 'Spell book' },
   { id: 'chronicle', label: 'Chronicle' },
+  { id: 'packs', label: 'Packs' },
 ];
 
 const RULE_TITLES: Record<RuleKey, string> = {
@@ -112,7 +120,15 @@ export function mountGuildHall({ client, host }: { client: GameClient; host: Hos
       close();
     }
   });
+  let packs: PackView[] | null = null;
+  let activePack = 'default';
   host.onHostEvent((event) => {
+    if (event.type === 'packs') {
+      packs = event.packs;
+      activePack = event.active;
+      if (tab === 'packs') render();
+      return;
+    }
     if (event.type !== 'settings') return;
     rules = event.rules;
     if (tab === 'rules') render();
@@ -129,6 +145,7 @@ export function mountGuildHall({ client, host }: { client: GameClient; host: Hos
     if (next === 'rules') host.request({ channel: 'host', type: 'readSettings' });
     if (next === 'chronicle') client.requestChronicle();
     if (next === 'spells') client.requestActions();
+    if (next === 'packs') host.request({ channel: 'host', type: 'readPacks' });
     render();
   };
 
@@ -144,13 +161,30 @@ export function mountGuildHall({ client, host }: { client: GameClient; host: Hos
     }
     const body = el('div', { className: 'guild-body' });
     body.setAttribute('role', 'tabpanel');
-    body.append(...(tab === 'rules' ? ruleBook() : tab === 'spells' ? spellBook() : chronicle()));
+    body.append(...tabBody(tab));
     panel.replaceChildren(
       el('h2', { text: 'Guild Hall' }),
       tabs,
       body,
       button({ label: 'Close', onClick: close }),
     );
+  }
+
+  function tabBody(t: GuildTab): HTMLElement[] {
+    switch (t) {
+      case 'rules':
+        return ruleBook();
+      case 'spells':
+        return spellBook();
+      case 'chronicle':
+        return chronicle();
+      case 'packs':
+        return packsTab({
+          packs,
+          active: activePack,
+          onUse: (id) => host.request({ channel: 'host', type: 'usePack', id }),
+        });
+    }
   }
 
   function ruleBook(): HTMLElement[] {
