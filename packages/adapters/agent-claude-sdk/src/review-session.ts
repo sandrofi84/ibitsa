@@ -5,6 +5,7 @@ import type { ReviewSession as Session } from '@ibitsa/runtime';
 import { z } from 'zod';
 import { loadSdk } from './claude-session';
 import { CouncillorSkills } from './councillor-skills';
+import { FINISH_MS } from './elder-session';
 import type { ToolReply } from './elder-session.types';
 import type { ReviewSessionInit } from './review-session.types';
 import { callIdOf } from './round-table-session';
@@ -83,6 +84,8 @@ export class ReviewSession implements Session {
     accepted: boolean;
     reason?: string;
   }): void {
+    // Marked now: the runtime closes the session in the same step, before the handler resumes.
+    if (accepted && this.verdicts.has(toolUseId)) this.filed = true;
     const resolve = this.verdicts.get(toolUseId);
     this.verdicts.delete(toolUseId);
     resolve?.(reason === undefined ? { accepted } : { accepted, reason });
@@ -93,7 +96,13 @@ export class ReviewSession implements Session {
     for (const resolve of this.verdicts.values())
       resolve({ accepted: false, reason: 'The review has ended.' });
     this.verdicts.clear();
-    this.query?.close();
+    if (!this.filed) {
+      this.query?.close();
+      return;
+    }
+    // A filed review finishes its last turn first, so the result's cost still arrives.
+    const query = this.query;
+    setTimeout(() => query?.close(), FINISH_MS).unref?.();
   }
 
   /** The submit_verdict handler: core rules on the verdict; its answer is the tool's result. */

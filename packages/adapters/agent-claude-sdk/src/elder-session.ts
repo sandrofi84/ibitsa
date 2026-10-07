@@ -48,6 +48,9 @@ const BRIEF_SHAPE = {
   quickQuest: z.object({ recommended: z.boolean(), reason }),
 };
 
+/** How long a session with its result filed may take to finish its last turn and report its cost. */
+export const FINISH_MS = 60_000;
+
 /**
  * The elder's research (spec §4.1, #101): a short, read-only session on a cheap model with a cap. It
  * ends when the elder files a brief that passes the schema and names only councillors who exist; the
@@ -66,9 +69,18 @@ export class ElderSession {
     void this.run();
   }
 
+  /**
+   * Stops the elder. After an accepted brief it finishes its last turn first, so the result's cost
+   * still arrives (#138); a minute at most.
+   */
   close(): void {
     this.closed = true;
-    this.query?.close();
+    if (!this.briefed) {
+      this.query?.close();
+      return;
+    }
+    const query = this.query;
+    setTimeout(() => query?.close(), FINISH_MS).unref?.();
   }
 
   /** The submit_brief handler: problems go back to the elder to fix; a good brief goes to core. */

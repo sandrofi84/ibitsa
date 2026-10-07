@@ -130,6 +130,8 @@ export class Review {
     if (!found) return;
     const { record, task, hero } = found;
     if (record.status !== 'running') {
+      // A finished reviewer's session reports its cost as it ends (#138).
+      if (event.type === 'usage') record.gold = { kind: 'exact', value: event.totalCost };
       if (event.type === 'verdictSubmitted')
         this.complete({ reviewId, toolUseId: event.toolUseId, reason: 'This review has ended.' });
       return;

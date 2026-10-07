@@ -255,13 +255,14 @@ describe('the review loop (spec §5.5, M5)', () => {
   it('passes the task when every reviewer passes, keeps suggestions, and hands the hero its next task', () => {
     const run = new Run().started().submit('abc').checks();
     const [security, tester] = run.reviews();
+    run.verdict(security?.reviewId ?? '', PASS);
+    // A reviewer's cost arrives as its session ends, after the verdict.
     run.feed({
       kind: 'review',
       t: 0,
       reviewId: security?.reviewId ?? '',
       event: { type: 'usage', totalCost: 50_000 },
     });
-    run.verdict(security?.reviewId ?? '', PASS);
     expect(run.task().state).toBe('underReview');
     run.effects = [];
     run.verdict(tester?.reviewId ?? '', {

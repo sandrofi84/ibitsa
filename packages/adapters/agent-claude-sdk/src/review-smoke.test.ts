@@ -51,18 +51,16 @@ describe.skipIf(process.env.IBITSA_SMOKE !== '1')('live review (smoke)', () => {
               accepted: ruled.ok,
               ...(ruled.ok ? {} : { reason: ruled.problems.join('; ') }),
             });
-            if (!ruled.ok) return;
-          } else if (event.type !== 'error') return;
-          // Let the result's usage arrive, as the runtime would before closing.
-          setTimeout(() => {
-            session.close();
-            resolve();
-          }, 3_000);
+            // Closed at once, as the runtime does: the cost must still arrive.
+            if (ruled.ok) session.close();
+          }
+          if (event.type === 'usage' || event.type === 'error') resolve();
         },
       );
     });
     writeFileSync(join(tmpdir(), 'ibitsa-review-smoke.json'), JSON.stringify(events, null, 2));
     expect(events.filter((e) => e.type === 'error')).toEqual([]);
+    expect(events.at(-1)?.type).toBe('usage');
     const filed = events.findLast((e) => e.type === 'verdictSubmitted');
     expect(filed?.type === 'verdictSubmitted' && filed.verdict.verdict).toBe('changes');
   }, 300_000);
