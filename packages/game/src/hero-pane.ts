@@ -190,11 +190,23 @@ export function mountHeroPane({
           onClick: () => client.send({ type: 'restHero', heroId: hero.id }),
         }),
       );
-      if (hero.state.kind === 'submitted') {
+      // With several parties the quest is the campaign: it finishes once every island is in (#126).
+      const several = snapshot.heroes.length > 1;
+      const submitted = snapshot.heroes.filter((h) => h.state.kind === 'submitted').length;
+      if (several) {
+        const finish = button({
+          label: 'Finish campaign',
+          onClick: () => client.send({ type: 'finishQuest' }),
+        });
+        finish.disabled = submitted < snapshot.heroes.length;
+        finish.title = `${submitted} of ${snapshot.heroes.length} islands submitted`;
+        items.push(finish);
+      } else if (hero.state.kind === 'submitted') {
         items.push(
           button({ label: 'Finish quest', onClick: () => client.send({ type: 'finishQuest' }) }),
         );
-      } else if (hero.state.kind === 'idle') {
+      }
+      if (hero.state.kind === 'idle') {
         items.push(
           button({
             label: 'Mark done',
@@ -203,7 +215,11 @@ export function mountHeroPane({
         );
       }
       const abandon = button({
-        label: confirmAbandon ? 'Really abandon?' : 'Abandon quest',
+        label: confirmAbandon
+          ? 'Really abandon?'
+          : snapshot.heroes.length > 1
+            ? 'Abandon campaign'
+            : 'Abandon quest',
         onClick: () => {
           if (!confirmAbandon) {
             confirmAbandon = true;

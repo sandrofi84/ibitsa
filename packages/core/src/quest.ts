@@ -190,8 +190,17 @@ export class Quest {
       this.ctx.outbox.reject(commandId, 'No active quest.');
       return;
     }
-    if (!this.ctx.state.heroes.every((h) => h.submitted && !h.inTurn)) {
-      this.ctx.outbox.reject(commandId, 'The task has not been submitted yet.');
+    const { heroes, islands } = this.ctx.state;
+    const open = heroes.filter((h) => !h.submitted || h.inTurn);
+    if (open.length > 0) {
+      // With several parties, say which islands are still open (#126).
+      const names = open.map((h) => islands.find((i) => i.id === h.islandId)?.name ?? h.name);
+      this.ctx.outbox.reject(
+        commandId,
+        heroes.length > 1
+          ? `Not every island is submitted yet: ${names.join(', ')}.`
+          : 'The task has not been submitted yet.',
+      );
       return;
     }
     this.end('finished');

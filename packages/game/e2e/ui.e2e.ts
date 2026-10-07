@@ -5,9 +5,25 @@ import { expect, type Page, test } from '@playwright/test';
 
 interface Probe {
   snapshot(): {
-    campaign: { status: string; branching: string; stackedStart: string | null } | null;
-    heroes: { name: string; classId: string; state: { kind: string }; queuedMessages: number }[];
-    islands: { id: string; basedOn: string | null; taskPoints: { state: string }[] }[];
+    campaign: {
+      status: string;
+      branching: string;
+      stackedStart: string | null;
+      capMicroUsd: number | null;
+    } | null;
+    heroes: {
+      id: string;
+      name: string;
+      classId: string;
+      state: { kind: string };
+      queuedMessages: number;
+    }[];
+    islands: {
+      id: string;
+      basedOn: string | null;
+      worktree: string;
+      taskPoints: { state: string }[];
+    }[];
     sitting: { mode: string; comparisonOf: string | null; rating: unknown } | null;
   } | null;
   hut(): { decisions: number } | null;
@@ -522,7 +538,49 @@ test('the brief convenes a round table; its approved plan becomes a quest, task 
   await expect
     .poll(() => probe(page, (p) => p.snapshot()?.heroes[1]?.state.kind), { timeout: 10_000 })
     .toBe('idle');
+
+  // The campaign finishes once every island is in (#126).
+  const finish = pane.getByRole('button', { name: 'Finish campaign' });
+  await expect(finish).toBeDisabled();
+  await expect(finish).toHaveAttribute('title', '1 of 2 islands submitted');
+  await expect(pane.getByRole('button', { name: 'Abandon campaign' })).toBeVisible();
+  const secondHero = await probe(page, (p) => p.snapshot()?.heroes[1]?.id);
+  await page.evaluate((heroId) => {
+    (window as unknown as { __ibitsa: { send(i: unknown): void } }).__ibitsa.send({
+      type: 'markDone',
+      heroId,
+    });
+  }, secondHero);
+  await expect(finish).toBeEnabled();
+  await finish.click();
+  await expect.poll(() => probe(page, (p) => p.snapshot()?.campaign?.status)).toBe('finished');
+  await pane.getByRole('button', { name: 'Remove worktree' }).click();
+  await expect
+    .poll(() => probe(page, (p) => p.snapshot()?.islands.map((i) => i.worktree)))
+    .toEqual(['removed', 'ready']);
   expect(errors).toEqual([]);
+});
+
+test("the campaign's cap stops the hero and can be raised (#126)", async ({ page }) => {
+  await page.goto('/?fixture=live&campaignCap=0.04');
+  await page.getByRole('button', { name: 'New quest' }).click();
+  await page.getByLabel('Task').fill('Tidy the README');
+  await page.getByRole('button', { name: 'Skip the elder' }).click();
+  await page.getByRole('button', { name: 'Start quest' }).click();
+  await expect.poll(() => heroState(page)).toBe('idle');
+  expect(await probe(page, (p) => p.snapshot()?.campaign?.capMicroUsd)).toBe(40_000);
+  const pane = page.getByRole('region', { name: 'Hero' });
+  for (const text of ['One more thing', 'And another']) {
+    await pane.getByLabel('Message to the hero').fill(text);
+    await pane.getByRole('button', { name: 'Send now' }).click();
+    await page.waitForTimeout(1_200);
+  }
+  const item = page.locator('.needs-you .item').filter({ hasText: 'reached its cap of $0.04' });
+  await expect(item).toBeVisible({ timeout: 10_000 });
+  await expect.poll(() => heroState(page)).toBe('outOfGold');
+  await item.getByRole('button', { name: 'Raise the campaign cap by $5' }).click();
+  await expect.poll(() => probe(page, (p) => p.snapshot()?.campaign?.capMicroUsd)).toBe(5_040_000);
+  await expect.poll(() => heroState(page), { timeout: 10_000 }).not.toBe('outOfGold');
 });
 
 test('party assembly: a stacked plan, its heroes, and how its islands start (#123)', async ({
