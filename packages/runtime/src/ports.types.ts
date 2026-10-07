@@ -4,6 +4,7 @@ import type {
   ActionInfo,
   AgentEvent,
   CheckResult,
+  ChronicleEntry,
   CoreMessage,
   CouncilAnswer,
   CouncilEvent,
@@ -115,18 +116,8 @@ export interface ElderStart {
   keptCouncil: { from: string } | null;
 }
 
-/** One past campaign in the elder's index (#168): enough to judge it, and where its record is. */
-export interface PastRecord {
-  campaignId: string;
-  title: string;
-  /** `YYYY-MM-DD`, when its record was written. */
-  date: string;
-  status: 'finished' | 'abandoned';
-  /** The plan's summary, when it had one. */
-  summary: string | null;
-  /** The record, relative to the repository. */
-  path: string;
-}
+/** One past campaign in the elder's index (#168) and the Chronicle (#179). */
+export type PastRecord = ChronicleEntry;
 
 /** The elder's lessons (§4.9, #167): a short session on a cheap model, from the reviews' material. */
 export interface LessonsStart {

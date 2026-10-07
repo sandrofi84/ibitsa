@@ -2,6 +2,7 @@ import {
   type ActionDraft,
   type ActionInfo,
   type ActionPreview,
+  type ChronicleEntry,
   type Command,
   type CoreMessage,
   type Cue,
@@ -31,6 +32,9 @@ export class GameClient {
   actions: ActionInfo[] = [];
   private readonly actionListeners: ((actions: ActionInfo[]) => void)[] = [];
   private readonly actionResultListeners: ((result: ActionResult) => void)[] = [];
+  /** Past campaigns for the Guild Hall's Chronicle (#179), once asked for. */
+  chronicle: ChronicleEntry[] | null = null;
+  private readonly chronicleListeners: ((campaigns: ChronicleEntry[]) => void)[] = [];
   /** The campaign the held lists are for; a new one starts afresh. */
   private actionsFor: string | null = null;
   /** Per hero (#125; `''` for the default): the list, or the ones waiting for it. */
@@ -128,6 +132,15 @@ export class GameClient {
     this.actionResultListeners.push(listener);
   }
 
+  /** Asks the runtime for past campaigns (#179); the answer arrives through `onChronicle`. */
+  requestChronicle(): void {
+    this.host.send({ type: 'requestChronicle' });
+  }
+
+  onChronicle(listener: (campaigns: ChronicleEntry[]) => void): void {
+    this.chronicleListeners.push(listener);
+  }
+
   /** Called whenever the held journal lines change. */
   onJournal(listener: () => void): void {
     this.journalListeners.push(listener);
@@ -190,6 +203,10 @@ export class GameClient {
         for (const l of this.actionResultListeners) {
           l({ ok: false, name: message.name, reason: message.reason, clash: message.clash });
         }
+        return;
+      case 'chronicle':
+        this.chronicle = message.campaigns;
+        for (const l of this.chronicleListeners) l(message.campaigns);
         return;
       case 'actions': {
         this.actions = message.actions;

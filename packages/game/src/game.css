@@ -1771,3 +1771,78 @@ body.in-hut:has(.council-chamber:not([hidden])) .needs-you {
   gap: 6px;
   margin-top: 6px;
 }
+
+/* The Guild Hall (§7.1, #179): Ibitsa's settings, over the map like the task panel. */
+.guild-hall:not([hidden]) {
+  position: fixed;
+  top: 48px;
+  left: 12px;
+  z-index: 6;
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 120px);
+  overflow: auto;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  background: rgba(239, 224, 184, 0.98);
+  color: #1a1420;
+  border: 2px solid #8a6a3a;
+  border-radius: 4px;
+  font:
+    13px / 1.45 system-ui,
+    sans-serif;
+}
+
+.guild-hall h2 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.guild-hall .guild-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.guild-hall .guild-tabs [aria-selected="true"] {
+  font-weight: bold;
+  border-bottom: 2px solid #8a6a3a;
+}
+
+.guild-hall .entry {
+  margin: 6px 0;
+}
+
+.guild-hall .rule {
+  display: grid;
+  grid-template-columns: 1fr minmax(120px, 200px) auto auto;
+  gap: 2px 8px;
+  align-items: center;
+  margin: 8px 0;
+}
+
+.guild-hall .rule .note,
+.guild-hall .rule .rule-problem {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.guild-hall .rule .rule-problem {
+  color: #a32020;
+}
+
+.guild-hall .rule textarea {
+  font: inherit;
+}
+
+.guild-hall .layer {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: #ddd0aa;
+}
+
+.guild-hall .layer.user,
+.guild-hall .layer.workspace {
+  background: #2f5fb0;
+  color: #fff;
+}

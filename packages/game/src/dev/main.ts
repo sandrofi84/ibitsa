@@ -93,6 +93,8 @@ if (name === 'live') {
     pullRequestOnPage: started.pullRequestOnPage,
     // The council hut and its chamber (#169).
     hutOnPage: started.hutOnPage,
+    guildHallOnPage: started.guildHallOnPage,
+    guildHall: started.guildHall,
     councilChamber: started.councilChamber,
     pullRequestPanel: started.pullRequestPanel,
     pullRequestPreview: started.pullRequestPreview,

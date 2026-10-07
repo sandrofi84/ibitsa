@@ -304,6 +304,11 @@
       "image": "map/hut.png",
       "width": 64,
       "height": 64
+    },
+    "guildHall": {
+      "image": "map/guild-hall.png",
+      "width": 48,
+      "height": 48
     }
   },
   "ui": {

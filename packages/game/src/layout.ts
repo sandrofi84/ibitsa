@@ -45,7 +45,9 @@ function middlesFor(n: number): number {
  */
 export function layoutWorld(snapshot: Snapshot | null): WorldLayout {
   const village = { x: 16, y: BOTTOM_Y, middles: 1 };
-  const hut = { x: village.x + 32, y: village.y - 30 };
+  // The Guild Hall (48×48, #179) on the left, the council hut (64×64) on the right, feet on the grass.
+  const guildHall = { x: village.x + 6, y: village.y - 14 };
+  const hut = { x: village.x + 56, y: village.y - 30 };
   const islands = snapshot?.islands ?? [];
   const sizes = islands.map((island) => middlesFor(island.taskPoints.length));
   const placed = snapshot?.campaign?.branching === 'stacked' ? stacked(sizes) : separate(sizes);
@@ -77,7 +79,7 @@ export function layoutWorld(snapshot: Snapshot | null): WorldLayout {
   const right = Math.max(WORLD.width, ...laid.map((i) => i.x + i.width + MARGIN));
   const left = Math.min(0, ...laid.map((i) => i.x - MARGIN));
   return {
-    village: { ...village, hut, door: { x: hut.x + 32, y: hut.y + 62 } },
+    village: { ...village, hut, guildHall, door: { x: hut.x + 32, y: hut.y + 62 } },
     islands: laid,
     bridges,
     ibitsa: { x: right - 40, y: CHANNEL_Y - 10 },

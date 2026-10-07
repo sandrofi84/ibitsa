@@ -74,6 +74,7 @@ function command(ctx: StepContext, command: Command): void {
   switch (command.type) {
     case 'hello':
     case 'requestJournal':
+    case 'requestChronicle':
     case 'requestFiles':
     case 'forgetProjectRule':
     case 'requestActions':

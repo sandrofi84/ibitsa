@@ -10,6 +10,7 @@ import {
   dialogueFrame,
   engineTextures,
   FRAMES,
+  guildHall,
   hut,
   island,
   markers,
@@ -80,6 +81,7 @@ export function buildDefaultPack(): { manifest: Manifest; files: Record<string, 
   files['map/island.png'] = island().png();
   files['map/task-points.png'] = taskPoints(TASK_POINT_STATES).png();
   files['map/hut.png'] = hut().png();
+  files['map/guild-hall.png'] = guildHall().png();
   files['ui/activity-icons.png'] = activityIcons(ACTIVITY_KINDS).png();
   files['ui/dialogue-frame.png'] = dialogueFrame().png();
   files['map/bridge.png'] = bridge().png();
@@ -113,7 +115,10 @@ export function buildDefaultPack(): { manifest: Manifest; files: Record<string, 
     },
     bridge: { image: 'map/bridge.png', ...SPEC.bridge, frames: [...BRIDGE_FRAMES] },
     markers: { image: 'ui/markers.png', size: SPEC.marker, kinds: [...MARKER_KINDS] },
-    buildings: { hut: { image: 'map/hut.png', width: SPEC.hut, height: SPEC.hut } },
+    buildings: {
+      hut: { image: 'map/hut.png', width: SPEC.hut, height: SPEC.hut },
+      guildHall: { image: 'map/guild-hall.png', width: SPEC.guildHall, height: SPEC.guildHall },
+    },
     ui: { dialogueFrame: { image: 'ui/dialogue-frame.png', size: SPEC.dialogueFrame, inset: 8 } },
   };
   return { manifest, files };

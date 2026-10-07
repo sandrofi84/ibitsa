@@ -77,7 +77,7 @@ describe('layoutWorld', () => {
     const l = layoutWorld(null);
     expect(l.islands).toEqual([]);
     expect(l.bridges).toEqual([]);
-    expect(l.village.door).toEqual({ x: 80, y: 192 });
+    expect(l.village.door).toEqual({ x: 104, y: 192 });
     expect(l.bounds).toEqual({ x: 0, y: 0, width: 480, height: 270 });
   });
 
@@ -166,9 +166,9 @@ describe('where heroes stand and walk', () => {
     const l = layoutWorld(snapshot({ islands: [island('i')] }));
     const spot = heroSpot(l, 'i-t0');
     const path = pathTo(l, 'i-t0');
-    expect(path).toEqual([{ x: 80, y: 196 }, { x: 168, y: spot.y }, spot]);
-    expect(heroSpot(l, 'nowhere')).toEqual({ x: 80, y: 196 });
-    expect(pathTo(l, 'nowhere')).toEqual([{ x: 80, y: 196 }]);
+    expect(path).toEqual([{ x: 104, y: 196 }, { x: 168, y: spot.y }, spot]);
+    expect(heroSpot(l, 'nowhere')).toEqual({ x: 104, y: 196 });
+    expect(pathTo(l, 'nowhere')).toEqual([{ x: 104, y: 196 }]);
   });
 
   it('routes a stacked hero across the islands and bridges before its own, never through the sea', () => {
@@ -176,7 +176,7 @@ describe('where heroes stand and walk', () => {
     const third = pathTo(l, 'i2-t0');
     const end = heroSpot(l, 'i2-t0');
     expect(third).toEqual([
-      { x: 80, y: 196 },
+      { x: 104, y: 196 },
       { x: 168, y: end.y },
       { x: (l.bridges[0]?.x ?? 0) + 24, y: end.y },
       { x: (l.bridges[1]?.x ?? 0) + 24, y: end.y },
@@ -213,8 +213,8 @@ describe('where heroes stand and walk', () => {
     expect(spots.get('h1')).toEqual(heroSpot(l, 'a-t0'));
     expect(spots.get('h2')).toEqual(villageSpot(l, 0));
     expect(spots.get('h3')).toEqual(villageSpot(l, 1));
-    expect(villageSpot(l, 0)).toEqual({ x: 60, y: 196 });
-    expect(villageSpot(l, 4)).toEqual({ x: 60, y: 208 });
+    expect(villageSpot(l, 0)).toEqual({ x: 84, y: 196 });
+    expect(villageSpot(l, 4)).toEqual({ x: 84, y: 208 });
   });
 });
 

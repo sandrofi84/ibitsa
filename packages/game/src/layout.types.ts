@@ -26,7 +26,7 @@ export interface BridgeLayout {
 }
 
 export interface WorldLayout {
-  village: { x: number; y: number; middles: number; hut: Point; door: Point };
+  village: { x: number; y: number; middles: number; hut: Point; guildHall: Point; door: Point };
   islands: IslandLayout[];
   bridges: BridgeLayout[];
   /** Ibitsa on the horizon (§7.2): in the sea between the rows, at the map's far end (#153). */

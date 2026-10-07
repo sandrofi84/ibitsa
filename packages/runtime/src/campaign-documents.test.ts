@@ -225,7 +225,7 @@ describe('the index of past records (#168)', () => {
       };
       write({
         id: 'c-old',
-        md: '# Campaign record: Sign-in\n\n**Finished.**\n\nEmail sign-in.\n\n## What shipped\n',
+        md: '# Campaign record: Sign-in\n\n**Finished.**\n\nEmail sign-in.\n\n## What shipped\n\n### Auth (`ibitsa/auth`)\n\nPull request [#7](https://github.com/o/r/pull/7): merged.\n- [x] Auth\n\n## Gold\n\n$1.24\n',
         at: 1_700_000_000,
       });
       write({
@@ -242,6 +242,8 @@ describe('the index of past records (#168)', () => {
           status: 'abandoned',
           summary: null,
           path: '.ibitsa/campaigns/c-new/record.md',
+          pullRequests: [],
+          gold: null,
         },
         {
           campaignId: 'c-old',
@@ -249,6 +251,8 @@ describe('the index of past records (#168)', () => {
           status: 'finished',
           summary: 'Email sign-in.',
           path: '.ibitsa/campaigns/c-old/record.md',
+          pullRequests: [{ number: 7, url: 'https://github.com/o/r/pull/7', state: 'merged' }],
+          gold: 1_240_000,
         },
       ]);
       expect(docs.pastRecords(1)).toHaveLength(1);

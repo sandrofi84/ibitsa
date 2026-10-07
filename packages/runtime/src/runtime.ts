@@ -221,6 +221,12 @@ export class Runtime {
       this.sendFiles({ frontEnd, islandId: command.islandId });
       return;
     }
+    if (command.type === 'requestChronicle') {
+      const repo = this.options.repoDir;
+      const campaigns = repo ? new CampaignDocuments(repo).pastRecords() : [];
+      frontEnd.post({ type: 'chronicle', seq: ++this.seq, campaigns });
+      return;
+    }
     if (command.type === 'requestJournal') {
       const page = this.journal.page({ before: command.before, limit: command.limit });
       frontEnd.post({ type: 'journal', seq: ++this.seq, ...page });
@@ -965,12 +971,13 @@ export class Runtime {
 
   /**
    * The `/` menu's actions for a hero's worktree (#84, #87, #125): that hero's, else the first one
-   * there is; none without one or on failure.
+   * there is. With no hero at work, the repository's, for the Guild Hall's Spell book (#179). None on
+   * failure.
    */
   currentActions(heroId?: string): Promise<ActionInfo[]> {
-    const cwd = this.worktreeOf(heroId);
-    if (!cwd || !this.actions || this.state.campaign?.status !== 'active')
-      return Promise.resolve([]);
+    const worktree = this.state.campaign?.status === 'active' ? this.worktreeOf(heroId) : null;
+    const cwd = worktree ?? this.options.repoDir;
+    if (!cwd || !this.actions) return Promise.resolve([]);
     return this.actions.list(cwd).catch(() => []);
   }
 

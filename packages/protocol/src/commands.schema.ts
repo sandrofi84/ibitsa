@@ -29,6 +29,8 @@ export const CommandSchema = v.variant('type', [
     before: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
     limit: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(500))),
   }),
+  /** The Guild Hall's Chronicle (#179): past campaigns, answered by the runtime and never logged. */
+  v.strictObject({ type: v.literal('requestChronicle') }),
   /**
    * Carry out the approved plan with a party per island (§5.1, §5.3, #121): each island's hero and gold
    * cap from party assembly, the base branch, and for a stacked plan how its islands start.

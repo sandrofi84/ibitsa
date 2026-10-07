@@ -1,7 +1,8 @@
 import type { HostEvent } from '@ibitsa/protocol';
 import { describe, expect, it, vi } from 'vitest';
 import type { Credentials } from './credentials.types';
-import { HostChannel, isHostMessage } from './host-channel';
+import { GuildSettings } from './guild-settings';
+import { HostChannel, isHostMessage, openablePath } from './host-channel';
 import type { HostChannelDeps } from './host-channel.types';
 
 function setup(overrides: Partial<HostChannelDeps> = {}) {
@@ -15,6 +16,14 @@ function setup(overrides: Partial<HostChannelDeps> = {}) {
     openApiKeyPage: vi.fn(),
     openWorktree: vi.fn(),
     post: (event) => posted.push(event),
+    settings: new GuildSettings({
+      schema: { 'ibitsa.review.loopLimit': { type: 'integer', default: 3, minimum: 1 } },
+      inspect: () => ({ defaultValue: 3 }),
+      update: async () => {},
+    }),
+    openSettings: vi.fn(),
+    openFile: vi.fn(),
+    openable: { workspace: '/ws', roots: ['/home/me/.claude/skills'] },
     ...overrides,
   };
   return { channel: new HostChannel(deps), deps, posted };
@@ -71,5 +80,77 @@ describe('isHostMessage', () => {
     expect(isHostMessage({ channel: 'host', type: 'x' })).toBe(true);
     expect(isHostMessage({ type: 'hello' })).toBe(false);
     expect(isHostMessage(null)).toBe(false);
+  });
+});
+
+describe('the Guild Hall on the host channel (#179)', () => {
+  it('sends the rules on request, and again after a write or a reset', async () => {
+    const update = vi.fn(async () => {});
+    const { channel, posted } = setup({
+      settings: new GuildSettings({
+        schema: { 'ibitsa.review.loopLimit': { type: 'integer', default: 3 } },
+        inspect: () => ({ defaultValue: 3 }),
+        update,
+      }),
+    });
+    await channel.receive({ channel: 'host', type: 'readSettings' });
+    await channel.receive({
+      channel: 'host',
+      type: 'writeSetting',
+      key: 'review.loopLimit',
+      value: 5,
+      layer: 'workspace',
+    });
+    await channel.receive({
+      channel: 'host',
+      type: 'resetSetting',
+      key: 'review.loopLimit',
+      layer: 'workspace',
+    });
+    expect(posted.map((e) => e.type)).toEqual(['settings', 'settings', 'settings']);
+    expect(update.mock.calls).toEqual([
+      [{ key: 'review.loopLimit', value: 5, layer: 'workspace' }],
+      [{ key: 'review.loopLimit', value: undefined, layer: 'workspace' }],
+    ]);
+  });
+
+  it('refuses to write anything but a rule', async () => {
+    const update = vi.fn(async () => {});
+    const { channel } = setup({
+      settings: new GuildSettings({ schema: {}, inspect: () => undefined, update }),
+    });
+    await channel.receive({
+      channel: 'host',
+      type: 'writeSetting',
+      key: 'claudeCodePath',
+      value: '/evil',
+      layer: 'user',
+    });
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('opens VS Code settings, and only files inside the workspace or the allowed folders', async () => {
+    const { channel, deps } = setup();
+    await channel.receive({ channel: 'host', type: 'openSettings' });
+    await channel.receive({
+      channel: 'host',
+      type: 'openFile',
+      path: '.ibitsa/campaigns/c1/record.md',
+    });
+    await channel.receive({ channel: 'host', type: 'openFile', path: '../secrets.txt' });
+    await channel.receive({ channel: 'host', type: 'openFile', path: '/etc/passwd' });
+    expect(deps.openSettings).toHaveBeenCalledOnce();
+    expect(deps.openFile).toHaveBeenCalledTimes(1);
+    expect(deps.openFile).toHaveBeenCalledWith('/ws/.ibitsa/campaigns/c1/record.md');
+  });
+
+  it('checks paths against every allowed folder', () => {
+    const roots = ['/home/me/.claude/skills'];
+    expect(
+      openablePath({ path: '/home/me/.claude/skills/x/SKILL.md', workspace: '/ws', roots }),
+    ).toBe('/home/me/.claude/skills/x/SKILL.md');
+    expect(openablePath({ path: '/home/me/.claude/skills', workspace: '/ws', roots })).toBeNull();
+    expect(openablePath({ path: 'a.md', workspace: undefined, roots })).toBeNull();
+    expect(openablePath({ path: '/ws/../ws2/a.md', workspace: '/ws', roots })).toBeNull();
   });
 });
