@@ -37,6 +37,34 @@ export const CommandSchema = v.variant('type', [
     classId: id,
     baseRef: id,
   }),
+  /**
+   * Carry out the approved plan with a party per island (§5.1, §5.3, #121): each island's hero and gold
+   * cap from party assembly, the base branch, and for a stacked plan how its islands start.
+   */
+  v.strictObject({
+    type: v.literal('startCampaign'),
+    commandId: id,
+    baseRef: id,
+    stackedStart: v.optional(v.picklist(['cleared', 'together'])),
+    parties: v.pipe(
+      v.array(
+        v.strictObject({
+          islandId: id,
+          heroName: v.pipe(v.string(), v.nonEmpty()),
+          classId: id,
+          /** Overrides the default gold pouch; null for none. */
+          budgetMicroUsd: v.optional(v.nullable(positiveInt)),
+        }),
+      ),
+      v.minLength(1),
+    ),
+  }),
+  /** Raise the campaign's cap (§14.3): heroes it stopped carry on if the total is below it again. */
+  v.strictObject({
+    type: v.literal('raiseCampaignBudget'),
+    commandId: id,
+    addMicroUsd: positiveInt,
+  }),
   /** Ask the elder to research a task (spec §4.1): starts a campaign in planning. */
   v.strictObject({
     type: v.literal('consultElder'),

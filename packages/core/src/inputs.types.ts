@@ -13,6 +13,8 @@ export type GameMasterEvent =
   | { type: 'diffObserved'; heroId: string; hash: string }
   | { type: 'worktreeRemoved'; islandId: string }
   | { type: 'worktreeRemoveFailed'; islandId: string; commandId: string; reason: string }
+  /** The result of `rebaseWorktree` (#121): already up to date, rebased cleanly, or aborted on a conflict. */
+  | { type: 'worktreeRebased'; islandId: string; outcome: 'upToDate' | 'rebased' | 'conflict' }
   /** The council version of a sitting whose session started (§4.10); noted by the runtime. */
   | { type: 'councilVersionNoted'; sittingId: string; version: string }
   /** The runtime rebuilt state after a restart; every live session is gone (spec §12). */

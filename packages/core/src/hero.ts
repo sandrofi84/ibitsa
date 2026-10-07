@@ -1,4 +1,5 @@
 import type { AgentEvent, ExecutionState, HeroView } from '@ibitsa/protocol';
+import { Campaign } from './campaign';
 import type { NewHero } from './hero.types';
 import { describePermission } from './needs-you';
 import type { HeroRecord, QuestSettings, StallWatch } from './state.types';
@@ -34,6 +35,8 @@ export class Hero {
       runningTools: [],
       lastMessage: null,
       allowRules: [],
+      heldFor: [],
+      campaignCapped: false,
       resting: false,
       pendingSubmit: null,
       submitted: null,
@@ -80,6 +83,11 @@ export class Hero {
     if (this.ctx.needsYou.isAsking(r.id)) return { kind: 'waitingOnYou' };
     if (r.resting) return { kind: 'resting' };
     if (r.inTurn || r.runningTools.length > 0) return { kind: 'working' };
+    const island = this.island();
+    if (island && !island.launched) {
+      return { kind: 'blocked', reason: Campaign.blockReason(this.ctx.state, island) };
+    }
+    if (r.heldFor.length > 0) return { kind: 'blocked', reason: 'dependency' };
     if (r.submitted) return { kind: 'submitted', summary: r.submitted.summary };
     if (r.sessionStarted) return { kind: 'idle' };
     return { kind: 'traveling' };
@@ -266,7 +274,8 @@ export class Hero {
   /** The agent process is gone (spec §12): say so, unless the hero had already finished. */
   restarted(): void {
     const r = this.record;
-    const wasActive = !r.submitted || r.inTurn;
+    // A hero whose island hasn't started yet has no session to lose (#121).
+    const wasActive = (!r.submitted || r.inTurn) && this.island()?.launched !== false;
     r.sessionLive = false;
     r.inTurn = false;
     r.runningTools = [];
@@ -405,8 +414,18 @@ export class Hero {
       this.record.submitted = { summary };
       return;
     }
-    next.state = 'active';
     this.record.taskPointId = next.id;
+    // A task that waits on another island's task is held until that one is done (#121).
+    const unmet = Campaign.unmet({ state: this.ctx.state, taskPoint: next });
+    if (unmet.length > 0) this.record.heldFor = unmet;
+    else this.takeNextTask();
+  }
+
+  /** The current task, now that nothing holds it: active on the map and sent to the hero. */
+  takeNextTask(): void {
+    this.record.heldFor = [];
+    const task = this.task();
+    if (task) task.state = 'active';
     this.ctx.outbox.effect({
       type: 'sendMessage',
       heroId: this.id,
@@ -415,10 +434,38 @@ export class Hero {
     });
   }
 
+  /** The campaign's cap is reached (§14.3, #121): stop and ask, like an empty pouch. */
+  stopForCampaign(cap: number): void {
+    const r = this.record;
+    r.campaignCapped = true;
+    r.outOfGold = true;
+    if (r.inTurn) this.ctx.outbox.effect({ type: 'interrupt', heroId: r.id });
+    r.inTurn = false;
+    r.runningTools = [];
+    this.ctx.needsYou.ask({
+      kind: 'outOfGold',
+      heroId: r.id,
+      cap,
+      capEnforcement: 'turnEnd',
+      scope: 'campaign',
+    });
+  }
+
+  /** The campaign's cap was raised past what's spent: carry on. */
+  releaseCampaignCap(): void {
+    const r = this.record;
+    r.campaignCapped = false;
+    if (this.overBudget()) return;
+    r.outOfGold = false;
+    this.ctx.needsYou.removeFor(r.id, ['outOfGold']);
+    this.continueWith({ text: CONTINUE_PROMPT, priority: 'next' });
+  }
+
   /** Arm the silence timer while a turn is in progress with no tool running; disarm otherwise. */
   watchSilence(): void {
     const r = this.record;
     const expectingEvents =
+      this.island()?.launched !== false &&
       (!r.sessionStarted || (r.inTurn && r.runningTools.length === 0)) &&
       r.sessionLive &&
       !this.ctx.needsYou.isAsking(r.id) &&
@@ -443,11 +490,26 @@ export class Hero {
     if (queuedTurns > 0) return;
     r.inTurn = false;
     r.queuedMessages = 0;
+    this.followBase(worktreePath);
     if (r.cap?.enforcement === 'native' && this.overBudget()) this.outOfGold();
     const paused = r.stalled !== null || r.outOfGold || r.error !== null;
     if (!r.submitted && !paused) {
       this.ctx.needsYou.ask({ kind: 'reply', heroId: r.id, text: r.lastMessage ?? '' });
     }
+  }
+
+  /** Stacked, all at once (#121): between turns, catch up with the island this one builds on. */
+  private followBase(worktreePath: string | null): void {
+    const island = this.island();
+    const base = this.ctx.state.islands.find((i) => i.id === island?.basedOn);
+    if (!island || !base || !worktreePath || this.ctx.state.campaign?.stackedStart !== 'together')
+      return;
+    this.ctx.outbox.effect({
+      type: 'rebaseWorktree',
+      islandId: island.id,
+      worktreePath,
+      onto: base.branch,
+    });
   }
 
   private activityFinished({ toolUseId, ok }: { toolUseId: string; ok: boolean }): void {

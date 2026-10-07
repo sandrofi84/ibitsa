@@ -153,6 +153,14 @@ export interface GameMaster {
   }): Promise<{ ok: true } | { ok: false; reason: string }>;
   /** Default branch, local branches and uncommitted changes of the workspace; null if not a git repo. */
   scanRepo(): Promise<RepoView | null>;
+  /**
+   * Stacked, all at once (#121): rebase a worktree onto the branch it builds on; aborts on a conflict.
+   * Game masters that can't leave it out (#122 adds it to the git one).
+   */
+  rebaseWorktree?(request: {
+    worktreePath: string;
+    onto: string;
+  }): Promise<'upToDate' | 'rebased' | 'conflict'>;
   /** The worktree's files, tracked and untracked but not ignored, for @ references (#83). */
   listFiles(request: { worktreePath: string }): Promise<string[]>;
 }
@@ -173,4 +181,8 @@ export interface FrontEnd {
 export interface UserSettings {
   budgetMicroUsd: number | null;
   stall: { testFailures: number; fileEdits: number; noProgressTurns: number };
+  /** `ibitsa.parties.maxParallel` (#121). */
+  maxParallel?: number;
+  /** `ibitsa.campaign.budgetUsd` in micro-dollars (#121); null for none. */
+  campaignBudgetMicroUsd?: number | null;
 }

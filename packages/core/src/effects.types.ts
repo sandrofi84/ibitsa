@@ -104,5 +104,7 @@ export type Effect =
       answers: CouncilAnswer[];
     }
   | { type: 'closeSitting'; sittingId: string }
+  /** Stacked, all at once (#121): rebase the island's worktree onto the branch it builds on. */
+  | { type: 'rebaseWorktree'; islandId: string; worktreePath: string; onto: string }
   | { type: 'setTimer'; timerId: string; at: number }
   | { type: 'cancelTimer'; timerId: string };

@@ -33,6 +33,17 @@ export class Quest {
       : { kind: 'exact', value: total };
   }
 
+  /** Branch names: `ibitsa/<slug of the title>` (spec §5.3). */
+  static slug(text: string): string {
+    return text
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 40)
+      .replace(/-+$/g, '');
+  }
+
   /** A quest's title: the task's first line, shortened. */
   static title(task: string): string {
     const firstLine = task.split('\n')[0]?.trim() ?? '';
@@ -150,8 +161,16 @@ export class Quest {
       state: i === 0 ? ('active' as const) : ('locked' as const),
     }));
     const heroId = newId(state, 'h');
-    const branch = `ibitsa/${slug(title) || 'quest'}`;
-    state.campaign = { id: campaignId, title, status: 'active', autoApprove: false };
+    const branch = `ibitsa/${Quest.slug(title) || 'quest'}`;
+    state.campaign = {
+      id: campaignId,
+      title,
+      status: 'active',
+      autoApprove: false,
+      branching: 'separate',
+      stackedStart: null,
+      baseRef: command.baseRef,
+    };
     state.islands = [
       {
         id: islandId,
@@ -160,6 +179,9 @@ export class Quest {
         baseRef: command.baseRef,
         worktreePath: null,
         worktreeRemoved: false,
+        launched: true,
+        basedOn: null,
+        behind: false,
         taskPoints,
       },
     ];
@@ -261,15 +283,4 @@ export class Quest {
     }
     this.ctx.needsYou.clear();
   }
-}
-
-/** Branch names: `ibitsa/<slug of the title>` (spec §5.3). */
-function slug(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 40)
-    .replace(/-+$/g, '');
 }

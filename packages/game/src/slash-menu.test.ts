@@ -77,7 +77,16 @@ describe('slashMenu (#84)', () => {
     };
     const c = new GameClient(host);
     const snapshot = {
-      campaign: { id: 'c1', title: 'Q', status, gold: { kind: 'unknown' }, autoApprove: false },
+      campaign: {
+        id: 'c1',
+        title: 'Q',
+        status,
+        gold: { kind: 'unknown' },
+        autoApprove: false,
+        branching: 'separate' as const,
+        stackedStart: null,
+        capMicroUsd: null,
+      },
       elder: null,
       sitting: null,
       islands: [],

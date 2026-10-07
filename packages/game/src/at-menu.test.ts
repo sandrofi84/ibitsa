@@ -42,10 +42,29 @@ function connected({
     type: 'snapshot',
     seq: 1,
     snapshot: {
-      campaign: { id: 'c1', title: 'Q', status, gold: { kind: 'unknown' }, autoApprove: false },
+      campaign: {
+        id: 'c1',
+        title: 'Q',
+        status,
+        gold: { kind: 'unknown' },
+        autoApprove: false,
+        branching: 'separate' as const,
+        stackedStart: null,
+        capMicroUsd: null,
+      },
       elder: null,
       sitting: null,
-      islands: [{ id: 'i2', name: 'Q', branch: 'b', worktree, taskPoints: [] }],
+      islands: [
+        {
+          id: 'i2',
+          name: 'Q',
+          branch: 'b',
+          worktree,
+          basedOn: null,
+          behind: false,
+          taskPoints: [],
+        },
+      ],
       heroes: [
         {
           id: 'h4',

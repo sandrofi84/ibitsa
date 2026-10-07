@@ -73,6 +73,21 @@
           "minimum": 0,
           "markdownDescription": "A hero's gold pouch in US dollars. When it's spent, the hero stops and asks before spending more. Leave empty for no cap."
         },
+        "ibitsa.parties.maxParallel": {
+          "type": "integer",
+          "default": 2,
+          "minimum": 1,
+          "markdownDescription": "How many parties (heroes on their own islands) work at the same time. The others wait for a free slot and start by themselves."
+        },
+        "ibitsa.campaign.budgetUsd": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "default": null,
+          "minimum": 0,
+          "markdownDescription": "The most a whole campaign may spend, in US dollars: every hero plus the elder and the council. When it's reached, every hero stops and asks. Leave empty for no cap."
+        },
         "ibitsa.worktree.setup": {
           "type": "string",
           "default": "",

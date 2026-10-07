@@ -95,9 +95,14 @@ describe('starting a quest', () => {
       status: 'active',
       gold: { kind: 'unknown' },
       autoApprove: false,
+      branching: 'separate',
+      stackedStart: null,
+      capMicroUsd: null,
     });
     expect(snap.islands).toEqual([
       {
+        basedOn: null,
+        behind: false,
         id: 'i2',
         name: 'Fix the login redirect',
         branch: 'ibitsa/fix-the-login-redirect',
@@ -498,6 +503,8 @@ describe('state precedence (§5.4)', () => {
     inTurn: true,
     runningTools: [],
     lastMessage: null,
+    heldFor: [],
+    campaignCapped: false,
     allowRules: [],
     resting: true,
     pendingSubmit: null,

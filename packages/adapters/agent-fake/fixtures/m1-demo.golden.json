@@ -147,6 +147,9 @@
           "title": "Make slugify strip accents",
           "status": "active",
           "autoApprove": false,
+          "branching": "separate",
+          "stackedStart": null,
+          "capMicroUsd": null,
           "gold": {
             "kind": "unknown"
           }
@@ -159,6 +162,8 @@
             "name": "Make slugify strip accents",
             "branch": "ibitsa/make-slugify-strip-accents-3",
             "worktree": "ready",
+            "basedOn": null,
+            "behind": false,
             "taskPoints": [
               {
                 "id": "t3",
@@ -208,6 +213,9 @@
           "title": "Make slugify strip accents",
           "status": "active",
           "autoApprove": false,
+          "branching": "separate",
+          "stackedStart": null,
+          "capMicroUsd": null,
           "gold": {
             "kind": "unknown"
           }
@@ -220,6 +228,8 @@
             "name": "Make slugify strip accents",
             "branch": "ibitsa/make-slugify-strip-accents-3",
             "worktree": "ready",
+            "basedOn": null,
+            "behind": false,
             "taskPoints": [
               {
                 "id": "t3",
@@ -263,6 +273,9 @@
           "title": "Make slugify strip accents",
           "status": "active",
           "autoApprove": false,
+          "branching": "separate",
+          "stackedStart": null,
+          "capMicroUsd": null,
           "gold": {
             "kind": "exact",
             "value": 161964
@@ -276,6 +289,8 @@
             "name": "Make slugify strip accents",
             "branch": "ibitsa/make-slugify-strip-accents-3",
             "worktree": "ready",
+            "basedOn": null,
+            "behind": false,
             "taskPoints": [
               {
                 "id": "t3",
@@ -321,6 +336,9 @@
       "title": "Make slugify strip accents",
       "status": "finished",
       "autoApprove": false,
+      "branching": "separate",
+      "stackedStart": null,
+      "capMicroUsd": null,
       "gold": {
         "kind": "exact",
         "value": 161964
@@ -334,6 +352,8 @@
         "name": "Make slugify strip accents",
         "branch": "ibitsa/make-slugify-strip-accents-3",
         "worktree": "removed",
+        "basedOn": null,
+        "behind": false,
         "taskPoints": [
           {
             "id": "t3",
