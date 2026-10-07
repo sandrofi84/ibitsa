@@ -16,16 +16,24 @@ export function shell({
   command,
   cwd,
   timeoutMs,
+  env,
 }: {
   command: string;
   cwd: string;
   timeoutMs: number;
+  /** Added to the environment, e.g. `CI=1` so test runners don't watch. */
+  env?: Record<string, string>;
 }): Promise<CommandResult> {
   return new Promise((resolve) => {
     // Its own process group (not on Windows), so a timeout stops everything the command started:
     // killing only the shell would leave its children running and holding the output open (#93).
     const group = process.platform !== 'win32';
-    const child = spawn(command, { cwd, shell: true, detached: group });
+    const child = spawn(command, {
+      cwd,
+      shell: true,
+      detached: group,
+      ...(env ? { env: { ...process.env, ...env } } : {}),
+    });
     let output = '';
     const collect = (chunk: Buffer) => {
       output += chunk.toString();
