@@ -11,7 +11,7 @@ import type { AgentEvent } from '@ibitsa/protocol';
 import { describe, expect, it } from 'vitest';
 import { ClaudeAdapter } from './claude-adapter';
 import type { SdkModule } from './claude-adapter.types';
-import { HERO_INSTRUCTIONS, SUBMIT_TOOL } from './claude-session';
+import { DISPUTE_TOOL, HERO_INSTRUCTIONS, SUBMIT_TOOL } from './claude-session';
 import { commandExists } from './hero-settings';
 
 type Script = (ctx: {
@@ -148,7 +148,7 @@ describe('ClaudeAdapter sessions', () => {
       settingSources: ['project'],
       sandbox: { enabled: true, autoAllowBashIfSandboxed: true, failIfUnavailable: true },
       settings: { permissions: { ask: ['Bash(dangerouslyDisableSandbox:true)'] } },
-      allowedTools: [SUBMIT_TOOL],
+      allowedTools: [SUBMIT_TOOL, DISPUTE_TOOL],
       maxBudgetUsd: 2.5,
     });
     expect(options.mcpServers).toHaveProperty('ibitsa');
@@ -449,6 +449,33 @@ describe('submit_task (#34)', () => {
     expect(await accepted).toEqual({
       content: [{ type: 'text', text: 'Submitted. Your work will be reviewed.' }],
     });
+    g.open();
+  });
+});
+
+describe('dispute_finding (#138)', () => {
+  it('passes the dispute to the user and tells the hero to carry on meanwhile', async () => {
+    const g = gate();
+    const fake = fakeSdk(async function* ({ input }) {
+      await input.next();
+      yield init;
+      await g.closed;
+    });
+    const events: AgentEvent[] = [];
+    adapter(fake.sdk).startSession(start, (e) => events.push(e));
+    await flush();
+    const dispute = fake.tools.find((t) => t.name === 'dispute_finding');
+    if (!dispute) throw new Error('no dispute_finding tool');
+    const reply = await dispute.handler({
+      reviewIds: ['r1', 'r2'],
+      reason: 'They contradict',
+    } as never);
+    expect(events.at(-1)).toEqual({
+      type: 'findingDisputed',
+      reviewIds: ['r1', 'r2'],
+      reason: 'They contradict',
+    });
+    expect(JSON.stringify(reply)).toContain('The user will decide');
     g.open();
   });
 });

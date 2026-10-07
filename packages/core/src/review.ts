@@ -298,21 +298,23 @@ export class Review {
   }): void {
     const review = task.review;
     if (!review) return;
-    const findings = this.open(review).flatMap((r) => blockingOf(r));
+    // Each finding names its review, so the hero can dispute it by id (`dispute_finding`).
+    const lines = this.open(review).flatMap((r) =>
+      blockingOf(r).map((f) => {
+        const where = f.file ? ` (${f.file}${f.line ? `:${f.line}` : ''})` : '';
+        const why = f.criterion ? `criterion "${f.criterion}"` : (f.kind ?? 'blocking');
+        return `- ${f.councillorId}, ${why}${where}: ${f.message} [review ${r.id}]`;
+      }),
+    );
     review.round++;
     review.phase = 'changes';
     task.state = 'active';
-    const lines = findings.map((f) => {
-      const where = f.file ? ` (${f.file}${f.line ? `:${f.line}` : ''})` : '';
-      const why = f.criterion ? `criterion "${f.criterion}"` : (f.kind ?? 'blocking');
-      return `- ${f.councillorId}, ${why}${where}: ${f.message}`;
-    });
     const intro =
       lines.length > 0 ? `The review found:\n${lines.join('\n')}` : 'The user sent the task back.';
     const extra = note ? `\n\nThe user adds: ${note}` : '';
     this.tell({
       hero,
-      text: `${intro}${extra}\n\nFix these, commit, and call submit_task again. If two findings contradict each other or a recorded decision, call dispute_finding instead.`,
+      text: `${intro}${extra}\n\nFix these, commit, and call submit_task again. If two findings contradict each other or a recorded decision, call dispute_finding with their review ids instead.`,
     });
   }
 

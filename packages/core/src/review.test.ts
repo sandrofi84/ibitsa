@@ -301,7 +301,8 @@ describe('the review loop (spec §5.5, M5)', () => {
     expect(run.messages()[0]).toContain(
       '- security, criterion "Passwords are hashed" (src/auth.ts:3): Uses MD5',
     );
-    expect(run.messages()[0]).toContain('call dispute_finding instead');
+    expect(run.messages()[0]).toContain(`Uses MD5 [review ${security?.reviewId}]`);
+    expect(run.messages()[0]).toContain('call dispute_finding with their review ids instead');
     expect(view(run.state).islands[0]?.taskPoints[0]?.review).toMatchObject({
       round: 2,
       phase: 'changes',
