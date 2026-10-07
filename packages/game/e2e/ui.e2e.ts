@@ -27,6 +27,7 @@ interface Probe {
     sitting: { mode: string; comparisonOf: string | null; rating: unknown } | null;
   } | null;
   hut(): { decisions: number } | null;
+  sent(): { type: string; parties?: unknown }[];
   hostRequests(): { type: string; key?: string }[];
   hero: {
     onPage(): { x: number; y: number } | null;
@@ -520,9 +521,22 @@ test('the brief convenes a round table; its approved plan becomes a quest, task 
   await expect(assembly.getByRole('group', { name: 'I1 The redirect fix' })).toBeVisible();
   const second = assembly.getByRole('group', { name: 'I2 The redirect test' });
   await expect(second.getByLabel('Hero name')).toHaveValue('Ranger Rowan');
-  await expect(second).toContainText('Reviewed by: Tester');
+  // One review effort per reviewing councillor, Light by default (#139).
+  const effort = second.getByLabel('Tester, review effort');
+  await expect(effort).toHaveValue('light');
+  await effort.selectOption('standard');
   await expect(assembly).toContainText('Up to 2 parties work at once');
+  await page.screenshot({ path: 'test-results/party-assembly-reviews.png' });
   await assembly.getByRole('button', { name: 'Start the campaign' }).click();
+  const started = await probe(page, (p) =>
+    p.sent().find((c: { type: string }) => c.type === 'startCampaign'),
+  );
+  expect(started).toMatchObject({
+    parties: [
+      { islandId: 'I1', reviewEfforts: { tester: 'light' } },
+      { islandId: 'I2', reviewEfforts: { tester: 'standard' } },
+    ],
+  });
   await expect(assembly).toBeHidden();
   await expect.poll(() => heroState(page)).toBe('idle');
   // The second island waits for the first island's task (#121).

@@ -2,7 +2,14 @@ import { type Plan, planIslands, type Snapshot } from '@ibitsa/protocol';
 import type { GameClient } from './client';
 import { button, el } from './dom';
 import { HERO_CLASSES } from './heroes';
-import { capFromInput, heroNameFor, namesProblem, partyRows } from './parties';
+import {
+  capFromInput,
+  heroNameFor,
+  namesProblem,
+  partyRows,
+  REVIEW_EFFORTS,
+  reviewEffortsFor,
+} from './parties';
 import type { PartyAssembly, PartyAssemblyOptions } from './party-assembly.types';
 import { councillorTitle } from './sitting-hut';
 
@@ -61,18 +68,42 @@ export function mountPartyAssembly({
       noCap.onchange = () => {
         cap.disabled = noCap.checked;
       };
-      const reviewers =
-        row.councillors.length > 0 ? row.councillors.map(councillorTitle).join(', ') : 'No one yet';
       const noCapLabel = el('label', { className: 'inline' });
       noCapLabel.append(noCap, ' No cap');
+      // One review effort per reviewing councillor (§5.5, #139): Light by default.
+      const efforts = row.councillors.map((councillorId) => {
+        const select = el('select');
+        for (const e of REVIEW_EFFORTS) select.add(new Option(e.label, e.id));
+        select.value = 'light';
+        return { councillorId, select };
+      });
+      const reviews = el('div', { className: 'reviews' });
+      if (efforts.length === 0) {
+        reviews.append(
+          el('p', {
+            className: 'note',
+            text: 'Nobody reviews this island: its checks are enough.',
+          }),
+        );
+      } else {
+        reviews.append(el('p', { className: 'note', text: 'Reviewed by:' }));
+        for (const e of efforts) {
+          reviews.append(
+            field({
+              label: `${councillorTitle(e.councillorId)}, review effort`,
+              control: e.select,
+            }),
+          );
+        }
+      }
       box.append(
         field({ label: 'Hero class', control: classSelect }),
         field({ label: 'Hero name', control: name }),
         field({ label: 'Gold cap in dollars', control: cap }),
         noCapLabel,
-        el('p', { className: 'note', text: `Reviewed by: ${reviewers} (reviews arrive with M5).` }),
+        reviews,
       );
-      return { row, box, classSelect, name, cap, noCap };
+      return { row, box, classSelect, name, cap, noCap, efforts };
     });
 
     const base = el('select');
@@ -147,6 +178,10 @@ export function mountPartyAssembly({
           heroName: r.name.value.trim(),
           classId: r.classSelect.value,
           ...(budget === undefined ? {} : { budgetMicroUsd: budget }),
+          ...reviewEffortsFor({
+            councillors: r.row.councillors,
+            chosen: Object.fromEntries(r.efforts.map((e) => [e.councillorId, e.select.value])),
+          }),
         };
       });
       const intent = {

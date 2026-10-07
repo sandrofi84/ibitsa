@@ -1,6 +1,13 @@
 import type { Plan, PlanTask } from '@ibitsa/protocol';
 import { describe, expect, it } from 'vitest';
-import { capFromInput, heroNameFor, namesProblem, partyRows } from './parties';
+import {
+  capFromInput,
+  heroNameFor,
+  namesProblem,
+  partyRows,
+  REVIEW_EFFORTS,
+  reviewEffortsFor,
+} from './parties';
 
 const task = (id: string, extra: Partial<PlanTask> = {}): PlanTask => ({
   id,
@@ -99,5 +106,25 @@ describe('gold caps and names (#123)', () => {
     expect(namesProblem(['A', 'B'])).toBeUndefined();
     expect(namesProblem(['A', ' '])).toBe('Every hero needs a name.');
     expect(namesProblem(['A', 'A '])).toBe('Two heroes are called A.');
+  });
+});
+
+describe('review efforts (#139)', () => {
+  it('offers Light, Standard and Deep, Light first', () => {
+    expect(REVIEW_EFFORTS.map((e) => e.id)).toEqual(['light', 'standard', 'deep']);
+    expect(REVIEW_EFFORTS[0]?.label).toBe('Light: Haiku, up to $0.10 a review');
+  });
+
+  it('sends one effort per reviewing councillor, Light unless chosen, and none without reviewers', () => {
+    expect(
+      reviewEffortsFor({
+        councillors: ['security', 'tester'],
+        chosen: { security: 'deep', tester: 'bogus' },
+      }),
+    ).toEqual({ reviewEfforts: { security: 'deep', tester: 'light' } });
+    expect(reviewEffortsFor({ councillors: ['tester'], chosen: {} })).toEqual({
+      reviewEfforts: { tester: 'light' },
+    });
+    expect(reviewEffortsFor({ councillors: [], chosen: { tester: 'deep' } })).toEqual({});
   });
 });

@@ -48,6 +48,8 @@ export class LiveDevHost implements Host {
   private readonly listeners: ((m: CoreMessage) => void)[] = [];
   private readonly repo: RepoView | null;
   private diffs = 0;
+  /** Every command the game sent, oldest first. */
+  readonly sent: Command[] = [];
   /** The scripted sitting's first councillor: it asks, and reviews the plan's tasks. */
   private asker = 'tester';
 
@@ -103,6 +105,8 @@ export class LiveDevHost implements Host {
   }
 
   send(command: Command): void {
+    // Kept for tests that check what the game sent (#139).
+    this.sent.push(command);
     if (command.type === 'forgetProjectRule') {
       this.projectRules = this.projectRules.filter((r) => r !== command.rule);
       this.emitSnapshot();

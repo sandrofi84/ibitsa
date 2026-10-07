@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  readChecks,
   readCouncilMode,
   readDisabledCouncillors,
   readElderSettings,
@@ -68,5 +69,25 @@ describe('readCouncilMode (#103)', () => {
     expect(readCouncilMode(config({ 'council.mode': 'chambers' }))).toBe('chambers');
     expect(readCouncilMode(config({ 'council.mode': 'sideways' }))).toBe('ask');
     expect(readCouncilMode(config({}))).toBe('ask');
+  });
+});
+
+describe('review settings (#139)', () => {
+  it('reads the loop limit, 3 unless set to a whole number of at least one', () => {
+    expect(readUserSettings(config({ 'review.loopLimit': 5 })).loopLimit).toBe(5);
+    expect(readUserSettings(config({ 'review.loopLimit': 2.7 })).loopLimit).toBe(2);
+    for (const value of [undefined, 0, -1, '4']) {
+      expect(readUserSettings(config({ 'review.loopLimit': value })).loopLimit).toBe(3);
+    }
+  });
+
+  it('reads the checks: the commands, an empty list for none, or null to detect them', () => {
+    expect(readChecks(config({ checks: [' pnpm test ', 'pnpm lint', '', 3] }))).toEqual([
+      'pnpm test',
+      'pnpm lint',
+    ]);
+    expect(readChecks(config({ checks: [] }))).toEqual([]);
+    expect(readChecks(config({}))).toBeNull();
+    expect(readChecks(config({ checks: 'pnpm test' }))).toBeNull();
   });
 });

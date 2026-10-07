@@ -1,6 +1,6 @@
-import { type Plan, planIslands } from '@ibitsa/protocol';
+import { type Effort, type Plan, planIslands } from '@ibitsa/protocol';
 import { DEFAULT_CLASS, HERO_CLASSES } from './heroes';
-import type { CapInput, PartyRow } from './parties.types';
+import type { CapInput, PartyRow, ReviewEffortOption } from './parties.types';
 
 /**
  * Party assembly's rows (§7.1 screen 4, #123): one per plan island, its hero's class from the island's
@@ -65,4 +65,31 @@ export function namesProblem(names: readonly string[]): string | undefined {
   if (names.some((n) => n.trim() === '')) return 'Every hero needs a name.';
   const twice = names.find((n, i) => names.findIndex((m) => m.trim() === n.trim()) !== i);
   return twice ? `Two heroes are called ${twice.trim()}.` : undefined;
+}
+
+/** A reviewer's effort (§5.5, M5): its model and the most one review may cost; Light by default. */
+export const REVIEW_EFFORTS: readonly ReviewEffortOption[] = [
+  { id: 'light', label: 'Light: Haiku, up to $0.10 a review' },
+  { id: 'standard', label: 'Standard: Sonnet, up to $0.40 a review' },
+  { id: 'deep', label: 'Deep: Opus, up to $1.20 a review' },
+];
+
+/**
+ * The review efforts a party sends with `startCampaign` (#139): one per reviewing councillor, Light
+ * unless chosen otherwise; none for an island nobody reviews.
+ */
+export function reviewEffortsFor({
+  councillors,
+  chosen,
+}: {
+  councillors: readonly string[];
+  chosen: Readonly<Record<string, string>>;
+}): { reviewEfforts?: Record<string, Effort> } {
+  if (councillors.length === 0) return {};
+  const efforts: Record<string, Effort> = {};
+  for (const id of councillors) {
+    const pick = REVIEW_EFFORTS.find((e) => e.id === chosen[id]);
+    efforts[id] = pick?.id ?? 'light';
+  }
+  return { reviewEfforts: efforts };
 }
