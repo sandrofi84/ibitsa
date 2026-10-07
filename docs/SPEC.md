@@ -108,6 +108,7 @@ Every character is backed by a real agent session. The game layer makes multi-ag
   - Recommended councillors (id, reason) and effort: one for a round table, and one per councillor for separate chambers (level, reason)
   - Quick-quest verdict (yes/no + reason)
 - The brief is written **before** the user chooses a quick quest or a sitting, and both kinds of sitting start from it, so the two differ only in how councillors work (§4.3).
+- **Past campaigns** (M7 planning): the elder's research gets an index of past records (title, date, one-line summary, path to `record.md`) and reads only those that look related. The brief gains **Related campaigns**, shown in the elder panel. When the council's context was kept (§4.9) and the new task looks unrelated, the elder says so and suggests starting fresh.
 - The raw research transcript is **not** carried into planning. The brief is the handoff. It is kept in the campaign folder and reused by reviews (M5).
 
 ### 4.2 Choosing the council
@@ -222,14 +223,21 @@ ask_user({
 - `@council` messages go to the sitting's lead session (the round table's session, or the elder's in separate chambers; resumed). It does **not** stop heroes.
 - The game master gives the council a **compact status report** (tasks done, current findings, blockers, PR states), never heroes' transcripts.
 - Plan changes become a **plan amendment** naming affected parties and potential rework. The user confirms. Affected parties receive it as a **queued** message (delivered after their current step).
+- Settled in M7 planning:
+  - **Reaching it:** `@council` in the command bar, or `@<councillor id>` (same lead session, naming who's asked), or clicking the council hut, which opens the sitting view with a message box. Each consultation is capped (`ibitsa.council.consultBudgetUsd`, $0.50).
+  - **Replies** are dialogue lines in the hut in the voice of the councillor who speaks, as with "Why?" answers; a short notice appears while the hut is closed.
+  - **Separate chambers:** the elder answers, and may send a question to a councillor's chamber (a subagent, as in planning) when it's in that field, within the cap.
+  - **Amendments** come from a `propose_amendment` tool. They may add tasks to an island, edit or remove tasks not started yet, add islands and add decisions. Done or active tasks never change: rework is a new task. The plan review screen shows the change set (added, edited and removed tasks marked) with **Approve**, **Request changes** (with a note) and **Discard**. An approved amendment adds an "Amendment N" section to `plan.md` and `plan.json`, and affected heroes get it as a queued message.
+  - **A new island** gets a small party assembly of its own (hero class and name, reviewers, review efforts, gold cap). A separate island fans out from the village; a stacked one joins the end of the line. It waits for a slot like any other.
 
 ### 4.9 Campaign end
-- The council always writes a **campaign record** (`record.md`): decisions, what shipped (PR links), what was deferred, lessons.
-- The user is asked what to do with the council's context, showing its current fullness (HP):
-  - **Keep** (default): next campaign resumes this session.
-  - **Compact**: summarize and continue.
-  - **Empty**: next campaign starts fresh (the record file preserves knowledge).
-- On the next campaign, the elder compares the new task with any kept context and may suggest a different choice ("Unrelated to the accounts work. Start fresh?").
+Settled in M7 planning (it changes the earlier draft: the record is built, not written by the council, and the default is Empty).
+- Every campaign gets a **campaign record** (`record.md`), on **Finish** (offered once the campaign has shipped, §5.6, and available any time) and on **Abandon** (marked abandoned). It is built from the log, with no tokens: the decisions, each island with its PR (link and state), what was deferred (unfinished tasks, suggestions kept but not done, dismissed "revisit" requests), the gold spent and the sittings' tallies. A short **Lessons** section is written by the elder on Haiku (about $0.05 cap) from the review rounds, escalations and disputes.
+- After the record, **Finish** asks what to do with the council's context, showing its size:
+  - **Empty** (default): the next campaign starts fresh; the record keeps the knowledge, and the elder reads the past records that look related (§4.1).
+  - **Compact**: the lead session is resumed and compacted there and then, so the next campaign starts quickly.
+  - **Keep**: the lead session's id is kept in workspace storage, and the next campaign's first sitting resumes it.
+- **Abandon** writes the record and empties the context without asking.
 - A hero's session ends when its island's PR is marked ready for review (or the work is abandoned). Bringing PR comments to the hero resumes that session (§5.6).
 
 ### 4.10 Measuring sittings
@@ -825,6 +833,12 @@ Settled in [#9](https://github.com/sandrofi84/ibitsa/issues/9); see [ADR 0001](a
   `t` is ms since the header. Each record is exactly a core input (`CoreInput` in `packages/core`); fixtures may add an optional `mark` naming a point where tests capture a snapshot. A torn last line (crash mid-write) is skipped on read. `logVersion` lets old logs be migrated or rejected.
 - **Recovery:** `campaigns/active` names the campaign still running (removed when it finishes or is abandoned; the next quest starts a new log and a fresh core). On start, the runtime replays that log through the core at `instant` speed without carrying out effects, then feeds a `runtimeRestarted` input; core decides what survives (M1: live sessions are marked not resumed, pending permissions and questions are dropped, silence timers are cancelled). Effects with no logged result come back as unknown, never as success. Session ids are chosen up front (SDK `sessionId`) and logged before the first event, so they survive. Checkpoints (a state snapshot every N inputs) only if rebuilding gets slow.
 - **M1:** after a window reload the hero is `unknown` ("session not resumed") and an `error`-kind "Needs you" item offers resume (SDK `resume`) or stop. No automatic resume until M7.
+- **M7 (settled in planning): everything that was running resumes on its own.**
+  - Heroes who were working resume their session with "VS Code reloaded; carry on where you left off"; idle heroes resume when they next get a message.
+  - Checks that were running run again, and reviewers that were running start over (a fresh session).
+  - A sitting resumes its lead session, and the elder's research restarts.
+  - A permission or question that was waiting is lost; the hero asks again.
+  - You're told with a journal line for each resumed hero or review and a one-time banner ("VS Code reloaded: resumed Ranger Ilse and Rogue Vex, restarted 1 review"), never a "Needs you" item.
 - **Sensitive content:** logs hold message text, paths and commands, so they stay in workspace storage and are never committed or uploaded automatically. Size cap per log (default 20 MB); past it, new records are written without activity `detail` strings (the file is never rewritten, and nothing that affects state is dropped). "Ibitsa: Export Replay" writes a fixture copy of the running (else the latest) campaign's log: paths inside the worktree become relative to it, the worktree itself `.`, the repo a path relative to the worktree, anything else under the home folder `~/…`; a stripped path's remainder is written with `/`, and on Windows the match ignores case and takes either separator (#56). Blanking, if chosen, replaces messages, permission notes and the submit summary, and cuts the quest description to its title line. Every record stays, so the copy replays to the same state.
 - **Journal** (#58): the hero pane's Journal section lists what the hero did and said and what you did, built from the campaign log by core's `Journal` (one line per message, finished tool, ask, answer, your message, stop/resume, stall, error, submit), never stored separately. The runtime rebuilds it when it replays the log, pushes new lines to front ends as `journalAppend`, and answers `requestJournal` (a runtime-only command, never logged) with pages of `journal`. The full transcript (tool output, reasoning) is not in it; if wanted later, it comes from Claude Code's own session file.
 - **Raw SDK messages** are not logged; the Claude adapter keeps its own small SDK-message fixtures for its mapping tests.
@@ -918,6 +932,15 @@ Settled in M6 planning; the details are in §5.6.
 - PR comments go to the hero's resumed session; its session ends when the PR is ready.
 - Stacked: in order, retarget after a merge, Restack with confirmation.
 - Remove worktree after a merge; every PR merged reaches Ibitsa.
+
+### 14.6 M7: campaign lifecycle
+Settled in M7 planning; the details are in §4.1, §4.8, §4.9 and §12.
+- After a restart, everything that was running resumes on its own, with a banner and journal lines.
+- The record is built from the log on Finish and Abandon, plus Lessons from the elder on Haiku.
+- The council's context: Empty by default, or Compact or Keep; the elder reads the related past records.
+- `@council`, `@<councillor>` and the hut reach the lead session, capped per consultation; heroes keep working.
+- Amendments touch only work not started (rework is a new task), are reviewed as a change set, and can add islands with their own party assembly.
+- Later: `#review` notes for the reviewers (#164); a Chronicle of past campaigns (M8).
 
 ## 15. Open questions
 1. Name registration: domains (ibitsa.com, ibitsa.dev, questforibitsa.com), GitHub org, npm scope, Marketplace/Open VSX publisher; trademark search (EUIPO TMview, USPTO). Initial checks found no conflicting software use.
