@@ -650,7 +650,7 @@ describe('removing the worktree', () => {
     expect(h.cues).toContainEqual({
       type: 'commandRejected',
       commandId: 'w1',
-      reason: 'Finish or abandon the quest first.',
+      reason: 'Finish or abandon the quest first, or merge its pull request.',
     });
     h.command({ type: 'abandonQuest', commandId: 'a' });
     h.drain();

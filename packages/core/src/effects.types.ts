@@ -36,11 +36,41 @@ export type Effect =
     }
   /** Report the worktree's diff hash; the result comes back as `diffObserved`. */
   | { type: 'observeDiff'; heroId: string; worktreePath: string }
-  /** Remove a finished quest's worktree if it is clean. */
-  | { type: 'removeWorktree'; islandId: string; worktreePath: string; commandId: string }
+  /** Remove a finished quest's (or a merged island's) worktree if it is clean; `branch` is deleted too (#154). */
+  | {
+      type: 'removeWorktree';
+      islandId: string;
+      worktreePath: string;
+      commandId: string;
+      branch?: string;
+    }
   | { type: 'sendMessage'; heroId: string; text: string; priority: 'now' | 'next' }
   /** Push the island's branch (§5.6); `branchPushed` or `remoteFailed` comes back. */
-  | { type: 'pushBranch'; islandId: string; worktreePath: string; branch: string }
+  | {
+      type: 'pushBranch';
+      islandId: string;
+      worktreePath: string;
+      branch: string;
+      /** `--force-with-lease`: the hero rebased the branch onto a merged island's base (#154). */
+      force?: boolean;
+    }
+  /** The PR's review comments, for the hero (#154); `pullRequestComments` or `remoteFailed` comes back. */
+  | { type: 'fetchPullRequestComments'; islandId: string; number: number }
+  /** Stacked: the PR it built on merged, so this one now targets `base`; `pullRequestRetargeted` comes back. */
+  | { type: 'retargetPullRequest'; islandId: string; number: number; base: string }
+  /**
+   * Stacked: move the branch onto `origin/<onto>`, dropping commits up to `upstream` (#154), and push it
+   * (forced, with lease) when it has a PR; `restacked` or `remoteFailed` comes back.
+   */
+  | {
+      type: 'restack';
+      islandId: string;
+      worktreePath: string;
+      branch: string;
+      onto: string;
+      upstream: string;
+      push: boolean;
+    }
   /** Push, then open the PR; `pullRequestOpened` or `remoteFailed` comes back. */
   | {
       type: 'openPullRequest';

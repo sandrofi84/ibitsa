@@ -511,6 +511,7 @@ export class WorldScene extends Phaser.Scene {
               useHandCursor: true,
             })
             .on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+              if (!onCanvas(pointer)) return;
               const at = { x: pointer.worldX, y: pointer.worldY };
               const hero = [...this.heroes].find(([, token]) => token.covers(at));
               if (hero) this.game.events.emit(HERO_SELECTED, hero[0]);
@@ -561,7 +562,9 @@ export class WorldScene extends Phaser.Scene {
       })
       .setOrigin(1, 0)
       .setInteractive({ useHandCursor: true })
-      .on('pointerdown', () => this.game.events.emit(PULL_REQUEST_SELECTED, islandId))
+      .on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+        if (onCanvas(pointer)) this.game.events.emit(PULL_REQUEST_SELECTED, islandId);
+      })
       .on('pointerover', () => {
         const below = this.toCanvas({ x: at.x - text.width, y: at.y + text.height + 2 });
         this.game.events.emit(PULL_REQUEST_HOVERED, { islandId, ...below });
@@ -676,6 +679,14 @@ export const HERO_SELECTED = 'heroSelected';
 export const TASK_SELECTED = 'taskSelected';
 /** Emitted on `game.events` with the island's id when its PR badge is clicked (#153). */
 export const PULL_REQUEST_SELECTED = 'pullRequestSelected';
+
+/**
+ * Phaser hears presses anywhere in the window, so a click on a panel lying over the map (a card's
+ * button, a "Needs you" item) would also reach the token beneath it. Only the canvas's own count.
+ */
+function onCanvas(pointer: Phaser.Input.Pointer): boolean {
+  return pointer.downElement === pointer.manager.game.canvas;
+}
 /** Emitted on `game.events` with `{ islandId, x, y }` (canvas pixels) over a PR badge, null off it. */
 export const PULL_REQUEST_HOVERED = 'pullRequestHovered';
 /** How far below a task point a click still reaches it, clear of a hero standing on it. */
@@ -740,7 +751,9 @@ export class HeroToken {
     this.sprite = scene.add.sprite(0, 1, character).setOrigin(0.5, 1);
     this.sprite
       .setInteractive({ useHandCursor: true })
-      .on('pointerdown', () => scene.game.events.emit(HERO_SELECTED, hero.id));
+      .on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+        if (onCanvas(pointer)) scene.game.events.emit(HERO_SELECTED, hero.id);
+      });
     this.hpBar = scene.add.graphics();
     this.bubble = scene.add
       .text(0, -26, '', { ...textStyle('#1a1420'), backgroundColor: '#f2c230' })
@@ -749,7 +762,9 @@ export class HeroToken {
     this.speechText = scene.add.text(0, -3, '', textStyle('#1a1420')).setOrigin(0.5, 1);
     this.speechText
       .setInteractive({ useHandCursor: true })
-      .on('pointerdown', () => scene.game.events.emit(HERO_SELECTED, hero.id));
+      .on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+        if (onCanvas(pointer)) scene.game.events.emit(HERO_SELECTED, hero.id);
+      });
     this.speech = scene.add.container(0, -24, [this.speechBox, this.speechText]).setVisible(false);
     this.icon = scene.add.sprite(13, -9, 'activityIcons', 0).setVisible(false);
     // Blocked (#124): a padlock over the head, and what it waits for when you point at it.

@@ -461,4 +461,225 @@ describe('pull requests (spec §5.6, M6)', () => {
       body: 'It loops.',
     });
   });
+
+  it('brings PR comments to the hero: back to the last task, its session resumed, and reviewed again by everyone', () => {
+    const run = new Run().started({
+      reviews: true,
+      plan: { ...PLAN, tasks: [PLAN.tasks[0] as PlanTask] },
+    });
+    const id = run.island().id;
+    const passReview = () => {
+      const taskId = run.island().taskPoints[0]?.id ?? '';
+      run.gm({ type: 'checksRan', taskPointId: taskId, results: [] });
+      const review = run.last('startReview');
+      run.feed({
+        kind: 'review',
+        t: 0,
+        reviewId: review?.reviewId ?? '',
+        event: {
+          type: 'verdictSubmitted',
+          toolUseId: `v${review?.reviewId}`,
+          verdict: { verdict: 'pass', findings: [] },
+        },
+      });
+      return review;
+    };
+    run.submit();
+    const first = passReview();
+    expect(run.snap().taskPoints[0]?.state).toBe('done');
+    run.do({ type: 'openPullRequest', islandId: id, title: 'T', body: '', draft: false });
+    run.gm(opened(id, { state: 'open' }));
+    expect(run.state.heroes[0]?.sessionLive).toBe(false);
+
+    run.do({ type: 'bringPullRequestComments', islandId: id });
+    expect(run.last('fetchPullRequestComments')).toEqual({
+      type: 'fetchPullRequestComments',
+      islandId: id,
+      number: 7,
+    });
+    expect(run.snap().remote?.busy).toBe('fetchingComments');
+    run.gm({ type: 'pullRequestComments', islandId: id, comments: [] });
+    expect(run.snap().remote).toMatchObject({
+      busy: null,
+      error: 'The pull request has no review comments yet.',
+    });
+
+    run.effects = [];
+    run.do({ type: 'bringPullRequestComments', islandId: id });
+    run.gm({
+      type: 'pullRequestComments',
+      islandId: id,
+      comments: [
+        { author: 'ana', body: 'Rename it', path: 'src/a.ts', line: 4 },
+        { author: 'bo', body: 'Looks good otherwise' },
+      ],
+    });
+    expect(run.snap().taskPoints[0]?.state).toBe('active');
+    expect(run.state.heroes[0]?.submitted).toBeNull();
+    expect(run.last('resumeSession')).toMatchObject({ sessionId: 's0' });
+    expect(run.last('sendMessage')?.text).toBe(
+      'Review comments on pull request #7:\n\n- ana (src/a.ts:4): Rename it\n- bo: Looks good otherwise\n\nAddress them, commit, and call submit_task again. The user pushes your commits to the pull request.',
+    );
+
+    // Submitted again: the councillor reviews what changed since its passing review.
+    run.submit();
+    const taskId = run.island().taskPoints[0]?.id ?? '';
+    run.effects = [];
+    run.gm({ type: 'checksRan', taskPointId: taskId, results: [] });
+    expect(run.last('startReview')).toMatchObject({
+      councillorId: 'security',
+      round: 2,
+      since: first?.to,
+    });
+  });
+
+  it('counts the loop limit from the round PR comments reopened', () => {
+    const run = new Run().started({
+      reviews: true,
+      plan: { ...PLAN, tasks: [PLAN.tasks[0] as PlanTask] },
+    });
+    run.state.settings.loopLimit = 2;
+    const id = run.island().id;
+    const verdict = (verdict: 'pass' | 'changes') => {
+      const taskId = run.island().taskPoints[0]?.id ?? '';
+      run.gm({ type: 'checksRan', taskPointId: taskId, results: [] });
+      const review = run.last('startReview');
+      run.feed({
+        kind: 'review',
+        t: 0,
+        reviewId: review?.reviewId ?? '',
+        event: {
+          type: 'verdictSubmitted',
+          toolUseId: `v${review?.reviewId}`,
+          verdict:
+            verdict === 'pass'
+              ? { verdict: 'pass', findings: [] }
+              : {
+                  verdict: 'changes',
+                  findings: [{ severity: 'blocking', kind: 'bug', message: 'Off by one' }],
+                },
+        },
+      });
+    };
+    run.submit();
+    verdict('changes');
+    run.submit();
+    verdict('pass');
+    run.do({ type: 'openPullRequest', islandId: id, title: 'T', body: '', draft: false });
+    run.gm(opened(id, { state: 'open' }));
+    run.do({ type: 'bringPullRequestComments', islandId: id });
+    run.gm({
+      type: 'pullRequestComments',
+      islandId: id,
+      comments: [{ author: 'ana', body: 'Rename it' }],
+    });
+    run.submit();
+    verdict('changes');
+    // Round 3 overall, but the first since the comments: sent back, not escalated.
+    expect(view(run.state).needsYou.filter((i) => i.kind === 'reviewEscalation')).toEqual([]);
+    expect(run.snap().taskPoints[0]?.state).toBe('active');
+    run.submit();
+    verdict('changes');
+    expect(view(run.state).needsYou.map((i) => i.kind)).toContain('reviewEscalation');
+  });
+
+  it("won't bring comments without an open PR or a hero", () => {
+    const run = new Run().started();
+    const id = run.island().id;
+    run.do({ type: 'bringPullRequestComments', islandId: id });
+    run.do({ type: 'openPullRequest', islandId: id, title: 'T', body: '', draft: true });
+    run.gm(opened(id));
+    run.state.heroes = [];
+    run.do({ type: 'bringPullRequestComments', islandId: id });
+    expect(run.rejections()).toEqual([
+      'There is no open pull request to read.',
+      'No hero works on this island.',
+    ]);
+  });
+
+  it('after an earlier stacked PR merges, retargets the next one and offers Restack', () => {
+    const run = new Run().started({ plan: STACKED });
+    const [first, second] = [run.island(0), run.island(1)];
+    run.do({ type: 'openPullRequest', islandId: first.id, title: 'B', body: '', draft: true });
+    run.gm({ ...opened(first.id, { number: 1 }), head: 'b-head' });
+    run.do({ type: 'openPullRequest', islandId: second.id, title: 'F', body: '', draft: true });
+    run.gm(opened(second.id, { number: 2 }));
+
+    run.gm({ type: 'pullRequestsPolled', pullRequests: [{ number: 1, state: 'merged' }] });
+    expect(run.last('retargetPullRequest')).toEqual({
+      type: 'retargetPullRequest',
+      islandId: second.id,
+      number: 2,
+      base: 'main',
+    });
+    expect(run.snap(1).remote).toMatchObject({
+      busy: 'retargeting',
+      restack: { onto: 'main', upstream: 'b-head', conflict: false },
+    });
+    run.gm({ type: 'pullRequestRetargeted', islandId: second.id, base: 'main' });
+    expect(run.snap(1).remote).toMatchObject({ busy: null, pullRequest: { base: 'main' } });
+
+    run.do({ type: 'restackIsland', islandId: second.id });
+    expect(run.last('restack')).toEqual({
+      type: 'restack',
+      islandId: second.id,
+      worktreePath: '/wt1',
+      branch: second.branch,
+      onto: 'main',
+      upstream: 'b-head',
+      push: true,
+    });
+    run.gm({ type: 'restacked', islandId: second.id, outcome: 'restacked', head: 'f-new' });
+    expect(run.snap(1).remote).toMatchObject({ busy: null, restack: null, pushedHead: 'f-new' });
+    run.do({ type: 'restackIsland', islandId: second.id });
+    expect(run.rejections()).toEqual(['Nothing to restack.']);
+  });
+
+  it('asks the hero to resolve a restack that conflicts, and the next push is forced', () => {
+    const run = new Run().started({ plan: STACKED });
+    const [first, second] = [run.island(0), run.island(1)];
+    run.do({ type: 'openPullRequest', islandId: first.id, title: 'B', body: '', draft: true });
+    run.gm({ ...opened(first.id, { number: 1 }), head: 'b-head' });
+    // The second island has no PR yet: its draft now targets main, with nothing to wait for.
+    run.gm({ type: 'pullRequestsPolled', pullRequests: [{ number: 1, state: 'merged' }] });
+    expect(run.last('retargetPullRequest')).toBeUndefined();
+    expect(run.snap(1).pullRequestDraft).toMatchObject({ base: 'main', cannotOpen: null });
+
+    run.do({ type: 'restackIsland', islandId: second.id });
+    expect(run.last('restack')?.push).toBe(false);
+    run.gm({ type: 'restacked', islandId: second.id, outcome: 'conflict', head: null });
+    expect(run.snap(1).remote?.restack).toMatchObject({ conflict: true });
+    expect(run.last('sendMessage')).toMatchObject({ heroId: run.state.heroes[1]?.id });
+    expect(run.last('sendMessage')?.text).toContain('git rebase --onto origin/main b-head');
+    run.do({ type: 'restackIsland', islandId: second.id });
+    expect(run.rejections()).toEqual(['The hero is resolving the rebase; push it with Update PR.']);
+
+    run.do({ type: 'pushBranch', islandId: second.id });
+    expect(run.last('pushBranch')).toMatchObject({ force: true });
+    run.gm({ type: 'branchPushed', islandId: second.id, head: 'f-fixed' });
+    expect(run.snap(1).remote?.restack).toBeNull();
+  });
+
+  it("removes a merged island's worktree and local branch mid-campaign, and nothing else", () => {
+    const run = new Run().started({ plan: STACKED });
+    const [first, second] = [run.island(0), run.island(1)];
+    run.do({ type: 'removeWorktree', islandId: first.id });
+    expect(run.rejections()).toEqual([
+      'Finish or abandon the quest first, or merge its pull request.',
+    ]);
+    run.do({ type: 'openPullRequest', islandId: first.id, title: 'B', body: '', draft: true });
+    run.gm(opened(first.id, { number: 1 }));
+    run.gm({ type: 'pullRequestsPolled', pullRequests: [{ number: 1, state: 'merged' }] });
+    run.do({ type: 'removeWorktree', islandId: first.id });
+    expect(run.last('removeWorktree')).toMatchObject({
+      islandId: first.id,
+      worktreePath: '/wt0',
+      branch: first.branch,
+    });
+    expect(run.last('closeSession')).toEqual({
+      type: 'closeSession',
+      heroId: run.state.heroes[0]?.id,
+    });
+    expect(second.worktreePath).toBe('/wt1');
+  });
 });

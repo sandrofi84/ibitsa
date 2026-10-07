@@ -319,13 +319,19 @@ export class LiveDevHost implements Host {
 
   /**
    * Dev only (#153): straight into a one-island campaign of two tasks, no reviews, for playing a PR from
-   * draft to merged (`pr=demo`). Tell the hero to submit to clear each task.
+   * draft to merged (`pr=demo`). Tell the hero to submit to clear each task. `stacked` (#154, `pr=stacked`):
+   * two stacked islands of one task each, for merging the first and restacking the second.
    */
-  pullRequestDemo(): void {
+  pullRequestDemo(layout: 'one' | 'stacked' = 'one'): void {
     this.approvedCampaign({
-      settings: { ...this.settings, maxParallel: 1 },
-      plan: pullRequestPlan(),
-      parties: [{ islandId: 'I1', heroName: 'Ranger Ilse', classId: 'ranger' }],
+      settings: { ...this.settings, maxParallel: 2 },
+      plan: layout === 'stacked' ? stackedPullRequestPlan() : pullRequestPlan(),
+      parties: [
+        { islandId: 'I1', heroName: 'Ranger Ilse', classId: 'ranger' },
+        ...(layout === 'stacked'
+          ? [{ islandId: 'I2', heroName: 'Rogue Vex', classId: 'rogue' }]
+          : []),
+      ],
     });
   }
 
@@ -925,6 +931,19 @@ function pullRequestPlan(): Plan {
         affects: ['T1', 'T2'],
       },
     ],
+  };
+}
+
+/** Two stacked islands of one task each (#154): the second builds on the first's branch. */
+function stackedPullRequestPlan(): Plan {
+  const plan = pullRequestPlan();
+  return {
+    ...plan,
+    islands: [
+      { id: 'I1', title: 'Accent-free slugs', tasks: ['T1'] },
+      { id: 'I2', title: 'Accent tests', tasks: ['T2'] },
+    ],
+    branching: 'stacked',
   };
 }
 

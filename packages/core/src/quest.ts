@@ -215,21 +215,36 @@ export class Quest {
     this.end('abandoned');
   }
 
+  /**
+   * Removes an island's worktree once the quest is over, or (#154) once its PR merged, even mid-campaign.
+   * A merged island's local branch goes too; the remote one never does.
+   */
   removeWorktree({ commandId, islandId }: { commandId: string; islandId: string }): void {
     const island = this.ctx.state.islands.find((i) => i.id === islandId);
-    if (this.ctx.state.campaign?.status === 'active') {
-      this.ctx.outbox.reject(commandId, 'Finish or abandon the quest first.');
+    const merged = island?.remote?.pullRequest?.state === 'merged';
+    if (this.ctx.state.campaign?.status === 'active' && !merged) {
+      this.ctx.outbox.reject(
+        commandId,
+        'Finish or abandon the quest first, or merge its pull request.',
+      );
       return;
     }
     if (!island?.worktreePath) {
       this.ctx.outbox.reject(commandId, 'There is no worktree to remove.');
       return;
     }
+    // Mid-campaign, its hero's session ends with it (after a quest, every session already has).
+    if (this.ctx.state.campaign?.status === 'active') {
+      for (const record of this.ctx.state.heroes.filter((h) => h.islandId === island.id)) {
+        new Hero({ record, ctx: this.ctx }).endSession();
+      }
+    }
     this.ctx.outbox.effect({
       type: 'removeWorktree',
       islandId: island.id,
       worktreePath: island.worktreePath,
       commandId,
+      ...(merged ? { branch: island.branch } : {}),
     });
   }
 

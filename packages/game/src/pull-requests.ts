@@ -23,6 +23,9 @@ const BUSY: Record<NonNullable<NonNullable<IslandView['remote']>['busy']>, strin
   pushing: 'Pushing…',
   opening: 'Opening the pull request…',
   markingReady: 'Marking it ready for review…',
+  fetchingComments: 'Fetching the review comments…',
+  retargeting: 'Retargeting the pull request…',
+  restacking: 'Restacking the branch…',
 };
 
 const WAIT = 'Wait for the push to finish.';
@@ -67,7 +70,26 @@ export function cardOf(island: IslandView): PullRequestCardModel {
         disabled: busy ?? (cleared(island) ? null : 'Every task on the island has to pass first.'),
       });
     }
+    actions.push({ id: 'comments', label: 'Bring the comments to the hero', disabled: busy });
     actions.push({ id: 'refresh', label: 'Refresh', disabled: null });
+  } else if (pr.state === 'merged' && island.worktree === 'ready') {
+    actions.push({
+      id: 'remove',
+      label: 'Remove worktree',
+      disabled: busy,
+      confirm: 'Remove the worktree and local branch?',
+    });
+  }
+  const restack = remote?.restack;
+  if (restack && !restack.conflict && island.worktree === 'ready') {
+    actions.push({
+      id: 'restack',
+      label: `Restack onto ${restack.onto}`,
+      disabled: busy,
+      ...(pr && pr.state !== 'merged' && pr.state !== 'closed'
+        ? { confirm: 'Restack and force-push?' }
+        : {}),
+    });
   }
   return {
     heading: pr ? `Pull request #${pr.number}` : 'Pull request',
@@ -79,6 +101,11 @@ export function cardOf(island: IslandView): PullRequestCardModel {
     url: pr?.url ?? null,
     busy: remote?.busy ? BUSY[remote.busy] : null,
     error: remote?.error ?? null,
+    restack: !restack
+      ? null
+      : restack.conflict
+        ? 'Moving the branch conflicted: the hero is resolving it. Update PR then pushes it (forced, with lease).'
+        : `The island it built on merged. Restack moves this branch onto ${restack.onto} without the merged commits.`,
     actions,
   };
 }

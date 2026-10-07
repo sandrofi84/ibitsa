@@ -39,6 +39,13 @@ export class Review {
     };
   }
 
+  /** PR comments reopened a passed task (#154): its next submit starts a fresh round. */
+  static reopen(review: TaskReview): void {
+    review.round++;
+    review.followUpRound = review.round;
+    review.phase = 'changes';
+  }
+
   /** The hero submitted (or was marked done): check, then review. */
   begin({ hero, summary, head }: { hero: HeroRecord; summary: string; head: string | null }): void {
     const found = this.taskOf(hero);
@@ -274,7 +281,8 @@ export class Review {
       this.pass({ task, hero });
       return;
     }
-    if (failed || review.round >= this.ctx.state.settings.loopLimit) {
+    const rounds = review.round - (review.followUpRound ?? 1) + 1;
+    if (failed || rounds >= this.ctx.state.settings.loopLimit) {
       review.phase = 'escalated';
       this.ctx.needsYou.ask({
         kind: 'reviewEscalation',
@@ -334,7 +342,9 @@ export class Review {
       (t) => t.id === task.planTaskId,
     );
     const all = (planTask?.criteria ?? []).map((c) => c.councillorId);
-    if (!review.reviews.some((r) => r.status === 'done')) return [...new Set(all)];
+    const fresh =
+      review.followUpRound === review.round || !review.reviews.some((r) => r.status === 'done');
+    if (fresh) return [...new Set(all)];
     return [...new Set(this.open(review).map((r) => r.councillorId))];
   }
 

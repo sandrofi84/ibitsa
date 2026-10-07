@@ -18,7 +18,6 @@ export type {
   FrontEnd,
   GameMaster,
   GitHost,
-  PullRequestComment,
   ReviewSession,
   ReviewStart,
   SessionResume,

@@ -38,7 +38,49 @@ export class PullRequests {
       case 'pollPullRequests':
         void this.poll(effect.numbers);
         return;
+      case 'fetchPullRequestComments':
+        void this.attempt({ islandId: effect.islandId, work: () => this.comments(effect) });
+        return;
+      case 'retargetPullRequest':
+        void this.attempt({ islandId: effect.islandId, work: () => this.retarget(effect) });
+        return;
+      case 'restack':
+        void this.attempt({ islandId: effect.islandId, work: () => this.restack(effect) });
+        return;
     }
+  }
+
+  private async comments(effect: Extract<PullRequestEffect, { type: 'fetchPullRequestComments' }>) {
+    const { host, remoteUrl } = await this.host();
+    const comments = await host.reviewComments({ remoteUrl, number: effect.number });
+    this.options.report({ type: 'pullRequestComments', islandId: effect.islandId, comments });
+  }
+
+  private async retarget(effect: Extract<PullRequestEffect, { type: 'retargetPullRequest' }>) {
+    const { host, remoteUrl } = await this.host();
+    await host.retarget({ remoteUrl, number: effect.number, base: effect.base });
+    this.options.report({
+      type: 'pullRequestRetargeted',
+      islandId: effect.islandId,
+      base: effect.base,
+    });
+  }
+
+  /** Moves the branch onto the merged island's base, then (with a PR) pushes it, forced with lease. */
+  private async restack(effect: Extract<PullRequestEffect, { type: 'restack' }>) {
+    const restack = this.options.gameMaster.restack?.bind(this.options.gameMaster);
+    if (!restack) throw new Error('This game master cannot restack.');
+    const outcome = await restack({
+      worktreePath: effect.worktreePath,
+      onto: effect.onto,
+      upstream: effect.upstream,
+    });
+    if (outcome === 'uncommitted') {
+      throw new Error('The worktree has uncommitted changes: commit or discard them first.');
+    }
+    const head =
+      outcome === 'restacked' && effect.push ? await this.push({ ...effect, force: true }) : null;
+    this.options.report({ type: 'restacked', islandId: effect.islandId, outcome, head });
   }
 
   dispose(): void {
@@ -82,10 +124,18 @@ export class PullRequests {
     }
   }
 
-  private async push({ worktreePath, branch }: { worktreePath: string; branch: string }) {
+  private async push({
+    worktreePath,
+    branch,
+    force = false,
+  }: {
+    worktreePath: string;
+    branch: string;
+    force?: boolean | undefined;
+  }) {
     const push = this.options.gameMaster.push?.bind(this.options.gameMaster);
     if (!push) throw new Error('This game master cannot push.');
-    const pushed = await push({ worktreePath, branch });
+    const pushed = await push({ worktreePath, branch, force });
     if (!pushed.ok) throw new Error(pushed.reason);
     return pushed.head;
   }

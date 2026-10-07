@@ -43,15 +43,20 @@ function setup({
   remoteUrl = async () => 'git@github.com:o/r.git' as string | null,
   host = {} as Partial<GitHost> | null,
   pollSeconds = 60,
+  restack = async () => 'restacked' as 'restacked' | 'conflict' | 'uncommitted',
 } = {}) {
   const clock = new ManualClock();
   const events: GameMasterEvent[] = [];
   const calls: string[] = [];
   const polls: PolledPullRequest[][] = [];
   const gameMaster = {
-    push: async (request: { branch: string }) => {
-      calls.push(`push ${request.branch}`);
+    push: async (request: { branch: string; force?: boolean }) => {
+      calls.push(`push ${request.branch}${request.force ? ' (force)' : ''}`);
       return push();
+    },
+    restack: async (request: { onto: string; upstream: string }) => {
+      calls.push(`restack onto ${request.onto} from ${request.upstream}`);
+      return restack();
     },
     remoteUrl,
   } as unknown as GameMaster;
@@ -74,8 +79,13 @@ function setup({
           if (!next) throw new Error('offline');
           return next;
         },
-        reviewComments: async () => [],
-        retarget: async () => {},
+        reviewComments: async (r) => {
+          calls.push(`comments #${r.number}`);
+          return [{ author: 'ana', body: 'Rename it' }];
+        },
+        retarget: async (r) => {
+          calls.push(`retarget #${r.number} → ${r.base}`);
+        },
         ...host,
       }
     : undefined;
@@ -259,5 +269,79 @@ describe('PullRequests (#152)', () => {
       expect(calls).toEqual([]);
       expect(events).toEqual([]);
     }
+  });
+
+  it('fetches review comments and retargets a PR (#154)', async () => {
+    const { prs, events, calls } = setup();
+    prs.perform({ type: 'fetchPullRequestComments', islandId: 'i2', number: 12 });
+    prs.perform({ type: 'retargetPullRequest', islandId: 'i3', number: 13, base: 'main' });
+    await flush();
+    expect(calls).toEqual(['comments #12', 'retarget #13 → main']);
+    expect(events).toEqual([
+      {
+        type: 'pullRequestComments',
+        islandId: 'i2',
+        comments: [{ author: 'ana', body: 'Rename it' }],
+      },
+      { type: 'pullRequestRetargeted', islandId: 'i3', base: 'main' },
+    ]);
+  });
+
+  const RESTACK = {
+    type: 'restack' as const,
+    islandId: 'i3',
+    worktreePath: '/wt3',
+    branch: 'ibitsa/front',
+    onto: 'main',
+    upstream: 'b-head',
+    push: true,
+  };
+
+  it('restacks and force-pushes a branch with a PR; without one it only moves it (#154)', async () => {
+    const withPr = setup();
+    withPr.prs.perform(RESTACK);
+    await flush();
+    expect(withPr.calls).toEqual(['restack onto main from b-head', 'push ibitsa/front (force)']);
+    expect(withPr.events).toEqual([
+      { type: 'restacked', islandId: 'i3', outcome: 'restacked', head: 'c0ffee' },
+    ]);
+    const local = setup();
+    local.prs.perform({ ...RESTACK, push: false });
+    await flush();
+    expect(local.calls).toEqual(['restack onto main from b-head']);
+    expect(local.events).toEqual([
+      { type: 'restacked', islandId: 'i3', outcome: 'restacked', head: null },
+    ]);
+  });
+
+  it("reports a conflict without pushing, and won't restack uncommitted work (#154)", async () => {
+    const conflict = setup({ restack: async () => 'conflict' as const });
+    conflict.prs.perform(RESTACK);
+    await flush();
+    expect(conflict.calls).toEqual(['restack onto main from b-head']);
+    expect(conflict.events).toEqual([
+      { type: 'restacked', islandId: 'i3', outcome: 'conflict', head: null },
+    ]);
+    const dirty = setup({ restack: async () => 'uncommitted' as const });
+    dirty.prs.perform(RESTACK);
+    await flush();
+    expect(dirty.events).toEqual([
+      {
+        type: 'remoteFailed',
+        islandId: 'i3',
+        message: 'The worktree has uncommitted changes: commit or discard them first.',
+      },
+    ]);
+    const events: GameMasterEvent[] = [];
+    new PullRequests({
+      gameMaster: {} as GameMaster,
+      clock: new ManualClock(),
+      pollSeconds: () => 60,
+      report: (e) => events.push(e),
+    }).perform(RESTACK);
+    await flush();
+    expect(events).toEqual([
+      { type: 'remoteFailed', islandId: 'i3', message: 'This game master cannot restack.' },
+    ]);
   });
 });

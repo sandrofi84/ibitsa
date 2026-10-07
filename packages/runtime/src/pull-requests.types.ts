@@ -20,6 +20,9 @@ export type PullRequestEffect = Extract<
       | 'openPullRequest'
       | 'markPullRequestReady'
       | 'watchPullRequests'
-      | 'pollPullRequests';
+      | 'pollPullRequests'
+      | 'fetchPullRequestComments'
+      | 'retargetPullRequest'
+      | 'restack';
   }
 >;

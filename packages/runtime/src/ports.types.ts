@@ -12,6 +12,7 @@ import type {
   Effort,
   ElderEvent,
   PolledPullRequest,
+  PullRequestComment,
   PullRequestState,
   RepoView,
   ResearchBrief,
@@ -175,9 +176,10 @@ export interface GameMaster {
   }): Promise<GameMasterEvent>;
   /** A hash of the worktree's diff against HEAD, for the no-progress stall rule. */
   observeDiff(request: { worktreePath: string }): Promise<string>;
-  /** Removes the worktree if it is clean. */
+  /** Removes the worktree if it is clean, and `branch` with it when named (#154). */
   removeWorktree(request: {
     worktreePath: string;
+    branch?: string;
   }): Promise<{ ok: true } | { ok: false; reason: string }>;
   /** Default branch, local branches and uncommitted changes of the workspace; null if not a git repo. */
   scanRepo(): Promise<RepoView | null>;
@@ -202,21 +204,18 @@ export interface GameMaster {
   listFiles(request: { worktreePath: string }): Promise<string[]>;
   /** `origin`'s URL (§5.6, M6); null without one. Game masters that can't push leave these out. */
   remoteUrl?(): Promise<string | null>;
+  /** Stacked (#154): move a branch onto `origin/<onto>`, dropping commits up to `upstream`. */
+  restack?(request: {
+    worktreePath: string;
+    onto: string;
+    upstream: string;
+  }): Promise<'restacked' | 'conflict' | 'uncommitted'>;
   /** Pushes a worktree's branch to `origin`; `force` is `--force-with-lease`. */
   push?(request: {
     worktreePath: string;
     branch: string;
     force?: boolean;
   }): Promise<{ ok: true; head: string } | { ok: false; reason: string }>;
-}
-
-/** A comment left on a PR's review, for the hero (#154). */
-export interface PullRequestComment {
-  author: string;
-  body: string;
-  /** Where it was left, for a comment on a line. */
-  path?: string;
-  line?: number;
 }
 
 /**

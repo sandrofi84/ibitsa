@@ -107,6 +107,7 @@ describe('the PR card (#153)', () => {
     expect(ids(draft)).toEqual([
       ['update', null],
       ['markReady', 'Every task on the island has to pass first.'],
+      ['comments', null],
       ['refresh', null],
     ]);
     const done = {
@@ -117,12 +118,72 @@ describe('the PR card (#153)', () => {
     expect(ids(done)).toContainEqual(['markReady', null]);
     expect(ids(withPr('approved'))).toEqual([
       ['update', null],
+      ['comments', null],
       ['refresh', null],
     ]);
   });
 
-  it('has nothing left to do once the PR is merged or closed', () => {
-    expect(cardOf(withPr('merged'))).toMatchObject({ status: 'Merged, into main', actions: [] });
+  it('offers only Remove worktree once merged (asking to confirm), and nothing once closed (#154)', () => {
+    expect(cardOf(withPr('merged'))).toMatchObject({
+      status: 'Merged, into main',
+      actions: [
+        {
+          id: 'remove',
+          label: 'Remove worktree',
+          disabled: null,
+          confirm: 'Remove the worktree and local branch?',
+        },
+      ],
+    });
+    expect(cardOf({ ...withPr('merged'), worktree: 'removed' }).actions).toEqual([]);
     expect(cardOf(withPr('closed')).actions).toEqual([]);
+  });
+
+  it('offers Restack after the island before merged, and says when the hero is resolving it (#154)', () => {
+    const offered = (pullRequest: boolean, conflict = false) => {
+      const base = withPr('open');
+      const remote = base.remote ?? {
+        pushedHead: null,
+        busy: null,
+        error: null,
+        pullRequest: null,
+      };
+      return island({
+        pullRequestDraft: pullRequest ? null : DRAFT,
+        remote: {
+          ...remote,
+          pullRequest: pullRequest ? remote.pullRequest : null,
+          restack: { onto: 'main', upstream: 'b-head', conflict },
+        },
+      });
+    };
+    expect(cardOf(offered(true)).actions.at(-1)).toEqual({
+      id: 'restack',
+      label: 'Restack onto main',
+      disabled: null,
+      confirm: 'Restack and force-push?',
+    });
+    expect(cardOf(offered(true)).restack).toBe(
+      'The island it built on merged. Restack moves this branch onto main without the merged commits.',
+    );
+    // Without a PR nothing is pushed, so there's nothing to confirm.
+    expect(cardOf(offered(false)).actions.at(-1)).toEqual({
+      id: 'restack',
+      label: 'Restack onto main',
+      disabled: null,
+    });
+    const conflict = cardOf(offered(true, true));
+    expect(conflict.actions.map((a) => a.id)).not.toContain('restack');
+    expect(conflict.restack).toMatch(/the hero is resolving it/);
+  });
+
+  it.each([
+    ['fetchingComments', 'Fetching the review comments…'],
+    ['retargeting', 'Retargeting the pull request…'],
+    ['restacking', 'Restacking the branch…'],
+  ] as const)('says when it is %s (#154)', (busy, text) => {
+    const pr = withPr('open');
+    const remote = pr.remote ?? { pushedHead: null, busy: null, error: null, pullRequest: null };
+    expect(cardOf({ ...pr, remote: { ...remote, busy } }).busy).toBe(text);
   });
 });
