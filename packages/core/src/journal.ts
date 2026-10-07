@@ -98,8 +98,6 @@ export class Journal {
             kind: 'event',
             text: `The campaign begins: ${c.parties.length} ${c.parties.length === 1 ? 'party' : 'parties'}.`,
           });
-        case 'startPlannedQuest':
-          return line(null, { kind: 'event', text: "The council's plan begins." });
         case 'approvePlan':
           return line(null, { kind: 'event', text: `You approved plan v${c.version}.` });
         case 'sendMessage':

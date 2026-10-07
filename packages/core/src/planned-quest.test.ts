@@ -92,10 +92,9 @@ class Run {
   }
   start(): this {
     return this.do({
-      type: 'startPlannedQuest',
-      heroName: 'Ilse',
-      classId: 'ranger',
+      type: 'startCampaign',
       baseRef: 'main',
+      parties: [{ islandId: 'I1', heroName: 'Ilse', classId: 'ranger' }],
     });
   }
   heroId(): string {

@@ -86,32 +86,6 @@ export class Quest {
     });
   }
 
-  /**
-   * Carries out the council's approved plan (spec §14.2, #104): one island whose task points are the
-   * plan's tasks in order, and one hero who works them one after another on the same branch.
-   */
-  startPlanned(command: Extract<Command, { type: 'startPlannedQuest' }>): void {
-    const state = this.ctx.state;
-    const plan =
-      state.campaign?.status === 'planning' && state.sitting?.status === 'approved'
-        ? state.sitting.plans.find((p) => p.outcome.kind === 'approved')?.plan
-        : undefined;
-    const order = plan && taskOrder(plan.tasks);
-    if (!plan || !order) {
-      this.ctx.outbox.reject(command.commandId, 'There is no approved plan to carry out.');
-      return;
-    }
-    this.launch({
-      title: state.campaign?.title ?? Quest.title(plan.summary),
-      tasks: order.map((task, index) => ({
-        title: task.title,
-        description: task.description,
-        briefing: Quest.briefing({ plan, task, index, total: order.length }),
-      })),
-      command,
-    });
-  }
-
   /** What a planned task's hero is told besides the task: where it sits in the plan and what to meet. */
   static briefing({
     plan,

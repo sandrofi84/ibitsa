@@ -98,6 +98,7 @@ describe('starting a quest', () => {
       branching: 'separate',
       stackedStart: null,
       capMicroUsd: null,
+      maxParallel: 2,
     });
     expect(snap.islands).toEqual([
       {

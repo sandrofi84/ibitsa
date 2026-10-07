@@ -1,4 +1,4 @@
-import { type HostEvent, type Snapshot, taskOrder } from '@ibitsa/protocol';
+import type { HostEvent, Snapshot } from '@ibitsa/protocol';
 import type { GameClient } from './client';
 import { button, el } from './dom';
 import { DEFAULT_CLASS, defaultHeroName, HERO_CLASSES } from './heroes';
@@ -33,7 +33,9 @@ export function mountNewQuestForm({
   let pendingStart: (() => void) | null = null;
   let renderOnboarding: ((error?: string) => void) | null = null;
 
-  let mode: 'ask' | 'quest' | 'planned' = 'ask';
+  let mode: 'ask' | 'quest' = 'ask';
+  /** The onboarding card was opened for someone else (party assembly, #123): Back closes it. */
+  let forOthers = false;
   const active = () => snapshot?.campaign?.status === 'active';
   const planning = () => snapshot?.campaign?.status === 'planning';
   client.onSnapshot((s) => {
@@ -135,11 +137,9 @@ export function mountNewQuestForm({
     button({ label: 'Cancel', onClick: () => dialog.close() }),
   );
 
-  function setMode(next: 'ask' | 'quest' | 'planned'): void {
+  function setMode(next: 'ask' | 'quest'): void {
     mode = next;
     const quest = mode !== 'ask';
-    // A planned quest's tasks come from the plan: its summary shows, read-only.
-    description.readOnly = mode === 'planned';
     heroFields.hidden = !quest;
     askNote.hidden = quest;
     skip.hidden = quest;
@@ -166,9 +166,7 @@ export function mountNewQuestForm({
     const intent =
       mode === 'ask'
         ? { type: 'consultElder' as const, task }
-        : mode === 'planned'
-          ? { type: 'startPlannedQuest' as const, ...hero }
-          : { type: 'startQuest' as const, description: task, ...hero };
+        : { type: 'startQuest' as const, description: task, ...hero };
     if (intent.type !== 'consultElder' && (!hero.heroName || !hero.baseRef)) return;
     // Ask the extension first: without credentials the onboarding card comes before the quest.
     pendingStart = () => {
@@ -237,7 +235,8 @@ export function mountNewQuestForm({
         onClick: () => {
           renderOnboarding = null;
           pendingStart = null;
-          dialog.replaceChildren(form);
+          if (forOthers) dialog.close();
+          else dialog.replaceChildren(form);
         },
       }),
     );
@@ -252,19 +251,22 @@ export function mountNewQuestForm({
       if (reason) message.textContent = reason;
     };
     dialog.replaceChildren(card);
+    if (!dialog.open) dialog.showModal();
     key.focus();
   }
 
   return {
     open,
     quickQuest: (task) => show({ mode: 'quest', task }),
-    plannedQuest: (plan) => {
-      const first = taskOrder(plan.tasks)?.[0];
-      if (first?.heroClass) {
-        classSelect.value = first.heroClass;
-        if (!nameEdited) heroName.value = defaultHeroName(first.heroClass);
-      }
-      show({ mode: 'planned', task: plan.summary });
+    withCredentials: (then) => {
+      // Without credentials the onboarding card comes first, in this form's dialog (§11.6).
+      forOthers = true;
+      renderOnboarding = null;
+      pendingStart = () => {
+        then();
+        if (dialog.open) dialog.close();
+      };
+      host.request({ channel: 'host', type: 'credentialsStatus' });
     },
   };
 
@@ -275,8 +277,9 @@ export function mountNewQuestForm({
   }
 
   /** Opens the form, with the task already written when it comes from the command bar (#81) or the elder. */
-  function show({ mode: next, task }: { mode: 'ask' | 'quest' | 'planned'; task?: string }): void {
+  function show({ mode: next, task }: { mode: 'ask' | 'quest'; task?: string }): void {
     if (active() || dialog.open) return;
+    forOthers = false;
     renderOnboarding = null;
     pendingStart = null;
     error.textContent = '';

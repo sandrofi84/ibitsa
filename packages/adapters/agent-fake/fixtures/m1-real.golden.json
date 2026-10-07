@@ -71,6 +71,7 @@
       "branching": "separate",
       "stackedStart": null,
       "capMicroUsd": null,
+      "maxParallel": 2,
       "gold": {
         "kind": "exact",
         "value": 117863

@@ -19,6 +19,7 @@ import { mountNeedsYouPanel } from './needs-you-panel';
 import { mountNewActionForm } from './new-action-form';
 import { mountNewQuestForm } from './new-quest-form';
 import { PACK_KEY, PackScene } from './pack-scene';
+import { mountPartyAssembly } from './party-assembly';
 import { mountPlanReview } from './plan-review';
 import { isSitting, rememberCouncillors, SittingFeed } from './sitting-hut';
 import { ViewState } from './view-state';
@@ -110,12 +111,16 @@ export function startGame(root: HTMLElement, host: Host): Started {
   const newAction = () => newActionForm.open();
   const view = new ViewState(host.viewStorage);
   const conveneForm = mountConveneForm({ client, view });
+  const partyAssembly = mountPartyAssembly({
+    client,
+    options: { withCredentials: (then) => newQuest.withCredentials(then) },
+  });
   mountPlanReview({ client });
   mountElderPanel({
     client,
     options: {
       quickQuest: (task) => newQuest.quickQuest(task),
-      startPlan: (plan) => newQuest.plannedQuest(plan),
+      assemble: (plan) => partyAssembly.open(plan),
       convene: () => conveneForm.open(),
     },
   });

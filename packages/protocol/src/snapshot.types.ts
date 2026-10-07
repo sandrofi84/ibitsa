@@ -49,6 +49,8 @@ export interface CampaignView {
   stackedStart: 'cleared' | 'together' | null;
   /** `ibitsa.campaign.budgetUsd` (§14.3); null for none. */
   capMicroUsd: MicroUsd | null;
+  /** `ibitsa.parties.maxParallel` (§5.1): how many parties work at once (#123). */
+  maxParallel: number;
 }
 
 export interface IslandView {

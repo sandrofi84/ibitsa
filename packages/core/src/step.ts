@@ -75,9 +75,6 @@ function command(ctx: StepContext, command: Command): void {
     case 'startQuest':
       quest.start(command);
       return;
-    case 'startPlannedQuest':
-      quest.startPlanned(command);
-      return;
     case 'startCampaign':
       new Campaign(ctx).start(command);
       return;

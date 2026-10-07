@@ -278,14 +278,29 @@ describe('LiveDevHost: the elder and the council (#101, #103–#105)', () => {
     expect(snapshot()?.sitting?.plans.at(-1)?.plan.summary).toBe('Revised: Smaller');
     host.send({ type: 'approvePlan', commandId: 'p1', version: 2 });
     host.send({
-      type: 'startPlannedQuest',
+      type: 'startCampaign',
       commandId: 'q1',
-      heroName: 'Ilse',
-      classId: 'ranger',
       baseRef: 'main',
+      parties: [
+        { islandId: 'I1', heroName: 'Ilse', classId: 'ranger' },
+        { islandId: 'I2', heroName: 'Vex', classId: 'rogue' },
+      ],
     });
     await settle();
-    expect(snapshot()?.islands[0]?.taskPoints.map((t) => t.state)).toEqual(['active', 'locked']);
+    // Two islands: the second waits for the first island's task (#123).
+    expect(snapshot()?.islands.map((i) => i.worktree)).toEqual(['ready', 'waiting']);
+    expect(snapshot()?.heroes.map((h) => h.state.kind)).toEqual(['idle', 'blocked']);
+    host.send({
+      type: 'sendMessage',
+      commandId: 'm1',
+      heroId: snapshot()?.heroes[0]?.id ?? '',
+      text: 'submit it',
+      priority: 'now',
+    });
+    await settle();
+    await settle();
+    expect(snapshot()?.islands.map((i) => i.worktree)).toEqual(['ready', 'ready']);
+    expect(snapshot()?.heroes.map((h) => h.state.kind)).toEqual(['submitted', 'idle']);
   });
 
   it('holds separate chambers too, its reports arriving one by one', async () => {

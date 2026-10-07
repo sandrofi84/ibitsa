@@ -32,6 +32,7 @@ export default defineConfig({
         'packages/game/src/file-search.ts',
         'packages/game/src/mentions.ts',
         'packages/game/src/heroes.ts',
+        'packages/game/src/parties.ts',
         'packages/game/src/slash-menu.ts',
         'packages/game/src/layout.ts',
         'packages/game/src/view-state.ts',
