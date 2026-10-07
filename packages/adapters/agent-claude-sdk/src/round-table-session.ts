@@ -23,7 +23,9 @@ import { InputQueue } from './input-queue';
 import type { AskedBatch, RoundTableInit, Seat, Verdict } from './round-table-session.types';
 
 export const TOOL = (name: string) => `mcp__ibitsa__${name}`;
-export const COUNCIL_TOOLS = ['report', 'ask_user', 'propose_plan', 'say'].map(TOOL);
+export const COUNCIL_TOOLS = ['report', 'ask_user', 'propose_plan', 'propose_amendment', 'say'].map(
+  TOOL,
+);
 export const READ_TOOLS = ['Read', 'Grep', 'Glob'];
 /** A sitting runs long: reports, questions, revisions. The cap usually ends it first. */
 const MAX_TURNS = 120;
@@ -109,6 +111,21 @@ const PLAN_SHAPE = {
     )
     .describe(`${ISLANDS_RULE} Every task on exactly one island.`),
   branching: z.enum(['separate', 'stacked']),
+};
+/** A change to the approved plan mid-campaign (§4.8, #170); core checks it against what has started. */
+const AMENDMENT_SHAPE = {
+  summary: z.string().describe('What changes and why, in a sentence or two.'),
+  tasks: PLAN_SHAPE.tasks.describe(
+    'New tasks (new ids), and new versions of tasks not started yet (their own ids). Started tasks never change: rework is a new task.',
+  ),
+  removeTasks: z.array(z.string()).describe('Ids of tasks not started yet to drop.'),
+  addToIslands: z
+    .array(z.object({ islandId: z.string(), tasks: z.array(z.string()) }))
+    .describe('New tasks added to the end of an existing island, in order.'),
+  islands: PLAN_SHAPE.islands.describe(
+    'New islands with their new tasks; each gets its own party.',
+  ),
+  decisions: PLAN_SHAPE.decisions.describe('New decisions for the Book of Decisions.'),
 };
 const SAY_SHAPE = {
   councillorId: z.string().describe('Who speaks: a councillor on the roster, or "elder".'),
@@ -238,6 +255,16 @@ export class RoundTableSession implements SittingSession {
     });
   }
 
+  private async proposeAmendment(input: unknown, callId?: string): Promise<ToolReply> {
+    const amendment = JSON.parse(JSON.stringify(input)) as unknown;
+    return this.ruled({
+      tool: 'propose_amendment',
+      callId,
+      event: (toolUseId) => ({ type: 'amendmentProposed', toolUseId, amendment }),
+      ok: 'The amendment is with the user. Say briefly why it helps, then end your turn.',
+    });
+  }
+
   private say({
     councillorId,
     text,
@@ -328,6 +355,13 @@ export class RoundTableSession implements SittingSession {
             'Propose the plan to the user.',
             PLAN_SHAPE,
             (i, extra) => this.proposePlan(i, callIdOf(extra)),
+            { alwaysLoad: true },
+          ),
+          sdk.tool(
+            'propose_amendment',
+            'Propose a change to the approved plan, once the heroes are at work.',
+            AMENDMENT_SHAPE,
+            (i, extra) => this.proposeAmendment(i, callIdOf(extra)),
             { alwaysLoad: true },
           ),
           sdk.tool(

@@ -1702,3 +1702,72 @@ body.in-hut:has(.council-chamber:not([hidden])) .needs-you {
 .council-notice[hidden] {
   display: none;
 }
+
+/* An amendment to the approved plan (#170): its change set, each line marked, over the map. */
+.amendment-review:not([hidden]) {
+  position: fixed;
+  left: 50%;
+  /* Below the council's notice, which may still show the reply that came with it. */
+  top: 104px;
+  transform: translateX(-50%);
+  width: min(560px, calc(100vw - 32px));
+  max-height: 60vh;
+  overflow: auto;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  background: rgba(239, 224, 184, 0.97);
+  border: 3px solid #5a3e1c;
+  border-radius: 4px;
+  color: #1a1420;
+  font:
+    13px / 1.45 system-ui,
+    sans-serif;
+  z-index: 25;
+}
+
+.amendment-review h2 {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+
+.amendment-review .changes {
+  list-style: none;
+  margin: 6px 0;
+  padding: 0;
+}
+
+.amendment-review .changes .mark {
+  display: inline-block;
+  width: 1.2em;
+  font-weight: 700;
+  text-align: center;
+}
+
+.amendment-review .changes .added .mark {
+  color: #1f6f2a;
+}
+
+.amendment-review .changes .edited .mark {
+  color: #8a5a00;
+}
+
+.amendment-review .changes .removed {
+  color: #7a2a20;
+}
+
+.amendment-review .note {
+  color: #4a3a2a;
+  font-size: 12px;
+}
+
+.amendment-review textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.amendment-review .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}

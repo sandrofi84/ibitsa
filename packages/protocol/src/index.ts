@@ -2,6 +2,9 @@
 
 export type { ActionDraft, ActionInfo, ActionPreview } from './actions.types';
 export type { AgentEvent } from './agent-events.types';
+export { amendmentChanges, applyAmendment, checkAmendment } from './amendment';
+export { type Amendment, AmendmentSchema } from './amendment.schema';
+export type { AmendmentChange, AmendmentOutcome, AmendmentView } from './amendment.types';
 export type {
   CampaignEndView,
   CouncilContextChoice,

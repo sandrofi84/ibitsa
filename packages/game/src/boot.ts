@@ -1,6 +1,7 @@
 import type { Manifest } from '@ibitsa/assets';
 import type { SittingView } from '@ibitsa/protocol';
 import * as Phaser from 'phaser';
+import { mountAmendmentReview } from './amendment-review';
 import type { Started } from './boot.types';
 import { mountCameraControls } from './camera-controls';
 import { mountCampaignEnd } from './campaign-end';
@@ -22,7 +23,7 @@ import { mountNeedsYouPanel } from './needs-you-panel';
 import { mountNewActionForm } from './new-action-form';
 import { mountNewQuestForm } from './new-quest-form';
 import { PACK_KEY, PackScene } from './pack-scene';
-import { mountPartyAssembly } from './party-assembly';
+import { mountNewParty, mountPartyAssembly } from './party-assembly';
 import { mountPlanReview } from './plan-review';
 import {
   mountPullRequestHover,
@@ -145,11 +146,16 @@ export function startGame(root: HTMLElement, host: Host): Started {
   const prPanel = mountPullRequestPanel(pullRequests);
   const prHover = mountPullRequestHover({ client });
   const taskPanel = mountTaskPanel({ client, pullRequests });
+  // Changes to the approved plan (#170): the council's amendment, and the party of an island it adds.
+  const amendmentReview = mountAmendmentReview({ client });
+  const newParty = mountNewParty({ client });
   mountNeedsYouPanel({
     client,
     openCouncil: () => councilDialogue.focus(),
     selectHero: (heroId) => selection.select(heroId),
     openTask: (taskPointId) => taskPanel.open(taskPointId),
+    reviewAmendment: () => amendmentReview.focus(),
+    assembleParty: (islandId) => newParty.open(islandId),
   });
   mountRestartNotice({ client });
   const newQuest = mountNewQuestForm({ client, host });

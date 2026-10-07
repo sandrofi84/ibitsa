@@ -8,4 +8,8 @@ export interface NeedsYouPanelOptions {
   selectHero?: (heroId: string) => void;
   /** Opens a task's checks and reviews in the task panel (#141). */
   openTask?: (taskPointId: string) => void;
+  /** Brings the council's waiting amendment into view (#170). */
+  reviewAmendment?: () => void;
+  /** Opens the party assembly of an island an amendment added (#170). */
+  assembleParty?: (islandId: string) => void;
 }

@@ -58,6 +58,44 @@ export class Campaign {
     return island.taskPoints.every((tp) => DONE.has(tp.state));
   }
 
+  /** An island's party joins (§5.1): its hero, on the island's first task, with its gold pouch. */
+  static joinParty({
+    state,
+    islandId,
+    party,
+  }: {
+    state: CoreState;
+    islandId: string;
+    party: { heroName: string; classId: string; budgetMicroUsd?: number | null | undefined };
+  }): void {
+    const island = state.islands.find((i) => i.id === islandId);
+    const hero = Hero.create({
+      hero: {
+        id: newId(state, 'h'),
+        name: party.heroName,
+        classId: party.classId,
+        islandId,
+        taskPointId: island?.taskPoints[0]?.id ?? '',
+      },
+      settings: state.settings,
+    });
+    if (party.budgetMicroUsd !== undefined) {
+      hero.cap =
+        party.budgetMicroUsd === null || state.settings.budget === 'none'
+          ? null
+          : { microUsd: party.budgetMicroUsd, enforcement: state.settings.budget };
+    }
+    state.heroes.push(hero);
+  }
+
+  /** A branch name no island of the campaign has taken yet (§5.3). */
+  static freeBranch({ state, title }: { state: CoreState; title: string }): string {
+    return unique({
+      branch: `ibitsa/${Quest.slug(title) || 'island'}`,
+      taken: new Set(state.islands.map((i) => i.branch)),
+    });
+  }
+
   start(command: Extract<Command, { type: 'startCampaign' }>): void {
     const state = this.ctx.state;
     const campaign = state.campaign;
@@ -131,27 +169,11 @@ export class Campaign {
         basedOn: basedOn?.id ?? null,
         behind: false,
         taskPoints,
+        planIslandId: planIsland.id,
         ...reviewEffortsOf(parties.get(planIsland.id)),
       });
       const party = parties.get(planIsland.id);
-      if (!party) continue;
-      const hero = Hero.create({
-        hero: {
-          id: newId(state, 'h'),
-          name: party.heroName,
-          classId: party.classId,
-          islandId: id,
-          taskPointId: taskPoints[0]?.id ?? '',
-        },
-        settings: state.settings,
-      });
-      if (party.budgetMicroUsd !== undefined) {
-        hero.cap =
-          party.budgetMicroUsd === null || state.settings.budget === 'none'
-            ? null
-            : { microUsd: party.budgetMicroUsd, enforcement: state.settings.budget };
-      }
-      state.heroes.push(hero);
+      if (party) Campaign.joinParty({ state, islandId: id, party });
     }
     this.ctx.needsYou.clear();
   }
@@ -174,7 +196,8 @@ export class Campaign {
       return island?.launched && !h.submitted;
     }).length;
     for (const island of state.islands) {
-      if (island.launched || island.worktreeRemoved) continue;
+      // An island an amendment added waits for its party first (#170).
+      if (island.launched || island.worktreeRemoved || island.awaitingParty) continue;
       if (busy >= state.settings.maxParallel) return;
       if (Campaign.blockReason(state, island) !== 'slot') continue;
       island.launched = true;

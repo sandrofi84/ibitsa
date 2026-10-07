@@ -1,5 +1,7 @@
 import type {
   ActivityKind,
+  Amendment,
+  AmendmentOutcome,
   AskUserQuestion,
   CampaignEndView,
   CheckResult,
@@ -124,6 +126,10 @@ export interface Island {
   reviewEfforts?: Record<string, Effort>;
   /** Its branch on the git host and its PR (M6); absent before anything was pushed. */
   remote?: IslandRemote;
+  /** The plan island it stands for (#170); absent in older logs, where the islands follow the plan's order. */
+  planIslandId?: string;
+  /** Added by an amendment (#170): it waits for its party (`assembleParty`) before it can start. */
+  awaitingParty?: boolean;
 }
 
 /** An island's branch on the git host (§5.6): plain data; `PullRequest` gives it behaviour. */
@@ -218,6 +224,8 @@ export interface SittingRecord {
   usage: { byModel: ModelUsage[]; byCouncillor: { councillorId: string; tokens: number }[] };
   /** Questions to the council once its plan is approved (§4.8, #169); absent in older logs. */
   consultations?: ConsultationRecord[];
+  /** Changes to the approved plan (§4.8, #170), oldest first; absent in older logs. */
+  amendments?: AmendmentRecord[];
   /** What the elder's brief recommended when the council convened; null without a brief. */
   elderPicks: {
     effort: Effort;
@@ -227,6 +235,13 @@ export interface SittingRecord {
 
 /** One question to the council mid-campaign (#169): plain data; `Consultation` gives it behaviour. */
 export type ConsultationRecord = ConsultationView;
+
+/** A change to the approved plan (#170): plain data; `PlanAmendment` gives it behaviour. */
+export interface AmendmentRecord {
+  number: number;
+  amendment: Amendment;
+  outcome: AmendmentOutcome;
+}
 
 /** One `ask_user` call; `answers` stays null until the user answers. */
 export interface QuestionBatch {

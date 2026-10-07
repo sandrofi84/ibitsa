@@ -7,6 +7,7 @@ const sitting = (over: Partial<SittingView> = {}): SittingView => ({
   rating: null,
   comparisonOf: null,
   consultations: [],
+  amendments: [],
   task: 'Add sign-in',
   mode: 'roundTable',
   status: 'deliberating',

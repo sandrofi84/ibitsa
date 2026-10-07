@@ -13,6 +13,7 @@ import type {
 import { checkPlan } from '@ibitsa/protocol';
 import { Consultation } from './consultation';
 import type { Effect } from './effects.types';
+import { PlanAmendment } from './plan-amendment';
 import { Quest } from './quest';
 import { newId } from './state';
 import type { CoreState, QuestionBatch, SittingRecord } from './state.types';
@@ -33,13 +34,16 @@ export class Sitting {
     this.ctx = ctx;
   }
 
-  /** The plan the user last approved, in this campaign's sittings; none for a quick quest. */
+  /**
+   * The plan the user last approved, in this campaign's sittings, with the amendments approved since
+   * (#170); none for a quick quest.
+   */
   static approvedPlan(state: CoreState): Plan | undefined {
     const sittings = [...state.pastSittings, ...(state.sitting ? [state.sitting] : [])];
-    return sittings
-      .flatMap((s) => s.plans)
-      .filter((p) => p.outcome.kind === 'approved')
-      .at(-1)?.plan;
+    const record = sittings
+      .filter((s) => s.plans.some((p) => p.outcome.kind === 'approved'))
+      .at(-1);
+    return record && PlanAmendment.amended(record);
   }
 
   static active(record: SittingRecord | null): record is SittingRecord {
@@ -70,6 +74,7 @@ export class Sitting {
       rating: record.rating,
       comparisonOf: record.comparisonOf,
       consultations: record.consultations ?? [],
+      amendments: PlanAmendment.views(record),
     };
   }
 
@@ -419,6 +424,14 @@ export class Sitting {
         return;
       case 'planProposed':
         this.propose({ record, event });
+        return;
+      case 'amendmentProposed':
+        this.complete({
+          record,
+          toolUseId: event.toolUseId,
+          reason:
+            'There is no approved plan to amend yet: propose the whole plan with propose_plan.',
+        });
         return;
       case 'said':
         // Only those at the table speak; anything else is dropped (there's no tool call to refuse).

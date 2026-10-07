@@ -7,6 +7,7 @@ import {
   Journal,
   type LogRecord,
   type QuestSettings,
+  Sitting,
   step,
   view,
 } from '@ibitsa/core';
@@ -530,6 +531,21 @@ export class LiveDevHost implements Host {
       case 'startSitting': {
         if (this.settingUp) return;
         if (effect.resume) {
+          // Asked to amend the plan (#170): the elder proposes a task and an island, then the turn ends.
+          const plan = Sitting.approvedPlan(this.state);
+          // The user's words, not the instructions (which name propose_amendment to every question).
+          if (plan && /amend the plan|changes to Amendment \d+/i.test(effect.resume.prompt ?? '')) {
+            this.council(effect.sittingId, [
+              { type: 'amendmentProposed', toolUseId: 'amend', amendment: demoAmendment(plan) },
+              {
+                type: 'said',
+                councillorId: 'elder',
+                text: 'Docs belong with the work: a task here, and an island for the site.',
+              },
+              { type: 'usage', totalCost: 40_000 },
+            ]);
+            return;
+          }
           // Asked mid-campaign (#169): the councillor asked answers, else the elder, then the turn ends.
           const asked = effect.resume.prompt?.match(/The user asks (\S+), who answers/)?.[1];
           this.council(effect.sittingId, [
@@ -974,6 +990,36 @@ const REVIEW_TITLES: Record<string, string> = {
 
 /** One task on one island (#141), with criteria for two councillors and a decision on it. */
 /** The PR demo's plan (#153): one island, two tasks, a decision, so the PR body has something in it. */
+/**
+ * Dev only (#170): the scripted council's amendment: a docs task at the end of the plan's first island,
+ * and a new island for a docs site.
+ */
+function demoAmendment(plan: Plan): unknown {
+  const ids = plan.tasks.map((t) => Number(t.id.slice(1)));
+  const next = Math.max(0, ...ids) + 1;
+  const islands = plan.islands ?? [
+    { id: 'I1', title: plan.goal, tasks: plan.tasks.map((t) => t.id) },
+  ];
+  const islandNext = Math.max(0, ...islands.map((i) => Number(i.id.slice(1)))) + 1;
+  const task = (n: number, title: string) => ({
+    id: `T${n}`,
+    title,
+    description: `${title}.`,
+    files: ['README.md'],
+    dependsOn: [],
+    criteria: [],
+    decisions: [],
+  });
+  return {
+    summary: 'Document the work: a docs task here, and a docs site on its own island.',
+    tasks: [task(next, 'Document the slugs'), task(next + 1, 'Build the docs site')],
+    removeTasks: [],
+    addToIslands: [{ islandId: islands[0]?.id ?? 'I1', tasks: [`T${next}`] }],
+    islands: [{ id: `I${islandNext}`, title: 'Docs site', tasks: [`T${next + 1}`] }],
+    decisions: [],
+  };
+}
+
 function pullRequestPlan(): Plan {
   const task = (id: string, title: string) => ({
     id,

@@ -1,4 +1,5 @@
 import type { Finding, NeedsYouItem, Snapshot } from '@ibitsa/protocol';
+import { pendingAmendment } from './amendment-review';
 import type { GameClient } from './client';
 import type { CommandIntent } from './client.types';
 import { button, el } from './dom';
@@ -15,6 +16,8 @@ export function mountNeedsYouPanel({
   openCouncil,
   selectHero,
   openTask,
+  reviewAmendment,
+  assembleParty,
 }: NeedsYouPanelOptions): void {
   const panel = document.createElement('section');
   panel.className = 'needs-you';
@@ -28,11 +31,20 @@ export function mountNeedsYouPanel({
   let shown = '';
   client.onSnapshot((snapshot) => {
     const council = councilItem({ snapshot, openCouncil });
-    const key = JSON.stringify([snapshot.needsYou, council?.dataset.batch]);
+    const amendment = amendmentItem({ snapshot, reviewAmendment });
+    const parties = partyItems({ snapshot, assembleParty });
+    const key = JSON.stringify([
+      snapshot.needsYou,
+      council?.dataset.batch,
+      amendment?.dataset.number,
+      parties.map((p) => p.dataset.island),
+    ]);
     if (key === shown) return;
     shown = key;
     panel.replaceChildren(
       ...(council ? [council] : []),
+      ...(amendment ? [amendment] : []),
+      ...parties,
       ...snapshot.needsYou.map((item) => {
         const box = renderItem({ item, snapshot, client, openTask });
         // Clicking an item (not one of its buttons) shows its hero in the pane (#125).
@@ -42,7 +54,7 @@ export function mountNeedsYouPanel({
         return box;
       }),
     );
-    panel.hidden = snapshot.needsYou.length === 0 && !council;
+    panel.hidden = snapshot.needsYou.length === 0 && !council && !amendment && parties.length === 0;
   });
   panel.hidden = true;
 
@@ -54,6 +66,50 @@ export function mountNeedsYouPanel({
     clearTimeout(timer);
     timer = setTimeout(() => toast.classList.remove('visible'), 4_000);
   });
+}
+
+/** The council's amendment waiting for the user (#170): one item that brings the review into view. */
+function amendmentItem({
+  snapshot,
+  reviewAmendment,
+}: {
+  snapshot: Snapshot;
+  reviewAmendment: (() => void) | undefined;
+}): HTMLElement | null {
+  const pending = pendingAmendment(snapshot);
+  if (!pending) return null;
+  const box = el('article', { className: 'item council' });
+  box.dataset.number = String(pending.number);
+  box.append(
+    el('p', {
+      text: `The council proposes Amendment ${pending.number}: ${pending.amendment.summary}`,
+    }),
+  );
+  const actions = el('div', { className: 'actions' });
+  actions.append(button({ label: 'Review', onClick: () => reviewAmendment?.() }));
+  box.append(actions);
+  return box;
+}
+
+/** Islands an amendment added that wait for their party (#170): one item each. */
+function partyItems({
+  snapshot,
+  assembleParty,
+}: {
+  snapshot: Snapshot;
+  assembleParty: ((islandId: string) => void) | undefined;
+}): HTMLElement[] {
+  return snapshot.islands
+    .filter((i) => i.awaitingParty)
+    .map((island) => {
+      const box = el('article', { className: 'item party' });
+      box.dataset.island = island.id;
+      box.append(el('p', { text: `${island.name} needs its party.` }));
+      const actions = el('div', { className: 'actions' });
+      actions.append(button({ label: 'Assemble', onClick: () => assembleParty?.(island.id) }));
+      box.append(actions);
+      return box;
+    });
 }
 
 /** The council's waiting questions (§6.4, #102): one item that opens the dialogue box. */
