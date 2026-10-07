@@ -38,5 +38,14 @@ export const ResearchBriefSchema = v.strictObject({
   councillorEfforts: v.array(v.strictObject({ councillorId, level: EffortSchema, reason: text })),
   /** Small and clear enough to skip the council? */
   quickQuest: v.strictObject({ recommended: v.boolean(), reason: text }),
+  /** Past campaigns whose records bear on this task (§4.1, #168); briefs from before M7 have none. */
+  relatedCampaigns: v.optional(
+    v.pipe(v.array(v.strictObject({ campaignId: text, title: text, why: text })), v.maxLength(5)),
+  ),
+  /**
+   * When the council's context was kept from an earlier campaign (§4.9, #168): whether this task is
+   * related to that work. Null without a kept context.
+   */
+  keptContext: v.optional(v.nullable(v.strictObject({ related: v.boolean(), reason: text }))),
 });
 export type ResearchBrief = v.InferOutput<typeof ResearchBriefSchema>;

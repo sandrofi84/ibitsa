@@ -26,6 +26,8 @@ describe.skipIf(process.env.IBITSA_SMOKE !== '1')('live elder research (smoke)',
           councillors,
           model: 'haiku',
           maxBudgetMicroUsd: 250_000,
+          pastRecords: [],
+          keptCouncil: null,
         },
         (event) => {
           events.push(event);

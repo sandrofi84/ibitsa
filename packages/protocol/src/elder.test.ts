@@ -49,4 +49,22 @@ describe('checkBrief (#101)', () => {
     expect(problems.some((p) => p.startsWith('effort.level: '))).toBe(true);
     expect(checkBrief({ input: 'not a brief', councillors: [] })).toMatchObject({ ok: false });
   });
+
+  it('names only past campaigns the elder was shown (#168)', () => {
+    const input = {
+      ...brief,
+      relatedCampaigns: [{ campaignId: 'c-old', title: 'Sign-in', why: 'Same auth module' }],
+      keptContext: { related: false, reason: 'Different area' },
+    };
+    expect(
+      checkBrief({ input, councillors: ['tester', 'security'], campaigns: ['c-old'] }),
+    ).toMatchObject({
+      ok: true,
+      brief: { keptContext: { related: false } },
+    });
+    expect(checkBrief({ input, councillors: ['tester', 'security'] })).toEqual({
+      ok: false,
+      problems: ['"c-old" isn\'t a past campaign. Choose from: none.'],
+    });
+  });
 });

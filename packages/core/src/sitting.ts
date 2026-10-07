@@ -142,6 +142,7 @@ export class Sitting {
       effort: command.effort,
       roster,
       brief,
+      ...(command.freshCouncil ? { fresh: true } : {}),
     });
   }
 

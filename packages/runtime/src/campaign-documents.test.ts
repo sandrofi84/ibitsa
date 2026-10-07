@@ -1,7 +1,10 @@
+import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { CampaignRecordData } from '@ibitsa/core';
 import type { Plan } from '@ibitsa/protocol';
 import { describe, expect, it } from 'vitest';
-import { planMarkdown, recordMarkdown } from './campaign-documents';
+import { CampaignDocuments, planMarkdown, recordMarkdown } from './campaign-documents';
 
 const plan: Plan = {
   summary: 'Sign-in',
@@ -207,5 +210,51 @@ describe('the campaign record (#167)', () => {
     expect(
       recordMarkdown({ ...RECORD, gold: { kind: 'estimated', value: 500_000, basis: 'x' } }),
     ).toContain('$0.50 (estimated)');
+  });
+});
+
+describe('the index of past records (#168)', () => {
+  it('lists every record, newest first, with its title, status and summary', () => {
+    const repo = mkdtempSync(join(tmpdir(), 'ibitsa-records-'));
+    try {
+      const write = ({ id, md, at }: { id: string; md: string; at: number }) => {
+        const dir = join(repo, '.ibitsa', 'campaigns', id);
+        mkdirSync(dir, { recursive: true });
+        writeFileSync(join(dir, 'record.md'), md);
+        utimesSync(join(dir, 'record.md'), at, at);
+      };
+      write({
+        id: 'c-old',
+        md: '# Campaign record: Sign-in\n\n**Finished.**\n\nEmail sign-in.\n\n## What shipped\n',
+        at: 1_700_000_000,
+      });
+      write({
+        id: 'c-new',
+        md: '# Campaign record: Slugs\n\n**Abandoned.**\n\n## What shipped\n',
+        at: 1_800_000_000,
+      });
+      mkdirSync(join(repo, '.ibitsa', 'campaigns', 'c-planning'), { recursive: true });
+      const docs = new CampaignDocuments(repo);
+      expect(docs.pastRecords().map(({ date: _date, ...r }) => r)).toEqual([
+        {
+          campaignId: 'c-new',
+          title: 'Slugs',
+          status: 'abandoned',
+          summary: null,
+          path: '.ibitsa/campaigns/c-new/record.md',
+        },
+        {
+          campaignId: 'c-old',
+          title: 'Sign-in',
+          status: 'finished',
+          summary: 'Email sign-in.',
+          path: '.ibitsa/campaigns/c-old/record.md',
+        },
+      ]);
+      expect(docs.pastRecords(1)).toHaveLength(1);
+      expect(new CampaignDocuments(join(repo, 'nowhere')).pastRecords()).toEqual([]);
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
   });
 });

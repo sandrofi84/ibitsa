@@ -1,5 +1,6 @@
 import type { Options, PermissionResult, Query, SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 import type { CouncillorInfo, ElderEvent, ResearchBrief } from '@ibitsa/protocol';
+import type { ElderStart } from '@ibitsa/runtime';
 import { describe, expect, it } from 'vitest';
 import { ClaudeAdapter } from './claude-adapter';
 import type { SdkModule } from './claude-adapter.types';
@@ -75,7 +76,13 @@ const BRIEF: ResearchBrief = {
   quickQuest: { recommended: true, reason: 'Small' },
 };
 
-function run(script: Script, councillors: CouncillorInfo[] = [tester]) {
+function run(
+  script: Script,
+  {
+    councillors = [tester],
+    past = {},
+  }: { councillors?: CouncillorInfo[]; past?: Partial<ElderStart> } = {},
+) {
   const fake = fakeSdk(script);
   const events: ElderEvent[] = [];
   const adapter = new ClaudeAdapter({
@@ -90,6 +97,9 @@ function run(script: Script, councillors: CouncillorInfo[] = [tester]) {
       councillors,
       model: 'haiku',
       maxBudgetMicroUsd: 250_000,
+      pastRecords: [],
+      keptCouncil: null,
+      ...past,
     },
     (e) => events.push(e),
   );
@@ -172,9 +182,12 @@ describe('the elder session (#101)', () => {
   });
 
   it('says when it can recommend no one', async () => {
-    const { calls } = run(async function* () {
-      yield result('success');
-    }, []);
+    const { calls } = run(
+      async function* () {
+        yield result('success');
+      },
+      { councillors: [] },
+    );
     await flush();
     expect(calls[0]?.prompt).toContain(
       '(none: recommend no councillors, and say whether a quick quest fits)',
@@ -202,7 +215,15 @@ describe('the elder session (#101)', () => {
         throw new Error('no SDK');
       },
     }).startElder(
-      { cwd: '/r', task: 't', councillors: [], model: 'haiku', maxBudgetMicroUsd: 1 },
+      {
+        cwd: '/r',
+        task: 't',
+        councillors: [],
+        model: 'haiku',
+        maxBudgetMicroUsd: 1,
+        pastRecords: [],
+        keptCouncil: null,
+      },
       (e) => events.push(e),
     );
     await flush();
@@ -230,5 +251,40 @@ describe('the elder session (#101)', () => {
     await flush();
     expect(control.closed).toBe(1);
     expect(events.filter((e) => e.type === 'error')).toEqual([]);
+  });
+
+  it('shows the elder past campaigns and a kept council, and checks the related ones (#168)', async () => {
+    let rejected: ToolReply | null = null;
+    const { calls } = run(
+      async function* ({ submit }) {
+        rejected = await submit({
+          ...BRIEF,
+          relatedCampaigns: [{ campaignId: 'c-nope', title: 'Nope', why: 'x' }],
+        });
+        yield result('success');
+      },
+      {
+        past: {
+          pastRecords: [
+            {
+              campaignId: 'c-old',
+              title: 'Sign-in',
+              date: '2026-10-01',
+              status: 'finished',
+              summary: 'Email sign-in.',
+              path: '.ibitsa/campaigns/c-old/record.md',
+            },
+          ],
+          keptCouncil: { from: 'Sign-in' },
+        },
+      },
+    );
+    await flush();
+    const prompt = String(calls[0]?.prompt);
+    expect(prompt).toContain(
+      'Past campaigns (their records, newest first):\n- c-old · 2026-10-01 · Sign-in (finished): Email sign-in. — .ibitsa/campaigns/c-old/record.md',
+    );
+    expect(prompt).toContain('The council\'s context was kept from the campaign "Sign-in".');
+    expect(JSON.stringify(rejected)).toContain('\\"c-nope\\" isn\'t a past campaign');
   });
 });

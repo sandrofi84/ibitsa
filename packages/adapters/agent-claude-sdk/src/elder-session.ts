@@ -24,6 +24,8 @@ Then call submit_brief once:
 - slices: for each recommended councillor, what in this task touches its field, as pointers (path, line range, note), not file contents.
 - effort: light, standard or deep for a round table, with a reason. councillorEfforts: the same for each recommended councillor.
 - quickQuest: whether the task is small and clear enough for one hero without a council, and why.
+- relatedCampaigns: when you're shown past campaigns, the ones whose records bear on this task, each with why. Judge from the index; read a record only when it looks related. Leave it empty when none do.
+- keptContext: only when you're told the council's context was kept from an earlier campaign: whether this task is related to that work, and why. Otherwise leave it out.
 
 If submit_brief rejects the brief, fix what it says and call it again.`;
 
@@ -46,6 +48,10 @@ const BRIEF_SHAPE = {
   effort: z.object({ level: effort, reason }),
   councillorEfforts: z.array(z.object({ councillorId: z.string(), level: effort, reason })),
   quickQuest: z.object({ recommended: z.boolean(), reason }),
+  relatedCampaigns: z
+    .array(z.object({ campaignId: z.string(), title: z.string(), why: z.string() }))
+    .optional(),
+  keptContext: z.object({ related: z.boolean(), reason }).optional(),
 };
 
 /** How long a session with its result filed may take to finish its last turn and report its cost. */
@@ -88,6 +94,7 @@ export class ElderSession {
     const checked = checkBrief({
       input,
       councillors: this.init.start.councillors.map((c) => c.id),
+      campaigns: this.init.start.pastRecords.map((r) => r.campaignId),
     });
     if (!checked.ok) {
       return {
@@ -205,7 +212,21 @@ function elderPrompt({ start }: ElderSessionInit): string {
     start.councillors.length > 0
       ? start.councillors.map((c) => `- ${c.id} (${c.title}): ${c.description}`).join('\n')
       : '(none: recommend no councillors, and say whether a quick quest fits)';
-  return `Research this task and file a brief.\n\nTask:\n${start.task}\n\nCouncillors you may recommend:\n${roster}`;
+  const past = start.pastRecords.map(
+    (r) =>
+      `- ${r.campaignId} · ${r.date} · ${r.title} (${r.status})${r.summary ? `: ${r.summary}` : ''} — ${r.path}`,
+  );
+  return [
+    `Research this task and file a brief.\n\nTask:\n${start.task}\n\nCouncillors you may recommend:\n${roster}`,
+    ...(past.length > 0
+      ? [`Past campaigns (their records, newest first):\n${past.join('\n')}`]
+      : []),
+    ...(start.keptCouncil
+      ? [
+          `The council's context was kept from the campaign "${start.keptCouncil.from}". Say in keptContext whether this task is related to that work.`,
+        ]
+      : []),
+  ].join('\n\n');
 }
 
 /** A tool call as a progress line, e.g. "Reading src/auth.ts". */

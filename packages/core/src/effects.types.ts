@@ -157,6 +157,8 @@ export type Effect =
       resume?: { sessionId: string; prompt?: string };
       /** A cap of its own instead of the effort's, e.g. one question mid-campaign (#169). */
       maxBudgetMicroUsd?: number;
+      /** Start fresh, forgetting a council's context kept from an earlier campaign (#168). */
+      fresh?: boolean;
     }
   /** Something the user did that the sitting must hear about. */
   | { type: 'sittingMessage'; sittingId: string; message: SittingMessage }

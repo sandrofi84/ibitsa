@@ -25,6 +25,7 @@ export type {
   GameMaster,
   GitHost,
   LessonsStart,
+  PastRecord,
   ReviewSession,
   ReviewStart,
   SessionResume,

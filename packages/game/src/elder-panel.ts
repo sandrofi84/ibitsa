@@ -123,6 +123,22 @@ export function mountElderPanel({
       li.append(el('strong', { text: c.councillorId }), ` ${c.reason}`);
       councillors.append(li);
     }
+    // Past campaigns whose records bear on this task, and whether a kept council's work is related (#168).
+    const related = el('ul', { className: 'related' });
+    for (const c of brief.relatedCampaigns ?? []) {
+      const li = el('li');
+      li.append(el('strong', { text: c.title }), ` ${c.why}`);
+      related.append(li);
+    }
+    const kept = brief.keptContext;
+    const keptNote = kept
+      ? el('p', {
+          className: 'note kept-context',
+          text: kept.related
+            ? `The council's kept context fits this task: ${kept.reason}`
+            : `Unrelated to the council's kept context: ${kept.reason} Start fresh when you convene.`,
+        })
+      : null;
     const quick = button({ label: 'Quick quest', onClick: () => options.quickQuest(elder.task) });
     const convene = button({ label: 'Convene council', onClick: () => options.convene() });
     const recommended = brief.quickQuest.recommended ? quick : convene;
@@ -134,6 +150,8 @@ export function mountElderPanel({
       section('Files', files),
       ...(brief.findings.length > 0 ? [section('Findings', findings)] : []),
       ...(brief.councillors.length > 0 ? [section('Recommended councillors', councillors)] : []),
+      ...((brief.relatedCampaigns ?? []).length > 0 ? [section('Related campaigns', related)] : []),
+      ...(keptNote ? [keptNote] : []),
       cost,
       actions(quick, convene, abandon),
     ];
