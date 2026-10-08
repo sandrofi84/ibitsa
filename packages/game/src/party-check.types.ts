@@ -14,12 +14,23 @@ export interface ClassReadiness {
   recheck: string | null;
 }
 
+/** A councillor who reviews on an ACP agent (#201), with its own model (empty: the agent's). */
+export interface ReviewerAgent {
+  councillorId: string;
+  agent: string;
+  model: string;
+}
+
 /** The party check as the game's panels use it: one store for every panel (#199). */
 export interface PartyCheck {
   /** Starts checking the ACP agents of these classes (not those already being checked). */
   check(classIds: readonly string[]): void;
+  /** Starts checking these ACP agents, e.g. the reviewing councillors' (#201). */
+  checkAgents(agents: readonly string[]): void;
   /** What the class's agent's last check says, or that it's being checked. */
   readiness(classId: string): ClassReadiness;
+  /** What a reviewing councillor's agent's last check says (#201). */
+  reviewerReadiness(reviewer: ReviewerAgent): ClassReadiness;
   /** Every class ready to set out. */
   allReady(classIds: readonly string[]): boolean;
   /** Opens a terminal on the agent's sign-in, through the extension. */

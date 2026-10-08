@@ -19,6 +19,11 @@ describe('the Roster (#181)', () => {
       withField({ override: { title: 'Guardian', model: 'opus' }, field: 'title', value: '' }),
     ).toEqual({ model: 'opus' });
     expect(withField({ override: { title: 'Guardian' }, field: 'title', value: ' ' })).toBeNull();
+    // The agent a councillor reviews on is one more field (#201).
+    expect(withField({ override: { model: 'opus' }, field: 'agent', value: 'codex' })).toEqual({
+      model: 'opus',
+      agent: 'codex',
+    });
   });
 
   it("says why a new councillor can't be written yet", () => {

@@ -3,11 +3,12 @@ import {
   type HostEvent,
   type HostRequest,
   resolveClasses,
+  type Snapshot,
 } from '@ibitsa/protocol';
 import { afterEach, describe, expect, it } from 'vitest';
 import { heroClasses, setHeroClasses } from './heroes';
 import type { Host } from './host.types';
-import { classReadiness, mountPartyCheck } from './party-check';
+import { classReadiness, mountPartyCheck, partyReady, reviewerAgentOf } from './party-check';
 
 afterEach(() => setHeroClasses(undefined));
 
@@ -173,5 +174,65 @@ describe('the party check store (#199)', () => {
       { channel: 'host', type: 'checkAgents', agents: ['codex'], force: true },
     ]);
     expect(partyCheck.readiness('seer').text).toBe('Checking Codex…');
+  });
+
+  it("checks a reviewing councillor's agent, and the party waits for it too (#201)", () => {
+    const { host, requests, answer } = fakeHost();
+    const partyCheck = mountPartyCheck({ host });
+    const reviewer = { councillorId: 'security', agent: 'codex', model: 'gpt-6-luna' };
+    partyCheck.checkAgents(['codex', 'claude', 'codex']);
+    partyCheck.checkAgents(['codex']);
+    expect(requests).toEqual([{ channel: 'host', type: 'checkAgents', agents: ['codex'] }]);
+    const party = { partyCheck, classIds: ['ranger'], fields: [{ reviewers: [reviewer] }] };
+    expect(partyReady(party)).toBe(false);
+    expect(partyCheck.reviewerReadiness(reviewer).text).toBe('Checking Codex…');
+    // The councillor's own model has to be on offer, as a class's does.
+    answer(codex({ kind: 'ready', models: ['gpt-6-sol'] }));
+    expect(partyCheck.reviewerReadiness(reviewer).text).toBe(
+      "Codex doesn't offer gpt-6-luna. It offers gpt-6-sol.",
+    );
+    expect(partyReady(party)).toBe(false);
+    answer(codex({ kind: 'ready', models: ['gpt-6-sol', 'gpt-6-luna'] }));
+    expect(partyCheck.reviewerReadiness(reviewer)).toMatchObject({
+      ready: true,
+      text: 'Codex is ready.',
+      warning: "Codex reports no cost: its review's cap can't stop it.",
+    });
+    expect(partyReady(party)).toBe(true);
+    expect(partyReady({ ...party, fields: [{ reviewers: [] }] })).toBe(true);
+  });
+});
+
+describe('reviewerAgentOf (#201)', () => {
+  it("finds a councillor's ACP agent and own model in the snapshot; Claude and strangers need none", () => {
+    const councillor = (id: string, extra: object) => ({
+      id,
+      skill: id,
+      title: id,
+      description: '',
+      source: 'builtin' as const,
+      portrait: null,
+      model: null,
+      tools: [],
+      modes: { planning: true, review: true },
+      hash: 'h',
+      ...extra,
+    });
+    const of = reviewerAgentOf({
+      councillors: [
+        councillor('security', { agent: 'codex', model: 'gpt-6-luna' }),
+        councillor('tester', { agent: 'codex' }),
+        councillor('design', {}),
+        councillor('docs', { agent: 'claude' }),
+      ],
+    } as unknown as Snapshot);
+    expect(of('security')).toEqual({
+      councillorId: 'security',
+      agent: 'codex',
+      model: 'gpt-6-luna',
+    });
+    expect(of('tester')).toEqual({ councillorId: 'tester', agent: 'codex', model: '' });
+    expect([of('design'), of('docs'), of('nobody')]).toEqual([null, null, null]);
+    expect(reviewerAgentOf(null)('security')).toBeNull();
   });
 });

@@ -29,7 +29,9 @@ export function sandboxSupported(platform: NodeJS.Platform): boolean {
  * allowed one by one, by allowing sockets and hiding the daemons' that would let a process out.
  */
 export function sandboxConfig(input: SandboxConfigInput): SandboxRuntimeConfig {
-  const { cwd, profile, platform, home, tmp, sharedGit, bridgeSocket } = input;
+  const { cwd, profile, platform, home, tmp, sharedGit, bridgeSocket, readOnly } = input;
+  // A reviewer only reads (#201): its agent still keeps its own state, and temp.
+  const repo = readOnly ? [] : [cwd, ...(sharedGit ? [sharedGit] : [])];
   const linux = platform === 'linux';
   const sockets = linux
     ? { allowAllUnixSockets: true }
@@ -41,7 +43,7 @@ export function sandboxConfig(input: SandboxConfigInput): SandboxRuntimeConfig {
     filesystem: {
       // POSIX paths: the sandbox runs only on macOS and Linux.
       denyRead: [...DENIED_READS.map((d) => posix.join(home, d)), ...(linux ? DENIED_SOCKETS : [])],
-      allowWrite: [cwd, ...(sharedGit ? [sharedGit] : []), tmp, ...profile.stateFolders],
+      allowWrite: [...repo, tmp, ...profile.stateFolders],
       denyWrite: [],
     },
     ...(profile.weakerNetworkIsolation && !linux ? { enableWeakerNetworkIsolation: true } : {}),
@@ -103,6 +105,7 @@ export class AgentSandbox {
         tmp: this.options.tmp ?? tmpdir(),
         sharedGit: sharedGitDir(request.cwd),
         ...(this.options.bridgeSocket ? { bridgeSocket: this.options.bridgeSocket } : {}),
+        ...(request.readOnly ? { readOnly: true } : {}),
       }),
     };
     const host = spawn(node.command, [this.options.script], {

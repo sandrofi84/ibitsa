@@ -9,11 +9,13 @@ export type {
   AgentSpec,
   SpawnRequest,
 } from './acp-adapter.types';
+export { REVIEW_STEPS } from './acp-review';
 export { CANT_RESUME } from './acp-session';
 export { spawnAgent } from './agent-connection';
 export { ESTIMATE_BASIS } from './gold';
 export { HERO_TOOL_INSTRUCTIONS, SUBMIT_TASK } from './hero-tools';
 export { runMcpBridge } from './mcp-bridge';
+export { SUBMIT_VERDICT } from './review-tools';
 export { AgentSandbox, SANDBOX_PLAN_ENV, sandboxConfig, sandboxSupported } from './sandbox';
 export type { NetworkRequest, SandboxProfile } from './sandbox.types';
 export { runSandboxHost } from './sandbox-host';

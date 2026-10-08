@@ -733,16 +733,29 @@ export class Runtime {
     this.scheduleSnapshot();
   }
 
-  /** A reviewer on its effort's model and cap (or its councillor's own model), given its diff (M5). */
+  /**
+   * A reviewer on its effort's model and cap (or its councillor's own model), given its diff (M5). A
+   * councillor whose override names an ACP agent reviews on it (#201): briefed with the guidance
+   * Claude's adapter finds in its skill, on its own model if it has one, else the agent's default.
+   */
   private async startReview(effect: Extract<Effect, { type: 'startReview' }>): Promise<void> {
     const { reviewId } = effect;
     const report = (event: ReviewEvent) =>
       this.input({ kind: 'review', t: this.t(), reviewId, event });
-    const start = this.options.adapter.startReview?.bind(this.options.adapter);
+    const councillor = this.councillorList.find((c) => c.id === effect.councillorId);
+    let adapter: AgentAdapter;
+    try {
+      adapter = this.agentNamed(councillor?.agent ?? CLAUDE_AGENT);
+    } catch (e) {
+      report({ type: 'error', message: e instanceof Error ? e.message : String(e) });
+      return;
+    }
+    const start = adapter.startReview?.bind(adapter);
     if (!start) {
       report({ type: 'error', message: 'This agent cannot review.' });
       return;
     }
+    const elsewhere = adapter !== this.options.adapter;
     try {
       const diff =
         (await this.options.gameMaster.taskDiff?.({
@@ -752,14 +765,22 @@ export class Runtime {
           since: effect.since,
         })) ?? '';
       const effort = reviewPlan(effect.effort);
-      const own = this.councillorList.find((c) => c.id === effect.councillorId)?.model;
+      // The effort's models are Claude's; another agent keeps its own default unless one is named.
+      const model = councillor?.model ?? (elsewhere ? '' : effort.model);
+      const guidance = elsewhere
+        ? (this.options.adapter.reviewGuidance?.({
+            cwd: effect.worktreePath,
+            councillorId: effect.councillorId,
+          }) ?? null)
+        : undefined;
       this.reviews.set(
         reviewId,
         start(
           {
             cwd: effect.worktreePath,
             councillorId: effect.councillorId,
-            model: own ?? effort.model,
+            model,
+            ...(guidance === undefined ? {} : { guidance }),
             maxBudgetMicroUsd: effort.budgetMicroUsd,
             round: effect.round,
             diff,
@@ -1069,7 +1090,11 @@ export class Runtime {
    * Throws when that agent can't be used; the caller turns it into the hero's error.
    */
   private adapterOf(classId: string): AgentAdapter {
-    const agent = this.classes().find((c) => c.id === classId)?.agent ?? CLAUDE_AGENT;
+    return this.agentNamed(this.classes().find((c) => c.id === classId)?.agent ?? CLAUDE_AGENT);
+  }
+
+  /** Claude's adapter, or the ACP agent's of that id; throws when it can't be used (§11.5). */
+  private agentNamed(agent: string): AgentAdapter {
     if (agent === CLAUDE_AGENT) return this.options.adapter;
     const found = this.options.agentAdapter?.(agent);
     if (!found) throw new Error(`No agent "${agent}" in ibitsa.agents.`);

@@ -29,4 +29,6 @@ export interface AgentConnectionInit {
   options: AcpAdapterOptions;
   cwd: string;
   handlers: ClientHandlers;
+  /** A reviewer's agent (#201): a sandbox keeps the worktree read-only. */
+  readOnly?: boolean;
 }

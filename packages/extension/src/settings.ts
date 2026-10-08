@@ -62,7 +62,7 @@ export function readCouncillorOverrides(config: ConfigReader): CouncillorOverrid
       if (typeof o !== 'object' || o === null || Array.isArray(o)) return [];
       const fields = o as Record<string, unknown>;
       const override: CouncillorOverride = {};
-      for (const key of ['title', 'model', 'portrait'] as const) {
+      for (const key of ['title', 'model', 'portrait', 'agent'] as const) {
         const t = text(fields[key]);
         if (t) override[key] = t.value;
       }

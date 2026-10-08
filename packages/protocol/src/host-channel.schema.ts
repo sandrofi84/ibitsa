@@ -68,6 +68,7 @@ export const CouncillorOverrideSchema = v.strictObject({
   model: v.optional(field),
   tools: v.optional(v.pipe(v.array(field), v.maxLength(10))),
   portrait: v.optional(field),
+  agent: v.optional(field),
 });
 
 export const HostRequestSchema = v.variant('type', [

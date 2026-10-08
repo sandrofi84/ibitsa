@@ -18,6 +18,7 @@ import type {
   CreateActionResult,
   ElderStart,
   LessonsStart,
+  ReviewGuidance,
   ReviewSession as ReviewSessionPort,
   ReviewStart,
   SessionResume,
@@ -144,6 +145,18 @@ export class ClaudeAdapter implements AgentAdapter {
   /** A councillor's review of one task (§5.5, #138): read-only, capped, ending with `submit_verdict`. */
   startReview(start: ReviewStart, onEvent: (event: ReviewEvent) => void): ReviewSessionPort {
     return new ReviewSession({ adapter: this.options, start, onEvent });
+  }
+
+  /** A councillor's review guidance, for a reviewer on an ACP agent (#201), from its skill file. */
+  reviewGuidance({
+    cwd,
+    councillorId,
+  }: {
+    cwd: string;
+    councillorId: string;
+  }): ReviewGuidance | null {
+    const found = CouncillorSkills.of({ cwd, adapter: this.options }).review(councillorId);
+    return found ? { title: found.info.title, guidance: found.guidance } : null;
   }
 
   /** The elder's lessons at a campaign's end (§4.9, #167): no tools but `submit_lessons`, capped. */
