@@ -333,24 +333,24 @@ Everything else is transparent: the room and the councillors show through.
 
 Tick each file as it lands (issue #223 tracks the batches). Generated from the lists above.
 
-### Batch 1: heroes, required animations
+### Batch 1: heroes, required animations (done)
 
-- [ ] `art/characters/hero-paladin/idle.grid`
-- [ ] `art/characters/hero-paladin/walk.grid`
-- [ ] `art/characters/hero-paladin/work.grid`
-- [ ] `art/characters/hero-barbarian/idle.grid`
-- [ ] `art/characters/hero-barbarian/walk.grid`
-- [ ] `art/characters/hero-barbarian/work.grid`
-- [ ] `art/characters/hero-ranger/idle.grid`
-- [ ] `art/characters/hero-ranger/walk.grid`
-- [ ] `art/characters/hero-ranger/work.grid`
-- [ ] `art/characters/hero-rogue/idle.grid`
-- [ ] `art/characters/hero-rogue/walk.grid`
-- [ ] `art/characters/hero-rogue/work.grid`
-- [ ] `art/portraits/hero-paladin.svg`
-- [ ] `art/portraits/hero-barbarian.svg`
-- [ ] `art/portraits/hero-ranger.svg`
-- [ ] `art/portraits/hero-rogue.svg`
+- [x] `art/characters/hero-paladin/idle.grid`
+- [x] `art/characters/hero-paladin/walk.grid`
+- [x] `art/characters/hero-paladin/work.grid`
+- [x] `art/characters/hero-barbarian/idle.grid`
+- [x] `art/characters/hero-barbarian/walk.grid`
+- [x] `art/characters/hero-barbarian/work.grid`
+- [x] `art/characters/hero-ranger/idle.grid`
+- [x] `art/characters/hero-ranger/walk.grid`
+- [x] `art/characters/hero-ranger/work.grid`
+- [x] `art/characters/hero-rogue/idle.grid`
+- [x] `art/characters/hero-rogue/walk.grid`
+- [x] `art/characters/hero-rogue/work.grid`
+- [x] `art/portraits/hero-paladin.svg`
+- [x] `art/portraits/hero-barbarian.svg`
+- [x] `art/portraits/hero-ranger.svg`
+- [x] `art/portraits/hero-rogue.svg`
 
 ### Batch 2: the elder and councillors on the map, and their portraits
 

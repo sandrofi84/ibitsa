@@ -11,6 +11,7 @@
       "!**/.tsbuild",
       "!prototypes",
       "!packages/assets/default-pack",
+      "!art",
       "!**/*.golden.json"
     ]
   },

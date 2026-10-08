@@ -24,41 +24,6 @@
           "row": 2,
           "frames": 4,
           "fps": 4
-        },
-        "test": {
-          "row": 3,
-          "frames": 4,
-          "fps": 4
-        },
-        "ask": {
-          "row": 4,
-          "frames": 4,
-          "fps": 4
-        },
-        "blocked": {
-          "row": 5,
-          "frames": 4,
-          "fps": 4
-        },
-        "rest": {
-          "row": 6,
-          "frames": 4,
-          "fps": 2
-        },
-        "celebrate": {
-          "row": 7,
-          "frames": 4,
-          "fps": 8
-        },
-        "hurt": {
-          "row": 8,
-          "frames": 4,
-          "fps": 8
-        },
-        "outOfGold": {
-          "row": 9,
-          "frames": 4,
-          "fps": 4
         }
       },
       "portrait": "portraits/hero-paladin.png"
@@ -83,41 +48,6 @@
         },
         "work": {
           "row": 2,
-          "frames": 4,
-          "fps": 4
-        },
-        "test": {
-          "row": 3,
-          "frames": 4,
-          "fps": 4
-        },
-        "ask": {
-          "row": 4,
-          "frames": 4,
-          "fps": 4
-        },
-        "blocked": {
-          "row": 5,
-          "frames": 4,
-          "fps": 4
-        },
-        "rest": {
-          "row": 6,
-          "frames": 4,
-          "fps": 2
-        },
-        "celebrate": {
-          "row": 7,
-          "frames": 4,
-          "fps": 8
-        },
-        "hurt": {
-          "row": 8,
-          "frames": 4,
-          "fps": 8
-        },
-        "outOfGold": {
-          "row": 9,
           "frames": 4,
           "fps": 4
         }
@@ -146,41 +76,6 @@
           "row": 2,
           "frames": 4,
           "fps": 4
-        },
-        "test": {
-          "row": 3,
-          "frames": 4,
-          "fps": 4
-        },
-        "ask": {
-          "row": 4,
-          "frames": 4,
-          "fps": 4
-        },
-        "blocked": {
-          "row": 5,
-          "frames": 4,
-          "fps": 4
-        },
-        "rest": {
-          "row": 6,
-          "frames": 4,
-          "fps": 2
-        },
-        "celebrate": {
-          "row": 7,
-          "frames": 4,
-          "fps": 8
-        },
-        "hurt": {
-          "row": 8,
-          "frames": 4,
-          "fps": 8
-        },
-        "outOfGold": {
-          "row": 9,
-          "frames": 4,
-          "fps": 4
         }
       },
       "portrait": "portraits/hero-ranger.png"
@@ -205,41 +100,6 @@
         },
         "work": {
           "row": 2,
-          "frames": 4,
-          "fps": 4
-        },
-        "test": {
-          "row": 3,
-          "frames": 4,
-          "fps": 4
-        },
-        "ask": {
-          "row": 4,
-          "frames": 4,
-          "fps": 4
-        },
-        "blocked": {
-          "row": 5,
-          "frames": 4,
-          "fps": 4
-        },
-        "rest": {
-          "row": 6,
-          "frames": 4,
-          "fps": 2
-        },
-        "celebrate": {
-          "row": 7,
-          "frames": 4,
-          "fps": 8
-        },
-        "hurt": {
-          "row": 8,
-          "frames": 4,
-          "fps": 8
-        },
-        "outOfGold": {
-          "row": 9,
           "frames": 4,
           "fps": 4
         }
