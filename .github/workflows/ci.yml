@@ -14,6 +14,10 @@ on:
       - 'docs/**'
       - '**/*.md'
 
+# Time limits: a test step normally takes under 2 minutes (Vitest ≤ 45 s on Windows, each e2e shard
+# ≤ 75 s, VS Code integration ≤ 70 s), so each gets 10 and each job 20. A stuck test then fails in
+# minutes instead of holding the run for half an hour.
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -21,7 +25,7 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -53,6 +57,7 @@ jobs:
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
 
       - name: Unit tests, fixture golden files and coverage floors (Vitest)
+        timeout-minutes: 10
         run: pnpm exec vitest run --coverage
         env:
           # The sandbox tests fail here rather than skip when a tool is missing (#200).
@@ -74,6 +79,7 @@ jobs:
         run: pnpm -r build
 
       - name: Extension integration tests (VS Code under xvfb)
+        timeout-minutes: 10
         working-directory: packages/extension
         run: xvfb-run -a -s "-screen 0 1920x1080x24" pnpm test:integration
 
@@ -90,7 +96,7 @@ jobs:
     container:
       image: mcr.microsoft.com/playwright:v1.63.0-noble
       options: --ipc=host
-    timeout-minutes: 30
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -110,6 +116,7 @@ jobs:
           [ "v$want" = "v1.63.0" ] || { echo "::error::@playwright/test is $want; update the e2e container tag to v$want-noble"; exit 1; }
 
       - name: End-to-end tests against the standalone game (Playwright)
+        timeout-minutes: 10
         run: pnpm --filter @ibitsa/game test:e2e --shard=${{ matrix.shard }}/3
 
       # Every run, not only failures: the screenshots are the visual evidence for a PR's changes.
@@ -139,7 +146,7 @@ jobs:
       matrix:
         os: [macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -157,6 +164,7 @@ jobs:
         run: pnpm exec tsc -b
 
       - name: Unit tests and fixture golden files (Vitest)
+        timeout-minutes: 10
         run: pnpm exec vitest run
         env:
           # macOS runs the ACP sandbox tests for real (#200); Windows has no sandbox and skips them.
@@ -166,5 +174,6 @@ jobs:
         run: pnpm -r build
 
       - name: Extension integration tests (VS Code)
+        timeout-minutes: 10
         working-directory: packages/extension
         run: pnpm test:integration
