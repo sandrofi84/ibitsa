@@ -30,8 +30,15 @@ function setup(overrides: Partial<HostChannelDeps> = {}) {
     openable: { workspace: '/ws', roots: ['/home/me/.claude/skills'] },
     packs: {
       list: () => [
-        { id: 'default', name: 'Default', scope: 'builtin', errors: [], preview: null },
-        { id: 'user:retro', name: 'Retro', scope: 'user', errors: [], preview: null },
+        {
+          id: 'default',
+          name: 'Default',
+          scope: 'builtin',
+          errors: [],
+          warnings: [],
+          preview: null,
+        },
+        { id: 'user:retro', name: 'Retro', scope: 'user', errors: [], warnings: [], preview: null },
       ],
       dir: (id: string) => (id === 'user:retro' ? '/home/me/.ibitsa/packs/retro' : null),
     } as unknown as HostChannelDeps['packs'],

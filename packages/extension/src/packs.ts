@@ -26,6 +26,7 @@ export class PackLibrary {
       name: 'Default',
       scope: 'builtin',
       errors: [],
+      warnings: [],
       preview: null,
     };
     return [builtin, ...this.found().map((p) => this.view(p))];
@@ -57,6 +58,7 @@ export class PackLibrary {
         name: nameOf(pack.dir),
         scope: pack.scope,
         errors: checked.errors,
+        warnings: [],
         preview: null,
       };
     }
@@ -68,6 +70,7 @@ export class PackLibrary {
       name: manifest.name,
       scope: pack.scope,
       errors: [],
+      warnings: checked.warnings,
       preview:
         character && walk
           ? {

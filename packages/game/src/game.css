@@ -1842,9 +1842,17 @@ body.in-hut:has(.council-chamber:not([hidden])) .needs-you {
   background-repeat: no-repeat;
 }
 
-.guild-hall .pack-errors {
-  color: #a32020;
+.guild-hall .pack-notes {
   margin: 4px 0 0;
+}
+
+.guild-hall .pack-error {
+  color: #a32020;
+}
+
+/* A warning (#235): the pack still works, so amber, not red. */
+.guild-hall .pack-warning {
+  color: #8a5a00;
 }
 
 /* The Roster (#181): a card per councillor, then the new councillor form. */
