@@ -1,44 +1,8 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import type { TestDetector } from '@ibitsa/runtime';
 import type { Activity } from './activity.types';
 import type { Worktree } from './worktree';
 
-/** Bash commands that count as running tests (spec §5.4), on top of the worktree's own `test*` scripts. */
-const DEFAULT_TEST_PATTERNS = [
-  /\b(pnpm|npm|yarn|bun)\s+(run\s+)?test\b/,
-  /\bvitest\b/,
-  /\bjest\b/,
-  /\bpytest\b/,
-  /\bgo\s+test\b/,
-  /\bcargo\s+test\b/,
-  /\bplaywright\s+test\b/,
-  /\bmocha\b/,
-];
-
 const DETAIL_MAX = 120;
-
-/** Which Bash commands count as tests, for one worktree. */
-export class TestDetector {
-  private readonly scripts: string[];
-
-  constructor(cwd: string) {
-    this.scripts = testScripts(cwd);
-  }
-
-  /** The worktree's own `test*` script names. */
-  get scriptNames(): readonly string[] {
-    return this.scripts;
-  }
-
-  isTest(command: string): boolean {
-    return (
-      DEFAULT_TEST_PATTERNS.some((p) => p.test(command)) ||
-      this.scripts.some((name) =>
-        new RegExp(`\\b(run\\s+)?${escapeRegExp(name)}(\\s|$)`).test(command),
-      )
-    );
-  }
-}
 
 /** Tool → activity kind and a short display detail (spec §5.4). Never the raw input. */
 export function classify({
@@ -95,20 +59,4 @@ export function classify({
 function shorten(text: string): string {
   const line = text.split('\n')[0] ?? '';
   return line.length > DETAIL_MAX ? `${line.slice(0, DETAIL_MAX - 1)}…` : line;
-}
-
-function testScripts(cwd: string): string[] {
-  const file = join(cwd, 'package.json');
-  if (!existsSync(file)) return [];
-  try {
-    const scripts = (JSON.parse(readFileSync(file, 'utf8')) as { scripts?: Record<string, string> })
-      .scripts;
-    return Object.keys(scripts ?? {}).filter((name) => name.startsWith('test'));
-  } catch {
-    return [];
-  }
-}
-
-function escapeRegExp(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

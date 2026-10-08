@@ -5,7 +5,8 @@ import type {
   SDKMessage,
 } from '@anthropic-ai/claude-agent-sdk';
 import type { AgentEvent } from '@ibitsa/protocol';
-import { classify, type TestDetector } from './activity';
+import type { TestDetector } from '@ibitsa/runtime';
+import { classify } from './activity';
 import type { Worktree } from './worktree';
 
 /**

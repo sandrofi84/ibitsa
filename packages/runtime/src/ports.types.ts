@@ -57,6 +57,11 @@ export interface AgentSession {
   interrupt(): void;
   /** Compact the session to free context (Rest, #82). */
   compact(): void;
+  /**
+   * False when `compact()` can't do anything (an ACP agent without a `compact` command, §11.5), so Rest
+   * can be turned off. Absent means it can.
+   */
+  readonly canCompact?: boolean;
   /** `always`: also allow the request's suggested rules for the rest of the session (#62). */
   respondToPermission(answer: {
     requestId: string;

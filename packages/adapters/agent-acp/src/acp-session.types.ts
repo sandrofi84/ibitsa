@@ -1,0 +1,34 @@
+import type {
+  CreateElicitationResponse,
+  PermissionOption,
+  RequestPermissionResponse,
+} from '@agentclientprotocol/sdk';
+import type { AgentEvent } from '@ibitsa/protocol';
+import type { AcpAdapterOptions } from './acp-adapter.types';
+import type { FormField } from './elicitation.types';
+
+export interface AcpSessionInit {
+  options: AcpAdapterOptions;
+  heroId: string;
+  /** The hero's worktree. */
+  cwd: string;
+  /** The class's model, set through the agent's `model` config option when it offers one. */
+  model?: string;
+  /** The first message; a resumed session without one waits idle. */
+  prompt?: string;
+  /** An earlier session to continue (`session/resume`, else `session/load`). */
+  resume?: string;
+  onEvent: (event: AgentEvent) => void;
+}
+
+/** A permission request waiting for "Needs you". */
+export interface PendingPermission {
+  options: PermissionOption[];
+  resolve: (response: RequestPermissionResponse) => void;
+}
+
+/** A form waiting for "Needs you", with how its answers map back to its fields. */
+export interface PendingQuestion {
+  fields: FormField[];
+  resolve: (response: CreateElicitationResponse) => void;
+}

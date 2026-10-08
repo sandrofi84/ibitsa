@@ -10,9 +10,8 @@ import type {
   SDKUserMessage,
 } from '@anthropic-ai/claude-agent-sdk';
 import type { AgentEvent, AskUserQuestion } from '@ibitsa/protocol';
-import type { AgentSession } from '@ibitsa/runtime';
+import { type AgentSession, TestDetector } from '@ibitsa/runtime';
 import { z } from 'zod';
-import { TestDetector } from './activity';
 import type { SdkModule } from './claude-adapter.types';
 import type { ClaudeSessionInit, Pending, PermissionAnswer } from './claude-session.types';
 import { EventMapper } from './event-mapper';

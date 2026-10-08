@@ -34,8 +34,17 @@ export type AgentEvent =
       /** Set when the request crosses a hard limit (spec §11.6): auto mode never answers these (#63). */
       boundary?: 'sandboxEscape' | 'outsideWorktree';
     }
-  /** Running totals for the session, never deltas. Omitted fields are unknown, not zero. */
-  | { type: 'usage'; contextUsed?: number; contextMax?: number; totalCost?: MicroUsd }
+  /**
+   * Running totals for the session, never deltas. Omitted fields are unknown, not zero. `costBasis`
+   * marks `totalCost` as estimated rather than reported, saying how (e.g. "tokens × agent prices").
+   */
+  | {
+      type: 'usage';
+      contextUsed?: number;
+      contextMax?: number;
+      totalCost?: MicroUsd;
+      costBasis?: string;
+    }
   /** Compaction started (Claude SDK: `status: 'compacting'`). */
   | { type: 'resting' }
   | { type: 'compacted'; trigger: 'manual' | 'auto'; preTokens: number; postTokens?: number }

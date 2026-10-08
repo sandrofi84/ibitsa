@@ -1,8 +1,9 @@
-import { mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { TestDetector } from '@ibitsa/runtime';
 import { afterEach, describe, expect, it } from 'vitest';
-import { classify, TestDetector } from './activity';
+import { classify } from './activity';
 import { Worktree } from './worktree';
 
 const dirs: string[] = [];
@@ -10,10 +11,9 @@ afterEach(() => {
   for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });
 });
 
-function worktree(scripts?: Record<string, string>): string {
+function worktree(): string {
   const dir = mkdtempSync(join(tmpdir(), 'ibitsa-wt-'));
   dirs.push(dir);
-  if (scripts) writeFileSync(join(dir, 'package.json'), JSON.stringify({ scripts }));
   return dir;
 }
 
@@ -134,23 +134,5 @@ describe('classify (spec §5.4)', () => {
     });
     expect(detail?.length).toBe(120);
     expect(detail).not.toContain('second line');
-  });
-});
-
-describe('TestDetector', () => {
-  it("counts the worktree's own test scripts", () => {
-    const tests = new TestDetector(
-      worktree({ 'test:unit': 'vitest', check: 'tsc', 'test-e2e': 'playwright' }),
-    );
-    expect(tests.isTest('pnpm run test-e2e')).toBe(true);
-    expect(tests.isTest('pnpm test:unit')).toBe(true);
-    expect(tests.isTest('pnpm check')).toBe(false);
-  });
-
-  it('works without a package.json or with a broken one', () => {
-    const broken = worktree();
-    writeFileSync(join(broken, 'package.json'), '{ nope');
-    expect(new TestDetector(broken).isTest('pytest -q')).toBe(true);
-    expect(new TestDetector(worktree()).isTest('make')).toBe(false);
   });
 });

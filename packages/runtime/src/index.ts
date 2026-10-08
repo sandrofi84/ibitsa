@@ -41,3 +41,4 @@ export type { Connection, RuntimeOptions } from './runtime.types';
 export type { FolderWatcher } from './skill-catalog.types';
 export { CampaignLog, CampaignStore, LOG_SIZE_CAP } from './storage';
 export { systemClock } from './system-clock';
+export { TestDetector } from './test-detector';

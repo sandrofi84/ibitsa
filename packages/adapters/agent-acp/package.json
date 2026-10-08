@@ -1,0 +1,13 @@
+{
+  "name": "@ibitsa/agent-acp",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@agentclientprotocol/sdk": "1.7.0",
+    "@ibitsa/protocol": "workspace:*",
+    "@ibitsa/runtime": "workspace:*"
+  }
+}
