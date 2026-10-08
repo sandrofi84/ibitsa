@@ -95,7 +95,7 @@ Any asset may be a `.grid` or an `.svg`, not both.
 | Buildings | `art/buildings/hut.grid`, `guild-hall.grid` | 64×64, 48×48 |
 | Dialogue frame | `art/ui/dialogue-frame.grid` | 24×24 |
 | Activity icons | `art/ui/activity/<kind>.grid` | 12×12 |
-| Scenes | `art/scenes/hut-interior.svg`, `hut-table.svg`, `village-*.svg`, `ibitsa.svg` | see [assets.md](assets.md) |
+| Scenes | `art/scenes/hut-interior.svg`, `hut-table.svg` (480×270), `village.svg` (128×96), `ibitsa.svg` (48×32) | see [assets.md](assets.md) |
 
 ## The characters
 

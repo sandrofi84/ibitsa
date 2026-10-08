@@ -321,12 +321,71 @@ front (5, 6) down to about y=230, an open Book of Decisions on it near the middl
 Everything else is transparent: the room and the councillors show through.
 ```
 
-### Home Village and Ibitsa
+### Home Village
 
-**Files:** `art/scenes/village-*.svg` and `art/scenes/ibitsa.svg`. These slots arrive with issue #221. Their sizes, and the props Home Village takes, are added here then.
+**File:** `art/scenes/village.svg` (or `.grid`), 128×96, 1 frame. The whole village island in one picture, at the size of an island with one middle piece: it replaces the plain island the village stands on. The council hut and the Guild Hall are their own images, drawn on top of it.
 
-**Ibitsa:** a distant island silhouette on the horizon, tall cliffs, a white town catching the light. Soft and pale (`k`, `l`, `j`), because the game fades it into mist.
+**The picture's layout.** Coordinates are inside the picture, (0, 0) at the top left:
 
+| What | Where | So |
+|---|---|---|
+| Ground (sand rim, grass) | rows 0–63 | as on the island pieces, so the village matches the other islands |
+| Cliff | rows 64–85 | as on the island pieces |
+| Foam where it meets the sea | rows 86–95 | as on the island pieces; transparent outside the island's outline |
+| Guild Hall (drawn on top) | x 6–53, rows −14 to 33 | hidden by the building; plain ground is enough |
+| Council hut (drawn on top) | x 56–119, rows −30 to 33 | hidden by the building; plain ground is enough |
+| The hut's door | (88, 32) | heroes come out here |
+| Heroes waiting for their island | feet at x 32–68, rows 36 and 48 | keep that patch open ground, no props |
+| Paths to the islands | from (88, 36) to the right edge | a sandy path there looks right; the game draws its dotted paths over it |
+| "HOME VILLAGE" (drawn by the game) | rows 70–78, x 22 to about 100 | keep that band of cliff plain, so the text reads |
+
+**Props** go in the open ground that's left: the left side (x 0–28, rows 36–62) and the right side (x 76–127, rows 40–62). For example, an olive tree or two, a stone well, a small jetty with a moored boat at the right edge, and a few flower pots.
+
+With Template S:
+
+```text
+Asset: Home Village island
+Size: width="128" height="96" viewBox="0 0 128 96"
+What it shows: a small Mediterranean village island from above, three-quarter view.
+Rows 0-63: ground with a sand rim (2, 3) and grass (c, d). Rows 64-85: a cliff face
+(5, 4, 6). Rows 86-95: white foam (j, k) where it meets the sea. Transparent outside
+the island's rounded outline. A sandy path from (88,36) to the right edge. Keep the
+top band (rows 0-33 from x=6 to x=119) plain grass: two buildings stand there. Keep
+x 32-76, rows 30-56 open ground: heroes wait there. Keep rows 70-78 of the cliff
+plain: the game writes the village's name there. Props in the open ground: an olive
+tree or two (d, e, 5), a stone well (l, k), a small jetty with a moored boat at the
+right edge (5, v, h), a few terracotta flower pots (1, 0).
+Must match: <paste the approved island middle piece> — the same sand, grass, cliff and foam.
+```
+
+**Checklist:**
+
+- [ ] 128×96, transparent outside the island;
+- [ ] the ground, cliff and foam rows line up with the island pieces;
+- [ ] the hero patch and the label band are clear;
+- [ ] in the game, the hut and the Guild Hall stand on it naturally.
+
+### Ibitsa
+
+**File:** `art/scenes/ibitsa.svg` (or `.grid`), 48×32, 1 frame. The legendary island on the far horizon, out of reach. The game draws its name above it, shows it at 70% opacity, and fades it to almost nothing in its own mist when the heroes sail for it. Its base sits on the bottom row, centred.
+
+With Template S:
+
+```text
+Asset: Ibitsa, on the horizon
+Size: width="48" height="32" viewBox="0 0 48 32"
+What it shows: a distant island silhouette seen from far away across the sea: tall
+pale cliffs rising from the water, a small white town on top catching the light, one
+slender tower. Soft and pale, low contrast (k, l, j, with m for the shadowed side),
+no outline, no detail smaller than 2 px. Its base on the bottom row, centred;
+transparent around it.
+Must match: (nothing)
+```
+
+**Checklist:**
+
+- [ ] 48×32, transparent around it, its base on the bottom row;
+- [ ] pale and soft: it should look far away, and still read at 70% opacity.
 ---
 
 ## Status
@@ -455,8 +514,8 @@ Tick each file as it lands (issue #223 tracks the batches). Generated from the l
 
 - [ ] `art/scenes/hut-interior.svg`
 - [ ] `art/scenes/hut-table.svg`
+- [ ] `art/scenes/village.svg`
 - [ ] `art/scenes/ibitsa.svg`
-- [ ] Home Village (files listed once issue #221 lands)
 
 ### Batch 7: extra poses
 
