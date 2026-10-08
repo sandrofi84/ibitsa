@@ -10,6 +10,9 @@ import type { AcpAdapterOptions, AgentPrices } from './acp-adapter.types';
 import { CANT_RESUME } from './acp-session';
 
 const FAKE_AGENT = fileURLToPath(new URL('../test/fake-agent.mjs', import.meta.url));
+/** Starting a Node process can take seconds on a busy CI runner (Windows especially). */
+const until = (check: () => void) => vi.waitFor(check, { timeout: 10_000, interval: 20 });
+vi.setConfig({ testTimeout: 30_000 });
 const dirs: string[] = [];
 const sessions: AgentSession[] = [];
 
@@ -86,7 +89,7 @@ function hero({
           .map((line) => JSON.parse(line) as { method: string; params: Record<string, unknown> })
       : [];
   const settled = (count = 1) =>
-    vi.waitFor(() =>
+    until(() =>
       expect(events.filter((e) => e.type === 'turnEnded' || e.type === 'error').length).toBe(count),
     );
   return { cwd, session, events, requests, settled, adapter };
@@ -227,7 +230,7 @@ describe('AcpSession: activity and messages', () => {
 describe('AcpSession: messages while working (§11.5 fallbacks)', () => {
   it('holds next messages until the turn ends, then sends them one turn each', async () => {
     const { session, events, settled } = hero({ prompt: [{ sleep: 300 }] });
-    await vi.waitFor(() => expect(events[0]?.type).toBe('sessionStarted'));
+    await until(() => expect(events[0]?.type).toBe('sessionStarted'));
     session.send('one', 'next');
     session.send('two', 'next');
     await settled(3);
@@ -252,7 +255,7 @@ describe('AcpSession: messages while working (§11.5 fallbacks)', () => {
 
   it('cancels the turn for a now message, then sends it', async () => {
     const { session, events, requests, settled } = hero({ prompt: [{ waitCancel: true }] });
-    await vi.waitFor(() => expect(requests().map((r) => r.method)).toContain('session/prompt'));
+    await until(() => expect(requests().map((r) => r.method)).toContain('session/prompt'));
     session.send('stop that', 'now');
     session.send('and this', 'now');
     await settled(2);
@@ -276,7 +279,7 @@ describe('AcpSession: messages while working (§11.5 fallbacks)', () => {
         { waitCancel: true },
       ],
     });
-    await vi.waitFor(() => expect(events.map((e) => e.type)).toContain('activityStarted'));
+    await until(() => expect(events.map((e) => e.type)).toContain('activityStarted'));
     session.send('later', 'next');
     session.interrupt();
     await settled();
@@ -310,7 +313,7 @@ describe('AcpSession: permissions and questions', () => {
 
   it('asks "Needs you" and answers with the matching option', async () => {
     const { session, events, settled } = hero({ prompt: [ask, ask, ask] });
-    await vi.waitFor(() => expect(events.filter((e) => e.type === 'permission')).toHaveLength(1));
+    await until(() => expect(events.filter((e) => e.type === 'permission')).toHaveLength(1));
     expect(events[1]).toEqual({
       type: 'permission',
       requestId: 't1:1',
@@ -319,9 +322,9 @@ describe('AcpSession: permissions and questions', () => {
       title: 'Run npm install',
     });
     session.respondToPermission({ requestId: 't1:1', decision: 'allow' });
-    await vi.waitFor(() => expect(events.filter((e) => e.type === 'permission')).toHaveLength(2));
+    await until(() => expect(events.filter((e) => e.type === 'permission')).toHaveLength(2));
     session.respondToPermission({ requestId: 't1:2', decision: 'allow', always: true });
-    await vi.waitFor(() => expect(events.filter((e) => e.type === 'permission')).toHaveLength(3));
+    await until(() => expect(events.filter((e) => e.type === 'permission')).toHaveLength(3));
     session.respondToPermission({ requestId: 't1:3', decision: 'deny', note: 'Use pnpm.' });
     // The note reaches the agent as the next message.
     await settled(2);
@@ -344,7 +347,7 @@ describe('AcpSession: permissions and questions', () => {
       },
     };
     const { session, events, settled } = hero({ prompt: [onlyAlways] });
-    await vi.waitFor(() => expect(events.map((e) => e.type)).toContain('permission'));
+    await until(() => expect(events.map((e) => e.type)).toContain('permission'));
     session.respondToPermission({ requestId: 't1:1', decision: 'allow' });
     await settled();
     expect(messages(events)).toEqual(['permission: {"outcome":"cancelled"}']);
@@ -352,7 +355,7 @@ describe('AcpSession: permissions and questions', () => {
 
   it('answers a waiting permission as cancelled when the hero is stopped', async () => {
     const { session, events, settled } = hero({ prompt: [ask] });
-    await vi.waitFor(() => expect(events.map((e) => e.type)).toContain('permission'));
+    await until(() => expect(events.map((e) => e.type)).toContain('permission'));
     session.interrupt();
     await settled();
     expect(messages(events)).toEqual(['permission: {"outcome":"cancelled"}']);
@@ -383,7 +386,7 @@ describe('AcpSession: permissions and questions', () => {
         },
       ],
     });
-    await vi.waitFor(() => expect(events.map((e) => e.type)).toContain('question'));
+    await until(() => expect(events.map((e) => e.type)).toContain('question'));
     expect(events[1]).toEqual({
       type: 'question',
       requestId: 'q1',
@@ -431,7 +434,7 @@ describe('AcpSession: permissions and questions', () => {
         },
       ],
     });
-    await vi.waitFor(() => expect(events.map((e) => e.type)).toContain('question'));
+    await until(() => expect(events.map((e) => e.type)).toContain('question'));
     session.interrupt();
     await settled();
     expect(messages(events)).toEqual(['elicit: {"action":"cancel"}']);
@@ -499,7 +502,7 @@ describe('AcpSession: Rest', () => {
       env: { FAKE_ACP_COMMANDS: JSON.stringify([{ name: 'compact', description: 'Compact' }]) },
     });
     await settled();
-    await vi.waitFor(() => expect(session.canCompact).toBe(true));
+    await until(() => expect(session.canCompact).toBe(true));
     session.compact();
     await settled(2);
     expect(events.slice(-4)).toEqual([
@@ -584,7 +587,7 @@ describe('AcpSession: errors and closing', () => {
       (e) => events.push(e),
     );
     sessions.push(session);
-    await vi.waitFor(() => expect(events).toHaveLength(1));
+    await until(() => expect(events).toHaveLength(1));
     expect(events[0]).toEqual({
       type: 'error',
       message: expect.stringContaining("Couldn't start the agent"),
@@ -599,7 +602,7 @@ describe('AcpSession: errors and closing', () => {
     session.close();
     session.close();
     session.send('anyone?', 'next');
-    await vi.waitFor(() => expect(requests().map((r) => r.method)).toContain('session/close'));
+    await until(() => expect(requests().map((r) => r.method)).toContain('session/close'));
     expect(events.map((e) => e.type)).toEqual(['sessionStarted', 'message', 'turnEnded']);
   });
 

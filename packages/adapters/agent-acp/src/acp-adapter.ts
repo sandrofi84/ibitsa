@@ -54,7 +54,6 @@ export class AcpAdapter implements AgentAdapter {
     let timer: ReturnType<typeof setTimeout> | undefined;
     const commands = new Promise<AvailableCommand[]>((resolve) => {
       listed = resolve;
-      timer = setTimeout(() => resolve([]), COMMANDS_WAIT_MS);
     });
     const connection = new AgentConnection({
       options: this.options,
@@ -70,6 +69,8 @@ export class AcpAdapter implements AgentAdapter {
     try {
       await connection.initialize();
       await connection.agent.request(methods.agent.session.new, { cwd, mcpServers: [] });
+      // Agents list their commands just after the session starts, if at all.
+      timer = setTimeout(() => listed([]), COMMANDS_WAIT_MS);
       return (await commands).map(toAction);
     } catch {
       return [];

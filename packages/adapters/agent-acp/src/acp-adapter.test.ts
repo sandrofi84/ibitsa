@@ -2,10 +2,12 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AcpAdapter } from './acp-adapter';
 
 const FAKE_AGENT = fileURLToPath(new URL('../test/fake-agent.mjs', import.meta.url));
+// Starting a Node process can take seconds on a busy CI runner (Windows especially).
+vi.setConfig({ testTimeout: 30_000 });
 const dirs: string[] = [];
 afterEach(() => {
   // On Windows the folder stays busy until the killed agent has gone.
