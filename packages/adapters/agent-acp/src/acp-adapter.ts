@@ -4,11 +4,19 @@ import {
   methods,
   RequestError,
 } from '@agentclientprotocol/sdk';
-import type { ActionInfo, AgentEvent } from '@ibitsa/protocol';
-import type { AgentAdapter, AgentSession, SessionResume, SessionStart } from '@ibitsa/runtime';
+import type { ActionInfo, AgentEvent, ReviewEvent } from '@ibitsa/protocol';
+import type {
+  AgentAdapter,
+  AgentSession,
+  ReviewSession,
+  ReviewStart,
+  SessionResume,
+  SessionStart,
+} from '@ibitsa/runtime';
 import type { AcpAdapterOptions, AgentProbe } from './acp-adapter.types';
-import { AcpSession, offeredModels } from './acp-session';
-import { AgentConnection } from './agent-connection';
+import { AcpReview } from './acp-review';
+import { AcpSession } from './acp-session';
+import { AgentConnection, offeredModels } from './agent-connection';
 
 /** How long the `/` menu waits for an agent to list its commands. */
 export const COMMANDS_WAIT_MS = 3_000;
@@ -20,7 +28,7 @@ const AUTH_REQUIRED = -32_000;
 /**
  * The generic Agent Client Protocol adapter (spec §11.5): heroes on any ACP agent, one agent process
  * each. Gold is estimated only from the prices in the agent's entry, so without them there is no
- * pouch to enforce. Reviewers come with #201.
+ * pouch to enforce. Councillors review on it too (#201).
  */
 export class AcpAdapter implements AgentAdapter {
   readonly capabilities: { budgetCap: boolean; costReported: boolean };
@@ -59,6 +67,11 @@ export class AcpAdapter implements AgentAdapter {
       ...(resume.allowRules ? { allowRules: resume.allowRules } : {}),
       onEvent,
     });
+  }
+
+  /** A councillor's review on this agent (§5.5, #201): read-only, filing `submit_verdict`. */
+  startReview(start: ReviewStart, onEvent: (event: ReviewEvent) => void): ReviewSession {
+    return new AcpReview({ options: this.options, start, onEvent });
   }
 
   /**

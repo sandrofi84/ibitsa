@@ -16,6 +16,14 @@ const LAYERS: Record<CouncilSettingsView['overridesLayer'], string> = {
   workspace: 'This project',
 };
 
+/** The Roster's override fields (#181), and the agent a councillor reviews on (#201). */
+const FIELD_LABELS = { title: 'Title ', model: 'Model ', agent: 'Reviews on ' } as const;
+const PLACEHOLDERS: Record<keyof typeof FIELD_LABELS, (c: CouncillorInfo) => string> = {
+  title: (c) => c.title,
+  model: (c) => c.model ?? 'the effort decides',
+  agent: (c) => c.agent ?? 'claude',
+};
+
 /** What a councillor does, in words: plans, reviews, or both. */
 export function modesText(modes: CouncillorInfo['modes']): string {
   if (modes.planning && modes.review) return 'Plans and reviews';
@@ -34,7 +42,7 @@ export function withField({
   value,
 }: {
   override: CouncillorOverride | undefined;
-  field: 'title' | 'model';
+  field: 'title' | 'model' | 'agent';
   value: string;
 }): CouncillorOverride | null {
   const { [field]: _old, ...rest } = override ?? {};
@@ -121,10 +129,10 @@ export function mountRoster({
     const sits = el('label', { className: 'sits' });
     sits.append(on, ' Sits on the council');
     const override = s.overrides[c.id];
-    const fields = (['title', 'model'] as const).map((field) => {
+    const fields = (['title', 'model', 'agent'] as const).map((field) => {
       const input = el('input');
       input.value = override?.[field] ?? '';
-      input.placeholder = field === 'title' ? c.title : (c.model ?? 'the effort decides');
+      input.placeholder = PLACEHOLDERS[field](c);
       input.onchange = () =>
         host.request({
           channel: 'host',
@@ -133,10 +141,10 @@ export function mountRoster({
           override: withField({ override, field, value: input.value }),
           layer,
         });
-      const label = el('label', {
-        className: 'override',
-        text: field === 'title' ? 'Title ' : 'Model ',
-      });
+      const label = el('label', { className: 'override', text: FIELD_LABELS[field] });
+      if (field === 'agent')
+        label.title =
+          'The agent its reviews run on: an ibitsa.agents id. The council sits on Claude.';
       label.append(input);
       return label;
     });
@@ -152,7 +160,7 @@ export function mountRoster({
       head,
       el('p', {
         className: 'note',
-        text: `${modesText(c.modes)} · ${c.model ?? 'the effort decides the model'}${c.description ? ` · ${c.description}` : ''}`,
+        text: `${modesText(c.modes)} · ${c.model ?? 'the effort decides the model'}${c.agent ? ` · reviews on ${c.agent}` : ''}${c.description ? ` · ${c.description}` : ''}`,
       }),
       sits,
       ...fields,

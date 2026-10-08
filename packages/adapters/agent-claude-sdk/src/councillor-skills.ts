@@ -144,6 +144,10 @@ function extended({
     ...(override.title?.trim() ? { title: override.title.trim() } : {}),
     ...(override.model?.trim() ? { model: override.model.trim() } : {}),
     ...(override.portrait?.trim() ? { portrait: override.portrait.trim() } : {}),
+    // Claude is the default, so naming it is the same as leaving it out (#201).
+    ...(override.agent?.trim() && override.agent.trim() !== 'claude'
+      ? { agent: override.agent.trim() }
+      : {}),
     ...(tools.length > 0 ? { tools: [...new Set(tools)] } : {}),
     hash: createHash('sha256')
       .update(`${info.hash}${JSON.stringify(override)}`)

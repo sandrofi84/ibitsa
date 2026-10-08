@@ -286,11 +286,14 @@
               },
               "portrait": {
                 "type": "string"
+              },
+              "agent": {
+                "type": "string"
               }
             },
             "additionalProperties": false
           },
-          "markdownDescription": "Overrides for councillors, by id: `title`, `model`, `tools` (read-only ones only) and `portrait`. The skill file stays as it is. Edit them in the Guild Hall's Roster."
+          "markdownDescription": "Overrides for councillors, by id: `title`, `model`, `tools` (read-only ones only), `portrait`, and `agent`: the agent its reviews run on, `claude` or an `ibitsa.agents` id (the council itself sits on Claude). The skill file stays as it is. Edit them in the Guild Hall's Roster."
         },
         "ibitsa.claudeCodePath": {
           "type": "string",

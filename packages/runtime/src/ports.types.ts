@@ -98,6 +98,11 @@ export interface AgentAdapter {
   compactCouncil?(request: { cwd: string; sessionId: string }): Promise<void>;
   /** A reviewer's session (§5.5, M5); #138 adds it to the Claude adapter. */
   startReview?(start: ReviewStart, onEvent: (event: ReviewEvent) => void): ReviewSession;
+  /**
+   * A councillor's review guidance from its skill (§5.5), for a reviewer on another agent (#201): the
+   * adapter that reads councillor skills finds it; null when the councillor has no skill file.
+   */
+  reviewGuidance?(request: { cwd: string; councillorId: string }): ReviewGuidance | null;
   /** A short hash of the adapter's council prompts, part of the council version (§4.10, #106). */
   councilPromptVersion?: string;
   /** A sitting's lead session (spec §4.3, #103); adapters that can't run one leave it out. */
@@ -183,6 +188,17 @@ export interface ReviewStart {
   criteria: string[];
   decisions: Decision[];
   checks: CheckResult[];
+  /**
+   * The councillor's guidance, when the reviewer runs on an agent that can't read councillor skills
+   * (#201); an adapter that reads them finds its own.
+   */
+  guidance?: ReviewGuidance | null;
+}
+
+/** A councillor's title and the guidance its skill gives a reviewer (opening lines and `## Review`). */
+export interface ReviewGuidance {
+  title: string;
+  guidance: string;
 }
 
 /** A running review: core's verdict on `submit_verdict` goes back through it. */

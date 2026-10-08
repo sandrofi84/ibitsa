@@ -21,6 +21,11 @@ export interface CouncillorInfo {
   hash: string;
   /** The skill file, for the Guild Hall's Customise (#181); absent from logs before it. */
   path?: string;
+  /**
+   * The agent it reviews on (§5.5, #201): an `ibitsa.agents` id, from its override. Absent is Claude,
+   * which also runs every sitting (§11.5).
+   */
+  agent?: string;
 }
 
 /**
@@ -33,5 +38,7 @@ export interface CouncillorOverride {
   /** Kept to the read-only tools a sitting allows. */
   tools?: string[] | undefined;
   portrait?: string | undefined;
+  /** The agent its reviews run on (#201): `claude`, or an `ibitsa.agents` id. */
+  agent?: string | undefined;
 }
 export type CouncillorOverrides = Record<string, CouncillorOverride>;

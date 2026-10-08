@@ -31,23 +31,6 @@ import { UpdateMapper } from './update-mapper';
 
 export const CANT_RESUME = 'This agent can’t resume a session. Start the task over.';
 
-/** The agent's choice of model, if it offers one (§11.5): a select option of category `model`. */
-function modelOption(
-  configOptions: SessionConfigOption[] | null | undefined,
-): Extract<SessionConfigOption, { type: 'select' }> | undefined {
-  const option = configOptions?.find((o) => o.category === 'model' && o.type === 'select');
-  return option?.type === 'select' ? option : undefined;
-}
-
-/** The models the agent offers for a session (#199); null when it offers no choice of model. */
-export function offeredModels(
-  configOptions: SessionConfigOption[] | null | undefined,
-): string[] | null {
-  const option = modelOption(configOptions);
-  if (!option) return null;
-  return option.options.flatMap((o) => ('group' in o ? o.options : [o])).map((o) => o.value);
-}
-
 /** A network ask's answers, as the permission options a "Needs you" answer picks from (#200). */
 const NETWORK_OPTIONS: PermissionOption[] = [
   { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
@@ -246,7 +229,11 @@ export class AcpSession implements AgentSession {
       }
       if (this.closed) return;
       this.emit({ type: 'sessionStarted', sessionId: this.sessionId });
-      await this.chooseModel({ model: init.model, configOptions });
+      await this.connection.chooseModel({
+        sessionId: this.sessionId,
+        model: init.model,
+        configOptions,
+      });
       await this.chooseMode(init.options.agent.mode);
       if (init.prompt !== undefined) {
         // A new hero with the bridge learns how to submit before its task; a resumed one knew.
@@ -262,25 +249,6 @@ export class AcpSession implements AgentSession {
       this.loading = false;
       this.fail(await this.connection.failure(error));
     }
-  }
-
-  /** The class's model, when the agent offers it as a `model` option; else the agent's default. */
-  private async chooseModel({
-    model,
-    configOptions,
-  }: {
-    model: string | undefined;
-    configOptions: SessionConfigOption[] | null | undefined;
-  }): Promise<void> {
-    if (!model || !this.sessionId) return;
-    const option = modelOption(configOptions);
-    if (!option || option.currentValue === model) return;
-    if (!offeredModels(configOptions)?.includes(model)) return;
-    await this.connection.agent.request(methods.agent.session.setConfigOption, {
-      sessionId: this.sessionId,
-      configId: option.id,
-      value: model,
-    });
   }
 
   /**

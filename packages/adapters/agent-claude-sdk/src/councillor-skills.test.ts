@@ -135,6 +135,40 @@ describe('CouncillorSkills (#98)', () => {
     expect((await adapter.listCouncillors({ cwd }))[0]?.title).toBe('Guardian');
   });
 
+  it('names the agent a councillor reviews on, Claude being the default (#201)', () => {
+    const { cwd, home } = folders();
+    write(
+      join(cwd, '.claude', 'skills', 'security', 'SKILL.md'),
+      skill('name: security\nibitsa-councillor: true'),
+    );
+    const agentOf = (agent: string) =>
+      new CouncillorSkills({
+        cwd,
+        home,
+        pluginDirs: [],
+        overrides: { security: { agent } },
+      }).list()[0]?.agent;
+    expect(agentOf(' codex ')).toBe('codex');
+    expect(agentOf('claude')).toBeUndefined();
+    expect(agentOf('  ')).toBeUndefined();
+  });
+
+  it("gives a reviewer on another agent the councillor's guidance, or null without a skill (#201)", () => {
+    const { cwd, home } = folders();
+    write(
+      join(cwd, '.claude', 'skills', 'security', 'SKILL.md'),
+      skill(
+        'name: security\nibitsa-councillor: true\nibitsa-title: Guardian',
+        'Watches trust boundaries.\n## Planning\nPlan.\n## Review\nLook for injection.\n',
+      ),
+    );
+    const adapter = new ClaudeAdapter({ env: () => ({}), home });
+    const found = adapter.reviewGuidance({ cwd, councillorId: 'security' });
+    expect(found?.title).toBe('Guardian');
+    expect(found?.guidance).toContain('Look for injection.');
+    expect(adapter.reviewGuidance({ cwd, councillorId: 'nobody' })).toBeNull();
+  });
+
   it('lets the project replace the user, and the user replace a built-in, by id', () => {
     const { cwd, home, plugin } = folders();
     for (const [root, source] of [

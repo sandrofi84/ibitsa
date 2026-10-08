@@ -26,6 +26,7 @@ export type {
   GitHost,
   LessonsStart,
   PastRecord,
+  ReviewGuidance,
   ReviewSession,
   ReviewStart,
   SessionResume,
@@ -36,6 +37,7 @@ export type {
 } from './ports.types';
 export { BLANKED, ReplayExport } from './replay-export';
 export type { ReplayExportOptions } from './replay-export.types';
+export { REVIEW_INSTRUCTIONS, reviewBrief } from './review-brief';
 export { Runtime, SNAPSHOT_INTERVAL_MS } from './runtime';
 export type { Connection, RuntimeOptions } from './runtime.types';
 export type { FolderWatcher } from './skill-catalog.types';

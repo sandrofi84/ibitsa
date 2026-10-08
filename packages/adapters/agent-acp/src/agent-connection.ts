@@ -8,6 +8,7 @@ import {
   methods,
   ndJsonStream,
   PROTOCOL_VERSION,
+  type SessionConfigOption,
 } from '@agentclientprotocol/sdk';
 import type { AgentProcess, SpawnRequest } from './acp-adapter.types';
 import type { AgentConnectionInit } from './agent-connection.types';
@@ -16,6 +17,23 @@ import type { AgentConnectionInit } from './agent-connection.types';
 const STDERR_TAIL = 2_000;
 /** A request that fails as the process dies is reported as the exit, which says more. */
 const EXIT_GRACE_MS = 200;
+
+/** The agent's choice of model, if it offers one (§11.5): a select option of category `model`. */
+function modelOption(
+  configOptions: SessionConfigOption[] | null | undefined,
+): Extract<SessionConfigOption, { type: 'select' }> | undefined {
+  const option = configOptions?.find((o) => o.category === 'model' && o.type === 'select');
+  return option?.type === 'select' ? option : undefined;
+}
+
+/** The models the agent offers for a session (#199); null when it offers no choice of model. */
+export function offeredModels(
+  configOptions: SessionConfigOption[] | null | undefined,
+): string[] | null {
+  const option = modelOption(configOptions);
+  if (!option) return null;
+  return option.options.flatMap((o) => ('group' in o ? o.options : [o])).map((o) => o.value);
+}
 
 /** Starts the agent as a plain child process; the sandbox (#200) replaces this through `spawn`. */
 export function spawnAgent(request: SpawnRequest): AgentProcess {
@@ -100,6 +118,27 @@ export class AgentConnection {
       // Terminal sign-in (#199): the party check's Sign in reruns the agent in a VS Code terminal.
       clientCapabilities: { elicitation: { form: {} }, auth: { terminal: true } },
       clientInfo: { name: 'ibitsa', version: '0.1.0' },
+    });
+  }
+
+  /** A model the agent offers as a `model` config option; anything else keeps its default (§11.5). */
+  async chooseModel({
+    sessionId,
+    model,
+    configOptions,
+  }: {
+    sessionId: string;
+    model: string | undefined;
+    configOptions: SessionConfigOption[] | null | undefined;
+  }): Promise<void> {
+    if (!model) return;
+    const option = modelOption(configOptions);
+    if (!option || option.currentValue === model) return;
+    if (!offeredModels(configOptions)?.includes(model)) return;
+    await this.agent.request(methods.agent.session.setConfigOption, {
+      sessionId,
+      configId: option.id,
+      value: model,
     });
   }
 

@@ -9,6 +9,8 @@
 //   FAKE_ACP_AUTH      "required": session/new fails with auth_required
 //   FAKE_ACP_AUTH_METHODS  authMethods to list in initialize (JSON)
 //   FAKE_ACP_INIT_DELAY    ms to wait before answering initialize
+//   FAKE_ACP_MODES     the session's modes for session/new (JSON: { currentModeId, availableModes })
+//   FAKE_ACP_SCRIPT    steps to run for a prompt that isn't itself steps, e.g. a reviewer's brief
 //
 // Steps: { update } sends a session update; { permission } and { elicit } ask the client and say what
 // came back; { sleep } waits that many ms; { waitCancel } ends the turn when it is cancelled; { stop, usage } ends it; { fail } fails
@@ -60,11 +62,14 @@ function log(method, params) {
   }
 }
 
-const say = ({ client, sessionId }, text) =>
-  client.notify(methods.client.session.update, {
+/** Says it in the session, and logs it as `said`, for a client that doesn't show messages. */
+const say = ({ client, sessionId }, text) => {
+  log('said', { text });
+  return client.notify(methods.client.session.update, {
     sessionId,
     update: { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text } },
   });
+};
 
 async function run({ client, sessionId, steps }) {
   for (const step of steps) {
@@ -132,7 +137,16 @@ agent({ name: 'fake-agent' })
       }, 10);
     }
     const configOptions = env('FAKE_ACP_CONFIG', null);
-    return { sessionId: SESSION, ...(configOptions ? { configOptions } : {}) };
+    const modes = env('FAKE_ACP_MODES', null);
+    return {
+      sessionId: SESSION,
+      ...(configOptions ? { configOptions } : {}),
+      ...(modes ? { modes } : {}),
+    };
+  })
+  .onRequest(methods.agent.session.setMode, ({ params }) => {
+    log('session/set_mode', params);
+    return {};
   })
   .onRequest(methods.agent.session.load, async ({ params, client }) => {
     log('session/load', params);
@@ -167,6 +181,8 @@ agent({ name: 'fake-agent' })
     const text = last?.type === 'text' ? last.text : '';
     if (text.startsWith('['))
       return run({ client, sessionId: params.sessionId, steps: JSON.parse(text) });
+    const script = env('FAKE_ACP_SCRIPT', null);
+    if (script) return run({ client, sessionId: params.sessionId, steps: script });
     if (text === '/compact') {
       for (const status of ['in_progress', 'completed']) {
         await client.notify(methods.client.session.update, {

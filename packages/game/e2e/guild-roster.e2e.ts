@@ -57,6 +57,18 @@ test('the Roster: on and off, extending a title, customising, and a new councill
   await security.getByRole('button', { name: 'Reset' }).click();
   await expect(security).not.toContainText('Extended');
 
+  // Reviewing on another agent (#201): Claude until an ibitsa.agents id is named.
+  const agent = security.getByLabel('Reviews on');
+  await expect(agent).toHaveAttribute('placeholder', 'claude');
+  await agent.fill('codex');
+  await agent.blur();
+  await expect(security).toContainText('Extended: You');
+  expect((await requests(page, 'setCouncillorOverride')).at(-1)).toEqual(
+    expect.objectContaining({ id: 'security', override: { agent: 'codex' } }),
+  );
+  await security.getByRole('button', { name: 'Reset' }).click();
+  await expect(security).not.toContainText('Extended');
+
   // Customise copies its skill (the extension opens the copy).
   await security.getByRole('button', { name: 'Customise' }).click();
   expect(await requests(page, 'customiseCouncillor')).toEqual([

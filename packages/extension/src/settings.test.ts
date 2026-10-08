@@ -19,12 +19,18 @@ describe('readCouncillorOverrides (#181)', () => {
       readCouncillorOverrides(
         config({
           councillors: {
-            security: { title: ' Guardian ', model: '', tools: ['Read', 3], extra: 'x' },
+            security: {
+              title: ' Guardian ',
+              model: '',
+              tools: ['Read', 3],
+              agent: ' codex ',
+              extra: 'x',
+            },
             tester: 'not an object',
           },
         }),
       ),
-    ).toEqual({ security: { title: 'Guardian', tools: ['Read'] } });
+    ).toEqual({ security: { title: 'Guardian', tools: ['Read'], agent: 'codex' } });
     expect(readCouncillorOverrides(config({ councillors: ['nope'] }))).toEqual({});
     expect(readCouncillorOverrides(config({}))).toEqual({});
   });

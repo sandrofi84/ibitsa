@@ -2208,3 +2208,135 @@ describe("a class's agent (§11.5, #198)", () => {
     runtime.dispose();
   });
 });
+
+describe("a councillor's agent for reviews (§5.5, #201)", () => {
+  const base: CouncillorInfo = {
+    id: 'security',
+    skill: 'ibitsa:security',
+    title: 'Security',
+    description: 'Security',
+    source: 'builtin',
+    portrait: null,
+    model: null,
+    tools: ['Read'],
+    modes: { planning: true, review: true },
+    hash: 'aaa',
+  };
+  const startReview = (councillorId: string) => ({
+    type: 'startReview',
+    reviewId: `r-${councillorId}`,
+    taskPointId: 't3',
+    councillorId,
+    effort: 'standard',
+    round: 1,
+    worktreePath: '/wt/x',
+    from: 'main',
+    to: 'abc',
+    since: null,
+    task: { title: 'T', description: 'D' },
+    criteria: ['Hashed'],
+    decisions: [],
+    checks: [],
+  });
+
+  /** A reviewing adapter that records what it was asked to review. */
+  function reviewer() {
+    const starts: ReviewStart[] = [];
+    return {
+      starts,
+      startReview: (start: ReviewStart) => {
+        starts.push(start);
+        return { completeTool: () => {}, close: () => {} };
+      },
+    };
+  }
+
+  async function withCouncillors(councillors: CouncillorInfo[]) {
+    const storageDir = mkdtempSync(join(tmpdir(), 'ibitsa-runtime-'));
+    const repoDir = mkdtempSync(join(tmpdir(), 'ibitsa-repo-'));
+    dirs.push(storageDir, repoDir);
+    const claudeReviews = reviewer();
+    const acpReviews = reviewer();
+    const guidanceAsked: unknown[] = [];
+    const claude = Object.assign(new FakeAdapter(), {
+      listCouncillors: async () => councillors,
+      startReview: claudeReviews.startReview,
+      reviewGuidance: (request: { cwd: string; councillorId: string }) => {
+        guidanceAsked.push(request);
+        return { title: 'Security', guidance: 'Look for injection.' };
+      },
+    });
+    const codex = Object.assign(new FakeAdapter(), { startReview: acpReviews.startReview });
+    const runtime = new Runtime({
+      storageDir,
+      adapter: claude,
+      agentAdapter: (id) =>
+        id === 'codex' ? codex : id === 'refused' ? { error: 'Not this one.' } : undefined,
+      gameMaster: Object.assign(new FakeGameMaster(), { taskDiff: async () => 'diff' }),
+      clock: new ManualClock(),
+      newId: () => 'camp-1',
+      repoDir,
+      watchFolder: () => ({ close: () => {} }),
+    });
+    runtime.start();
+    const connection = runtime.connect({ post: () => {} });
+    connection.receive(startQuest);
+    await flush();
+    const perform = (runtime as unknown as { perform(e: unknown): void }).perform.bind(runtime);
+    const reviewErrors = () =>
+      logOf(storageDir).records.flatMap((r) =>
+        r.kind === 'review' && r.event.type === 'error' ? [r.event.message] : [],
+      );
+    return { runtime, perform, claudeReviews, acpReviews, guidanceAsked, reviewErrors };
+  }
+
+  it("reviews on the councillor's ACP agent, briefed with Claude's guidance, on the agent's model", async () => {
+    const env = await withCouncillors([
+      { ...base, agent: 'codex' },
+      { ...base, id: 'tester', title: 'Tester' },
+    ]);
+    env.perform(startReview('security'));
+    env.perform(startReview('tester'));
+    await flush();
+    // A Claude hero's work, reviewed by another vendor's model: a second opinion.
+    expect(env.acpReviews.starts).toEqual([
+      expect.objectContaining({
+        councillorId: 'security',
+        cwd: '/wt/x',
+        model: '',
+        maxBudgetMicroUsd: 400_000,
+        diff: 'diff',
+        guidance: { title: 'Security', guidance: 'Look for injection.' },
+      }),
+    ]);
+    expect(env.guidanceAsked).toEqual([{ cwd: '/wt/x', councillorId: 'security' }]);
+    // A councillor on Claude reviews as before: the effort's model, its adapter's own guidance.
+    expect(env.claudeReviews.starts).toEqual([
+      expect.objectContaining({ councillorId: 'tester', model: 'sonnet' }),
+    ]);
+    expect(env.claudeReviews.starts[0]).not.toHaveProperty('guidance');
+    env.runtime.dispose();
+  });
+
+  it("keeps the councillor's own model on its agent", async () => {
+    const env = await withCouncillors([{ ...base, agent: 'codex', model: 'gpt-6-luna' }]);
+    env.perform(startReview('security'));
+    await flush();
+    expect(env.acpReviews.starts[0]?.model).toBe('gpt-6-luna');
+    env.runtime.dispose();
+  });
+
+  it('fails the review when its agent is unknown or refused', async () => {
+    const env = await withCouncillors([
+      { ...base, agent: 'nowhere' },
+      { ...base, id: 'tester', agent: 'refused' },
+    ]);
+    env.perform(startReview('security'));
+    env.perform(startReview('tester'));
+    await flush();
+    expect(env.reviewErrors()).toEqual(['No agent "nowhere" in ibitsa.agents.', 'Not this one.']);
+    expect(env.acpReviews.starts).toEqual([]);
+    expect(env.claudeReviews.starts).toEqual([]);
+    env.runtime.dispose();
+  });
+});
