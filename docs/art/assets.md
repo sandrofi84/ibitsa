@@ -333,55 +333,55 @@ Everything else is transparent: the room and the councillors show through.
 
 Tick each file as it lands (issue #223 tracks the batches). Generated from the lists above.
 
-### Batch 1: heroes, required animations
+### Batch 1: heroes, required animations (done)
 
-- [ ] `art/characters/hero-paladin/idle.grid`
-- [ ] `art/characters/hero-paladin/walk.grid`
-- [ ] `art/characters/hero-paladin/work.grid`
-- [ ] `art/characters/hero-barbarian/idle.grid`
-- [ ] `art/characters/hero-barbarian/walk.grid`
-- [ ] `art/characters/hero-barbarian/work.grid`
-- [ ] `art/characters/hero-ranger/idle.grid`
-- [ ] `art/characters/hero-ranger/walk.grid`
-- [ ] `art/characters/hero-ranger/work.grid`
-- [ ] `art/characters/hero-rogue/idle.grid`
-- [ ] `art/characters/hero-rogue/walk.grid`
-- [ ] `art/characters/hero-rogue/work.grid`
-- [ ] `art/portraits/hero-paladin.svg`
-- [ ] `art/portraits/hero-barbarian.svg`
-- [ ] `art/portraits/hero-ranger.svg`
-- [ ] `art/portraits/hero-rogue.svg`
+- [x] `art/characters/hero-paladin/idle.grid`
+- [x] `art/characters/hero-paladin/walk.grid`
+- [x] `art/characters/hero-paladin/work.grid`
+- [x] `art/characters/hero-barbarian/idle.grid`
+- [x] `art/characters/hero-barbarian/walk.grid`
+- [x] `art/characters/hero-barbarian/work.grid`
+- [x] `art/characters/hero-ranger/idle.grid`
+- [x] `art/characters/hero-ranger/walk.grid`
+- [x] `art/characters/hero-ranger/work.grid`
+- [x] `art/characters/hero-rogue/idle.grid`
+- [x] `art/characters/hero-rogue/walk.grid`
+- [x] `art/characters/hero-rogue/work.grid`
+- [x] `art/portraits/hero-paladin.svg`
+- [x] `art/portraits/hero-barbarian.svg`
+- [x] `art/portraits/hero-ranger.svg`
+- [x] `art/portraits/hero-rogue.svg`
 
-### Batch 2: the elder and councillors on the map, and their portraits
+### Batch 2: the elder and councillors on the map, and their portraits (done)
 
-- [ ] `art/characters/councillor-elder/idle.grid`
-- [ ] `art/characters/councillor-elder/walk.grid`
-- [ ] `art/characters/councillor-elder/work.grid`
-- [ ] `art/characters/councillor-architect/idle.grid`
-- [ ] `art/characters/councillor-architect/walk.grid`
-- [ ] `art/characters/councillor-architect/work.grid`
-- [ ] `art/characters/councillor-security/idle.grid`
-- [ ] `art/characters/councillor-security/walk.grid`
-- [ ] `art/characters/councillor-security/work.grid`
-- [ ] `art/characters/councillor-tester/idle.grid`
-- [ ] `art/characters/councillor-tester/walk.grid`
-- [ ] `art/characters/councillor-tester/work.grid`
-- [ ] `art/characters/councillor-accessibility/idle.grid`
-- [ ] `art/characters/councillor-accessibility/walk.grid`
-- [ ] `art/characters/councillor-accessibility/work.grid`
-- [ ] `art/characters/councillor-designer/idle.grid`
-- [ ] `art/characters/councillor-designer/walk.grid`
-- [ ] `art/characters/councillor-designer/work.grid`
-- [ ] `art/characters/councillor-default/idle.grid`
-- [ ] `art/characters/councillor-default/walk.grid`
-- [ ] `art/characters/councillor-default/work.grid`
-- [ ] `art/portraits/councillor-elder.svg`
-- [ ] `art/portraits/councillor-architect.svg`
-- [ ] `art/portraits/councillor-security.svg`
-- [ ] `art/portraits/councillor-tester.svg`
-- [ ] `art/portraits/councillor-accessibility.svg`
-- [ ] `art/portraits/councillor-designer.svg`
-- [ ] `art/portraits/councillor-default.svg`
+- [x] `art/characters/councillor-elder/idle.grid`
+- [x] `art/characters/councillor-elder/walk.grid`
+- [x] `art/characters/councillor-elder/work.grid`
+- [x] `art/characters/councillor-architect/idle.grid`
+- [x] `art/characters/councillor-architect/walk.grid`
+- [x] `art/characters/councillor-architect/work.grid`
+- [x] `art/characters/councillor-security/idle.grid`
+- [x] `art/characters/councillor-security/walk.grid`
+- [x] `art/characters/councillor-security/work.grid`
+- [x] `art/characters/councillor-tester/idle.grid`
+- [x] `art/characters/councillor-tester/walk.grid`
+- [x] `art/characters/councillor-tester/work.grid`
+- [x] `art/characters/councillor-accessibility/idle.grid`
+- [x] `art/characters/councillor-accessibility/walk.grid`
+- [x] `art/characters/councillor-accessibility/work.grid`
+- [x] `art/characters/councillor-designer/idle.grid`
+- [x] `art/characters/councillor-designer/walk.grid`
+- [x] `art/characters/councillor-designer/work.grid`
+- [x] `art/characters/councillor-default/idle.grid`
+- [x] `art/characters/councillor-default/walk.grid`
+- [x] `art/characters/councillor-default/work.grid`
+- [x] `art/portraits/councillor-elder.svg`
+- [x] `art/portraits/councillor-architect.svg`
+- [x] `art/portraits/councillor-security.svg`
+- [x] `art/portraits/councillor-tester.svg`
+- [x] `art/portraits/councillor-accessibility.svg`
+- [x] `art/portraits/councillor-designer.svg`
+- [x] `art/portraits/councillor-default.svg`
 
 ### Batch 3: council figures (48×48)
 
@@ -467,41 +467,41 @@ Tick each file as it lands (issue #223 tracks the batches). Generated from the l
 - [ ] `art/characters/councillor-accessibility/council/walk.grid`
 - [ ] `art/characters/councillor-designer/council/walk.grid`
 - [ ] `art/characters/councillor-default/council/walk.grid`
-- [ ] `art/characters/councillor-elder/review.grid`
-- [ ] `art/characters/councillor-architect/review.grid`
-- [ ] `art/characters/councillor-security/review.grid`
-- [ ] `art/characters/councillor-tester/review.grid`
-- [ ] `art/characters/councillor-accessibility/review.grid`
-- [ ] `art/characters/councillor-designer/review.grid`
-- [ ] `art/characters/councillor-default/review.grid`
-- [ ] `art/characters/hero-paladin/test.grid`
-- [ ] `art/characters/hero-paladin/ask.grid`
-- [ ] `art/characters/hero-paladin/blocked.grid`
-- [ ] `art/characters/hero-paladin/rest.grid`
-- [ ] `art/characters/hero-paladin/celebrate.grid`
-- [ ] `art/characters/hero-paladin/hurt.grid`
-- [ ] `art/characters/hero-paladin/outOfGold.grid`
-- [ ] `art/characters/hero-barbarian/test.grid`
-- [ ] `art/characters/hero-barbarian/ask.grid`
-- [ ] `art/characters/hero-barbarian/blocked.grid`
-- [ ] `art/characters/hero-barbarian/rest.grid`
-- [ ] `art/characters/hero-barbarian/celebrate.grid`
-- [ ] `art/characters/hero-barbarian/hurt.grid`
-- [ ] `art/characters/hero-barbarian/outOfGold.grid`
-- [ ] `art/characters/hero-ranger/test.grid`
-- [ ] `art/characters/hero-ranger/ask.grid`
-- [ ] `art/characters/hero-ranger/blocked.grid`
-- [ ] `art/characters/hero-ranger/rest.grid`
-- [ ] `art/characters/hero-ranger/celebrate.grid`
-- [ ] `art/characters/hero-ranger/hurt.grid`
-- [ ] `art/characters/hero-ranger/outOfGold.grid`
-- [ ] `art/characters/hero-rogue/test.grid`
-- [ ] `art/characters/hero-rogue/ask.grid`
-- [ ] `art/characters/hero-rogue/blocked.grid`
-- [ ] `art/characters/hero-rogue/rest.grid`
-- [ ] `art/characters/hero-rogue/celebrate.grid`
-- [ ] `art/characters/hero-rogue/hurt.grid`
-- [ ] `art/characters/hero-rogue/outOfGold.grid`
+- [x] `art/characters/councillor-elder/review.grid`
+- [x] `art/characters/councillor-architect/review.grid`
+- [x] `art/characters/councillor-security/review.grid`
+- [x] `art/characters/councillor-tester/review.grid`
+- [x] `art/characters/councillor-accessibility/review.grid`
+- [x] `art/characters/councillor-designer/review.grid`
+- [x] `art/characters/councillor-default/review.grid`
+- [x] `art/characters/hero-paladin/test.grid`
+- [x] `art/characters/hero-paladin/ask.grid`
+- [x] `art/characters/hero-paladin/blocked.grid`
+- [x] `art/characters/hero-paladin/rest.grid`
+- [x] `art/characters/hero-paladin/celebrate.grid`
+- [x] `art/characters/hero-paladin/hurt.grid`
+- [x] `art/characters/hero-paladin/outOfGold.grid`
+- [x] `art/characters/hero-barbarian/test.grid`
+- [x] `art/characters/hero-barbarian/ask.grid`
+- [x] `art/characters/hero-barbarian/blocked.grid`
+- [x] `art/characters/hero-barbarian/rest.grid`
+- [x] `art/characters/hero-barbarian/celebrate.grid`
+- [x] `art/characters/hero-barbarian/hurt.grid`
+- [x] `art/characters/hero-barbarian/outOfGold.grid`
+- [x] `art/characters/hero-ranger/test.grid`
+- [x] `art/characters/hero-ranger/ask.grid`
+- [x] `art/characters/hero-ranger/blocked.grid`
+- [x] `art/characters/hero-ranger/rest.grid`
+- [x] `art/characters/hero-ranger/celebrate.grid`
+- [x] `art/characters/hero-ranger/hurt.grid`
+- [x] `art/characters/hero-ranger/outOfGold.grid`
+- [x] `art/characters/hero-rogue/test.grid`
+- [x] `art/characters/hero-rogue/ask.grid`
+- [x] `art/characters/hero-rogue/blocked.grid`
+- [x] `art/characters/hero-rogue/rest.grid`
+- [x] `art/characters/hero-rogue/celebrate.grid`
+- [x] `art/characters/hero-rogue/hurt.grid`
+- [x] `art/characters/hero-rogue/outOfGold.grid`
 
 ### Licence
 

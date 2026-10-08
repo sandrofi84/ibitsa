@@ -20,7 +20,7 @@ import {
   tiles,
 } from './art.ts';
 import { artSlots } from './art-slots.ts';
-import { applyArtSources } from './art-source.ts';
+import { applyArtSources, hasSource } from './art-source.ts';
 import type { ArtSources } from './art-source.types.ts';
 import type { Manifest } from './manifest.schema.ts';
 import {
@@ -28,10 +28,11 @@ import {
   BRIDGE_FRAMES,
   COUNCIL_ANIMATIONS,
   MARKER_KINDS,
+  REQUIRED_ANIMATIONS,
   SPEC,
   TASK_POINT_STATES,
 } from './manifest.ts';
-import type { Raster } from './raster.ts';
+import { Raster } from './raster.ts';
 import { defaultSounds, wav } from './sound.ts';
 
 /** A councillor's 32×32 council sheet (§9.2): writes the image and returns its manifest entry. */
@@ -69,6 +70,11 @@ function fpsOf(animation: string): number {
  * from `art` where a source exists, else the code-drawn placeholder (§9.5); without `art`, all
  * placeholders.
  */
+/** A pose every character needs (§9.2): never dropped. */
+function isRequired(animation: string): boolean {
+  return (REQUIRED_ANIMATIONS as readonly string[]).includes(animation);
+}
+
 export function buildDefaultPack({ art }: { art?: ArtSources } = {}): {
   manifest: Manifest;
   files: Record<string, Buffer>;
@@ -76,22 +82,33 @@ export function buildDefaultPack({ art }: { art?: ArtSources } = {}): {
   const files: Record<string, Buffer> = {};
   const images: Record<string, Raster> = {};
   const characters: Manifest['characters'] = {};
+  const sources = art;
   for (const art of CHARACTERS) {
     const name = art.key.replace('.', '-');
     const sheet = `characters/${name}.png`;
     const face = `portraits/${name}.png`;
     images[sheet] = characterSheet(art);
     images[face] = portrait(art);
+    // A character drawn in art/ keeps only the optional poses drawn for it: a placeholder pose would
+    // show the old placeholder character, so the game falls back to the drawn idle or work instead.
+    const drawn = (animation: string) =>
+      sources !== undefined && hasSource({ sources, source: `characters/${name}/${animation}` });
+    const animations = characterAnimations(art.role).flatMap((animation, row) => {
+      if (drawn('idle') && !isRequired(animation) && !drawn(animation)) {
+        images[sheet]?.paste({
+          src: new Raster(FRAMES * SPEC.characterFrame, SPEC.characterFrame),
+          x: 0,
+          y: row * SPEC.characterFrame,
+        });
+        return [];
+      }
+      return [[animation, { row, frames: FRAMES, fps: fpsOf(animation) }] as const];
+    });
     characters[art.key] = {
       role: art.role,
       sheet,
       frame: { width: SPEC.characterFrame, height: SPEC.characterFrame },
-      animations: Object.fromEntries(
-        characterAnimations(art.role).map((animation, row) => [
-          animation,
-          { row, frames: FRAMES, fps: fpsOf(animation) },
-        ]),
-      ),
+      animations: Object.fromEntries(animations),
       portrait: face,
       ...(art.role === 'councillor' ? { council: councilEntry({ name, images, art }) } : {}),
     };

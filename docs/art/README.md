@@ -99,7 +99,7 @@ Any asset may be a `.grid` or an `.svg`, not both.
 
 ## The characters
 
-Each character has one or two colours that are *theirs*, so they stay recognisable at 16 px, in the hut and in their portrait. Skin tones vary across the crew: `u`, `3`, `4`, `v`, `5`.
+Each character has one or two colours that are *theirs*, so they stay recognisable at 16 px, in the hut and in their portrait. Every councillor owns one colour family so they never blur together: elder blue, architect green, security crimson, tester white and turquoise, accessibility orange, designer magenta, default grey. Skin tones vary across the crew: `u`, `3`, `4`, `v`, `5`.
 
 ### Heroes
 
@@ -115,11 +115,11 @@ Each character has one or two colours that are *theirs*, so they stay recognisab
 | Councillor | Key | Look | Their colours | Prop |
 |---|---|---|---|---|
 | The elder | `councillor.elder` | old, long white beard, deep-blue robe with a terracotta sash, a little stooped, kind | `g` `n`, beard `j` `k`, sash `1` | tall staff, a rolled sea chart |
-| Architect | `councillor.architect` | ochre work tunic, rolled sleeves, tool belt, calm | `a` `9` `5` | rolled blueprint (`h` with `j` lines) |
-| Security | `councillor.security` | chainmail hood, deep-teal tabard with a keyhole emblem, watchful | `f` `e` `l` | ring of keys and a small shield with a lock |
-| Tester | `councillor.tester` | lab apron over a green shirt, goggles pushed up on the head, curious | `c` `k` `j` | magnifying glass, a flask (`i`) |
+| Architect | `councillor.architect` | green work tunic, rolled sleeves, leather apron and tool belt, auburn hair in a bun, calm | `c` `d` `5`, hair `0` | rolled blueprint (`h` with `j` lines) |
+| Security | `councillor.security` | wide-brimmed steel kettle helmet with a red plume over a dark mail coif, crimson tabard with a gold keyhole emblem, watchful | `8` `7`, helmet `k` `l` | ring of keys and a small steel shield with a gold lock |
+| Tester | `councillor.tester` | white lab apron over a turquoise shirt, goggles pushed up on the head, curious | `j` `k`, shirt `i` `h` | magnifying glass, a flask (`i`) |
 | Accessibility | `councillor.accessibility` | warm orange robe, open friendly stance, a hand often held out | `9` `1` `b` | lantern giving light (`b` `a`) |
-| Designer | `councillor.designer` | colourful scarf, a beret, paint-flecked smock | `s` `t` `r`, beret `8` | brush and a palette |
+| Designer | `councillor.designer` | light pink scarf, a red beret, magenta paint-flecked smock | `s` `r`, scarf `t`, beret `8` | brush and a palette |
 | Any other councillor | `councillor.default` | plain grey-blue robe and hood, neutral, recolours well | `m` `l` `k` | a scroll |
 
 ## Animations

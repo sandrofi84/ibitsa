@@ -151,7 +151,11 @@ export class WorldScene extends Phaser.Scene {
         token.underReview() ? [heroId] : [],
       ),
       reviewers: [...this.reviewers.values()].map((t) => t.probe()),
-      poses: [...this.heroes].map(([heroId, token]) => ({ heroId, pose: token.pose() })),
+      poses: [...this.heroes].map(([heroId, token]) => ({
+        heroId,
+        pose: token.pose(),
+        wants: token.wants(),
+      })),
       shipped: this.last?.campaign?.shipped ?? false,
       atIbitsa: [...this.heroes].flatMap(([heroId, token]) => (token.atIbitsa() ? [heroId] : [])),
       startScreen: this.startLabels[0]?.visible ?? false,
@@ -1232,6 +1236,11 @@ export class HeroToken {
   /** The pose it plays, for tests and probes (#222). */
   pose(): MapPose {
     return this.playing;
+  }
+
+  /** The pose its state asks for, before falling back to one its sheet has. */
+  wants(): MapPose {
+    return this.held;
   }
 
   /** Holds a pose for its state, or the nearest one its sheet has (§9.2); a brief pose finishes first. */
