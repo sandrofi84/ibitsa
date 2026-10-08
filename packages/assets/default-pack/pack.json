@@ -316,6 +316,356 @@
         }
       }
     },
+    "councillor.architect": {
+      "role": "councillor",
+      "sheet": "characters/councillor-architect.png",
+      "frame": {
+        "width": 16,
+        "height": 16
+      },
+      "animations": {
+        "idle": {
+          "row": 0,
+          "frames": 4,
+          "fps": 4
+        },
+        "walk": {
+          "row": 1,
+          "frames": 4,
+          "fps": 8
+        },
+        "work": {
+          "row": 2,
+          "frames": 4,
+          "fps": 4
+        },
+        "review": {
+          "row": 3,
+          "frames": 4,
+          "fps": 4
+        }
+      },
+      "portrait": "portraits/councillor-architect.png",
+      "council": {
+        "sheet": "characters/councillor-architect-council.png",
+        "frame": {
+          "width": 48,
+          "height": 48
+        },
+        "animations": {
+          "idle": {
+            "row": 0,
+            "frames": 4,
+            "fps": 3
+          },
+          "talk": {
+            "row": 1,
+            "frames": 4,
+            "fps": 6
+          },
+          "think": {
+            "row": 2,
+            "frames": 4,
+            "fps": 3
+          },
+          "raiseHand": {
+            "row": 3,
+            "frames": 4,
+            "fps": 6
+          },
+          "write": {
+            "row": 4,
+            "frames": 4,
+            "fps": 6
+          },
+          "walk": {
+            "row": 5,
+            "frames": 4,
+            "fps": 8
+          }
+        }
+      }
+    },
+    "councillor.security": {
+      "role": "councillor",
+      "sheet": "characters/councillor-security.png",
+      "frame": {
+        "width": 16,
+        "height": 16
+      },
+      "animations": {
+        "idle": {
+          "row": 0,
+          "frames": 4,
+          "fps": 4
+        },
+        "walk": {
+          "row": 1,
+          "frames": 4,
+          "fps": 8
+        },
+        "work": {
+          "row": 2,
+          "frames": 4,
+          "fps": 4
+        },
+        "review": {
+          "row": 3,
+          "frames": 4,
+          "fps": 4
+        }
+      },
+      "portrait": "portraits/councillor-security.png",
+      "council": {
+        "sheet": "characters/councillor-security-council.png",
+        "frame": {
+          "width": 48,
+          "height": 48
+        },
+        "animations": {
+          "idle": {
+            "row": 0,
+            "frames": 4,
+            "fps": 3
+          },
+          "talk": {
+            "row": 1,
+            "frames": 4,
+            "fps": 6
+          },
+          "think": {
+            "row": 2,
+            "frames": 4,
+            "fps": 3
+          },
+          "raiseHand": {
+            "row": 3,
+            "frames": 4,
+            "fps": 6
+          },
+          "write": {
+            "row": 4,
+            "frames": 4,
+            "fps": 6
+          },
+          "walk": {
+            "row": 5,
+            "frames": 4,
+            "fps": 8
+          }
+        }
+      }
+    },
+    "councillor.tester": {
+      "role": "councillor",
+      "sheet": "characters/councillor-tester.png",
+      "frame": {
+        "width": 16,
+        "height": 16
+      },
+      "animations": {
+        "idle": {
+          "row": 0,
+          "frames": 4,
+          "fps": 4
+        },
+        "walk": {
+          "row": 1,
+          "frames": 4,
+          "fps": 8
+        },
+        "work": {
+          "row": 2,
+          "frames": 4,
+          "fps": 4
+        },
+        "review": {
+          "row": 3,
+          "frames": 4,
+          "fps": 4
+        }
+      },
+      "portrait": "portraits/councillor-tester.png",
+      "council": {
+        "sheet": "characters/councillor-tester-council.png",
+        "frame": {
+          "width": 48,
+          "height": 48
+        },
+        "animations": {
+          "idle": {
+            "row": 0,
+            "frames": 4,
+            "fps": 3
+          },
+          "talk": {
+            "row": 1,
+            "frames": 4,
+            "fps": 6
+          },
+          "think": {
+            "row": 2,
+            "frames": 4,
+            "fps": 3
+          },
+          "raiseHand": {
+            "row": 3,
+            "frames": 4,
+            "fps": 6
+          },
+          "write": {
+            "row": 4,
+            "frames": 4,
+            "fps": 6
+          },
+          "walk": {
+            "row": 5,
+            "frames": 4,
+            "fps": 8
+          }
+        }
+      }
+    },
+    "councillor.accessibility": {
+      "role": "councillor",
+      "sheet": "characters/councillor-accessibility.png",
+      "frame": {
+        "width": 16,
+        "height": 16
+      },
+      "animations": {
+        "idle": {
+          "row": 0,
+          "frames": 4,
+          "fps": 4
+        },
+        "walk": {
+          "row": 1,
+          "frames": 4,
+          "fps": 8
+        },
+        "work": {
+          "row": 2,
+          "frames": 4,
+          "fps": 4
+        },
+        "review": {
+          "row": 3,
+          "frames": 4,
+          "fps": 4
+        }
+      },
+      "portrait": "portraits/councillor-accessibility.png",
+      "council": {
+        "sheet": "characters/councillor-accessibility-council.png",
+        "frame": {
+          "width": 48,
+          "height": 48
+        },
+        "animations": {
+          "idle": {
+            "row": 0,
+            "frames": 4,
+            "fps": 3
+          },
+          "talk": {
+            "row": 1,
+            "frames": 4,
+            "fps": 6
+          },
+          "think": {
+            "row": 2,
+            "frames": 4,
+            "fps": 3
+          },
+          "raiseHand": {
+            "row": 3,
+            "frames": 4,
+            "fps": 6
+          },
+          "write": {
+            "row": 4,
+            "frames": 4,
+            "fps": 6
+          },
+          "walk": {
+            "row": 5,
+            "frames": 4,
+            "fps": 8
+          }
+        }
+      }
+    },
+    "councillor.designer": {
+      "role": "councillor",
+      "sheet": "characters/councillor-designer.png",
+      "frame": {
+        "width": 16,
+        "height": 16
+      },
+      "animations": {
+        "idle": {
+          "row": 0,
+          "frames": 4,
+          "fps": 4
+        },
+        "walk": {
+          "row": 1,
+          "frames": 4,
+          "fps": 8
+        },
+        "work": {
+          "row": 2,
+          "frames": 4,
+          "fps": 4
+        },
+        "review": {
+          "row": 3,
+          "frames": 4,
+          "fps": 4
+        }
+      },
+      "portrait": "portraits/councillor-designer.png",
+      "council": {
+        "sheet": "characters/councillor-designer-council.png",
+        "frame": {
+          "width": 48,
+          "height": 48
+        },
+        "animations": {
+          "idle": {
+            "row": 0,
+            "frames": 4,
+            "fps": 3
+          },
+          "talk": {
+            "row": 1,
+            "frames": 4,
+            "fps": 6
+          },
+          "think": {
+            "row": 2,
+            "frames": 4,
+            "fps": 3
+          },
+          "raiseHand": {
+            "row": 3,
+            "frames": 4,
+            "fps": 6
+          },
+          "write": {
+            "row": 4,
+            "frames": 4,
+            "fps": 6
+          },
+          "walk": {
+            "row": 5,
+            "frames": 4,
+            "fps": 8
+          }
+        }
+      }
+    },
     "councillor.default": {
       "role": "councillor",
       "sheet": "characters/councillor-default.png",
