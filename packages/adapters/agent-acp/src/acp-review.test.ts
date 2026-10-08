@@ -364,6 +364,47 @@ describe('AcpReview: a reviewer only reads (§5.5, #201)', () => {
     ]);
   });
 
+  it('allows calling its own verdict tool when the agent asks, and no other server’s (#202)', async () => {
+    const options = [
+      { optionId: 'yes', name: 'Allow', kind: 'allow_once' },
+      { optionId: 'no', name: 'Reject', kind: 'reject_once' },
+    ];
+    const { said, events } = review({
+      script: [
+        // Codex announces the MCP call, then asks about it by id.
+        {
+          update: {
+            sessionUpdate: 'tool_call',
+            toolCallId: 'v1',
+            title: 'mcp.ibitsa.submit_verdict',
+            kind: 'other',
+            rawInput: { server: 'ibitsa', tool: 'submit_verdict', arguments: PASS },
+          },
+        },
+        { permission: { toolCall: { toolCallId: 'v1', kind: 'execute' }, options } },
+        // A standalone approval names the server instead.
+        {
+          permission: {
+            toolCall: { toolCallId: 'v2', kind: 'execute', rawInput: { serverName: 'ibitsa' } },
+            options,
+          },
+        },
+        {
+          permission: {
+            toolCall: { toolCallId: 'v3', kind: 'execute', title: 'mcp.github.create_issue' },
+            options,
+          },
+        },
+      ],
+    });
+    await until(() => expect(types(events)).toContain('error'));
+    expect(said()).toEqual([
+      'permission: {"outcome":"selected","optionId":"yes"}',
+      'permission: {"outcome":"selected","optionId":"yes"}',
+      'permission: {"outcome":"selected","optionId":"no"}',
+    ]);
+  });
+
   it('asks a sandbox for a read-only worktree, and refuses every new domain without asking (#200)', async () => {
     const requests: SpawnRequest[] = [];
     const { events } = review({

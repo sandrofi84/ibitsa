@@ -12,6 +12,7 @@ import {
 } from '@agentclientprotocol/sdk';
 import type { AgentProcess, SpawnRequest } from './acp-adapter.types';
 import type { AgentConnectionInit } from './agent-connection.types';
+import { isBridgeCall } from './tool-bridge';
 
 /** How much of the agent's stderr to keep, for the error when it exits. */
 const STDERR_TAIL = 2_000;
@@ -58,6 +59,8 @@ export class AgentConnection {
   private closed = false;
   private exitMessage: string | null = null;
   private readonly exitWaiters = new Set<(message: string) => void>();
+  /** Tool calls the agent announced to the bridge's own server, by id (#202). */
+  private readonly bridgeCalls = new Set<string>();
 
   constructor({ options, cwd, handlers, readOnly }: AgentConnectionInit) {
     const spec = options.agent;
@@ -91,14 +94,28 @@ export class AgentConnection {
     });
     const { stdin, stdout } = this.process;
     if (!stdin || !stdout) throw new Error('The agent process has no stdin or stdout.');
-    const app = client({ name: 'ibitsa' }).onNotification(methods.client.session.update, (ctx) =>
-      handlers.update?.(ctx.params),
-    );
-    app.onRequest(methods.client.session.requestPermission, (ctx) =>
-      handlers.permission
+    const app = client({ name: 'ibitsa' }).onNotification(methods.client.session.update, (ctx) => {
+      const update = ctx.params.update;
+      if (
+        (update.sessionUpdate === 'tool_call' || update.sessionUpdate === 'tool_call_update') &&
+        isBridgeCall(update)
+      )
+        this.bridgeCalls.add(update.toolCallId);
+      handlers.update?.(ctx.params);
+    });
+    app.onRequest(methods.client.session.requestPermission, (ctx) => {
+      const call = ctx.params.toolCall;
+      // Asking to call a tool Ibitsa offered, through its own bridge: yes, once.
+      if (this.bridgeCalls.has(call.toolCallId) || isBridgeCall(call)) {
+        const allow =
+          ctx.params.options.find((o) => o.kind === 'allow_once') ??
+          ctx.params.options.find((o) => o.kind === 'allow_always');
+        if (allow) return { outcome: { outcome: 'selected', optionId: allow.optionId } };
+      }
+      return handlers.permission
         ? handlers.permission({ params: ctx.params, signal: ctx.signal })
-        : { outcome: { outcome: 'cancelled' } },
-    );
+        : { outcome: { outcome: 'cancelled' } };
+    });
     app.onRequest(methods.client.elicitation.create, (ctx) =>
       handlers.elicit
         ? handlers.elicit({ params: ctx.params, signal: ctx.signal })

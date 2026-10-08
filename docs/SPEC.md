@@ -863,6 +863,11 @@ Settled in M9 planning, checked on 2026-10-07 against `@agentclientprotocol/sdk@
 | Questions | `elicitation/create` in form mode → a question item | a plain-text question → a reply item |
 
 - **Tests.** A scripted fake ACP agent in the repo (the SDK's agent side over stdio) for unit and integration tests; `pnpm acp:probe` runs `initialize` and `session/new` against installed agents and prints their capabilities (no prompt, nothing spent), for the coverage table (§15, 8); an opt-in live smoke test, run only with approval, on Codex first.
+- **Live smoke test** (#202, 2026-10-08, Codex `codex-acp` 2.1.1 on macOS): `IBITSA_SMOKE=1 pnpm exec vitest run --project @ibitsa/agent-acp codex-smoke` runs a sandboxed Codex hero on a small task in a scratch repo, which submits through the bridge, then a Codex reviewer, which files its verdict through the bridge. It passed after two fixes it found:
+  - **The bridge's socket is named by its real folder** (`/private/var/…`, not macOS's `/var/…` link). The sandbox allows the socket by path when the agent starts, before the socket exists, and only a real path matches; otherwise the bridge got `connect EPERM` and Codex dropped the server ("omitting MCP server without an exact ready client").
+  - **A request to call a tool on Ibitsa's own bridge is allowed at once.** In read-only mode Codex asks before every MCP tool call; the reviewer's read-only rule refused its own `submit_verdict` ("user cancelled MCP tool call"). The connection recognises calls to the `ibitsa` server (Codex names them `mcp.ibitsa.<tool>` with `{ server, tool }`, or `{ serverName }` in an approval) and answers allow-once for heroes and reviewers alike; other servers' calls are asked or refused as before.
+  - **Debugging Codex:** `APP_SERVER_LOGS=<dir>` makes `codex-acp` log its traffic with Codex; Codex's own logs, MCP servers' stderr included, are in `~/.codex/logs_2.sqlite` (table `logs`).
+  - **Open:** Codex also gives the hero its ChatGPT connectors (the `codex_apps` MCP server, 66 tools here). They reach the account's connected apps through `chatgpt.com`, which the sandbox must allow, so the sandbox can't keep a hero from them.
 - **Coverage** (`pnpm acp:probe`, 2026-10-08; agents not installed have no row yet):
 
 | Agent | `session/new` | Sign-in methods | load / resume / list / close | MCP http / sse | Modes | Config options | Models | `compact` command |
@@ -1038,7 +1043,7 @@ Settled in M8 planning; the details are in §1.1, §4.7, §5.2, §7.1, §8.1, §
 5. ~~Councillor skill location so they don't clutter the normal `/` menu.~~ Settled in M3 planning and #98: the usual skill locations, `ibitsa-target: council` keeps them out of the hero's menu, and `disable-model-invocation` doesn't block subagent preloading (§4.7).
 6. ~~Whether Claude Code tolerates extra frontmatter fields (for action `target`), else sidecar.~~ Settled in M2 planning: a skill with an extra flat field loads and is listed by `supportedCommands()`; Ibitsa uses `ibitsa-target` and reads it from the file.
 7. ~~Confirm SDK invocation of custom skills via `/name` prompts.~~ Settled (#84): a real session sent `/greet Wren` ran the project skill with its argument (opt-in smoke test).
-8. ACP capability coverage per agent. (M9 planning:) measured with `pnpm acp:probe` and kept as a table in §11.5.
+8. ~~ACP capability coverage per agent.~~ Settled in M9: measured with `pnpm acp:probe` and kept as a table in §11.5, with a live smoke test on Codex (#202). Agents not installed get their row when someone runs the probe with them.
 9. Subscription (claude.ai) sign-in for the published extension: possible only with Anthropic's approval; not requested yet (§11.6).
 10. ~~Default max parallel parties.~~ Settled in M4 planning: 2, `ibitsa.parties.maxParallel` (§5.1).
 11. ~~Specialist dives (planning subagents): add later or not.~~ Settled in M3 planning: separate chambers (§4.3), measured against the round table (§4.10).

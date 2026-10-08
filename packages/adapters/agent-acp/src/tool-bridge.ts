@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { chmodSync, rmSync } from 'node:fs';
+import { chmodSync, realpathSync, rmSync } from 'node:fs';
 import { createServer, type Server, type Socket } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -23,6 +23,20 @@ export const BRIDGE_SOCKET_ENV = 'IBITSA_BRIDGE';
 export const BRIDGE_TOKEN_ENV = 'IBITSA_BRIDGE_TOKEN';
 /** The MCP server's name in `session/new`; agents prefix its tools with it. */
 export const BRIDGE_SERVER_NAME = 'ibitsa';
+
+/**
+ * Whether an agent's tool call goes to the bridge's own server (#202): Codex names an MCP call
+ * `mcp.<server>.<tool>` with `{ server, tool, arguments }`, and an approval for one `{ serverName }`.
+ * Ibitsa offered those tools, so asking whether to call them needs no one's answer.
+ */
+export function isBridgeCall(call: { title?: string | null; rawInput?: unknown }): boolean {
+  const input =
+    call.rawInput && typeof call.rawInput === 'object'
+      ? (call.rawInput as { server?: unknown; serverName?: unknown })
+      : {};
+  if (input.server === BRIDGE_SERVER_NAME || input.serverName === BRIDGE_SERVER_NAME) return true;
+  return call.title?.startsWith(`mcp.${BRIDGE_SERVER_NAME}.`) ?? false;
+}
 /** macOS keeps a Unix socket's path under 104 bytes; past this, the socket moves to `/tmp`. */
 const MAX_SOCKET_PATH = 100;
 
@@ -155,6 +169,16 @@ async function answer({
 function socketPath(dir: string | undefined): string {
   const name = `ibitsa-${randomBytes(6).toString('hex')}`;
   if (process.platform === 'win32') return `\\\\.\\pipe\\${name}`;
-  const path = join(dir ?? tmpdir(), `${name}.sock`);
-  return path.length <= MAX_SOCKET_PATH ? path : join('/tmp', `${name}.sock`);
+  // The real folder, not a link to it (macOS's `/var` is `/private/var`): the sandbox allows the
+  // socket by path when the agent starts, before the socket exists, and only a real path matches (#202).
+  const path = join(realFolder(dir ?? tmpdir()), `${name}.sock`);
+  return path.length <= MAX_SOCKET_PATH ? path : join(realFolder('/tmp'), `${name}.sock`);
+}
+
+function realFolder(dir: string): string {
+  try {
+    return realpathSync(dir);
+  } catch {
+    return dir;
+  }
 }
