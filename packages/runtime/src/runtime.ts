@@ -1054,7 +1054,7 @@ export class Runtime {
       ...(this.repo === undefined ? {} : { repo: this.repo }),
       ...(this.gitHost ? { gitHost: this.gitHost } : {}),
       keptCouncil: this.keptCouncilView(),
-      classes: this.classes(),
+      classes: this.classes().map((c) => (this.unsandboxed(c) ? { ...c, sandboxed: false } : c)),
       recolor: this.options.recolor?.() ?? {},
     };
   }
@@ -1075,6 +1075,12 @@ export class Runtime {
     if (!found) throw new Error(`No agent "${agent}" in ibitsa.agents.`);
     if ('error' in found) throw new Error(found.error);
     return found;
+  }
+
+  /** Whether heroes of this class run without Ibitsa's sandbox (§11.5, #200): an ACP agent's say. */
+  private unsandboxed(heroClass: HeroClassView): boolean {
+    if (heroClass.agent === CLAUDE_AGENT || !this.options.agentSandboxed) return false;
+    return !this.options.agentSandboxed(heroClass.agent);
   }
 
   /** The model a hero of this class runs on (#182); none for a class nobody knows. */

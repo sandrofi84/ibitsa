@@ -25,6 +25,7 @@ import {
   submitResult,
   submittedSummary,
 } from './hero-tools.ts';
+import type { NetworkRequest } from './sandbox.types';
 import type { OpenTools, ToolResult } from './tool-bridge.types.ts';
 import { UpdateMapper } from './update-mapper';
 
@@ -46,6 +47,12 @@ export function offeredModels(
   if (!option) return null;
   return option.options.flatMap((o) => ('group' in o ? o.options : [o])).map((o) => o.value);
 }
+
+/** A network ask's answers, as the permission options a "Needs you" answer picks from (#200). */
+const NETWORK_OPTIONS: PermissionOption[] = [
+  { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+  { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
+];
 
 /**
  * One hero's session on an ACP agent (spec §11.5): its own agent process in the worktree. ACP has no
@@ -75,9 +82,15 @@ export class AcpSession implements AgentSession {
   /** Set by an error, cleared when the next turn starts. */
   private failed = false;
   private agentCapabilities: InitializeResponse['agentCapabilities'] = {};
+  /** Rules allowed for the quest (#62, #200): asked again by the agent, they're allowed at once. */
+  private readonly allowed: Set<string>;
+  /** Inside Ibitsa's sandbox; without it, auto mode never answers this hero's requests (#200). */
+  private readonly sandboxed: boolean;
 
   constructor(init: AcpSessionInit) {
     this.onEvent = init.onEvent;
+    this.allowed = new Set(init.allowRules ?? []);
+    this.sandboxed = init.options.sandboxed === true;
     this.mapper = new UpdateMapper({
       cwd: init.cwd,
       tests: new TestDetector(init.cwd),
@@ -90,6 +103,7 @@ export class AcpSession implements AgentSession {
         permission: (request) => this.permission(request),
         elicit: (request) => this.elicit(request),
         update: (notification) => this.update(notification),
+        ask: (request) => this.network(request),
         exited: (message) => this.fail(message),
       },
     });
@@ -143,6 +157,7 @@ export class AcpSession implements AgentSession {
     const pending = this.permissions.get(requestId);
     if (!pending) return;
     this.permissions.delete(requestId);
+    if (decision === 'allow' && always && pending.rule) this.allowed.add(pending.rule);
     pending.resolve({
       outcome: chooseOption({ options: pending.options, answer: { decision, always: !!always } }),
     });
@@ -232,6 +247,7 @@ export class AcpSession implements AgentSession {
       if (this.closed) return;
       this.emit({ type: 'sessionStarted', sessionId: this.sessionId });
       await this.chooseModel({ model: init.model, configOptions });
+      await this.chooseMode(init.options.agent.mode);
       if (init.prompt !== undefined) {
         // A new hero with the bridge learns how to submit before its task; a resumed one knew.
         const preface = tools && init.resume === undefined ? HERO_TOOL_INSTRUCTIONS : undefined;
@@ -265,6 +281,17 @@ export class AcpSession implements AgentSession {
       configId: option.id,
       value: model,
     });
+  }
+
+  /**
+   * The agent's own mode for this hero (#200), e.g. Codex's `agent-full-access` when Ibitsa's
+   * sandbox is the boundary. An agent without that mode keeps its own.
+   */
+  private async chooseMode(mode: string | undefined): Promise<void> {
+    if (!mode || !this.sessionId) return;
+    await this.connection.agent
+      .request(methods.agent.session.setMode, { sessionId: this.sessionId, modeId: mode })
+      .catch(() => {});
   }
 
   /** The bridge's tools for this session (#197), when the adapter has a bridge. */
@@ -364,8 +391,23 @@ export class AcpSession implements AgentSession {
   }): Promise<RequestPermissionResponse> {
     const requestId = `${params.toolCall.toolCallId}:${++this.requests}`;
     const call = params.toolCall;
+    const tool = call.name ?? call.title ?? call.kind ?? 'tool';
+    // The agent's "always" is a rule only it understands: offered for the quest, never the project.
+    const always = params.options.some((o) => o.kind === 'allow_always');
+    if (always && this.allowed.has(tool)) {
+      return Promise.resolve({
+        outcome: chooseOption({
+          options: params.options,
+          answer: { decision: 'allow', always: true },
+        }),
+      });
+    }
     return new Promise((resolve) => {
-      this.permissions.set(requestId, { options: params.options, resolve });
+      this.permissions.set(requestId, {
+        options: params.options,
+        resolve,
+        ...(always ? { rule: tool } : {}),
+      });
       signal.addEventListener(
         'abort',
         () => {
@@ -376,9 +418,33 @@ export class AcpSession implements AgentSession {
       this.emit({
         type: 'permission',
         requestId,
-        tool: call.name ?? call.title ?? call.kind ?? 'tool',
+        tool,
         input: call.rawInput ?? {},
         ...(call.title ? { title: call.title } : {}),
+        ...(always ? { alwaysAllow: [tool], alwaysQuestOnly: true } : {}),
+        ...(this.sandboxed ? {} : { boundary: 'unsandboxed' as const }),
+      });
+    });
+  }
+
+  /**
+   * A domain outside the agent's list, asked by the sandbox (#200): a "Needs you" item like a Claude
+   * hero's network request. A cancelled turn or a closed session refuses it.
+   */
+  private network({ host, port }: NetworkRequest): Promise<boolean> {
+    if (this.closed) return Promise.resolve(false);
+    const requestId = `network:${++this.requests}`;
+    return new Promise((resolve) => {
+      this.permissions.set(requestId, {
+        options: NETWORK_OPTIONS,
+        resolve: (response) =>
+          resolve(response.outcome.outcome === 'selected' && response.outcome.optionId === 'allow'),
+      });
+      this.emit({
+        type: 'permission',
+        requestId,
+        tool: 'Network',
+        input: { host: port === null ? host : `${host}:${port}` },
       });
     });
   }

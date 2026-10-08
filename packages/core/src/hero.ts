@@ -395,6 +395,7 @@ export class Hero {
           ...describePermission(event.tool, event.input),
           cwd: this.worktreePath() ?? '(unknown)',
           alwaysAllow: event.alwaysAllow ?? [],
+          ...(event.alwaysQuestOnly ? { questOnly: true } : {}),
         });
         break;
       case 'question':

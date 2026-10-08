@@ -195,6 +195,64 @@ describe('always allow (#62)', () => {
     });
     expect(offered.items().map((i) => i.kind)).toEqual(['permission']);
   });
+
+  it("keeps an ACP agent's always to this quest: never the project (#200)", () => {
+    const h = quest().agent({
+      type: 'permission',
+      requestId: 'r1',
+      tool: 'Run npm install',
+      input: { command: 'npm install' },
+      alwaysAllow: ['Run npm install'],
+      alwaysQuestOnly: true,
+    });
+    expect(h.items()[0]).toMatchObject({ kind: 'permission', questOnly: true });
+    h.command({
+      type: 'answerPermission',
+      commandId: 'a',
+      itemId: 'n5',
+      decision: 'allow',
+      always: 'project',
+    });
+    expect(h.cues).toContainEqual({
+      type: 'commandRejected',
+      commandId: 'a',
+      reason: 'This request can be always allowed for this quest only.',
+    });
+    expect(h.items().map((i) => i.kind)).toEqual(['permission']);
+    h.command({
+      type: 'answerPermission',
+      commandId: 'b',
+      itemId: 'n5',
+      decision: 'allow',
+      always: 'quest',
+    });
+    expect(h.state.heroes[0]?.allowRules).toEqual(['Run npm install']);
+  });
+});
+
+describe('a hero without Ibitsa’s sandbox (#200)', () => {
+  it('auto mode leaves its requests to "Needs you"', () => {
+    const h = quest();
+    h.command({ type: 'setAutoApprove', commandId: 'auto', on: true });
+    h.agent({
+      type: 'permission',
+      requestId: 'r1',
+      tool: 'Run npm install',
+      input: {},
+      boundary: 'unsandboxed',
+    });
+    expect(h.items().map((i) => i.kind)).toEqual(['permission']);
+  });
+
+  it('shows a network ask as the domain it wants', () => {
+    const h = quest().agent({
+      type: 'permission',
+      requestId: 'r1',
+      tool: 'Network',
+      input: { host: 'example.com:443' },
+    });
+    expect(h.items()[0]).toMatchObject({ action: 'Connect to', target: 'example.com:443' });
+  });
 });
 
 describe('runtime-only commands', () => {

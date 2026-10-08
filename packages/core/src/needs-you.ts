@@ -75,6 +75,14 @@ export class NeedsYou {
       this.outbox.reject(command.commandId, 'This request can’t be always allowed.');
       return null;
     }
+    if (always === 'project' && item.kind === 'permission' && item.questOnly) {
+      // An ACP agent's rule (#200) would mean nothing to other heroes' sessions.
+      this.outbox.reject(
+        command.commandId,
+        'This request can be always allowed for this quest only.',
+      );
+      return null;
+    }
     this.state.needsYou = this.state.needsYou.filter((i) => i.id !== item.id);
     if (item.kind === 'permission' && command.type === 'answerPermission') {
       this.outbox.effect({
@@ -118,6 +126,8 @@ export function describePermission(
     NotebookEdit: ['Edit notebook', 'notebook_path'],
     WebFetch: ['Fetch URL', 'url'],
     WebSearch: ['Search the web', 'query'],
+    // A new domain asked for under an ACP hero's sandbox (#200).
+    Network: ['Connect to', 'host'],
   };
   const entry = known[tool];
   const target = entry ? field(entry[1]) : undefined;

@@ -13,8 +13,9 @@
 // Steps: { update } sends a session update; { permission } and { elicit } ask the client and say what
 // came back; { sleep } waits that many ms; { waitCancel } ends the turn when it is cancelled; { stop, usage } ends it; { fail } fails
 // the prompt; { exit } ends the process; { mcp: { tool, arguments } } starts the session's `ibitsa` MCP
-// server, as a real agent would, calls that tool and says what it listed and what came back.
-import { spawn } from 'node:child_process';
+// server, as a real agent would, calls that tool and says what it listed and what came back;
+// { run: command } runs a shell command, as an agent's own tool would, and says its exit code and output.
+import { spawn, spawnSync } from 'node:child_process';
 import { appendFileSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { Readable, Writable } from 'node:stream';
@@ -95,6 +96,10 @@ async function run({ client, sessionId, steps }) {
       throw new RequestError(-32603, step.fail);
     } else if (step.mcp) {
       await say({ client, sessionId }, `mcp: ${JSON.stringify(await callMcpTool(step.mcp))}`);
+    } else if (step.run) {
+      const ran = spawnSync(step.run, { shell: true, encoding: 'utf8' });
+      const output = `${ran.stdout ?? ''}${ran.stderr ?? ''}`.trim();
+      await say({ client, sessionId }, `run: ${ran.status} ${output}`);
     } else if (step.exit !== undefined) {
       process.exit(step.exit);
     }
@@ -141,6 +146,10 @@ agent({ name: 'fake-agent' })
   })
   .onRequest(methods.agent.session.close, ({ params }) => {
     log('session/close', params);
+    return {};
+  })
+  .onRequest(methods.agent.session.setMode, ({ params }) => {
+    log('session/set_mode', params);
     return {};
   })
   .onRequest(methods.agent.session.setConfigOption, ({ params }) => {

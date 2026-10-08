@@ -31,8 +31,16 @@ export type AgentEvent =
        * when not offered: never for writing outside the worktree or escaping the sandbox.
        */
       alwaysAllow?: string[];
-      /** Set when the request crosses a hard limit (spec §11.6): auto mode never answers these (#63). */
-      boundary?: 'sandboxEscape' | 'outsideWorktree';
+      /**
+       * "Always allow" only for this quest, never the project (#200): an ACP agent's own rule, which
+       * means nothing to other agents' sessions.
+       */
+      alwaysQuestOnly?: boolean;
+      /**
+       * Set when the request crosses a hard limit (spec §11.6), or when no sandbox of Ibitsa's keeps
+       * the hard limits for this hero (`unsandboxed`, #200): auto mode never answers these (#63).
+       */
+      boundary?: 'sandboxEscape' | 'outsideWorktree' | 'unsandboxed';
     }
   /**
    * Running totals for the session, never deltas. Omitted fields are unknown, not zero. `costBasis`

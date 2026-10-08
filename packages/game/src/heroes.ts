@@ -16,7 +16,17 @@ function heroClass(view: HeroClassView): HeroClass {
     modelId: view.model,
     names: view.names,
     appearance: view.appearance,
+    unsandboxed: view.sandboxed === false,
   };
+}
+
+/** The hero pane's notice for a hero whose agent runs without Ibitsa's sandbox (§11.5, #200). */
+export const UNSANDBOXED_NOTE =
+  'Not sandboxed by Ibitsa: this hero’s agent runs with only its own safeguards, so every request it makes waits for you, even in auto mode. On Windows, open the project in WSL or a dev container for full sandboxing; elsewhere, give the agent its state folders and domains in ibitsa.agents.';
+
+/** The notice for a hero of this class, or null when Ibitsa's sandbox keeps it in. */
+export function sandboxNote(classId: string): string | null {
+  return current.find((c) => c.id === classId)?.unsandboxed ? UNSANDBOXED_NOTE : null;
 }
 
 let current: HeroClass[] = DEFAULT_CLASSES.map(heroClass);

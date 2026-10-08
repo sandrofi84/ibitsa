@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AcpAdapter } from './acp-adapter';
 import type { AcpAdapterOptions, AgentPrices } from './acp-adapter.types';
 import { CANT_RESUME } from './acp-session';
+import { spawnAgent } from './agent-connection';
 import { HERO_TOOL_INSTRUCTIONS, SESSION_CLOSED, SUBMIT_NEEDS_SUMMARY } from './hero-tools';
 import { ToolBridge } from './tool-bridge';
 import type { ToolHost, ToolSet } from './tool-bridge.types';
@@ -37,6 +38,10 @@ function hero({
   resume,
   mcpServers,
   tools,
+  sandboxed,
+  mode,
+  allowRules,
+  spawn,
 }: {
   env?: Record<string, string>;
   prices?: AgentPrices;
@@ -46,6 +51,10 @@ function hero({
   resume?: string;
   mcpServers?: AcpAdapterOptions['mcpServers'];
   tools?: AcpAdapterOptions['tools'];
+  sandboxed?: boolean;
+  mode?: string;
+  allowRules?: string[];
+  spawn?: AcpAdapterOptions['spawn'];
 } = {}) {
   const cwd = mkdtempSync(join(tmpdir(), 'ibitsa-acp-'));
   dirs.push(cwd);
@@ -56,9 +65,12 @@ function hero({
       args: [FAKE_AGENT],
       env: { ...env, FAKE_ACP_LOG: log },
       ...(prices ? { prices } : {}),
+      ...(mode ? { mode } : {}),
     },
     ...(mcpServers ? { mcpServers } : {}),
     ...(tools ? { tools } : {}),
+    ...(sandboxed === undefined ? {} : { sandboxed }),
+    ...(spawn ? { spawn } : {}),
   });
   const events: AgentEvent[] = [];
   const steps = typeof prompt === 'function' ? prompt(cwd) : prompt;
@@ -74,6 +86,7 @@ function hero({
             cwd,
             classId: 'seer',
             ...(model ? { model } : {}),
+            ...(allowRules ? { allowRules } : {}),
             prompt: text ?? '',
           },
           onEvent,
@@ -84,6 +97,7 @@ function hero({
             sessionId: resume,
             cwd,
             classId: 'seer',
+            ...(allowRules ? { allowRules } : {}),
             ...(text === undefined ? {} : { prompt: text }),
           },
           onEvent,
@@ -319,8 +333,15 @@ describe('AcpSession: permissions and questions', () => {
     },
   };
 
+  const other = {
+    permission: {
+      ...ask.permission,
+      toolCall: { ...ask.permission.toolCall, toolCallId: 't2', title: 'Run make clean' },
+    },
+  };
+
   it('asks "Needs you" and answers with the matching option', async () => {
-    const { session, events, settled } = hero({ prompt: [ask, ask, ask] });
+    const { session, events, settled } = hero({ prompt: [ask, ask, other, ask] });
     await until(() => expect(events.filter((e) => e.type === 'permission')).toHaveLength(1));
     expect(events[1]).toEqual({
       type: 'permission',
@@ -328,23 +349,113 @@ describe('AcpSession: permissions and questions', () => {
       tool: 'Run npm install',
       input: { command: 'npm install' },
       title: 'Run npm install',
+      // The agent's own "always": for the quest only (#200).
+      alwaysAllow: ['Run npm install'],
+      alwaysQuestOnly: true,
+      // No sandbox of Ibitsa's here, so auto mode never answers it.
+      boundary: 'unsandboxed',
     });
     session.respondToPermission({ requestId: 't1:1', decision: 'allow' });
     await until(() => expect(events.filter((e) => e.type === 'permission')).toHaveLength(2));
     session.respondToPermission({ requestId: 't1:2', decision: 'allow', always: true });
     await until(() => expect(events.filter((e) => e.type === 'permission')).toHaveLength(3));
-    session.respondToPermission({ requestId: 't1:3', decision: 'deny', note: 'Use pnpm.' });
+    session.respondToPermission({ requestId: 't2:3', decision: 'deny', note: 'Use pnpm.' });
     // The note reaches the agent as the next message.
     await settled(2);
-    // The fake agent's three replies share one message.
+    // The last ask was always allowed, so it didn't reach "Needs you" again.
+    expect(events.filter((e) => e.type === 'permission')).toHaveLength(3);
+    // The fake agent's replies share one message.
     expect(messages(events)).toEqual([
       [
         'permission: {"outcome":"selected","optionId":"once"}',
         'permission: {"outcome":"selected","optionId":"always"}',
         'permission: {"outcome":"selected","optionId":"no"}',
+        'permission: {"outcome":"selected","optionId":"always"}',
       ].join(''),
       'echo: The user declined that: Use pnpm.',
     ]);
+  });
+
+  it("allows at once what the quest always allows (#62), and offers no always where the agent doesn't", async () => {
+    const onceOnly = {
+      permission: {
+        ...other.permission,
+        options: [{ optionId: 'once', name: 'Allow', kind: 'allow_once' }],
+      },
+    };
+    const { session, events, settled } = hero({
+      prompt: [ask, onceOnly],
+      allowRules: ['Run npm install', 'Bash(npm test:*)'],
+      sandboxed: true,
+    });
+    await until(() => expect(events.filter((e) => e.type === 'permission')).toHaveLength(1));
+    // Inside the sandbox auto mode may answer it; nothing to always allow.
+    expect(events.find((e) => e.type === 'permission')).toEqual({
+      type: 'permission',
+      requestId: 't2:2',
+      tool: 'Run make clean',
+      input: { command: 'npm install' },
+      title: 'Run make clean',
+    });
+    session.respondToPermission({ requestId: 't2:2', decision: 'allow', always: true });
+    await settled();
+    expect(messages(events)).toEqual([
+      [
+        'permission: {"outcome":"selected","optionId":"always"}',
+        'permission: {"outcome":"selected","optionId":"once"}',
+      ].join(''),
+    ]);
+  });
+
+  it("switches to the agent's sandboxed mode once the session starts (#200)", async () => {
+    const { requests, settled } = hero({ mode: 'agent-full-access', sandboxed: true });
+    await settled();
+    expect(requests().find((r) => r.method === 'session/set_mode')?.params).toEqual({
+      sessionId: 'fake-session-1',
+      modeId: 'agent-full-access',
+    });
+  });
+
+  it('asks "Needs you" for a new domain the sandbox stops, and passes the answer back (#200)', async () => {
+    const answers: boolean[] = [];
+    const { session, events, settled } = hero({
+      prompt: [{ sleep: 300 }],
+      sandboxed: true,
+      spawn: (request) => {
+        const child = spawnAgent(request);
+        // As the sandbox does when the agent reaches out: two domains, one with no port.
+        void request.ask?.({ host: 'example.com', port: 443 }).then((a) => answers.push(a));
+        void request.ask?.({ host: 'evil.test', port: null }).then((a) => answers.push(a));
+        return child;
+      },
+    });
+    await until(() => expect(events.filter((e) => e.type === 'permission')).toHaveLength(2));
+    expect(events.filter((e) => e.type === 'permission')).toEqual([
+      {
+        type: 'permission',
+        requestId: 'network:1',
+        tool: 'Network',
+        input: { host: 'example.com:443' },
+      },
+      { type: 'permission', requestId: 'network:2', tool: 'Network', input: { host: 'evil.test' } },
+    ]);
+    session.respondToPermission({ requestId: 'network:1', decision: 'allow' });
+    session.respondToPermission({ requestId: 'network:2', decision: 'deny' });
+    await until(() => expect(answers).toEqual([true, false]));
+    await settled();
+  });
+
+  it('refuses a new domain once the hero is stopped', async () => {
+    let ask: ((host: string) => Promise<boolean>) | undefined;
+    const { session, settled } = hero({
+      spawn: (request) => {
+        ask = (host) => request.ask?.({ host, port: 80 }) ?? Promise.resolve(true);
+        return spawnAgent(request);
+      },
+    });
+    await settled();
+    session.close();
+    expect(await ask?.('late.test')).toBe(false);
   });
 
   it('never widens a plain allow to always', async () => {

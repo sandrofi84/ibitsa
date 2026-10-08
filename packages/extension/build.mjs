@@ -14,8 +14,9 @@ const common = {
   format: 'cjs',
   target: 'node22',
   // The Agent SDK is ESM-only and finds its native binary next to its own module (spec §13); zod must
-  // be the same copy the SDK uses.
-  external: ['vscode', '@anthropic-ai/claude-agent-sdk', 'zod'],
+  // be the same copy the SDK uses. The sandbox runtime is ESM-only too and finds its helpers (seccomp,
+  // srt-win) in its own package (#200).
+  external: ['vscode', '@anthropic-ai/claude-agent-sdk', 'zod', '@anthropic-ai/sandbox-runtime'],
   sourcemap: true,
 };
 await esbuild.build({
@@ -29,6 +30,12 @@ await esbuild.build({
   ...common,
   entryPoints: ['src/mcp-bridge.ts'],
   outfile: 'dist/mcp-bridge.cjs',
+});
+// One hero's sandbox host (§11.5, #200): its own file, run by Node outside the extension host.
+await esbuild.build({
+  ...common,
+  entryPoints: ['src/sandbox-host.ts'],
+  outfile: 'dist/sandbox-host.cjs',
 });
 await esbuild.build({
   ...common,

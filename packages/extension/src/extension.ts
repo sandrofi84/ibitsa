@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { ToolBridge } from '@ibitsa/agent-acp';
+import { AgentSandbox, ToolBridge } from '@ibitsa/agent-acp';
 import { ClaudeAdapter } from '@ibitsa/agent-claude-sdk';
 import { GitHubHost } from '@ibitsa/githost-github';
 import { heroHandle } from '@ibitsa/protocol';
@@ -61,12 +61,18 @@ export function activate(context: vscode.ExtensionContext): IbitsaApi {
     agents: () => readAgents(config()),
     env: () => heroEnv,
     tools: toolBridge,
+    // One sandbox host per hero on macOS and Linux (#200); the bridge's socket stays reachable.
+    sandbox: new AgentSandbox({
+      script: context.asAbsolutePath('dist/sandbox-host.cjs'),
+      bridgeSocket: toolBridge.socketPath,
+    }),
   });
   let dependencies: DependencyFactory = ({ workspaceDir, credentials, env: base }) => {
     const env = agentEnvironment({ credentials, env: base, allowLogin: development });
     heroEnv = base;
     return {
       agentAdapter: (id) => heroAgents.adapterFor(id),
+      agentSandboxed: (id) => heroAgents.sandboxed(id),
       adapter: env
         ? new ClaudeAdapter({
             env: () => env,

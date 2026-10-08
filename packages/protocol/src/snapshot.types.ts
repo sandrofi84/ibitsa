@@ -161,6 +161,8 @@ export type NeedsYouItem =
       cwd: string;
       /** The rules "Always allow" would add (#62); empty when it isn't offered. */
       alwaysAllow: string[];
+      /** "Always allow" is offered for this quest only, not the project (#200). */
+      questOnly?: boolean;
     }
   /** answerQuestion */
   | { kind: 'question'; id: string; heroId: string; questions: AskUserQuestion[] }

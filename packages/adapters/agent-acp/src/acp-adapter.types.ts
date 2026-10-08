@@ -1,5 +1,6 @@
 import type { Readable, Writable } from 'node:stream';
 import type { McpServer } from '@agentclientprotocol/sdk';
+import type { NetworkRequest } from './sandbox.types';
 import type { ToolHost } from './tool-bridge.types.ts';
 
 /** USD per million tokens, for estimating gold when an agent reports tokens but no cost (§11.5). */
@@ -14,6 +15,8 @@ export interface AgentSpec {
   args?: string[];
   env?: Record<string, string>;
   prices?: AgentPrices;
+  /** The agent's own mode to switch to once the session starts (Codex's `agent-full-access` under the sandbox, #200). */
+  mode?: string;
 }
 
 /** What the adapter asks to start: one agent process per hero, in the hero's worktree. */
@@ -22,6 +25,8 @@ export interface SpawnRequest {
   args: string[];
   cwd: string;
   env: Record<string, string | undefined>;
+  /** Asks "Needs you" whether the agent may reach a new domain; only a sandbox asks (#200). */
+  ask?: (request: NetworkRequest) => Promise<boolean>;
 }
 
 /** The started process, as much of Node's `ChildProcess` as the adapter uses. */
@@ -56,8 +61,13 @@ export interface AcpAdapterOptions {
   agent: AgentSpec;
   /** The environment heroes start from (§11.6, #67); the agent's own `env` goes on top. */
   env?: () => Record<string, string | undefined>;
-  /** Starts the agent's process. The default spawns it directly; #200 wraps it in the sandbox. */
+  /** Starts the agent's process. The default spawns it directly; a sandbox wraps it (#200). */
   spawn?: (request: SpawnRequest) => AgentProcess;
+  /**
+   * Whether `spawn` runs the agent inside Ibitsa's sandbox (§11.5, #200). Without it, nothing of
+   * Ibitsa's keeps the hard limits, so auto mode never answers this agent's requests.
+   */
+  sandboxed?: boolean;
   /**
    * Offers heroes Ibitsa's tools (`submit_task`) through the MCP tool bridge (#197). Without it a hero
    * can't submit, and the user marks the task done.

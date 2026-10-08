@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "1.7.0",
+    "@anthropic-ai/sandbox-runtime": "0.0.79",
     "@ibitsa/protocol": "workspace:*",
     "@ibitsa/runtime": "workspace:*",
     "valibot": "^1.5.0"
