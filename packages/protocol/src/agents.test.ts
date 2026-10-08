@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AGENT_PRESETS, agentName, resolveAgents } from './agents';
+import { AGENT_PRESETS, agentName, CODEX_CONFIG, resolveAgents } from './agents';
 
 describe('resolveAgents (§11.5, #198)', () => {
   it('is the presets without settings, Codex with the sandbox profile the spike measured', () => {
@@ -19,6 +19,11 @@ describe('resolveAgents (§11.5, #198)', () => {
     });
   });
 
+  it('starts Codex without its ChatGPT connectors (#214)', () => {
+    const codex = resolveAgents({}).find((a) => a.id === 'codex');
+    expect(JSON.parse(codex?.env.CODEX_CONFIG ?? '{}')).toEqual({ features: { apps: false } });
+  });
+
   it('overrides a preset field by field and adds agents with a command', () => {
     const agents = resolveAgents({
       codex: {
@@ -31,7 +36,8 @@ describe('resolveAgents (§11.5, #198)', () => {
     });
     expect(agents.find((a) => a.id === 'codex')).toEqual({
       ...AGENT_PRESETS[0],
-      env: { CODEX_HOME: '/tmp/codex' },
+      // The preset's own settings stay: a user's env adds to them.
+      env: { CODEX_CONFIG, CODEX_HOME: '/tmp/codex' },
       prices: { inputPerMillion: 1, outputPerMillion: 8 },
     });
     expect(agents.find((a) => a.id === 'gemini')).toMatchObject({
