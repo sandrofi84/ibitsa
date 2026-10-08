@@ -1,4 +1,6 @@
 import type { HostEvent } from '@ibitsa/protocol';
+import type { AgentChecks } from './agent-checks';
+import type { SignInTerminal } from './agent-checks.types';
 import type { Armory } from './armory';
 import type { Credentials } from './credentials.types';
 import type { GuildCouncil } from './guild-council';
@@ -36,4 +38,8 @@ export interface HostChannelDeps {
   openable: { workspace: string | undefined; roots: readonly string[] };
   /** The Guild Hall's Armory (#182): classes and recolors. */
   armory: Armory;
+  /** The party check of ACP agents (§11.5, #199). */
+  agentChecks: AgentChecks;
+  /** Opens a VS Code terminal and types the command into it (Sign in, #199). */
+  openTerminal(terminal: SignInTerminal): void;
 }

@@ -21,6 +21,8 @@ export const AgentSettingSchema = v.strictObject({
   stateFolders: v.optional(v.pipe(v.array(text), v.maxLength(20))),
   /** For the sandbox (#200): domains the agent reaches without asking, e.g. its API. */
   domains: v.optional(v.pipe(v.array(text), v.maxLength(50))),
+  /** The command that signs you in to it by hand, run in a terminal by the party check (#199). */
+  signIn: v.optional(text),
   /** USD per million tokens, for estimated gold when the agent reports tokens but no cost. */
   prices: v.optional(v.strictObject({ inputPerMillion: price, outputPerMillion: price })),
 });

@@ -26,6 +26,7 @@ import { mountNewActionForm } from './new-action-form';
 import { mountNewQuestForm } from './new-quest-form';
 import { PACK_BASE, PACK_KEY, PACK_KEYS, PackScene } from './pack-scene';
 import { mountNewParty, mountPartyAssembly } from './party-assembly';
+import { mountPartyCheck } from './party-check';
 import { mountPlanReview } from './plan-review';
 import {
   mountPullRequestHover,
@@ -163,7 +164,9 @@ export function startGame(root: HTMLElement, host: Host): Started {
   const taskPanel = mountTaskPanel({ client, pullRequests });
   // Changes to the approved plan (#170): the council's amendment, and the party of an island it adds.
   const amendmentReview = mountAmendmentReview({ client });
-  const newParty = mountNewParty({ client });
+  // The party check of ACP agents (#199), shared by every panel that sends heroes out.
+  const partyCheck = mountPartyCheck({ host });
+  const newParty = mountNewParty({ client, partyCheck });
   mountNeedsYouPanel({
     client,
     openCouncil: () => councilDialogue.focus(),
@@ -173,13 +176,13 @@ export function startGame(root: HTMLElement, host: Host): Started {
     assembleParty: (islandId) => newParty.open(islandId),
   });
   mountRestartNotice({ client });
-  const newQuest = mountNewQuestForm({ client, host });
+  const newQuest = mountNewQuestForm({ client, host, partyCheck });
   const newActionForm = mountNewActionForm({ client });
   const newAction = () => newActionForm.open();
   const conveneForm = mountConveneForm({ client, view });
   const partyAssembly = mountPartyAssembly({
     client,
-    options: { withCredentials: (then) => newQuest.withCredentials(then) },
+    options: { withCredentials: (then) => newQuest.withCredentials(then), partyCheck },
   });
   mountPlanReview({ client });
   mountCampaignEnd({ client });
@@ -405,7 +408,7 @@ export function startGame(root: HTMLElement, host: Host): Started {
   // The pack's sounds on what happens, at the user's volumes (#184).
   const soundBoard = mountSoundBoard({ game, client, host });
   // The Guild Hall in Home Village opens Ibitsa's settings (#179).
-  const guildHall = mountGuildHall({ client, host });
+  const guildHall = mountGuildHall({ client, host, partyCheck });
   game.events.on(GUILD_HALL_SELECTED, () => guildHall.open());
   // The hut shows while the council sits (§7.1 screen 2), and the map comes back after.
   let sittingHut = false;

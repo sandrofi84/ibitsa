@@ -1,4 +1,4 @@
-import type { AgentView } from './agents.types';
+import type { AgentCheck, AgentView } from './agents.types';
 import type { Recolor } from './classes.schema';
 import type { HeroClassView } from './classes.types';
 import type { CouncillorOverrides } from './councillors.types';
@@ -63,7 +63,9 @@ export type HostEvent =
   /** The Roster's settings (#181), after `readCouncilSettings` or a change. */
   | { channel: 'host'; type: 'councilSettings'; council: CouncilSettingsView }
   /** The Armory (#182), after `readArmory` or a write. */
-  | { channel: 'host'; type: 'armory'; armory: ArmoryView };
+  | { channel: 'host'; type: 'armory'; armory: ArmoryView }
+  /** One agent's party check (§11.5, #199), after `checkAgents`. */
+  | { channel: 'host'; type: 'agentCheck'; check: AgentCheck };
 
 /**
  * The Roster's settings (#181): who's turned off (`ibitsa.council.disabled`) and each councillor's

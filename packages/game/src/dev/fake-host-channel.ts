@@ -1,4 +1,6 @@
 import type {
+  AgentCheck,
+  AgentCheckResult,
   CouncilSettingsView,
   HostEvent,
   HostRequest,
@@ -39,6 +41,11 @@ export class FakeHostChannel {
   };
   /** The Armory's classes and recolors (#182). */
   readonly armory = new FakeArmory();
+  /**
+   * The agents signed in, for the party check (#199): none at first, so Codex, the one installed,
+   * needs a sign-in; Sign in counts as done once the terminal would have opened.
+   */
+  private readonly signedIn = new Set<string>();
 
   constructor({ credentialsReady }: { credentialsReady: boolean }) {
     this.ready = credentialsReady;
@@ -137,7 +144,33 @@ export class FakeHostChannel {
         this.armory.apply(request);
         this.emit({ channel: 'host', type: 'armory', armory: this.armory.view() });
         return;
+      case 'checkAgents':
+        for (const agent of request.agents) {
+          this.emit({ channel: 'host', type: 'agentCheck', check: this.agentCheck(agent) });
+        }
+        return;
+      case 'signInAgent':
+        this.signedIn.add(request.agent);
+        return;
     }
+  }
+
+  /** An agent's party check as the extension would answer it (#199). */
+  private agentCheck(id: string): AgentCheck {
+    const agent = this.armory.view().agents.find((a) => a.id === id);
+    const result: AgentCheckResult = !agent
+      ? { kind: 'failed', message: `There's no agent "${id}" in ibitsa.agents.` }
+      : !agent.found
+        ? { kind: 'notInstalled', command: agent.command }
+        : this.signedIn.has(id)
+          ? { kind: 'ready', models: ['gpt-6.1-sol', 'gpt-6-luna'] }
+          : {
+              kind: 'signIn',
+              message: 'Authentication required',
+              via: 'command',
+              command: `${id} login`,
+            };
+    return { agent: id, name: agent?.name ?? id, costReported: false, result };
   }
 
   /** Plays an event the extension would send, e.g. from the Command Palette (tests, #87). */

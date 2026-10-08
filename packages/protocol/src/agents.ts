@@ -20,6 +20,7 @@ export const AGENT_PRESETS: readonly AgentDefinition[] = [
     domains: ['chatgpt.com', '*.oaiusercontent.com'],
     weakerNetworkIsolation: true,
     sandboxedMode: 'agent-full-access',
+    signIn: 'codex login',
     preset: true,
   },
   {
@@ -30,6 +31,8 @@ export const AGENT_PRESETS: readonly AgentDefinition[] = [
     env: {},
     stateFolders: [],
     domains: [],
+    // Its interactive prompt, where `/login` signs in.
+    signIn: 'copilot',
     preset: true,
   },
   {
@@ -40,6 +43,7 @@ export const AGENT_PRESETS: readonly AgentDefinition[] = [
     env: {},
     stateFolders: [],
     domains: [],
+    signIn: 'opencode auth login',
     preset: true,
   },
   {
@@ -50,6 +54,8 @@ export const AGENT_PRESETS: readonly AgentDefinition[] = [
     env: {},
     stateFolders: [],
     domains: [],
+    // The Antigravity CLI signs in on its first run.
+    signIn: 'agy',
     preset: true,
   },
   {
@@ -60,6 +66,8 @@ export const AGENT_PRESETS: readonly AgentDefinition[] = [
     env: {},
     stateFolders: [],
     domains: [],
+    // Its first run asks how to sign in; personal Google accounts need an API key since June 2026.
+    signIn: 'gemini',
     preset: true,
   },
 ];
@@ -99,6 +107,7 @@ export function resolveAgents(setting: unknown): AgentDefinition[] {
     const command = s.command ?? known?.command;
     if (!command) continue;
     const prices = s.prices ?? known?.prices;
+    const signIn = s.signIn ?? known?.signIn;
     const merged: AgentDefinition = {
       id,
       name: s.name ?? known?.name ?? id.charAt(0).toUpperCase() + id.slice(1),
@@ -110,6 +119,7 @@ export function resolveAgents(setting: unknown): AgentDefinition[] {
       ...(known?.weakerNetworkIsolation ? { weakerNetworkIsolation: true } : {}),
       ...(known?.sandboxedMode ? { sandboxedMode: known.sandboxedMode } : {}),
       ...(prices ? { prices } : {}),
+      ...(signIn ? { signIn } : {}),
       preset: known?.preset ?? false,
     };
     const refused = refusal(merged);

@@ -122,6 +122,23 @@ export class HostChannel {
         await this.deps.armory.resetRecolor(request);
         this.postArmory();
         return;
+      case 'checkAgents':
+        // Each agent's answer goes out as soon as it has one.
+        await Promise.all(
+          request.agents.map(async (agent) => {
+            const check = await this.deps.agentChecks.check({
+              agent,
+              force: request.force ?? false,
+            });
+            this.post({ channel: 'host', type: 'agentCheck', check });
+          }),
+        );
+        return;
+      case 'signInAgent': {
+        const terminal = this.deps.agentChecks.signIn(request.agent);
+        if (terminal) this.deps.openTerminal(terminal);
+        return;
+      }
     }
   }
 

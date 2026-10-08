@@ -7,6 +7,8 @@
 //   FAKE_ACP_CONFIG    configOptions for session/new (JSON)
 //   FAKE_ACP_COMMANDS  availableCommands to list after session/new (JSON)
 //   FAKE_ACP_AUTH      "required": session/new fails with auth_required
+//   FAKE_ACP_AUTH_METHODS  authMethods to list in initialize (JSON)
+//   FAKE_ACP_INIT_DELAY    ms to wait before answering initialize
 //
 // Steps: { update } sends a session update; { permission } and { elicit } ask the client and say what
 // came back; { sleep } waits that many ms; { waitCancel } ends the turn when it is cancelled; { stop, usage } ends it; { fail } fails
@@ -101,9 +103,15 @@ async function run({ client, sessionId, steps }) {
 }
 
 agent({ name: 'fake-agent' })
-  .onRequest(methods.agent.initialize, ({ params }) => {
+  .onRequest(methods.agent.initialize, async ({ params }) => {
     log('initialize', params);
-    return { protocolVersion: 1, agentCapabilities: env('FAKE_ACP_CAPS', {}) };
+    const delay = env('FAKE_ACP_INIT_DELAY', 0);
+    if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
+    return {
+      protocolVersion: 1,
+      agentCapabilities: env('FAKE_ACP_CAPS', {}),
+      authMethods: env('FAKE_ACP_AUTH_METHODS', []),
+    };
   })
   .onRequest(methods.agent.session.new, ({ params, client }) => {
     log('session/new', params);

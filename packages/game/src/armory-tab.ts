@@ -11,6 +11,8 @@ import type { ArmoryTab } from './armory-tab.types';
 import type { GameClient } from './client';
 import { button, el } from './dom';
 import type { Host } from './host.types';
+import { readinessLine } from './party-check';
+import type { PartyCheck } from './party-check.types';
 
 const LAYERS: Record<ArmoryLayer, string> = {
   default: 'Default',
@@ -79,19 +81,27 @@ export function appearances(view: ArmoryView): string[] {
 export function armoryTab({
   client,
   host,
+  partyCheck,
   changed,
 }: {
   client: GameClient;
   host: Host;
+  /** Checks a class's ACP agent, as party assembly will (#199). */
+  partyCheck: PartyCheck;
   changed: () => void;
 }): ArmoryTab {
   let view: ArmoryView | null = null;
   let layer: 'user' | 'workspace' = 'user';
   let problem: string | null = null;
+  /** The classes whose agents were checked here: their lines show. */
+  const checked = new Set<string>();
   host.onHostEvent((event) => {
     if (event.type !== 'armory') return;
     view = event.armory;
     changed();
+  });
+  partyCheck.onChange(() => {
+    if (checked.size > 0) changed();
   });
 
   function render(): HTMLElement[] {
@@ -180,6 +190,21 @@ export function armoryTab({
       const p = el('p', { className: 'rule-problem', text: warning });
       p.setAttribute('role', 'status');
       row.append(p);
+    }
+    // The party check, on demand (#199): the agent started once to see that heroes can set out.
+    if (c.agent !== CLAUDE_AGENT) {
+      if (checked.has(c.id)) row.append(readinessLine({ partyCheck, classId: c.id }));
+      else {
+        row.append(
+          button({
+            label: 'Check the agent',
+            onClick: () => {
+              checked.add(c.id);
+              partyCheck.check([c.id]);
+            },
+          }),
+        );
+      }
     }
     if (c.layer !== 'default') {
       const from = c.layer;

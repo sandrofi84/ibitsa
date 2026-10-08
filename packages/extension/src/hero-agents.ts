@@ -46,6 +46,12 @@ export class HeroAgents {
     return adapter;
   }
 
+  /** The agent's adapter as heroes would get it, for the party check (#199); undefined if none. */
+  acpAdapter(id: string): AcpAdapter | undefined {
+    const adapter = this.adapterFor(id);
+    return adapter instanceof AcpAdapter ? adapter : undefined;
+  }
+
   /** The agents for the Armory: no environment (it may hold keys), and whether each is installed. */
   views(): AgentView[] {
     const env = this.deps.env();

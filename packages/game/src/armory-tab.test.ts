@@ -111,6 +111,8 @@ describe('the Armory (#182)', () => {
       id: 'bard',
       label: 'Bard',
       model: 'Claude Opus',
+      agent: 'claude',
+      modelId: 'opus',
       names: ['Lyra'],
       appearance: 'hero.ranger',
     });

@@ -30,6 +30,23 @@ import { UpdateMapper } from './update-mapper';
 
 export const CANT_RESUME = 'This agent can’t resume a session. Start the task over.';
 
+/** The agent's choice of model, if it offers one (§11.5): a select option of category `model`. */
+function modelOption(
+  configOptions: SessionConfigOption[] | null | undefined,
+): Extract<SessionConfigOption, { type: 'select' }> | undefined {
+  const option = configOptions?.find((o) => o.category === 'model' && o.type === 'select');
+  return option?.type === 'select' ? option : undefined;
+}
+
+/** The models the agent offers for a session (#199); null when it offers no choice of model. */
+export function offeredModels(
+  configOptions: SessionConfigOption[] | null | undefined,
+): string[] | null {
+  const option = modelOption(configOptions);
+  if (!option) return null;
+  return option.options.flatMap((o) => ('group' in o ? o.options : [o])).map((o) => o.value);
+}
+
 /**
  * One hero's session on an ACP agent (spec §11.5): its own agent process in the worktree. ACP has no
  * input during a turn, so `next` messages wait here for the turn to end, and `now` cancels the turn
@@ -240,10 +257,9 @@ export class AcpSession implements AgentSession {
     configOptions: SessionConfigOption[] | null | undefined;
   }): Promise<void> {
     if (!model || !this.sessionId) return;
-    const option = configOptions?.find((o) => o.category === 'model' && o.type === 'select');
-    if (option?.type !== 'select' || option.currentValue === model) return;
-    const values = option.options.flatMap((o) => ('group' in o ? o.options : [o]));
-    if (!values.some((v) => v.value === model)) return;
+    const option = modelOption(configOptions);
+    if (!option || option.currentValue === model) return;
+    if (!offeredModels(configOptions)?.includes(model)) return;
     await this.connection.agent.request(methods.agent.session.setConfigOption, {
       sessionId: this.sessionId,
       configId: option.id,

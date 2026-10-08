@@ -14,6 +14,7 @@ import type { GuildHall, GuildTab } from './guild-hall.types';
 import { packsTab } from './guild-packs';
 import { mountRoster } from './guild-roster';
 import type { Host } from './host.types';
+import type { PartyCheck } from './party-check.types';
 
 const TABS: { id: GuildTab; label: string }[] = [
   { id: 'roster', label: 'Roster' },
@@ -112,7 +113,16 @@ export function isRule(view: SettingView): view is SettingView & { key: RuleKey 
  * settings through the host, at your layer or the project's; the Spell book lists the actions; the
  * Chronicle lists past campaigns. Esc closes it.
  */
-export function mountGuildHall({ client, host }: { client: GameClient; host: Host }): GuildHall {
+export function mountGuildHall({
+  client,
+  host,
+  partyCheck,
+}: {
+  client: GameClient;
+  host: Host;
+  /** The Armory checks a class's ACP agent (#199). */
+  partyCheck: PartyCheck;
+}): GuildHall {
   const panel = el('section', { className: 'guild-hall' });
   panel.setAttribute('aria-label', 'Guild Hall');
   panel.hidden = true;
@@ -152,6 +162,7 @@ export function mountGuildHall({ client, host }: { client: GameClient; host: Hos
   const armory = armoryTab({
     client,
     host,
+    partyCheck,
     changed: () => {
       if (tab === 'armory') render();
     },

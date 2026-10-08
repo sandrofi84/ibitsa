@@ -96,7 +96,8 @@ export class AgentConnection {
   initialize(): Promise<InitializeResponse> {
     return this.agent.request(methods.agent.initialize, {
       protocolVersion: PROTOCOL_VERSION,
-      clientCapabilities: { elicitation: { form: {} } },
+      // Terminal sign-in (#199): the party check's Sign in reruns the agent in a VS Code terminal.
+      clientCapabilities: { elicitation: { form: {} }, auth: { terminal: true } },
       clientInfo: { name: 'ibitsa', version: '0.1.0' },
     });
   }

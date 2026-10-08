@@ -4,6 +4,8 @@ import { button, el } from './dom';
 import { DEFAULT_CLASS, defaultHeroName, heroClasses } from './heroes';
 import type { Host } from './host.types';
 import type { NewQuestForm } from './new-quest-form.types';
+import { AGENTS_NOT_READY, readinessLine } from './party-check';
+import type { PartyCheck } from './party-check.types';
 
 /**
  * The council's welcome (§1.1, §7.1 screen 9, #180), once the New Quest form (spec §14.1, §4.1), and the
@@ -18,9 +20,12 @@ import type { NewQuestForm } from './new-quest-form.types';
 export function mountNewQuestForm({
   client,
   host,
+  partyCheck,
 }: {
   client: GameClient;
   host: Host;
+  /** The quick quest's hero sets out once its class's ACP agent passes the party check (#199). */
+  partyCheck: PartyCheck;
 }): NewQuestForm {
   const dialog = el('dialog', { className: 'new-quest council-welcome' });
   dialog.setAttribute('aria-label', 'Welcome');
@@ -101,7 +106,12 @@ export function mountNewQuestForm({
   classSelect.onchange = () => {
     if (!nameEdited) heroName.value = defaultHeroName(classSelect.value);
     fillSuggestions();
+    partyCheck.check([classSelect.value]);
+    // A Claude class needs no check, so no answer will redraw the line.
+    refreshBranches();
   };
+  const checkLine = el('div', { className: 'party-check' });
+  partyCheck.onChange(() => refreshBranches());
 
   const field = (label: string, control: HTMLElement) => {
     const wrapper = el('label');
@@ -114,6 +124,7 @@ export function mountNewQuestForm({
   const heroFields = el('div', { className: 'hero-fields' });
   heroFields.append(
     field('Hero class', classSelect),
+    checkLine,
     field('Hero name', heroName),
     nameSuggestions,
     field('Start from branch', baseSelect),
@@ -152,6 +163,7 @@ export function mountNewQuestForm({
     skip.hidden = quest;
     start.textContent = quest ? 'Start quest' : 'Help me find it';
     heroName.required = quest;
+    if (quest) partyCheck.check([classSelect.value]);
     refreshBranches();
     if (quest) classSelect.focus();
   }
@@ -175,6 +187,10 @@ export function mountNewQuestForm({
         ? { type: 'consultElder' as const, task }
         : { type: 'startQuest' as const, description: task, ...hero };
     if (intent.type !== 'consultElder' && (!hero.heroName || !hero.baseRef)) return;
+    if (intent.type !== 'consultElder' && !partyCheck.allReady([hero.classId])) {
+      error.textContent = AGENTS_NOT_READY;
+      return;
+    }
     // Ask the extension first: without credentials the onboarding card comes before the quest.
     pendingStart = () => {
       client.send(intent);
@@ -194,8 +210,13 @@ export function mountNewQuestForm({
     const current = baseSelect.value;
     baseSelect.replaceChildren(...(repo?.branches ?? []).map((b) => new Option(b, b)));
     baseSelect.value = repo?.branches.includes(current) ? current : (repo?.defaultBranch ?? '');
-    // Only the quest needs git: the elder just reads the folder.
-    start.disabled = mode !== 'ask' && repo === null;
+    // Only the quest needs git, and its hero's agent to pass the party check (#199): the elder just
+    // reads the folder.
+    const quest = mode !== 'ask';
+    checkLine.replaceChildren(
+      ...(quest ? [readinessLine({ partyCheck, classId: classSelect.value })] : []),
+    );
+    start.disabled = quest && (repo === null || !partyCheck.allReady([classSelect.value]));
     if (repo === null) {
       repoNote.textContent =
         "This folder isn't a git repository: a quest needs one for the hero's worktree.";

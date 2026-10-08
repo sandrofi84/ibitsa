@@ -1,6 +1,7 @@
 import { resolve } from 'node:path';
 import type { HostEvent } from '@ibitsa/protocol';
 import { describe, expect, it, vi } from 'vitest';
+import { AgentChecks } from './agent-checks';
 import { Armory } from './armory';
 import type { Credentials } from './credentials.types';
 import { GuildCouncil } from './guild-council';
@@ -45,6 +46,13 @@ function setup(overrides: Partial<HostChannelDeps> = {}) {
       open: () => {},
     }),
     armory: new Armory({ inspect: () => undefined, update: async () => {} }),
+    agentChecks: new AgentChecks({
+      agents: () => [],
+      checker: () => undefined,
+      cwd: () => '/ws',
+      env: () => ({}),
+    }),
+    openTerminal: vi.fn(),
     ...overrides,
   };
   return { channel: new HostChannel(deps), deps, posted };
@@ -330,5 +338,76 @@ describe('the Armory on the host channel (#182)', () => {
       layer: 'user',
     });
     expect(update).not.toHaveBeenCalled();
+  });
+});
+
+describe('the party check on the host channel (#199)', () => {
+  const codex = {
+    id: 'codex',
+    name: 'Codex',
+    command: 'codex-acp',
+    args: [],
+    env: {},
+    stateFolders: [],
+    domains: [],
+    signIn: 'codex login',
+    preset: true,
+  };
+
+  it('answers each agent with its check, and Sign in opens a terminal on its sign-in', async () => {
+    const agentChecks = new AgentChecks({
+      agents: () => [codex],
+      checker: () => ({
+        check: async () => ({ kind: 'signIn', message: 'Sign in first', terminal: null }),
+      }),
+      cwd: () => '/ws',
+      env: () => ({ PATH: '/bin' }),
+      platform: 'linux',
+      isFile: () => true,
+    });
+    const { channel, deps, posted } = setup({ agentChecks });
+    await channel.receive({ channel: 'host', type: 'checkAgents', agents: ['codex', 'nobody'] });
+    expect(posted).toEqual([
+      {
+        channel: 'host',
+        type: 'agentCheck',
+        check: {
+          agent: 'nobody',
+          name: 'nobody',
+          costReported: false,
+          result: { kind: 'failed', message: 'There\'s no agent "nobody" in ibitsa.agents.' },
+        },
+      },
+      {
+        channel: 'host',
+        type: 'agentCheck',
+        check: {
+          agent: 'codex',
+          name: 'Codex',
+          costReported: false,
+          result: {
+            kind: 'signIn',
+            message: 'Sign in first',
+            via: 'command',
+            command: 'codex login',
+          },
+        },
+      },
+    ]);
+    await channel.receive({ channel: 'host', type: 'signInAgent', agent: 'codex' });
+    expect(deps.openTerminal).toHaveBeenCalledWith({
+      name: 'Sign in to Codex',
+      command: 'codex login',
+      env: {},
+    });
+  });
+
+  it('opens nothing for an agent without a sign-in, and drops requests that do not check out', async () => {
+    const { channel, deps, posted } = setup();
+    await channel.receive({ channel: 'host', type: 'signInAgent', agent: 'codex' });
+    await channel.receive({ channel: 'host', type: 'checkAgents', agents: [] });
+    await channel.receive({ channel: 'host', type: 'checkAgents', agents: ['Not An Id'] });
+    expect(deps.openTerminal).not.toHaveBeenCalled();
+    expect(posted).toEqual([]);
   });
 });
