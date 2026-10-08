@@ -43,6 +43,19 @@ test("Home Village and Ibitsa show a pack's own pictures, and the game draws its
 }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
+  // One handler for the manifest, switched below: first a pack without a village or an Ibitsa
+  // of its own (the default pack has the drawn art's, #223), then one with stand-ins.
+  let withScenes = false;
+  await page.route('**/pack/pack.json', async (route) => {
+    const manifest = await (await route.fetch()).json();
+    if (withScenes)
+      manifest.scenes = { village: 'scenes/village.png', ibitsa: 'scenes/ibitsa.png' };
+    else {
+      delete manifest.scenes?.village;
+      delete manifest.scenes?.ibitsa;
+    }
+    await route.fulfill({ json: manifest });
+  });
   // A campaign is on, so Ibitsa stands on the horizon beside the village.
   await page.goto('/?fixture=live&campaign=separate');
   await expect
@@ -52,11 +65,7 @@ test("Home Village and Ibitsa show a pack's own pictures, and the game draws its
       ibitsa: 'drawn',
     });
 
-  await page.route('**/pack/pack.json', async (route) => {
-    const manifest = await (await route.fetch()).json();
-    manifest.scenes = { village: 'scenes/village.png', ibitsa: 'scenes/ibitsa.png' };
-    await route.fulfill({ json: manifest });
-  });
+  withScenes = true;
   // A green village island and a pale Ibitsa, at their slot sizes (128×96 and 48×32).
   await page.route('**/pack/scenes/village.png', (route) =>
     route.fulfill({

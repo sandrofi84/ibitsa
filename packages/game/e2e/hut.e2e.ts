@@ -232,11 +232,20 @@ test("the hut shows a pack's own room and table, and draws its own without them 
   page,
 }) => {
   const errors = watchErrors(page);
-  // A pack without a room or a table (the default pack has the drawn art's, #223).
+  // One handler for the manifest, switched below: first a pack without a room or a table (the
+  // default pack has the drawn art's, #223), then one with stand-ins.
+  let withScenes = false;
   await page.route('**/pack/pack.json', async (route) => {
     const manifest = await (await route.fetch()).json();
-    delete manifest.scenes?.hutInterior;
-    delete manifest.scenes?.hutTable;
+    if (withScenes)
+      manifest.scenes = {
+        hutInterior: 'scenes/hut-interior.png',
+        hutTable: 'scenes/hut-table.png',
+      };
+    else {
+      delete manifest.scenes?.hutInterior;
+      delete manifest.scenes?.hutTable;
+    }
     await route.fulfill({ json: manifest });
   });
   await page.goto('/?scene=hut&mode=roundTable');
@@ -244,12 +253,7 @@ test("the hut shows a pack's own room and table, and draws its own without them 
   expect(await hut(page)).toMatchObject({ room: 'drawn', table: 'drawn' });
 
   // The same pack with a room and a table: sand walls, and a brown table from y=176 down.
-  await page.unroute('**/pack/pack.json');
-  await page.route('**/pack/pack.json', async (route) => {
-    const manifest = await (await route.fetch()).json();
-    manifest.scenes = { hutInterior: 'scenes/hut-interior.png', hutTable: 'scenes/hut-table.png' };
-    await route.fulfill({ json: manifest });
-  });
+  withScenes = true;
   await page.route('**/pack/scenes/hut-interior.png', (route) =>
     route.fulfill({ body: scenePng({ rgba: [0xea, 0xd4, 0xaa, 255] }), contentType: 'image/png' }),
   );
