@@ -110,7 +110,12 @@ describe('HeroAgents (§11.5, #198)', () => {
       script,
       `require('node:fs').writeFileSync(${JSON.stringify(planFile)}, process.env.${SANDBOX_PLAN_ENV});`,
     );
-    const sandbox = new AgentSandbox({ script, node: { command: process.execPath } });
+    // The plan as macOS would build it, wherever the test runs.
+    const sandbox = new AgentSandbox({
+      script,
+      node: { command: process.execPath },
+      platform: 'darwin',
+    });
     const agents = (platform: NodeJS.Platform) =>
       new HeroAgents({
         agents: () => resolveAgents({ mine: { command: 'my-agent' } }),
@@ -144,7 +149,7 @@ describe('HeroAgents (§11.5, #198)', () => {
     expect(plan.command).toBe('codex-acp');
     expect(plan.config.network.allowedDomains).toEqual(['chatgpt.com', '*.oaiusercontent.com']);
     // The state folder with ~ expanded, and macOS's weaker isolation for Codex's TLS.
-    expect(plan.config.filesystem.allowWrite).toContain(join(homedir(), '.codex'));
+    expect(plan.config.filesystem.allowWrite).toContain(`${homedir()}/.codex`);
     expect(plan.config.enableWeakerNetworkIsolation).toBe(true);
   });
 

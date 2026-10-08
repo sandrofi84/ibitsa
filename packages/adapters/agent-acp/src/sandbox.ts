@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
-import { dirname, isAbsolute, join, resolve } from 'node:path';
+import { dirname, isAbsolute, join, posix, resolve } from 'node:path';
 import type { SandboxRuntimeConfig } from '@anthropic-ai/sandbox-runtime';
 import * as v from 'valibot';
 import type { AgentProcess } from './acp-adapter.types';
@@ -39,7 +39,8 @@ export function sandboxConfig(input: SandboxConfigInput): SandboxRuntimeConfig {
   return {
     network: { allowedDomains: [...profile.domains], deniedDomains: [], ...sockets },
     filesystem: {
-      denyRead: [...DENIED_READS.map((d) => join(home, d)), ...(linux ? DENIED_SOCKETS : [])],
+      // POSIX paths: the sandbox runs only on macOS and Linux.
+      denyRead: [...DENIED_READS.map((d) => posix.join(home, d)), ...(linux ? DENIED_SOCKETS : [])],
       allowWrite: [cwd, ...(sharedGit ? [sharedGit] : []), tmp, ...profile.stateFolders],
       denyWrite: [],
     },
