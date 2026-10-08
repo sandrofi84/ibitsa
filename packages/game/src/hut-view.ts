@@ -1,5 +1,15 @@
 import type { CouncilPose } from './council-look.types';
-import type { HutEvent, HutStep, HutView, Seat, WalkIn, WalkInPlan } from './hut-view.types';
+import type {
+  HutEvent,
+  HutStep,
+  HutView,
+  NamePlate,
+  NamePlateInput,
+  Seat,
+  TitleFit,
+  WalkIn,
+  WalkInPlan,
+} from './hut-view.types';
 
 /** The step tracker, left to right (§7.1). */
 export const HUT_STEPS: readonly { step: HutStep; label: string }[] = [
@@ -128,4 +138,50 @@ export function walkIns({ seats, seated, first, view, reducedMotion }: WalkInPla
       delayMs: i * WALK_STAGGER_MS,
       durationMs: Math.round((Math.abs(s.x - HUT_DOOR_X) / WALK_SPEED) * 1000),
     }));
+}
+
+/** The table's top edge (§9.2, #219): councillors stand behind it, hidden from it down. */
+export const TABLE_TOP = 176;
+
+/**
+ * The name plates' rows, on the table's front panel (#233): below its top, where a pack's table may
+ * draw the Book of Decisions, a candle or an inkwell, and plain wood in the game's own table too.
+ */
+export const NAME_ROWS = [TABLE_TOP + 24, TABLE_TOP + 38] as const;
+/** The "Book of Decisions" counter's plate, under the names. */
+export const DECISIONS_Y = TABLE_TOP + 54;
+/** A plate's padding either side of its title, and the least gap between two plates on a row. */
+export const PLATE_PAD = 3;
+export const PLATE_GAP = 4;
+/** The widest a plate may be; a longer title is shortened to fit (`fitTitle`). */
+export const PLATE_MAX = 92;
+
+/**
+ * Where each councillor's name plate goes (#233): centred under their seat on the first row, or,
+ * when any two neighbours' plates would touch, every other plate on the second row. A plate never
+ * leaves the room.
+ */
+export function placeNames({ seats, widths, room }: NamePlateInput): NamePlate[] {
+  const plates = seats.map((_, i) => Math.min(PLATE_MAX, (widths[i] ?? 0) + 2 * PLATE_PAD));
+  const crowded = seats.some((seat, i) => {
+    const next = seats[i + 1];
+    if (!next) return false;
+    const half = ((plates[i] ?? 0) + (plates[i + 1] ?? 0)) / 2;
+    return next.x - seat.x < half + PLATE_GAP;
+  });
+  return seats.map((seat, i) => {
+    const width = plates[i] ?? 0;
+    const x = Math.min(room - width / 2 - 2, Math.max(width / 2 + 2, seat.x));
+    const y = crowded && i % 2 === 1 ? NAME_ROWS[1] : NAME_ROWS[0];
+    return { id: seat.id, x: Math.round(x), y, width: Math.round(width) };
+  });
+}
+
+/** A title that fits a plate (#233): as it is, or cut with an ellipsis. */
+export function fitTitle({ title, measure }: TitleFit): string {
+  const room = PLATE_MAX - 2 * PLATE_PAD;
+  if (measure(title) <= room) return title;
+  let cut = title;
+  while (cut.length > 1 && measure(`${cut}…`) > room) cut = cut.slice(0, -1);
+  return `${cut.trimEnd()}…`;
 }

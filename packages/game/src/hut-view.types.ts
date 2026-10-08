@@ -65,3 +65,26 @@ export interface WalkInPlan {
   view: HutView;
   reducedMotion: boolean;
 }
+
+/** Placing the councillors' name plates on the table's front (#233). */
+export interface NamePlateInput {
+  seats: readonly Seat[];
+  /** Each seat's title as measured in the scene's font, in seat order. */
+  widths: readonly number[];
+  /** How wide the room is: a plate never leaves it. */
+  room: number;
+}
+
+/** A councillor's name plate: centred at `x`, `y`, and `width` wide. */
+export interface NamePlate {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+}
+
+/** Shortening a title to fit a plate, measured in the scene's font (#233). */
+export interface TitleFit {
+  title: string;
+  measure: (text: string) => number;
+}

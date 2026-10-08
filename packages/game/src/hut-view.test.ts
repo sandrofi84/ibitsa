@@ -1,6 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { councilPose, emptyHut, HUT_DOOR_X, reduceHut, seatHut, walkIns } from './hut-view';
-import type { HutEvent, HutMode, HutView } from './hut-view.types';
+import {
+  councilPose,
+  DECISIONS_Y,
+  emptyHut,
+  fitTitle,
+  HUT_DOOR_X,
+  NAME_ROWS,
+  PLATE_GAP,
+  PLATE_MAX,
+  PLATE_PAD,
+  placeNames,
+  reduceHut,
+  seatHut,
+  TABLE_TOP,
+  walkIns,
+} from './hut-view';
+import type { HutEvent, HutMode, HutView, NamePlate } from './hut-view.types';
 
 const ROSTER = [
   { id: 'elder', title: 'Elder', appearance: 'councillor.elder' },
@@ -195,5 +210,52 @@ describe('walking in (#219)', () => {
     expect(
       walkIns({ seats, seated: new Set(), first: true, view: convened, reducedMotion: true }),
     ).toEqual([]);
+  });
+});
+
+describe('name plates on the table (#233)', () => {
+  const seats = (xs: number[]) => xs.map((x, i) => ({ id: `c${i}`, x }));
+  // 8px monospace: about 5 px a letter.
+  const measure = (t: string) => t.length * 5;
+
+  it('puts every plate on the table front, below its top, so a drawn book or candle stays clear', () => {
+    for (const y of [...NAME_ROWS, DECISIONS_Y]) expect(y).toBeGreaterThanOrEqual(TABLE_TOP + 16);
+  });
+
+  it('keeps roomy plates on one row, centred under their seats', () => {
+    const plates = placeNames({ seats: seats([176, 240, 304]), widths: [30, 25, 30], room: 480 });
+    expect(plates.map((p) => p.y)).toEqual([NAME_ROWS[0], NAME_ROWS[0], NAME_ROWS[0]]);
+    expect(plates.map((p) => p.x)).toEqual([176, 240, 304]);
+    expect(plates[1]?.width).toBe(25 + 2 * PLATE_PAD);
+  });
+
+  it('staggers every other plate when any two neighbours would touch, and none touch on a row', () => {
+    const xs = [48, 96, 144, 192, 240, 288, 336, 384, 432];
+    const titles = ['Architect', 'Tester', 'Accessibility', 'Security', 'Elder', 'Designer'];
+    const widths = [...titles, 'Navigator', 'Scribe', 'Herald'].map(measure);
+    const plates = placeNames({ seats: seats(xs), widths, room: 480 });
+    expect(plates.filter((_, i) => i % 2 === 1).every((p) => p.y === NAME_ROWS[1])).toBe(true);
+    for (const row of NAME_ROWS) {
+      const on = plates.filter((p) => p.y === row);
+      for (let i = 1; i < on.length; i++) {
+        const [a, b] = [on[i - 1], on[i]] as [NamePlate, NamePlate];
+        expect(b.x - b.width / 2 - (a.x + a.width / 2)).toBeGreaterThanOrEqual(PLATE_GAP);
+      }
+    }
+  });
+
+  it('keeps a plate inside the room, and caps its width', () => {
+    const [left, right] = placeNames({ seats: seats([10, 470]), widths: [200, 60], room: 480 });
+    expect(left?.width).toBe(PLATE_MAX);
+    expect(left?.x).toBe(PLATE_MAX / 2 + 2);
+    expect((right?.x ?? 0) + (right?.width ?? 0) / 2).toBeLessThanOrEqual(478);
+  });
+
+  it('shortens only a title too long for a plate, with an ellipsis', () => {
+    expect(fitTitle({ title: 'Accessibility', measure })).toBe('Accessibility');
+    const long = fitTitle({ title: 'The Keeper of Very Long Councillor Names', measure });
+    expect(long.endsWith('…')).toBe(true);
+    expect(measure(long)).toBeLessThanOrEqual(PLATE_MAX - 2 * PLATE_PAD);
+    expect(long.startsWith('The Keeper of')).toBe(true);
   });
 });

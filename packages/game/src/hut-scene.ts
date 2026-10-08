@@ -2,25 +2,30 @@ import type { Manifest } from '@ibitsa/assets';
 import * as Phaser from 'phaser';
 import { councilLook } from './council-look';
 import type { CouncilPose } from './council-look.types';
-import type { HutRendered, SeatObjects } from './hut-scene.types';
-import { councilPose, HUT_DOOR_X, HUT_FEED, HUT_STEPS, seatHut, walkIns } from './hut-view';
-import type { HutFeed, HutView, WalkIn } from './hut-view.types';
+import type { HutRendered, PlateBox, SeatObjects } from './hut-scene.types';
+import {
+  councilPose,
+  DECISIONS_Y,
+  fitTitle,
+  HUT_DOOR_X,
+  HUT_FEED,
+  HUT_STEPS,
+  PLATE_PAD,
+  placeNames,
+  seatHut,
+  TABLE_TOP,
+  walkIns,
+} from './hut-view';
+import type { HutFeed, HutView, NamePlate, WalkIn } from './hut-view.types';
 import { PACK_KEY, SCENE_KEYS } from './pack-scene';
 import { recoloredCharacter, recolorOf } from './recolor';
 import { packLook } from './sitting-hut';
 
 const W = 480;
 const H = 270;
-/** The table's top edge (§9.2, #219): councillors stand behind it, hidden from it down. */
-const TABLE_TOP = 176;
 /** Where a councillor's feet are: 16 px below the table's edge, so it hides their lower third. */
 const FOOT = TABLE_TOP + 16;
 const TABLE_DEPTH = 10;
-/** Titles under the seats: one row, or two staggered rows when the table is crowded. */
-const LABEL_Y = TABLE_TOP + 14;
-const LABEL_STAGGER = 10;
-/** Seats closer than this share the table's front with their neighbours' titles: stagger them. */
-const ROOMY = 64;
 const STUDY_DOTS = ['•', '••', '•••'];
 
 const text = (color: string): Phaser.Types.GameObjects.Text.TextStyle => ({
@@ -31,6 +36,23 @@ const text = (color: string): Phaser.Types.GameObjects.Text.TextStyle => ({
 const CREAM = '#f3ead2';
 const DIM = '#8a7a66';
 const GOLD = '#f2c230';
+/** Name plates (#233): dark letters on a cream plate with a dark rim, gold for the speaker. */
+const INK = '#3e2731';
+const PLATE = 0xf3ead2;
+const PLATE_LIT = 0xf2c230;
+const PLATE_RIM = 0x3e2731;
+const PLATE_HEIGHT = 11;
+
+/** A plate's box, rounded to room pixels (#233). */
+const box = (plate: Phaser.GameObjects.Rectangle): PlateBox => {
+  const b = plate.getBounds();
+  return {
+    left: Math.round(b.left),
+    top: Math.round(b.top),
+    right: Math.round(b.right),
+    bottom: Math.round(b.bottom),
+  };
+};
 
 const reducedMotion = () =>
   window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
@@ -43,6 +65,9 @@ export class HutScene extends Phaser.Scene {
   private steps: { step: string; label: Phaser.GameObjects.Text }[] = [];
   private modeLabel!: Phaser.GameObjects.Text;
   private decisionsLabel!: Phaser.GameObjects.Text;
+  private decisionsPlate!: Phaser.GameObjects.Rectangle;
+  /** Measures titles in the plates' font, to size and place the plates (#233). */
+  private measurer!: Phaser.GameObjects.Text;
   private dots = 0;
   /** Until the first view is drawn: a hut opened mid-sitting shows everyone seated (#219). */
   private first = true;
@@ -89,6 +114,7 @@ export class HutScene extends Phaser.Scene {
       decisions: this.view.decisions,
       room: this.textures.exists(SCENE_KEYS.hutInterior) ? 'pack' : 'drawn',
       table: this.textures.exists(SCENE_KEYS.hutTable) ? 'pack' : 'drawn',
+      decisionsPlate: box(this.decisionsPlate),
       councillors: [...this.seats].map(([id, s]) => ({
         id,
         x: s.x,
@@ -99,6 +125,8 @@ export class HutScene extends Phaser.Scene {
         mark: s.mark.visible ? s.mark.text : null,
         hand: s.hand.visible,
         book: s.book.visible,
+        name: s.label.text,
+        plate: box(s.plate),
       })),
     };
   }
@@ -160,10 +188,12 @@ export class HutScene extends Phaser.Scene {
         .fillRect(W / 2 - 10, TABLE_TOP - 3, 9, 6)
         .fillRect(W / 2 + 1, TABLE_TOP - 3, 9, 6);
     }
+    this.decisionsPlate = this.plate({ x: W / 2, y: DECISIONS_Y });
     this.decisionsLabel = this.add
-      .text(W / 2, TABLE_TOP + 38, '', text(CREAM))
+      .text(W / 2, DECISIONS_Y, '', text(INK))
       .setOrigin(0.5)
-      .setDepth(TABLE_DEPTH + 2);
+      .setDepth(TABLE_DEPTH + 3);
+    this.measurer = this.add.text(0, 0, '', text(INK)).setVisible(false);
   }
 
   private drawTracker(): void {
@@ -194,6 +224,8 @@ export class HutScene extends Phaser.Scene {
     });
     this.modeLabel.setText(view.mode === 'chambers' ? 'Separate chambers' : 'Round table');
     this.decisionsLabel.setText(`Book of Decisions · ${view.decisions}`);
+    this.decisionsPlate.setSize(this.decisionsLabel.width + 2 * PLATE_PAD, PLATE_HEIGHT);
+    this.decisionsPlate.setOrigin(0.5);
 
     const seats = seatHut(view, W);
     const walks = walkIns({
@@ -204,28 +236,32 @@ export class HutScene extends Phaser.Scene {
       reducedMotion: reducedMotion(),
     });
     this.first = false;
-    const crowded = seats.length > 1 && (seats[1]?.x ?? 0) - (seats[0]?.x ?? 0) < ROOMY;
+    const measure = (t: string) => this.measurer.setText(t).width;
+    const titles = seats.map((seat) =>
+      fitTitle({ title: view.councillors.find((c) => c.id === seat.id)?.title ?? '', measure }),
+    );
+    const plates = placeNames({ seats, widths: titles.map(measure), room: W });
     const wanted = new Set(seats.map((s) => s.id));
     for (const [id, s] of this.seats) {
       if (wanted.has(id)) continue;
-      for (const o of [s.sprite, s.glow, s.label, s.hand, s.mark, s.book]) o.destroy();
+      for (const o of [s.sprite, s.glow, s.label, s.plate, s.hand, s.mark, s.book]) o.destroy();
       this.seats.delete(id);
     }
     seats.forEach((seat, i) => {
       const c = view.councillors.find((x) => x.id === seat.id);
       if (!c) return;
       const existing = this.seats.get(seat.id);
-      const labelY = LABEL_Y + (crowded && i % 2 === 1 ? LABEL_STAGGER : 0);
+      const title = titles[i] ?? c.title;
+      const plate = plates[i] ?? { id: seat.id, x: seat.x, y: DECISIONS_Y, width: 0 };
       const objects =
         existing &&
         existing.x === seat.x &&
         existing.appearance === c.appearance &&
-        existing.label.y === labelY
+        existing.label.text === title &&
+        existing.label.x === plate.x &&
+        existing.label.y === plate.y
           ? existing
-          : this.seat(
-              { id: seat.id, x: seat.x, appearance: c.appearance, title: c.title, labelY },
-              existing,
-            );
+          : this.seat({ id: seat.id, x: seat.x, appearance: c.appearance, title, plate }, existing);
       const walk = walks.find((w) => w.id === seat.id);
       if (walk) this.walkIn(objects, walk);
       const pose = this.animation(c, councilPose(view, c.id));
@@ -233,7 +269,8 @@ export class HutScene extends Phaser.Scene {
       if (!objects.walking) this.play(objects, pose);
       const speaking = view.speaker === c.id;
       objects.glow.setVisible(speaking && !objects.walking);
-      objects.label.setColor(speaking ? GOLD : CREAM).setVisible(!objects.walking);
+      objects.label.setVisible(!objects.walking);
+      objects.plate.setFillStyle(speaking ? PLATE_LIT : PLATE).setVisible(!objects.walking);
       objects.hand.setVisible(c.raisedHand && !objects.walking);
       objects.book.setVisible(view.stage === 'study' && c.report === 'pending' && !objects.walking);
     });
@@ -298,14 +335,22 @@ export class HutScene extends Phaser.Scene {
     return { key, character: this.manifest.characters[key] as Manifest['characters'][string] };
   }
 
+  /** A name plate, on the table's front (#233); sized by its caller. */
+  private plate({ x, y }: { x: number; y: number }): Phaser.GameObjects.Rectangle {
+    return this.add
+      .rectangle(x, y, 0, PLATE_HEIGHT, PLATE)
+      .setStrokeStyle(1, PLATE_RIM)
+      .setDepth(TABLE_DEPTH + 2);
+  }
+
   private seat(
     {
       id,
       x,
       appearance,
       title,
-      labelY,
-    }: { id: string; x: number; appearance: string; title: string; labelY: number },
+      plate,
+    }: { id: string; x: number; appearance: string; title: string; plate: NamePlate },
     replacing: SeatObjects | undefined,
   ): SeatObjects {
     if (replacing) {
@@ -313,6 +358,7 @@ export class HutScene extends Phaser.Scene {
         replacing.sprite,
         replacing.glow,
         replacing.label,
+        replacing.plate,
         replacing.hand,
         replacing.mark,
         replacing.book,
@@ -332,9 +378,12 @@ export class HutScene extends Phaser.Scene {
       glow: this.add.ellipse(x, FOOT - 26, 58, 66, 0xfff2b0, 0.3).setVisible(false),
       sprite: this.add.sprite(x, FOOT, look.texture).setOrigin(0.5, 1).setDepth(1),
       label: this.add
-        .text(x, labelY, title, text(CREAM))
+        .text(plate.x, plate.y, title, text(INK))
         .setOrigin(0.5)
-        .setDepth(TABLE_DEPTH + 2),
+        .setDepth(TABLE_DEPTH + 3),
+      plate: this.plate({ x: plate.x, y: plate.y })
+        .setSize(plate.width, PLATE_HEIGHT)
+        .setOrigin(0.5),
       hand: bubble.setDepth(TABLE_DEPTH + 3).setVisible(false),
       mark: this.add
         .text(x, FOOT - 54, '', text(CREAM))
