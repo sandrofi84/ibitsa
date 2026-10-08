@@ -13,3 +13,11 @@ export interface ReviewerView {
   /** Its place among the task's reviewers, for where it stands. */
   index: number;
 }
+
+/** A name plate's box on the map, in map pixels (#234). */
+export interface PlateBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}

@@ -1,5 +1,5 @@
 import type { Snapshot } from '@ibitsa/protocol';
-import type { ReviewerView } from './reviewers.types';
+import type { PlateBox, ReviewerView } from './reviewers.types';
 
 /**
  * The councillors to show on the map (§5.5, #140): while a task is being reviewed, everyone reviewing it
@@ -29,4 +29,28 @@ export function reviewersOf(snapshot: Snapshot): ReviewerView[] {
         }));
     }),
   );
+}
+
+/** The gap kept between stacked name plates. */
+const PLATE_GAP = 1;
+
+/**
+ * Where each name plate goes so none overlaps another (#234): the offset down from its own place, in
+ * order. Plates keep their place while clear; a plate that would overlap one already placed moves down
+ * a plate's height at a time until it's clear. So reviewers bunched at the hut's door show a neat stack
+ * of names, and spread out at their task points every plate is back under its own token.
+ */
+export function stackPlates(plates: readonly PlateBox[]): number[] {
+  const placed: PlateBox[] = [];
+  return plates.map((plate) => {
+    let dy = 0;
+    const at = () => ({ ...plate, y: plate.y + dy });
+    while (placed.some((other) => overlaps(at(), other))) dy += plate.height + PLATE_GAP;
+    placed.push(at());
+    return dy;
+  });
+}
+
+function overlaps(a: PlateBox, b: PlateBox): boolean {
+  return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
 }

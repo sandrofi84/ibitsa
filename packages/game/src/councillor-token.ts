@@ -4,13 +4,15 @@ import type { Point } from './layout.types';
 import { marker } from './map-markers';
 import { availablePose } from './poses';
 import type { MapPose } from './poses.types';
-import type { ReviewerView } from './reviewers.types';
+import type { PlateBox, ReviewerView } from './reviewers.types';
 
 /** A councillor's walk between the hut and a task point; a little quicker than a hero's. */
 const WALK_MS = 2_400;
 /** How long a councillor stays by the hero once the review is over, before walking home. */
 export const LINGER_MS = 1_500;
 const PARCHMENT = 0xf3ead2;
+/** A plate's offset under its token. */
+const PLATE_Y = 2;
 
 /**
  * A reviewing councillor on the map (§7.2, #140): a square token with a parchment border and a name
@@ -21,6 +23,7 @@ const PARCHMENT = 0xf3ead2;
 export class CouncillorToken {
   private readonly container: Phaser.GameObjects.Container;
   private readonly sprite: Phaser.GameObjects.Sprite;
+  private readonly plate: Phaser.GameObjects.Text;
   private readonly magnifier: Phaser.GameObjects.Sprite | Phaser.GameObjects.Graphics;
   private readonly badge: Phaser.GameObjects.Text;
   private readonly scene: Phaser.Scene;
@@ -48,13 +51,14 @@ export class CouncillorToken {
     this.sprite = scene.add.sprite(0, 0, character).setOrigin(0.5, 1);
     // Under the token, reaching away from the hero so it never covers it.
     const plate = scene.add
-      .text(-9 * side, 2, title.slice(0, 9), {
+      .text(-9 * side, PLATE_Y, title.slice(0, 9), {
         fontFamily: 'monospace',
         fontSize: '8px',
         color: '#1a1420',
         backgroundColor: '#f3ead2',
       })
       .setOrigin(side === 1 ? 0 : 1, 0);
+    this.plate = plate;
     // The magnifier, badge or "?" on the token's outer top corner.
     const corner = { x: 8 * side, y: -16 };
     this.magnifier = marker({ scene, kind: 'magnifier', at: corner });
@@ -107,7 +111,26 @@ export class CouncillorToken {
       failed: this.badge.visible && this.view.status === 'failed',
       leaving: this.leaving,
       pose: this.playing,
+      plate: this.plateBox({ stacked: true }),
     };
+  }
+
+  /** Its name plate's box on the map: in its own place, or where it's drawn now (#234). */
+  plateBox({ stacked }: { stacked: boolean }): PlateBox {
+    const width = this.plate.width;
+    const left = this.plate.x - (this.plate.originX === 1 ? width : 0);
+    const y = stacked ? this.plate.y : PLATE_Y;
+    return {
+      x: this.container.x + left,
+      y: this.container.y + y,
+      width,
+      height: this.plate.height,
+    };
+  }
+
+  /** Moves its name plate down from its own place, to clear the others' (#234). */
+  stackPlate(dy: number): void {
+    this.plate.setY(PLATE_Y + dy);
   }
 
   destroy(): void {

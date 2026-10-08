@@ -26,7 +26,7 @@ import type { MapPose } from './poses.types';
 import { badgeOf } from './pull-requests';
 import type { PullRequestBadge } from './pull-requests.types';
 import { recoloredCharacter, recolorOf } from './recolor';
-import { reviewersOf } from './reviewers';
+import { reviewersOf, stackPlates } from './reviewers';
 import { councillorAppearance, councillorTitle, packLook } from './sitting-hut';
 import type { ViewState } from './view-state';
 import type { MapProbe } from './world-scene.types';
@@ -388,6 +388,12 @@ export class WorldScene extends Phaser.Scene {
     cam.setFollowOffset(-inset / 2 / cam.zoom, 0);
     // Bubbles and icons keep their whole-map size while the map zooms (#75).
     for (const token of this.heroes.values()) token.keepSize(cam.zoom);
+    // Reviewers' name plates never overlap, while they walk together or stand side by side (#234).
+    const reviewers = [...this.reviewers.values()];
+    const offsets = stackPlates(reviewers.map((t) => t.plateBox({ stacked: false })));
+    reviewers.forEach((token, i) => {
+      token.stackPlate(offsets[i] ?? 0);
+    });
   }
 
   /** Moves the main camera to the director's aim: zoom, follow the hero, or ease back to the map. */

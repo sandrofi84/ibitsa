@@ -10,6 +10,7 @@ interface Reviewer {
   badge: number | null;
   failed: boolean;
   leaving: boolean;
+  plate: { x: number; y: number; width: number; height: number };
 }
 
 interface Probe {
@@ -81,6 +82,49 @@ test('councillors walk out to review, a magnifier each, and the hero waits under
     ]);
   const placed = (await probe(page, (p) => p.map()?.reviewers)) ?? [];
   expect(new Set(placed.map((r) => `${r.x},${r.y}`)).size).toBe(3);
+  expect(errors).toEqual([]);
+});
+
+test('reviewers setting out together keep their names apart, and back under them once spread out (#234)', async ({
+  page,
+}) => {
+  const errors = watchErrors(page);
+  await submitFirst(page);
+  const overlapping = async () => {
+    const plates = ((await probe(page, (p) => p.map()?.reviewers)) ?? []).map((r) => r.plate);
+    return plates.some((a, i) =>
+      plates
+        .slice(i + 1)
+        .some(
+          (b) =>
+            a.x < b.x + b.width &&
+            b.x < a.x + a.width &&
+            a.y < b.y + b.height &&
+            b.y < a.y + a.height,
+        ),
+    );
+  };
+  // All three on their way out: watched for the whole walk, no two names ever overlap.
+  await expect
+    .poll(() => probe(page, (p) => p.map()?.reviewers?.filter((r) => r.walking).length), {
+      timeout: 10_000,
+    })
+    .toBe(3);
+  await page.screenshot({ path: 'test-results/reviewers-names.png', style: UNCOVER });
+  for (let i = 0; i < 20; i++) {
+    expect(await overlapping()).toBe(false);
+    if ((await probe(page, (p) => p.map()?.reviewers?.some((r) => r.walking))) === false) break;
+    await page.waitForTimeout(100);
+  }
+  // Arrived and spread out beside the hero: every name is back under its own token.
+  await expect
+    .poll(() => probe(page, (p) => p.map()?.reviewers?.every((r) => !r.walking && r.magnifier)), {
+      timeout: 10_000,
+    })
+    .toBe(true);
+  const standing = (await probe(page, (p) => p.map()?.reviewers)) ?? [];
+  for (const r of standing) expect(r.plate.y - r.y).toBe(2);
+  expect(await overlapping()).toBe(false);
   expect(errors).toEqual([]);
 });
 

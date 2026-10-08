@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
 import type { Point } from './layout.types';
 import type { MapPose } from './poses.types';
-import type { ReviewerView } from './reviewers.types';
+import type { PlateBox, ReviewerView } from './reviewers.types';
 
 /** A reviewing councillor on the map as tests and probes see it (#140). */
 export interface ReviewerProbe {
@@ -24,6 +24,8 @@ export interface ReviewerProbe {
   leaving: boolean;
   /** The pose it plays (#222): `review` while its review runs. */
   pose: MapPose;
+  /** Its name plate where it's drawn now, after stacking clear of the others (#234). */
+  plate: PlateBox;
 }
 
 export interface CouncillorTokenOptions {
