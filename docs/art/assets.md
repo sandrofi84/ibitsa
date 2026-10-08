@@ -444,88 +444,88 @@ Tick each file as it lands (issue #223 tracks the batches). Generated from the l
 
 ### Batch 3: council figures (48×48)
 
-- [ ] `art/characters/councillor-elder/council/idle.grid`
-- [ ] `art/characters/councillor-elder/council/talk.grid`
-- [ ] `art/characters/councillor-elder/council/think.grid`
-- [ ] `art/characters/councillor-elder/council/raiseHand.grid`
-- [ ] `art/characters/councillor-elder/council/write.grid`
-- [ ] `art/characters/councillor-architect/council/idle.grid`
-- [ ] `art/characters/councillor-architect/council/talk.grid`
-- [ ] `art/characters/councillor-architect/council/think.grid`
-- [ ] `art/characters/councillor-architect/council/raiseHand.grid`
-- [ ] `art/characters/councillor-architect/council/write.grid`
-- [ ] `art/characters/councillor-security/council/idle.grid`
-- [ ] `art/characters/councillor-security/council/talk.grid`
-- [ ] `art/characters/councillor-security/council/think.grid`
-- [ ] `art/characters/councillor-security/council/raiseHand.grid`
-- [ ] `art/characters/councillor-security/council/write.grid`
-- [ ] `art/characters/councillor-tester/council/idle.grid`
-- [ ] `art/characters/councillor-tester/council/talk.grid`
-- [ ] `art/characters/councillor-tester/council/think.grid`
-- [ ] `art/characters/councillor-tester/council/raiseHand.grid`
-- [ ] `art/characters/councillor-tester/council/write.grid`
-- [ ] `art/characters/councillor-accessibility/council/idle.grid`
-- [ ] `art/characters/councillor-accessibility/council/talk.grid`
-- [ ] `art/characters/councillor-accessibility/council/think.grid`
-- [ ] `art/characters/councillor-accessibility/council/raiseHand.grid`
-- [ ] `art/characters/councillor-accessibility/council/write.grid`
-- [ ] `art/characters/councillor-designer/council/idle.grid`
-- [ ] `art/characters/councillor-designer/council/talk.grid`
-- [ ] `art/characters/councillor-designer/council/think.grid`
-- [ ] `art/characters/councillor-designer/council/raiseHand.grid`
-- [ ] `art/characters/councillor-designer/council/write.grid`
-- [ ] `art/characters/councillor-default/council/idle.grid`
-- [ ] `art/characters/councillor-default/council/talk.grid`
-- [ ] `art/characters/councillor-default/council/think.grid`
-- [ ] `art/characters/councillor-default/council/raiseHand.grid`
-- [ ] `art/characters/councillor-default/council/write.grid`
+- [x] `art/characters/councillor-elder/council/idle.grid`
+- [x] `art/characters/councillor-elder/council/talk.grid`
+- [x] `art/characters/councillor-elder/council/think.grid`
+- [x] `art/characters/councillor-elder/council/raiseHand.grid`
+- [x] `art/characters/councillor-elder/council/write.grid`
+- [x] `art/characters/councillor-architect/council/idle.grid`
+- [x] `art/characters/councillor-architect/council/talk.grid`
+- [x] `art/characters/councillor-architect/council/think.grid`
+- [x] `art/characters/councillor-architect/council/raiseHand.grid`
+- [x] `art/characters/councillor-architect/council/write.grid`
+- [x] `art/characters/councillor-security/council/idle.grid`
+- [x] `art/characters/councillor-security/council/talk.grid`
+- [x] `art/characters/councillor-security/council/think.grid`
+- [x] `art/characters/councillor-security/council/raiseHand.grid`
+- [x] `art/characters/councillor-security/council/write.grid`
+- [x] `art/characters/councillor-tester/council/idle.grid`
+- [x] `art/characters/councillor-tester/council/talk.grid`
+- [x] `art/characters/councillor-tester/council/think.grid`
+- [x] `art/characters/councillor-tester/council/raiseHand.grid`
+- [x] `art/characters/councillor-tester/council/write.grid`
+- [x] `art/characters/councillor-accessibility/council/idle.grid`
+- [x] `art/characters/councillor-accessibility/council/talk.grid`
+- [x] `art/characters/councillor-accessibility/council/think.grid`
+- [x] `art/characters/councillor-accessibility/council/raiseHand.grid`
+- [x] `art/characters/councillor-accessibility/council/write.grid`
+- [x] `art/characters/councillor-designer/council/idle.grid`
+- [x] `art/characters/councillor-designer/council/talk.grid`
+- [x] `art/characters/councillor-designer/council/think.grid`
+- [x] `art/characters/councillor-designer/council/raiseHand.grid`
+- [x] `art/characters/councillor-designer/council/write.grid`
+- [x] `art/characters/councillor-default/council/idle.grid`
+- [x] `art/characters/councillor-default/council/talk.grid`
+- [x] `art/characters/councillor-default/council/think.grid`
+- [x] `art/characters/councillor-default/council/raiseHand.grid`
+- [x] `art/characters/councillor-default/council/write.grid`
 
 ### Batch 4: the map
 
-- [ ] `art/map/water.grid`
-- [ ] `art/map/island-left.grid`
-- [ ] `art/map/island-middle.grid`
-- [ ] `art/map/island-right.grid`
-- [ ] `art/map/task-points/locked.grid`
-- [ ] `art/map/task-points/active.grid`
-- [ ] `art/map/task-points/done.grid`
-- [ ] `art/map/task-points/underReview.grid`
-- [ ] `art/map/bridge/lowered.grid`
-- [ ] `art/map/bridge/raised.grid`
-- [ ] `art/map/markers/padlock.grid`
-- [ ] `art/map/markers/behind.grid`
-- [ ] `art/map/markers/magnifier.grid`
-- [ ] `art/map/markers/hourglass.grid`
+- [x] `art/map/water.grid`
+- [x] `art/map/island-left.grid`
+- [x] `art/map/island-middle.grid`
+- [x] `art/map/island-right.grid`
+- [x] `art/map/task-points/locked.grid`
+- [x] `art/map/task-points/active.grid`
+- [x] `art/map/task-points/done.grid`
+- [x] `art/map/task-points/underReview.grid`
+- [x] `art/map/bridge/lowered.grid`
+- [x] `art/map/bridge/raised.grid`
+- [x] `art/map/markers/padlock.grid`
+- [x] `art/map/markers/behind.grid`
+- [x] `art/map/markers/magnifier.grid`
+- [x] `art/map/markers/hourglass.grid`
 
 ### Batch 5: buildings and UI
 
-- [ ] `art/buildings/hut.grid`
-- [ ] `art/buildings/guild-hall.grid`
-- [ ] `art/ui/dialogue-frame.grid`
-- [ ] `art/ui/activity/read.grid`
-- [ ] `art/ui/activity/search.grid`
-- [ ] `art/ui/activity/edit.grid`
-- [ ] `art/ui/activity/test.grid`
-- [ ] `art/ui/activity/run.grid`
-- [ ] `art/ui/activity/think.grid`
-- [ ] `art/ui/activity/other.grid`
+- [x] `art/buildings/hut.grid`
+- [x] `art/buildings/guild-hall.grid`
+- [x] `art/ui/dialogue-frame.grid`
+- [x] `art/ui/activity/read.grid`
+- [x] `art/ui/activity/search.grid`
+- [x] `art/ui/activity/edit.grid`
+- [x] `art/ui/activity/test.grid`
+- [x] `art/ui/activity/run.grid`
+- [x] `art/ui/activity/think.grid`
+- [x] `art/ui/activity/other.grid`
 
 ### Batch 6: scenes
 
-- [ ] `art/scenes/hut-interior.svg`
-- [ ] `art/scenes/hut-table.svg`
+- [x] `art/scenes/hut-interior.svg`
+- [x] `art/scenes/hut-table.svg`
 - [ ] `art/scenes/village.svg`
 - [ ] `art/scenes/ibitsa.svg`
 
 ### Batch 7: extra poses
 
-- [ ] `art/characters/councillor-elder/council/walk.grid`
-- [ ] `art/characters/councillor-architect/council/walk.grid`
-- [ ] `art/characters/councillor-security/council/walk.grid`
-- [ ] `art/characters/councillor-tester/council/walk.grid`
-- [ ] `art/characters/councillor-accessibility/council/walk.grid`
-- [ ] `art/characters/councillor-designer/council/walk.grid`
-- [ ] `art/characters/councillor-default/council/walk.grid`
+- [x] `art/characters/councillor-elder/council/walk.grid`
+- [x] `art/characters/councillor-architect/council/walk.grid`
+- [x] `art/characters/councillor-security/council/walk.grid`
+- [x] `art/characters/councillor-tester/council/walk.grid`
+- [x] `art/characters/councillor-accessibility/council/walk.grid`
+- [x] `art/characters/councillor-designer/council/walk.grid`
+- [x] `art/characters/councillor-default/council/walk.grid`
 - [x] `art/characters/councillor-elder/review.grid`
 - [x] `art/characters/councillor-architect/review.grid`
 - [x] `art/characters/councillor-security/review.grid`

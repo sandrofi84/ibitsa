@@ -1,0 +1,27 @@
+# dialogue box frame, 9-slice inset 8: corners fixed, edges and middle stretch
+size 24x24
+---
+.pppppppppppppppppppppp.
+pvvvvvvvvvvvvvvvvvvvvvvp
+pvba5555555555555555ba5p
+pva96666666666666666a95p
+pv56pppppppppppppppp665p
+pv56puuuuuuuuuuuuuup665p
+pv56pu222222222222up665p
+pv56pu222222222222up665p
+pv56pu222222222222up665p
+pv56pu222222222222up665p
+pv56pu222222222222up665p
+pv56pu222222222222up665p
+pv56pu222222222222up665p
+pv56pu222222222222up665p
+pv56pu222222222222up665p
+pv56pu222222222222up665p
+pv56pu222222222222up665p
+pv56pu222222222222up665p
+pv56puuuuuuuuuuuuuup665p
+pv56pppppppppppppppp665p
+pvba6666666666666666ba5p
+pva96666666666666666a95p
+pv555555555555555555555p
+.pppppppppppppppppppppp.

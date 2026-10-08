@@ -4,7 +4,7 @@ The art in `art/` is licensed separately from the code (spec §9.5).
 
 ## Tools
 
-- **Claude** (Anthropic), https://claude.ai — drew the 16×16 map sprites and their animations for the heroes and councillors, wrote the portrait specs, and converted the generated portraits to 64×64 Endesga 32 pixel art. Use of outputs is governed by Anthropic's terms for the plan used (Consumer Terms: https://www.anthropic.com/legal/consumer-terms).
+- **Claude** (Anthropic), https://claude.ai — drew the map sprites and their animations, the 48×48 council figures, the map tiles, buildings, UI and scenes; wrote the portrait specs; and converted the generated portraits to 64×64 Endesga 32 pixel art. Use of outputs is governed by Anthropic's terms for the plan used (Consumer Terms: https://www.anthropic.com/legal/consumer-terms).
 - **Image generation service:** _name and terms to be filled in_ — generated the hero and council portraits (`art/portraits/*.svg`) from those specs; they were then converted to the palette and size by Claude.
 
 ## Palette
@@ -23,3 +23,7 @@ _To be filled in._
 | `art/characters/councillor-*/*.grid` | Claude |
 | `art/portraits/hero-*.svg` | Image service, converted by Claude |
 | `art/portraits/councillor-*.svg` | Image service, converted by Claude |
+| `art/characters/councillor-*/council/*.grid` | Claude |
+| `art/map/**` | Claude |
+| `art/buildings/*.grid`, `art/ui/**` | Claude |
+| `art/scenes/*.svg` | Claude |

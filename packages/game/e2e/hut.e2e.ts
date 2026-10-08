@@ -193,11 +193,19 @@ test("the hut shows a pack's own room and table, and draws its own without them 
   page,
 }) => {
   const errors = watchErrors(page);
+  // A pack without a room or a table (the default pack has the drawn art's, #223).
+  await page.route('**/pack/pack.json', async (route) => {
+    const manifest = await (await route.fetch()).json();
+    delete manifest.scenes?.hutInterior;
+    delete manifest.scenes?.hutTable;
+    await route.fulfill({ json: manifest });
+  });
   await page.goto('/?scene=hut&mode=roundTable');
   await expect.poll(async () => (await hut(page))?.councillors.length, { timeout: 20_000 }).toBe(6);
   expect(await hut(page)).toMatchObject({ room: 'drawn', table: 'drawn' });
 
   // The same pack with a room and a table: sand walls, and a brown table from y=176 down.
+  await page.unroute('**/pack/pack.json');
   await page.route('**/pack/pack.json', async (route) => {
     const manifest = await (await route.fetch()).json();
     manifest.scenes = { hutInterior: 'scenes/hut-interior.png', hutTable: 'scenes/hut-table.png' };

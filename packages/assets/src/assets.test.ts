@@ -285,7 +285,8 @@ describe('validatePack', () => {
       ibitsa: 'scenes/ibitsa.png',
     });
     const good = copyPack();
-    mkdirSync(join(good, 'scenes'));
+    // The default pack may already have scenes of its own (the hut's, #223).
+    mkdirSync(join(good, 'scenes'), { recursive: true });
     for (const name of ['village', 'ibitsa'])
       writeFileSync(
         join(good, 'scenes', `${name}.png`),

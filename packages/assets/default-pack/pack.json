@@ -816,6 +816,10 @@
       "inset": 8
     }
   },
+  "scenes": {
+    "hutInterior": "scenes/hut-interior.png",
+    "hutTable": "scenes/hut-table.png"
+  },
   "sounds": {
     "needsYou": {
       "file": "sounds/needsYou.wav"
