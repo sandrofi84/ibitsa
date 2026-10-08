@@ -352,36 +352,36 @@ Tick each file as it lands (issue #223 tracks the batches). Generated from the l
 - [x] `art/portraits/hero-ranger.svg`
 - [x] `art/portraits/hero-rogue.svg`
 
-### Batch 2: the elder and councillors on the map, and their portraits
+### Batch 2: the elder and councillors on the map, and their portraits (done)
 
-- [ ] `art/characters/councillor-elder/idle.grid`
-- [ ] `art/characters/councillor-elder/walk.grid`
-- [ ] `art/characters/councillor-elder/work.grid`
-- [ ] `art/characters/councillor-architect/idle.grid`
-- [ ] `art/characters/councillor-architect/walk.grid`
-- [ ] `art/characters/councillor-architect/work.grid`
-- [ ] `art/characters/councillor-security/idle.grid`
-- [ ] `art/characters/councillor-security/walk.grid`
-- [ ] `art/characters/councillor-security/work.grid`
-- [ ] `art/characters/councillor-tester/idle.grid`
-- [ ] `art/characters/councillor-tester/walk.grid`
-- [ ] `art/characters/councillor-tester/work.grid`
-- [ ] `art/characters/councillor-accessibility/idle.grid`
-- [ ] `art/characters/councillor-accessibility/walk.grid`
-- [ ] `art/characters/councillor-accessibility/work.grid`
-- [ ] `art/characters/councillor-designer/idle.grid`
-- [ ] `art/characters/councillor-designer/walk.grid`
-- [ ] `art/characters/councillor-designer/work.grid`
-- [ ] `art/characters/councillor-default/idle.grid`
-- [ ] `art/characters/councillor-default/walk.grid`
-- [ ] `art/characters/councillor-default/work.grid`
-- [ ] `art/portraits/councillor-elder.svg`
-- [ ] `art/portraits/councillor-architect.svg`
-- [ ] `art/portraits/councillor-security.svg`
-- [ ] `art/portraits/councillor-tester.svg`
-- [ ] `art/portraits/councillor-accessibility.svg`
-- [ ] `art/portraits/councillor-designer.svg`
-- [ ] `art/portraits/councillor-default.svg`
+- [x] `art/characters/councillor-elder/idle.grid`
+- [x] `art/characters/councillor-elder/walk.grid`
+- [x] `art/characters/councillor-elder/work.grid`
+- [x] `art/characters/councillor-architect/idle.grid`
+- [x] `art/characters/councillor-architect/walk.grid`
+- [x] `art/characters/councillor-architect/work.grid`
+- [x] `art/characters/councillor-security/idle.grid`
+- [x] `art/characters/councillor-security/walk.grid`
+- [x] `art/characters/councillor-security/work.grid`
+- [x] `art/characters/councillor-tester/idle.grid`
+- [x] `art/characters/councillor-tester/walk.grid`
+- [x] `art/characters/councillor-tester/work.grid`
+- [x] `art/characters/councillor-accessibility/idle.grid`
+- [x] `art/characters/councillor-accessibility/walk.grid`
+- [x] `art/characters/councillor-accessibility/work.grid`
+- [x] `art/characters/councillor-designer/idle.grid`
+- [x] `art/characters/councillor-designer/walk.grid`
+- [x] `art/characters/councillor-designer/work.grid`
+- [x] `art/characters/councillor-default/idle.grid`
+- [x] `art/characters/councillor-default/walk.grid`
+- [x] `art/characters/councillor-default/work.grid`
+- [x] `art/portraits/councillor-elder.svg`
+- [x] `art/portraits/councillor-architect.svg`
+- [x] `art/portraits/councillor-security.svg`
+- [x] `art/portraits/councillor-tester.svg`
+- [x] `art/portraits/councillor-accessibility.svg`
+- [x] `art/portraits/councillor-designer.svg`
+- [x] `art/portraits/councillor-default.svg`
 
 ### Batch 3: council figures (48×48)
 
@@ -467,13 +467,13 @@ Tick each file as it lands (issue #223 tracks the batches). Generated from the l
 - [ ] `art/characters/councillor-accessibility/council/walk.grid`
 - [ ] `art/characters/councillor-designer/council/walk.grid`
 - [ ] `art/characters/councillor-default/council/walk.grid`
-- [ ] `art/characters/councillor-elder/review.grid`
-- [ ] `art/characters/councillor-architect/review.grid`
-- [ ] `art/characters/councillor-security/review.grid`
-- [ ] `art/characters/councillor-tester/review.grid`
-- [ ] `art/characters/councillor-accessibility/review.grid`
-- [ ] `art/characters/councillor-designer/review.grid`
-- [ ] `art/characters/councillor-default/review.grid`
+- [x] `art/characters/councillor-elder/review.grid`
+- [x] `art/characters/councillor-architect/review.grid`
+- [x] `art/characters/councillor-security/review.grid`
+- [x] `art/characters/councillor-tester/review.grid`
+- [x] `art/characters/councillor-accessibility/review.grid`
+- [x] `art/characters/councillor-designer/review.grid`
+- [x] `art/characters/councillor-default/review.grid`
 - [x] `art/characters/hero-paladin/test.grid`
 - [x] `art/characters/hero-paladin/ask.grid`
 - [x] `art/characters/hero-paladin/blocked.grid`
