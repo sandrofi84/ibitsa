@@ -1,3 +1,7 @@
+import { mkdtempSync, realpathSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { AgentProbe } from '@ibitsa/agent-acp';
 import type { AgentCheck, AgentCheckResult, AgentDefinition } from '@ibitsa/protocol';
 import type { AgentChecksDeps, KeptCheck, SignInTerminal } from './agent-checks.types';
@@ -8,7 +12,7 @@ export const CHECK_HOLDS_MS = 5 * 60_000;
 
 /**
  * The party check (§11.5, #199): before heroes set out on an ACP agent, start it once, ask it to
- * `initialize` and for a throwaway session in the workspace, and stop it. No prompt is sent, so
+ * `initialize` and for a throwaway session in a fresh temp folder, and stop it. No prompt is sent, so
  * nothing is spent. A check holds a few minutes for the same entry; checks of one agent at the same
  * time share one start.
  */
@@ -90,6 +94,24 @@ export class AgentChecks {
     return agent.signIn ? { name, command: agent.signIn, env: agent.env } : null;
   }
 
+  /**
+   * Runs a check in a fresh, empty temp folder (#200), not the workspace: the sandbox lets an agent
+   * write where it starts, and a check has no business there. The folder goes afterwards; on Windows
+   * it stays busy until the stopped agent has gone, so its removal retries, without holding the check.
+   */
+  private async inThrowawayFolder(
+    check: (cwd: string) => Promise<AgentProbe>,
+  ): Promise<AgentProbe> {
+    const cwd = realpathSync(mkdtempSync(join(this.deps.tmp?.() ?? tmpdir(), 'ibitsa-check-')));
+    try {
+      return await check(cwd);
+    } finally {
+      void rm(cwd, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 }).catch(() => {
+        // Left in temp, where the system clears it.
+      });
+    }
+  }
+
   private async start({
     agent,
     report,
@@ -104,7 +126,7 @@ export class AgentChecks {
     const checker = this.deps.checker(agent.id);
     // Always awaited, so the check is kept before it can report.
     const probe: AgentProbe = await (checker
-      ? checker.check({ cwd: this.deps.cwd() })
+      ? this.inThrowawayFolder((cwd) => checker.check({ cwd }))
       : Promise.resolve({ kind: 'failed', message: "Heroes can't start on it." }));
     if (probe.kind === 'ready') return report(probe);
     if (probe.kind === 'failed') {

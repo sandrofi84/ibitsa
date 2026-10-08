@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { homedir, tmpdir } from 'node:os';
+import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { AgentSandbox, ToolBridge } from '@ibitsa/agent-acp';
 import { ClaudeAdapter } from '@ibitsa/agent-claude-sdk';
@@ -214,11 +214,11 @@ export function activate(context: vscode.ExtensionContext): IbitsaApi {
         vscode.Uri.joinPath(context.extensionUri, 'dist', 'plugin').fsPath,
       ],
     },
-    // The party check (§11.5, #199): each ACP agent started once, in the workspace, nothing spent.
+    // The party check (§11.5, #199): each ACP agent started once, in a fresh temp folder (#200),
+    // nothing spent.
     agentChecks: new AgentChecks({
       agents: () => readAgents(config()),
       checker: (id) => heroAgents.acpAdapter(id),
-      cwd: () => workspaceDir ?? tmpdir(),
       env: () => heroEnv,
     }),
     openTerminal: ({ name, command, env }) => {
