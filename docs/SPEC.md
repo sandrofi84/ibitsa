@@ -281,7 +281,7 @@ Built so round table and separate chambers, and later changes to either, can be 
 | Ranger | Claude Sonnet |
 | Rogue | Claude Haiku |
 
-- Users can remap classes and add new classes (new model → new class with an appearance). (M8 planning:) through `ibitsa.classes` (id → name, model, appearance: a character sprite), edited in the Guild Hall's Armory; the adapter stays Claude until M9. **Recolor:** a hue shift and a few palette presets per class and per councillor, kept in settings and applied by the game when it draws. (#182:) The runtime puts the classes in play in the snapshot (`classes`) and starts each hero on its class's model; a class id nobody knows runs on Sonnet. A class in `ibitsa.classes` overrides a built-in by id, field by field; a new one gets Sonnet and a ranger's look unless it says otherwise, and a hero is named after it when it has no suggested names. `ibitsa.recolor` maps `class:<id>` or `councillor:<id>` to `{ hue: -180…180, preset }`, the presets being none, gold, frost, ember, verdant and shadow; an entry that doesn't check out is dropped alone. The game recolors a copy of the character's sheet pixel by pixel (map tokens and the hut's council sheets) and gives portraits the nearest CSS filter. The Armory writes one class or recolor at a time through the host (`writeClass`, `resetClass`, `writeRecolor`, `resetRecolor`), at your layer or the project's, with the layer each comes from and Reset (Remove for an added class). Appearances offered are the built-ins' characters and any in use; a pack's own characters join with #183.
+- Users can remap classes and add new classes (new model → new class with an appearance). (M8 planning:) through `ibitsa.classes` (id → name, model, appearance: a character sprite), edited in the Guild Hall's Armory; the adapter stays Claude until M9. **Recolor:** a hue shift and a few palette presets per class and per councillor, kept in settings and applied by the game when it draws. (#182:) The runtime puts the classes in play in the snapshot (`classes`) and starts each hero on its class's model; a class id nobody knows runs on Sonnet. A class in `ibitsa.classes` overrides a built-in by id, field by field; a new one gets Sonnet and a ranger's look unless it says otherwise, and a hero is named after it when it has no suggested names. `ibitsa.recolor` maps `class:<id>` or `councillor:<id>` to `{ hue: -180…180, preset }`, the presets being none, gold, frost, ember, verdant and shadow; an entry that doesn't check out is dropped alone. The game recolors a copy of the character's sheet pixel by pixel (map tokens and the hut's council sheets) and gives portraits the nearest CSS filter. The Armory writes one class or recolor at a time through the host (`writeClass`, `resetClass`, `writeRecolor`, `resetRecolor`), at your layer or the project's, with the layer each comes from and Reset (Remove for an added class). Appearances offered are the built-ins' characters and any in use; a pack's own characters join with #183. (M9 planning:) a class also names its `agent`: `claude` by default, or an ACP agent from `ibitsa.agents` (§11.5).
 
 ### 5.3 Branching strategies
 - **Separate:** each island is an independent branch off `main`. Islands are spread around the map. There is no merge step: each task/branch gets its own PR.
@@ -809,6 +809,31 @@ Verified 2026-10-04 against `@anthropic-ai/claude-agent-sdk@0.3.289` ([research]
 ### 11.5 ACP adapter
 - Generic adapter for any Agent Client Protocol agent (Codex, Gemini CLI, Copilot, OpenCode, …). Reports reduced capabilities; the core uses fallbacks (§11.3).
 
+Settled in M9 planning, checked on 2026-10-07 against `@agentclientprotocol/sdk@1.7.0` and the [ACP registry](https://agentclientprotocol.com/registry):
+- **Roles.** ACP runs **heroes and reviewers**; a party may mix agents, and a reviewer on another vendor is a second opinion. The elder, the council's sittings, lessons and council compaction stay on the Claude adapter (later, once the tool bridge has proven itself).
+- **Custom tools** (`submit_task`, the reviewer's verdict) reach the agent as an **MCP server**, the only way ACP allows: a small stdio MCP bridge bundled with the extension, listed in `session/new`'s `mcpServers`, which the agent launches and which talks back to the runtime over a local socket (a named pipe on Windows). Every ACP agent must support stdio MCP. An agent that never calls the tool still has **Mark done**. ACP-transport MCP replaces the bridge once it is stable.
+- **Agents** come from the setting `ibitsa.agents` (id → command, args, env, and for the sandbox its state folders and network domains). Built-in presets run agents you have installed yourself: Gemini CLI (`gemini --acp`), Copilot CLI (`copilot --acp`), Codex (`codex-acp`) and OpenCode (`opencode acp`). Ibitsa installs nothing; the Armory shows which presets it finds. Claude runs only through the native adapter (§11.6, claude.ai sign-in): no `claude-agent-acp` preset, and a custom entry that runs it is refused with the reason. One agent process per hero.
+- **Classes** gain `agent` (default `claude`, else an `ibitsa.agents` id) beside `model` (§5.2). An ACP agent's model is set through its session config option of category `model` when it offers one; otherwise it uses its own default, and the Armory says so. The built-in classes stay on Claude.
+- **Sign-in and the party check.** Ibitsa keeps no credentials for ACP agents. When the party assembly shows the chosen classes, and in the Armory per class, Ibitsa checks each ACP agent once (cached a few minutes): it starts it, runs `initialize` and a throwaway `session/new` in the repo (no prompt, no tokens) and closes it. Outcomes: **not installed**; **needs sign-in** (`auth_required`), with **Sign in** opening a VS Code terminal on the agent's own login when it offers terminal auth, else the command to run; **model not offered**, naming the ones it offers. Start quest waits until every agent in the party passes; a reviewer class is checked when reviews are on.
+- **Confinement.** On macOS and Linux (WSL and dev containers included) each ACP agent's process runs inside Anthropic's [sandbox runtime](https://github.com/anthropic-experimental/sandbox-runtime) (`@anthropic-ai/sandbox-runtime`, Seatbelt / bubblewrap): writes only to the worktree, temp and the preset's state folders; network only through its proxy, where the preset's domains pass and any other domain asks through the runtime's ask callback as a "Needs you" item, like a Claude hero's. The agent's own `session/request_permission` requests also become "Needs you" items with its options (allow-always → "Always allow for this quest"). The sandbox keeps the hard limits, so Auto mode is offered. A missing bubblewrap, socat or ripgrep is an `error` naming it, never a silent unsandboxed run.
+- **Unsandboxed** on native Windows, and for a custom agent without state folders and domains: the hero pane says "Not sandboxed by Ibitsa", every permission goes to "Needs you" and Auto mode is off, as for a Claude hero on Windows today. The notice points to WSL or a dev container for full sandboxing. An opt-in using the sandbox runtime's Windows mode (alpha: a dedicated local account and firewall rules installed once as admin; the account can't see per-user installs or the agents' logins) is a later issue, after a spike.
+- **Fallbacks** (§11.3):
+
+| Need | When the agent reports it | Fallback |
+|---|---|---|
+| HP | `usage_update` used / size → exact | unknown |
+| Gold | `usage_update.cost` in USD → exact; else per-turn token usage (unstable) × the prices in its `ibitsa.agents` entry → estimated | unknown (subscription agents often have no per-token cost) |
+| Gold pouch | — | turn-end enforcement when gold is known or estimated; otherwise the party check warns that the pouch can't stop this hero, and it still starts |
+| Message `next` | — | the adapter holds it until the turn ends |
+| Message `now` | — | `session/cancel`, then send |
+| Rest | the agent lists a `compact` command → `/compact` | Rest disabled, with a tooltip |
+| Resume after restart | `session/resume`, else `session/load` | an error item: this agent can't resume |
+| `/` actions | `available_commands_update` | none |
+| Activity | tool call kind (`execute` matching the test patterns of §5.4 → test, else run; read, edit, search, think…) | other |
+| Questions | `elicitation/create` in form mode → a question item | a plain-text question → a reply item |
+
+- **Tests.** A scripted fake ACP agent in the repo (the SDK's agent side over stdio) for unit and integration tests; `pnpm acp:probe` runs `initialize` and `session/new` against installed agents and prints their capabilities (no prompt, nothing spent), for the coverage table (§15, 8); an opt-in live smoke test, run only with approval, on Gemini CLI first.
+
 ### 11.6 Security and permissions
 - Per-role tool allowlists; reviewers and council read-only.
 - A short default allowlist of safe actions (read, search, run tests); everything else becomes a permission request in "Needs you".
@@ -897,7 +922,7 @@ Settled in [#9](https://github.com/sandrofi84/ibitsa/issues/9); see [ADR 0001](a
 | M6 | PRs | A git-host port (GitHub), a PR per island with drafts and ready for review, stacked bases and restacking, badges with polling, PR comments to the hero (§5.6, §14.5). |
 | M7 | Campaign lifecycle | Campaign record, keep/compact/empty, mid-campaign council and amendments, resume after restart (§4.8, §4.9, §12, §14.6). |
 | M8 | Customization | Settings layers, Guild Hall, councillor editing, class/model mapping, asset & sound packs with validator and recolor, sounds. |
-| M9 | Agent-agnostic | ACP adapter with capability fallbacks. |
+| M9 | Agent-agnostic | ACP adapter with capability fallbacks: heroes and reviewers on any ACP agent, sandboxed, with the party check (§11.5). |
 | M10 | Release | Real art, accessibility pass, docs, Marketplace + Open VSX publishing. |
 
 ### 14.1 M1: the hand-started quick quest
@@ -977,7 +1002,7 @@ Settled in M8 planning; the details are in §1.1, §4.7, §5.2, §7.1, §8.1, §
 5. ~~Councillor skill location so they don't clutter the normal `/` menu.~~ Settled in M3 planning and #98: the usual skill locations, `ibitsa-target: council` keeps them out of the hero's menu, and `disable-model-invocation` doesn't block subagent preloading (§4.7).
 6. ~~Whether Claude Code tolerates extra frontmatter fields (for action `target`), else sidecar.~~ Settled in M2 planning: a skill with an extra flat field loads and is listed by `supportedCommands()`; Ibitsa uses `ibitsa-target` and reads it from the file.
 7. ~~Confirm SDK invocation of custom skills via `/name` prompts.~~ Settled (#84): a real session sent `/greet Wren` ran the project skill with its argument (opt-in smoke test).
-8. ACP capability coverage per agent.
+8. ACP capability coverage per agent. (M9 planning:) measured with `pnpm acp:probe` and kept as a table in §11.5.
 9. Subscription (claude.ai) sign-in for the published extension: possible only with Anthropic's approval; not requested yet (§11.6).
 10. ~~Default max parallel parties.~~ Settled in M4 planning: 2, `ibitsa.parties.maxParallel` (§5.1).
 11. ~~Specialist dives (planning subagents): add later or not.~~ Settled in M3 planning: separate chambers (§4.3), measured against the round table (§4.10).
