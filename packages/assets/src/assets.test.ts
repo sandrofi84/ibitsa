@@ -8,10 +8,13 @@ import { buildDefaultPack } from './generate.ts';
 import type { Manifest } from './manifest.schema.ts';
 import { SOUND_LIMITS, SOUND_SLOTS } from './manifest.ts';
 import { defaultSounds, synth, wav, wavSeconds } from './sound.ts';
+import { rasterizeSvg } from './svg-rasterizer.ts';
 import { validatePack } from './validate.ts';
 
 const PACK = fileURLToPath(new URL('../default-pack/', import.meta.url));
 const TEXTURES = fileURLToPath(new URL('../../game/public/textures/', import.meta.url));
+/** The repo's art sources, which the committed pack is built from (§9.5). */
+const ART = fileURLToPath(new URL('../../../art/', import.meta.url));
 
 const temps: string[] = [];
 afterEach(() => {
@@ -221,7 +224,7 @@ describe('validatePack', () => {
 
 describe('regenerating', () => {
   it('produces exactly the committed default pack', () => {
-    const { manifest, files } = buildDefaultPack();
+    const { manifest, files } = buildDefaultPack({ art: { dir: ART, rasterize: rasterizeSvg } });
     const committed = readdirSync(PACK, { recursive: true, withFileTypes: true })
       .filter((e) => !e.isDirectory())
       // Pack paths use / on every OS.
