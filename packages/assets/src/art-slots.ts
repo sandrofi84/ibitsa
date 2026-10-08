@@ -1,4 +1,4 @@
-import { ANIMATIONS, CHARACTERS, FRAMES, TILE_INDEX } from './art.ts';
+import { CHARACTERS, characterAnimations, FRAMES, TILE_INDEX } from './art.ts';
 import type { ArtPiece, ArtSlot } from './art-source.types.ts';
 import {
   ACTIVITY_KINDS,
@@ -65,7 +65,7 @@ export function artSlots(): ArtSlot[] {
       {
         output: `characters/${name}.png`,
         pieces: rows({
-          animations: ANIMATIONS,
+          animations: characterAnimations(art.role),
           folder: `characters/${name}`,
           size: SPEC.characterFrame,
         }),

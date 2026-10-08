@@ -1,10 +1,10 @@
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import {
-  ANIMATIONS,
   activityIcons,
   bridge,
   CHARACTERS,
+  characterAnimations,
   characterSheet,
   councilSheet,
   dialogueFrame,
@@ -58,6 +58,12 @@ function councilEntry({
   };
 }
 
+/** A placeholder map animation's speed: brisk for walking and the one-shots, slow for resting. */
+function fpsOf(animation: string): number {
+  if (animation === 'walk' || animation === 'celebrate' || animation === 'hurt') return 8;
+  return animation === 'rest' ? 2 : 4;
+}
+
 /**
  * The default pack: manifest plus every file, keyed by path inside the pack. Each image is the art
  * from `art` where a source exists, else the code-drawn placeholder (§9.5); without `art`, all
@@ -81,9 +87,9 @@ export function buildDefaultPack({ art }: { art?: ArtSources } = {}): {
       sheet,
       frame: { width: SPEC.characterFrame, height: SPEC.characterFrame },
       animations: Object.fromEntries(
-        ANIMATIONS.map((animation, row) => [
+        characterAnimations(art.role).map((animation, row) => [
           animation,
-          { row, frames: FRAMES, fps: animation === 'walk' ? 8 : 4 },
+          { row, frames: FRAMES, fps: fpsOf(animation) },
         ]),
       ),
       portrait: face,

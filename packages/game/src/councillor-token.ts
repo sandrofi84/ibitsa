@@ -2,6 +2,8 @@ import type * as Phaser from 'phaser';
 import type { CouncillorTokenOptions, ReviewerProbe } from './councillor-token.types';
 import type { Point } from './layout.types';
 import { marker } from './map-markers';
+import { availablePose } from './poses';
+import type { MapPose } from './poses.types';
 import type { ReviewerView } from './reviewers.types';
 
 /** A councillor's walk between the hut and a task point; a little quicker than a hero's. */
@@ -30,6 +32,7 @@ export class CouncillorToken {
   private linger: Phaser.Time.TimerEvent | null = null;
   private readonly gone: () => void;
   private leaving = false;
+  private playing: MapPose = 'idle';
 
   constructor(options: CouncillorTokenOptions) {
     const { scene, layer, view, character, title, side, path, still, gone } = options;
@@ -102,6 +105,7 @@ export class CouncillorToken {
       badge: this.badge.visible && this.view.status === 'done' ? this.view.findings : null,
       failed: this.badge.visible && this.view.status === 'failed',
       leaving: this.leaving,
+      pose: this.playing,
     };
   }
 
@@ -113,6 +117,7 @@ export class CouncillorToken {
 
   private show(view: ReviewerView): void {
     this.magnifier.setVisible(view.status === 'running');
+    if (!this.walk) this.play(this.standing());
     if (view.status === 'failed') {
       this.badge.setText(' ? ').setBackgroundColor('#8a8a8a').setVisible(true);
     } else if (view.status === 'done' && view.findings > 0) {
@@ -123,7 +128,7 @@ export class CouncillorToken {
   }
 
   private arrived(): void {
-    this.play('idle');
+    this.play(this.standing());
     if (this.leaving) this.goHome();
   }
 
@@ -141,8 +146,17 @@ export class CouncillorToken {
     this.gone();
   }
 
-  private play(animation: 'walk' | 'idle'): void {
-    const key = `${this.character}:${animation}`;
+  /** Peering at the work while its review runs (#222), else standing by. */
+  private standing(): MapPose {
+    return this.view.status === 'running' ? 'review' : 'idle';
+  }
+
+  /** Plays a pose, or the nearest one its sheet has (§9.2). */
+  private play(pose: MapPose): void {
+    const has = (p: MapPose) => this.scene.anims.exists(`${this.character}:${p}`);
+    const shown = availablePose({ pose, has }) ?? 'idle';
+    this.playing = shown;
+    const key = `${this.character}:${shown}`;
     if (this.sprite.anims.currentAnim?.key !== key) this.sprite.play(key);
   }
 
