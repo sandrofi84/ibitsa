@@ -251,6 +251,33 @@ describe('the default pack from art sources (§9.5, #218)', () => {
       if (path !== 'map/tiles.png') expect(built.files[path]?.equals(bytes), path).toBe(true);
   });
 
+  it('keeps only the drawn optional poses of a character drawn in art/, so it never shows the placeholder', () => {
+    const strip = `size 16x16\nframes 4\n${`---\n${`${'j'.repeat(16)}\n`.repeat(16)}`.repeat(4)}`;
+    const built = buildDefaultPack({
+      art: {
+        dir: artDir({
+          'characters/hero-paladin/idle.grid': strip,
+          'characters/hero-paladin/ask.grid': strip,
+        }),
+      },
+    });
+    const paladin = built.manifest.characters['hero.paladin'];
+    const kept = Object.keys(paladin?.animations ?? {});
+    // Required poses always stay (a missing one is still the placeholder); ask is drawn; the rest go.
+    expect(kept).toEqual(['idle', 'walk', 'work', 'ask']);
+    // A dropped pose's row is cleared, and the poses keep their rows.
+    const sheet = built.files['characters/hero-paladin.png'] as Buffer;
+    const testRow = placeholder.manifest.characters['hero.paladin']?.animations.test?.row ?? -1;
+    expect(pngPixel(sheet, { x: 8, y: testRow * 16 + 8 })).toEqual(CLEAR);
+    expect(paladin?.animations.ask?.row).toBe(
+      placeholder.manifest.characters['hero.paladin']?.animations.ask?.row,
+    );
+    // A character without art keeps every placeholder pose.
+    expect(built.manifest.characters['hero.rogue']).toEqual(
+      placeholder.manifest.characters['hero.rogue'],
+    );
+  });
+
   it('refuses a slot for an image the pack doesn’t have', () => {
     expect(() =>
       applyArtSources({
