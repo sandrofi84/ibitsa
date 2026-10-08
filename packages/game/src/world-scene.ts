@@ -13,6 +13,7 @@ import {
   heroSpots,
   ibitsaSpot,
   layoutWorld,
+  namePlateSpot,
   overviewCenter,
   pathTo,
   reviewerPath,
@@ -186,6 +187,31 @@ export class WorldScene extends Phaser.Scene {
     return this.startLabels;
   }
 
+  /**
+   * A place's name on a small plate (#240): dark text on cream with a dark rim, like the hut's name
+   * plates (#238). White text straight on the map read poorly over the islands' white and turquoise
+   * foam; an opaque plate reads over any island art and the sea. A waiting (`dim`) island's plate
+   * stays opaque, its name in grey.
+   */
+  private namePlate({
+    at,
+    text,
+    dim = false,
+  }: {
+    at: Point;
+    text: string;
+    dim?: boolean;
+  }): Phaser.GameObjects.Container {
+    const label = this.add.text(0, 0, text, textStyle(dim ? '#5a6988' : '#3e2731')).setOrigin(0.5);
+    const width = Math.ceil(label.width) + 6;
+    const height = Math.ceil(label.height) + 2;
+    const plate = this.add
+      .rectangle(0, 0, width, height, 0xead4aa)
+      .setStrokeStyle(1, 0x3e2731)
+      .setOrigin(0.5);
+    return this.add.container(Math.round(at.x), Math.round(at.y), [plate, label]);
+  }
+
   /** The Guild Hall's middle, in world coordinates (tests click it, #179). */
   guildHallSpot(): { x: number; y: number } {
     const { guildHall } = this.layout.village;
@@ -291,7 +317,7 @@ export class WorldScene extends Phaser.Scene {
         }),
       this.guildHall(v.guildHall),
       ...this.labelBuildings(v),
-      this.add.text(v.x + 22, v.y + 70, 'HOME VILLAGE', textStyle()),
+      this.namePlate({ at: namePlateSpot(v), text: 'HOME VILLAGE' }),
       this.questLayer,
       this.empty,
       this.badgeLayer,
@@ -624,6 +650,7 @@ export class WorldScene extends Phaser.Scene {
     this.badgeLayer.removeAll(true);
     const stacked = snapshot.campaign?.branching === 'stacked';
     const islands: MapProbe['islands'] = [];
+    const names: string[] = [];
     let fresh = 0;
     this.prSpots.clear();
     this.questLayer.setVisible(!this.sunk);
@@ -639,7 +666,10 @@ export class WorldScene extends Phaser.Scene {
       if (first && (!stacked || k === 0)) this.dots(this.questLayer, pathTo(this.layout, first.id));
       const c = this.add.container(0, 0);
       this.drawIsland(c, l);
-      c.add(this.add.text(l.x + 8, l.y + 70, island.name.toUpperCase().slice(0, 28), textStyle()));
+      const name = island.name.toUpperCase().slice(0, 28);
+      names.push(name);
+      // Over the island but not in it, so a waiting island's plate stays opaque and readable.
+      const plate = this.namePlate({ at: namePlateSpot(l), text: name, dim });
       island.taskPoints.forEach((tp, i) => {
         const p = l.taskPoints[i];
         if (!p) return;
@@ -677,12 +707,12 @@ export class WorldScene extends Phaser.Scene {
       });
       // An island still waiting for a slot, a dependency or the island before it looks idle.
       c.setAlpha(dim ? 0.55 : 1);
-      this.questLayer.add(c);
+      this.questLayer.add([c, plate]);
       // Charted out of the fog (#180): a new possible location of Ibitsa rises, one after another.
       if (snapshot.campaign?.status === 'active' && !this.charted.has(island.id)) {
         this.charted.add(island.id);
         if (!reducedMotion())
-          this.chart({ island: c, layout: l, order: fresh++, alpha: dim ? 0.55 : 1 });
+          this.chart({ island: c, plate, layout: l, order: fresh++, alpha: dim ? 0.55 : 1 });
       }
       if (badge)
         this.drawBadge({ islandId: island.id, badge, at: { x: l.x + l.width - 12, y: l.y + 4 } });
@@ -692,7 +722,12 @@ export class WorldScene extends Phaser.Scene {
       this.drawBridge({ bridge: b, ...state });
       return { from: b.from, to: b.to, vertical: b.vertical, ...state };
     });
-    this.probe = { bounds: this.layout.bounds, islands, bridges };
+    this.probe = {
+      bounds: this.layout.bounds,
+      islands,
+      bridges,
+      placeNames: ['HOME VILLAGE', ...names],
+    };
   }
 
   /**
@@ -735,11 +770,14 @@ export class WorldScene extends Phaser.Scene {
   /** A fog bank over a newly charted island, lifting as the island rises (#180). */
   private chart({
     island,
+    plate,
     layout,
     order,
     alpha,
   }: {
     island: Phaser.GameObjects.Container;
+    /** Its name plate, which rises with it. */
+    plate: Phaser.GameObjects.Container;
     layout: IslandLayout;
     order: number;
     alpha: number;
@@ -756,8 +794,10 @@ export class WorldScene extends Phaser.Scene {
     }
     this.questLayer.add(fog);
     island.setAlpha(0);
+    plate.setAlpha(0);
     const delay = order * CHART_STEP_MS;
     this.tweens.add({ targets: island, alpha, delay, duration: CHART_MS, ease: 'Sine.easeOut' });
+    this.tweens.add({ targets: plate, alpha: 1, delay, duration: CHART_MS, ease: 'Sine.easeOut' });
     this.tweens.add({
       targets: fog,
       alpha: 0,

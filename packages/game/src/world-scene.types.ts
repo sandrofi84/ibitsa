@@ -9,6 +9,8 @@ export interface MapProbe {
   poses?: { heroId: string; pose: MapPose; wants: MapPose }[];
   /** The part of the map with something on it. */
   bounds: { x: number; y: number; width: number; height: number };
+  /** The place names on plates (#240): Home Village's, then each island's. */
+  placeNames?: string[];
   islands: {
     id: string;
     x: number;

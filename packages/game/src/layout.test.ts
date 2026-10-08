@@ -7,11 +7,13 @@ import {
   heroSpots,
   islandWidth,
   layoutWorld,
+  namePlateSpot,
   overviewCenter,
   pathTo,
   reviewerPath,
   reviewerSide,
   reviewerSpot,
+  SHORE_ROW,
   villageSpot,
   WORLD,
 } from './layout';
@@ -283,3 +285,17 @@ describe('reviewers on the map (#140)', () => {
 function pairs<T>(items: T[]): [T, T][] {
   return items.flatMap((a, i) => items.slice(i + 1).map((b): [T, T] => [a, b]));
 }
+
+describe('name plates (#240)', () => {
+  it('centres a place’s name on its shore line, whatever its width', () => {
+    expect(namePlateSpot({ x: 100, y: 40, middles: 1 })).toEqual({ x: 164, y: 40 + SHORE_ROW });
+    expect(namePlateSpot({ x: 0, y: 0, middles: 3 })).toEqual({ x: islandWidth(3) / 2, y: 74 });
+  });
+
+  it('puts Home Village’s on its shore too', () => {
+    const { village } = layoutWorld(null);
+    const spot = namePlateSpot(village);
+    expect(spot.y - village.y).toBe(SHORE_ROW);
+    expect(spot.x).toBe(village.x + islandWidth(village.middles) / 2);
+  });
+});
