@@ -8,9 +8,11 @@ import {
   REQUIRED_ANIMATIONS,
   REQUIRED_COUNCIL_ANIMATIONS,
   REQUIRED_MARKERS,
+  SCENE_SIZES,
   SCENE_SLOTS,
   SOUND_LIMITS,
   SPEC,
+  TILE_NAMES,
 } from './manifest.ts';
 import { readPngSize } from './png.ts';
 import { wavSeconds } from './sound.ts';
@@ -28,6 +30,8 @@ function listFiles(dir: string): string[] {
 
 export function validatePack(dir: string): PackValidation {
   const errors: string[] = [];
+  /** Things a pack may still have but shouldn't need; they don't stop it being used. */
+  const warnings: string[] = [];
   const files = listFiles(dir);
 
   let total = 0;
@@ -152,6 +156,14 @@ export function validatePack(dir: string): PackValidation {
 
   const t = manifest.tiles;
   if (t.tileSize !== SPEC.tile) errors.push(`tiles: tileSize ${t.tileSize}, expected ${SPEC.tile}`);
+  // Older packs list tiles the game never drew (#221): still fine, but say they can go.
+  const unused = Object.keys(t.tiles).filter(
+    (name) => !(TILE_NAMES as readonly string[]).includes(name),
+  );
+  if (unused.length > 0)
+    warnings.push(
+      `tiles: ${unused.join(', ')} ${unused.length === 1 ? 'is' : 'are'} no longer used; only water is drawn`,
+    );
   const slots = Math.max(0, ...Object.values(t.tiles).map((x) => x.index + (x.frames ?? 1)));
   checkImage({
     file: t.image,
@@ -248,15 +260,11 @@ export function validatePack(dir: string): PackValidation {
   if (d.inset * 2 >= d.size) errors.push('dialogue frame: inset leaves no middle slice');
   checkImage({ file: d.image, label: 'dialogue frame', check: exactly(d.size, d.size) });
 
-  // Full-scene pictures (#219): optional, each exactly the scene size.
+  // Scene pictures (#219, #221): optional, each exactly its slot's size.
   for (const slot of SCENE_SLOTS) {
     const file = manifest.scenes?.[slot];
-    if (file)
-      checkImage({
-        file,
-        label: `scene ${slot}`,
-        check: exactly(SPEC.scene.width, SPEC.scene.height),
-      });
+    const size = SCENE_SIZES[slot];
+    if (file) checkImage({ file, label: `scene ${slot}`, check: exactly(size.width, size.height) });
   }
 
   // Sounds (§9.4, #184): there, and not too long; a WAV's length is read from its header.
@@ -273,5 +281,5 @@ export function validatePack(dir: string): PackValidation {
       errors.push(`sound ${slot}: ${seconds.toFixed(1)} s, at most ${limit} s`);
   }
 
-  return errors.length > 0 ? { ok: false, errors } : { ok: true, manifest };
+  return errors.length > 0 ? { ok: false, errors } : { ok: true, manifest, warnings };
 }

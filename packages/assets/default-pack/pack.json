@@ -744,18 +744,6 @@
       "water": {
         "index": 0,
         "frames": 4
-      },
-      "grass": {
-        "index": 4
-      },
-      "sand": {
-        "index": 5
-      },
-      "shore": {
-        "index": 6
-      },
-      "pathDot": {
-        "index": 7
       }
     }
   },

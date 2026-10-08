@@ -21,6 +21,13 @@ export const SPEC = {
   marker: 12,
   /** Full-scene pictures, e.g. the hut interior and its table layer (§9.2, #219). */
   scene: { width: 480, height: 270 },
+  /**
+   * Home Village (#221): the whole village island in one picture, the island's own size at one middle
+   * slice (48 + 32 + 48 wide, 96 tall). The hut and the Guild Hall stand on it as their own images.
+   */
+  village: { width: 128, height: 96 },
+  /** Ibitsa on the horizon (#221): a far-off silhouette the game fades into its own mist. */
+  ibitsa: { width: 48, height: 32 },
 } as const;
 
 /**
@@ -79,8 +86,19 @@ export const REQUIRED_COUNCIL_ANIMATIONS = [
   'raiseHand',
   'write',
 ] as const satisfies readonly (typeof COUNCIL_ANIMATIONS)[number][];
-/** The full-scene pictures a pack may fill (#219), each SPEC.scene in size; the game draws its own without. */
-export const SCENE_SLOTS = ['hutInterior', 'hutTable'] as const;
+/**
+ * The scene pictures a pack may fill (#219, #221), each its own fixed size; the game draws its own
+ * without them.
+ */
+export const SCENE_SIZES = {
+  hutInterior: SPEC.scene,
+  hutTable: SPEC.scene,
+  village: SPEC.village,
+  ibitsa: SPEC.ibitsa,
+} as const;
+export const SCENE_SLOTS = ['hutInterior', 'hutTable', 'village', 'ibitsa'] as const;
+/** The only tile the game draws (§9.2, #221); older packs may still list grass, sand, shore, pathDot. */
+export const TILE_NAMES = ['water'] as const;
 export const TASK_POINT_STATES = ['locked', 'active', 'done', 'underReview'] as const;
 /** The protocol's `ActivityKind`s (spec §5.4); assets has no dependency on protocol, so they repeat here. */
 export const ACTIVITY_KINDS = ['read', 'search', 'edit', 'test', 'run', 'think', 'other'] as const;

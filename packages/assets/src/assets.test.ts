@@ -15,6 +15,7 @@ import { engineTextures } from './art.ts';
 import { buildDefaultPack } from './generate.ts';
 import type { Manifest } from './manifest.schema.ts';
 import { SOUND_LIMITS, SOUND_SLOTS } from './manifest.ts';
+import { Raster } from './raster.ts';
 import { defaultSounds, synth, wav, wavSeconds } from './sound.ts';
 import { rasterizeSvg } from './svg-rasterizer.ts';
 import { validatePack } from './validate.ts';
@@ -264,6 +265,67 @@ describe('validatePack', () => {
         'scene hutTable: table.png is 64×64, expected 480×270',
       ],
     });
+  });
+
+  it('builds Home Village and Ibitsa from art, and accepts them only at their sizes (#221)', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ibitsa-scene-art-'));
+    temps.push(dir);
+    mkdirSync(join(dir, 'scenes'));
+    writeFileSync(
+      join(dir, 'scenes', 'village.svg'),
+      '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="96" viewBox="0 0 128 96" shape-rendering="crispEdges"><rect width="128" height="64" fill="#63c74d"/></svg>',
+    );
+    writeFileSync(
+      join(dir, 'scenes', 'ibitsa.grid'),
+      `size 48x32\n---\n${`${'k'.repeat(48)}\n`.repeat(32)}`,
+    );
+    const built = buildDefaultPack({ art: { dir, rasterize: rasterizeSvg } });
+    expect(built.manifest.scenes).toEqual({
+      village: 'scenes/village.png',
+      ibitsa: 'scenes/ibitsa.png',
+    });
+    const good = copyPack();
+    mkdirSync(join(good, 'scenes'));
+    for (const name of ['village', 'ibitsa'])
+      writeFileSync(
+        join(good, 'scenes', `${name}.png`),
+        built.files[`scenes/${name}.png`] as Buffer,
+      );
+    editManifest(good, (m) => {
+      m.scenes = built.manifest.scenes;
+    });
+    expect(validatePack(good)).toMatchObject({ ok: true, warnings: [] });
+
+    const bad = copyPack();
+    editManifest(bad, (m) => {
+      m.scenes = { village: 'map/hut.png', ibitsa: 'map/hut.png' };
+    });
+    expect(validatePack(bad)).toEqual({
+      ok: false,
+      errors: [
+        'scene village: map/hut.png is 64×64, expected 128×96',
+        'scene ibitsa: map/hut.png is 64×64, expected 48×32',
+      ],
+    });
+  });
+
+  it('still accepts an older pack listing the tiles the game never drew, with a warning (#221)', () => {
+    const dir = copyPack();
+    writeFileSync(join(dir, 'map', 'tiles.png'), new Raster(8 * 16, 16).png());
+    editManifest(dir, (m) => {
+      m.tiles.tiles = {
+        water: { index: 0, frames: 4 },
+        grass: { index: 4 },
+        sand: { index: 5 },
+        shore: { index: 6 },
+        pathDot: { index: 7 },
+      };
+    });
+    expect(validatePack(dir)).toMatchObject({
+      ok: true,
+      warnings: ['tiles: grass, sand, shore, pathDot are no longer used; only water is drawn'],
+    });
+    expect(validatePack(PACK)).toMatchObject({ ok: true, warnings: [] });
   });
 
   it('rejects images whose size does not match the manifest', () => {
