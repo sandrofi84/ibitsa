@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { posix, win32 } from 'node:path';
@@ -9,7 +9,7 @@ import {
   type SpawnRequest,
   spawnAgent,
 } from '@ibitsa/agent-acp';
-import type { AgentDefinition, AgentView } from '@ibitsa/protocol';
+import type { AgentView } from '@ibitsa/protocol';
 import type { AgentAdapter } from '@ibitsa/runtime';
 import type { CommandLookup, HeroAgentsDeps } from './hero-agents.types';
 
@@ -102,13 +102,24 @@ export function spawnOnWindows(request: SpawnRequest): AgentProcess {
   if (!path || !/\.(cmd|bat)$/i.test(path)) {
     return spawnAgent({ ...request, command: path ?? request.command });
   }
-  return spawn([path, ...request.args].map(quoteForCmd).join(' '), {
+  const child = spawn([path, ...request.args].map(quoteForCmd).join(' '), {
     cwd: request.cwd,
     env: request.env,
     shell: true,
     stdio: ['pipe', 'pipe', 'pipe'],
     windowsHide: true,
   });
+  // Killing cmd.exe would leave the agent it started running, so stop the whole tree.
+  return Object.assign(child, { kill: () => killTree(child.pid) });
+}
+
+/** Stops a process and everything it started (Windows' `taskkill /t`). */
+function killTree(pid: number | undefined): boolean {
+  if (pid === undefined) return false;
+  execFile('taskkill', ['/pid', String(pid), '/t', '/f'], { windowsHide: true }, () => {
+    // Already gone, or nothing more to do: either way the hero's session is closed.
+  });
+  return true;
 }
 
 /** One argument for cmd.exe: quoted when it has spaces or cmd's special characters. */
