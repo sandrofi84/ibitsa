@@ -9,13 +9,20 @@ export const CLAUDE_AGENT = 'claude';
  * The agents Ibitsa knows how to start (§11.5). Ibitsa installs none of them. Only Codex has a
  * sandbox profile so far, measured in the #195 spike; the others run unsandboxed until theirs is.
  */
+/**
+ * Codex's session settings (#214): no ChatGPT connectors (`codex_apps`). They act on the apps
+ * connected to the user's ChatGPT account through `chatgpt.com`, which the sandbox has to allow, so
+ * only Codex can keep a hero from them.
+ */
+export const CODEX_CONFIG = JSON.stringify({ features: { apps: false } });
+
 export const AGENT_PRESETS: readonly AgentDefinition[] = [
   {
     id: 'codex',
     name: 'Codex',
     command: 'codex-acp',
     args: [],
-    env: {},
+    env: { CODEX_CONFIG },
     stateFolders: ['~/.codex'],
     domains: ['chatgpt.com', '*.oaiusercontent.com'],
     weakerNetworkIsolation: true,

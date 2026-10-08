@@ -2,7 +2,13 @@
 
 export type { ActionDraft, ActionInfo, ActionPreview } from './actions.types';
 export type { AgentEvent } from './agent-events.types';
-export { AGENT_PRESETS, agentName, CLAUDE_AGENT, resolveAgents } from './agents';
+export {
+  AGENT_PRESETS,
+  agentName,
+  CLAUDE_AGENT,
+  CODEX_CONFIG,
+  resolveAgents,
+} from './agents';
 export { type AgentSetting, AgentSettingSchema } from './agents.schema';
 export type {
   AgentCheck,
