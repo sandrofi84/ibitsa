@@ -273,14 +273,18 @@ const DEMO_RULES: SettingView[] = [
   }),
 ];
 
-/** The packs a fresh setup might find (#183): the default, one of yours, and a project's that's broken. */
+/**
+ * The packs a fresh setup might find (#183): the default, one of yours, a project's that's broken, and
+ * an older one of yours that still lists tiles the game no longer draws (#235): usable, with a warning.
+ */
 const DEMO_PACKS: PackView[] = [
-  { id: 'default', name: 'Default', scope: 'builtin', errors: [], preview: null },
+  { id: 'default', name: 'Default', scope: 'builtin', errors: [], warnings: [], preview: null },
   {
     id: 'user:retro',
     name: 'retro',
     scope: 'user',
     errors: [],
+    warnings: [],
     preview: {
       sheet: '/pack/characters/hero-paladin.png',
       frameWidth: 16,
@@ -295,6 +299,15 @@ const DEMO_PACKS: PackView[] = [
     name: 'half-done',
     scope: 'project',
     errors: ['characters: missing "hero.ranger"', 'map/tiles.png: 64×16, expected 96×16'],
+    warnings: [],
+    preview: null,
+  },
+  {
+    id: 'user:classic',
+    name: 'classic',
+    scope: 'user',
+    errors: [],
+    warnings: ['tiles: grass, sand are no longer used; only water is drawn'],
     preview: null,
   },
 ];

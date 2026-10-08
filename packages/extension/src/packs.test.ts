@@ -61,6 +61,22 @@ describe('PackLibrary (#183)', () => {
     ]);
   });
 
+  it("passes on a usable pack's warnings, and still gives its folder (#235)", () => {
+    const { home, workspace, good } = folders();
+    // An older pack that still lists a tile the game no longer draws.
+    const manifest = JSON.parse(readFileSync(join(good, 'pack.json'), 'utf8'));
+    manifest.tiles.tiles.grass = { index: 1 };
+    writeFileSync(join(good, 'pack.json'), JSON.stringify(manifest));
+    const library = new PackLibrary({ home, workspace, url: (p) => p });
+    const retro = library.list().find((p) => p.id === 'user:retro');
+    expect(retro?.errors).toEqual([]);
+    expect(retro?.warnings).toEqual(['tiles: grass is no longer used; only water is drawn']);
+    expect(library.dir('user:retro')).toBe(good);
+    // The default and a broken pack carry none.
+    expect(library.list().find((p) => p.id === 'default')?.warnings).toEqual([]);
+    expect(library.list().find((p) => p.id === 'project:broken')?.warnings).toEqual([]);
+  });
+
   it('has only the default without pack folders or a workspace', () => {
     const home = mkdtempSync(join(tmpdir(), 'ibitsa-empty-'));
     dirs.push(home);

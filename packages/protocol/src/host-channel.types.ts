@@ -31,6 +31,8 @@ export interface PackView {
   scope: 'builtin' | 'user' | 'project';
   /** The validator's errors; a pack with any can't be used. */
   errors: string[];
+  /** The validator's warnings (#235), e.g. tiles no longer used: shown, but the pack can still be used. */
+  warnings: string[];
   /** A character's walk, for the live preview; null when the pack has none to show. */
   preview: {
     sheet: string;

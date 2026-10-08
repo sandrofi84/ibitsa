@@ -1,12 +1,14 @@
 import type { PackView, SettingKey, SettingValue, SettingView } from '@ibitsa/protocol';
 import { button, el } from './dom';
+import type { PackStatus } from './guild-packs.types';
 
 /** How much bigger the preview draws a 16×16 character. */
 const PREVIEW_SCALE = 3;
 
 /**
- * The Guild Hall's Packs tab (§9.3, #183): each pack found, its validator errors, a live preview of a
- * character walking, and "Use this pack". A pack with errors can't be used.
+ * The Guild Hall's Packs tab (§9.3, #183): each pack found, its validator errors and warnings, a live
+ * preview of a character walking, and "Use this pack". A pack with errors can't be used; one with only
+ * warnings can (#235).
  */
 export function packsTab({
   packs,
@@ -97,18 +99,40 @@ function packEntry({
   const li = el('li', { className: `entry pack${active ? ' active' : ''}` });
   li.append(el('strong', { text: pack.name }), ` (${packSource(pack.scope)})`);
   if (pack.preview) li.append(preview(pack.preview));
+  const status = packStatus(pack);
   if (active) li.append(' ', el('span', { className: 'layer user', text: 'In use' }));
   else {
     const use = button({ label: 'Use this pack', onClick: () => onUse(pack.id) });
-    use.disabled = pack.errors.length > 0;
+    use.disabled = !status.usable;
     li.append(' ', use);
   }
-  if (pack.errors.length > 0) {
-    const errors = el('ul', { className: 'pack-errors' });
-    for (const e of pack.errors) errors.append(el('li', { text: e }));
-    li.append(errors);
+  if (status.notes.length > 0) {
+    const notes = el('ul', { className: 'pack-notes' });
+    for (const note of status.notes)
+      notes.append(
+        el('li', { className: `pack-${note.kind}`, text: `${note.label}: ${note.text}` }),
+      );
+    li.append(notes);
   }
   return li;
+}
+
+/**
+ * What the validator said about a pack, errors first, and whether it can be used: errors stop it,
+ * warnings don't (#235).
+ */
+export function packStatus(pack: Pick<PackView, 'errors' | 'warnings'>): PackStatus {
+  return {
+    usable: pack.errors.length === 0,
+    notes: [
+      ...pack.errors.map((text) => ({ kind: 'error' as const, label: 'Error' as const, text })),
+      ...pack.warnings.map((text) => ({
+        kind: 'warning' as const,
+        label: 'Warning' as const,
+        text,
+      })),
+    ],
+  };
 }
 
 /**
