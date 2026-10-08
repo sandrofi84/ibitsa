@@ -238,6 +238,31 @@ describe('the default pack from art sources (§9.5, #218)', () => {
     expect(sources.has('characters/councillor-elder/review')).toBe(true);
   });
 
+  it('drops the placeholder walk-in of a council sheet drawn in art/ without one (#219)', () => {
+    const pose = `size 48x48\nframes 4\n${`---\n${`${'j'.repeat(48)}\n`.repeat(48)}`.repeat(4)}`;
+    const built = buildDefaultPack({
+      art: { dir: artDir({ 'characters/councillor-elder/council/idle.grid': pose }) },
+    });
+    const elder = built.manifest.characters['councillor.elder']?.council;
+    expect(Object.keys(elder?.animations ?? {})).toEqual([
+      'idle',
+      'talk',
+      'think',
+      'raiseHand',
+      'write',
+    ]);
+    // Its row is cleared; the other poses keep their rows.
+    const walkRow =
+      placeholder.manifest.characters['councillor.elder']?.council?.animations.walk?.row ?? -1;
+    const sheet = built.files['characters/councillor-elder-council.png'] as Buffer;
+    expect(pngPixel(sheet, { x: 24, y: walkRow * 48 + 24 })).toEqual(CLEAR);
+    expect(elder?.animations.write?.row).toBe(4);
+    // A councillor without council art keeps the placeholder's walk-in.
+    expect(built.manifest.characters['councillor.default']?.council).toEqual(
+      placeholder.manifest.characters['councillor.default']?.council,
+    );
+  });
+
   it('adds the hut scenes to the pack and its manifest only when their art exists (#219)', () => {
     expect(placeholder.manifest.scenes).toBeUndefined();
     const table = `<svg xmlns="http://www.w3.org/2000/svg" width="480" height="270" viewBox="0 0 480 270" shape-rendering="crispEdges"><rect x="24" y="176" width="432" height="54" fill="#733e39"/></svg>`;

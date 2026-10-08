@@ -187,6 +187,11 @@ export function nearestColor(color: Rgba): Rgba {
  * A piece's art from `dir`, its frames side by side, or null when it has no source yet. A piece may
  * have a `.grid` or an `.svg`, not both; either must have the piece's frame size and frame count.
  */
+/** Whether `art/` has a source for a piece, as a grid or an SVG. */
+export function hasSource({ sources, source }: { sources: ArtSources; source: string }): boolean {
+  return ['.grid', '.svg'].some((ext) => existsSync(join(sources.dir, `${source}${ext}`)));
+}
+
 export function readSource({
   sources,
   piece,
