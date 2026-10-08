@@ -29,10 +29,27 @@ export function councillorTitle(id: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
-/** The pack character a councillor is drawn with: its `ibitsa-portrait`, else the default. */
+/** The look of a councillor the pack has no character for, such as a custom one (§9.2). */
+export const DEFAULT_COUNCILLOR = 'councillor.default';
+
+/**
+ * The pack character a councillor is drawn with (#220): its skill's `ibitsa-portrait`, else its own,
+ * `councillor.<id>` (the built-ins each have one). `packLook` falls back when the pack doesn't.
+ */
 export function councillorAppearance(id: string): string {
   if (id === ELDER) return 'councillor.elder';
-  return known.get(id)?.portrait ?? 'councillor.default';
+  return known.get(id)?.portrait ?? `councillor.${id}`;
+}
+
+/** The character a pack draws for an appearance: that one if the pack has it, else the default. */
+export function packLook({
+  appearance,
+  has,
+}: {
+  appearance: string;
+  has: (key: string) => boolean;
+}): string {
+  return has(appearance) ? appearance : DEFAULT_COUNCILLOR;
 }
 
 /**

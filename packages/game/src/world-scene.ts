@@ -27,7 +27,7 @@ import { badgeOf } from './pull-requests';
 import type { PullRequestBadge } from './pull-requests.types';
 import { recoloredCharacter, recolorOf } from './recolor';
 import { reviewersOf } from './reviewers';
-import { councillorAppearance, councillorTitle } from './sitting-hut';
+import { councillorAppearance, councillorTitle, packLook } from './sitting-hut';
 import type { ViewState } from './view-state';
 import type { MapProbe } from './world-scene.types';
 
@@ -842,8 +842,10 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private councillorKey(councillorId: string): string {
-    const appearance = councillorAppearance(councillorId);
-    const key = this.manifest.characters[appearance] ? appearance : 'councillor.default';
+    const key = packLook({
+      appearance: councillorAppearance(councillorId),
+      has: (k) => this.manifest.characters[k] !== undefined,
+    });
     return recoloredCharacter({
       scene: this,
       key,
