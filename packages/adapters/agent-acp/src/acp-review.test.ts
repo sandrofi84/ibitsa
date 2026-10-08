@@ -6,7 +6,14 @@ import type { ReviewEvent, Verdict } from '@ibitsa/protocol';
 import { REVIEW_INSTRUCTIONS, type ReviewSession, type ReviewStart } from '@ibitsa/runtime';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AcpAdapter } from './acp-adapter';
-import { NO_BRIDGE, NO_VERDICT, OUT_OF_GOLD, REVIEW_STEPS, TOO_MANY_STEPS } from './acp-review';
+import {
+  FINISH_MS,
+  NO_BRIDGE,
+  NO_VERDICT,
+  OUT_OF_GOLD,
+  REVIEW_STEPS,
+  TOO_MANY_STEPS,
+} from './acp-review';
 import { VERDICT_TOOL_NOTE } from './review-tools';
 import { ToolBridge } from './tool-bridge';
 import type { ToolHost, ToolResult, ToolSet } from './tool-bridge.types';
@@ -23,9 +30,15 @@ const bridges: ToolBridge[] = [];
 afterEach(() => {
   for (const r of reviews.splice(0)) r.close();
   for (const b of bridges.splice(0)) b.close();
-  // On Windows the folder stays busy until the killed agent has gone.
+  // On Windows the folder stays busy until the agent has gone, and a filed review lets its agent
+  // finish the turn for up to FINISH_MS first.
   for (const d of dirs.splice(0))
-    rmSync(d, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
+    rmSync(d, {
+      recursive: true,
+      force: true,
+      maxRetries: Math.ceil((FINISH_MS + 3_000) / 100),
+      retryDelay: 100,
+    });
 });
 
 const PASS: Verdict = { verdict: 'pass', findings: [] };
