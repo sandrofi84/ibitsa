@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, rmSync, statSync } from 'node:fs';
+import { existsSync, mkdtempSync, realpathSync, rmSync, statSync, symlinkSync } from 'node:fs';
 import { connect, type Socket } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -89,9 +89,24 @@ describe('ToolBridge: the runtime end of the tool bridge (#197)', () => {
   it.runIf(posix)('moves the socket to /tmp when the folder would make its path too long', () => {
     const dir = mkdtempSync(join(tmpdir(), `ibitsa-${'x'.repeat(80)}-`));
     dirs.push(dir);
-    expect(bridge({ socketDir: dir }).socketPath).toMatch(/^\/tmp\/ibitsa-[0-9a-f]{12}\.sock$/);
+    const realTmp = realpathSync('/tmp');
+    expect(bridge({ socketDir: dir }).socketPath).toMatch(
+      new RegExp(`^${realTmp}/ibitsa-[0-9a-f]{12}\\.sock$`),
+    );
     const short = bridge({ socketDir: '/tmp' }).socketPath;
-    expect(short.startsWith('/tmp/ibitsa-')).toBe(true);
+    expect(short.startsWith(`${realTmp}/ibitsa-`)).toBe(true);
+  });
+
+  it.runIf(posix)('puts the socket in the real folder, not a link to it (#202)', () => {
+    // The sandbox allows the socket by path before it exists, and only a real path matches: on macOS
+    // the temp folder is under `/var`, a link to `/private/var`.
+    const real = mkdtempSync(join(tmpdir(), 'ibitsa-real-'));
+    const link = `${real}-link`;
+    symlinkSync(real, link);
+    dirs.push(real, link);
+    expect(bridge({ socketDir: link }).socketPath.startsWith(`${realpathSync(real)}/ibitsa-`)).toBe(
+      true,
+    );
   });
 
   it('answers a bridge that proves its session, and only with that session’s tools', async () => {
