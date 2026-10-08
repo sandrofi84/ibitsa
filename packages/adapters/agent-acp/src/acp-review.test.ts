@@ -1,4 +1,5 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -27,19 +28,22 @@ const dirs: string[] = [];
 const reviews: ReviewSession[] = [];
 const bridges: ToolBridge[] = [];
 
-afterEach(() => {
+afterEach(async () => {
   for (const r of reviews.splice(0)) r.close();
   for (const b of bridges.splice(0)) b.close();
   // On Windows the folder stays busy until the agent has gone, and a filed review lets its agent
-  // finish the turn for up to FINISH_MS first.
-  for (const d of dirs.splice(0))
-    rmSync(d, {
-      recursive: true,
-      force: true,
-      maxRetries: Math.ceil((FINISH_MS + 3_000) / 100),
-      retryDelay: 100,
-    });
-});
+  // finish the turn for up to FINISH_MS first. Retried without blocking, so that timer can fire.
+  await Promise.all(
+    dirs.splice(0).map((d) =>
+      rm(d, {
+        recursive: true,
+        force: true,
+        maxRetries: Math.ceil((FINISH_MS + 3_000) / 100),
+        retryDelay: 100,
+      }),
+    ),
+  );
+}, FINISH_MS + 10_000);
 
 const PASS: Verdict = { verdict: 'pass', findings: [] };
 const CHANGES: Verdict = {
