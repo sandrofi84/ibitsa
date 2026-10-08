@@ -474,34 +474,34 @@ Tick each file as it lands (issue #223 tracks the batches). Generated from the l
 - [ ] `art/characters/councillor-accessibility/review.grid`
 - [ ] `art/characters/councillor-designer/review.grid`
 - [ ] `art/characters/councillor-default/review.grid`
-- [ ] `art/characters/hero-paladin/test.grid`
-- [ ] `art/characters/hero-paladin/ask.grid`
-- [ ] `art/characters/hero-paladin/blocked.grid`
-- [ ] `art/characters/hero-paladin/rest.grid`
-- [ ] `art/characters/hero-paladin/celebrate.grid`
-- [ ] `art/characters/hero-paladin/hurt.grid`
-- [ ] `art/characters/hero-paladin/outOfGold.grid`
-- [ ] `art/characters/hero-barbarian/test.grid`
-- [ ] `art/characters/hero-barbarian/ask.grid`
-- [ ] `art/characters/hero-barbarian/blocked.grid`
-- [ ] `art/characters/hero-barbarian/rest.grid`
-- [ ] `art/characters/hero-barbarian/celebrate.grid`
-- [ ] `art/characters/hero-barbarian/hurt.grid`
-- [ ] `art/characters/hero-barbarian/outOfGold.grid`
-- [ ] `art/characters/hero-ranger/test.grid`
-- [ ] `art/characters/hero-ranger/ask.grid`
-- [ ] `art/characters/hero-ranger/blocked.grid`
-- [ ] `art/characters/hero-ranger/rest.grid`
-- [ ] `art/characters/hero-ranger/celebrate.grid`
-- [ ] `art/characters/hero-ranger/hurt.grid`
-- [ ] `art/characters/hero-ranger/outOfGold.grid`
-- [ ] `art/characters/hero-rogue/test.grid`
-- [ ] `art/characters/hero-rogue/ask.grid`
-- [ ] `art/characters/hero-rogue/blocked.grid`
-- [ ] `art/characters/hero-rogue/rest.grid`
-- [ ] `art/characters/hero-rogue/celebrate.grid`
-- [ ] `art/characters/hero-rogue/hurt.grid`
-- [ ] `art/characters/hero-rogue/outOfGold.grid`
+- [x] `art/characters/hero-paladin/test.grid`
+- [x] `art/characters/hero-paladin/ask.grid`
+- [x] `art/characters/hero-paladin/blocked.grid`
+- [x] `art/characters/hero-paladin/rest.grid`
+- [x] `art/characters/hero-paladin/celebrate.grid`
+- [x] `art/characters/hero-paladin/hurt.grid`
+- [x] `art/characters/hero-paladin/outOfGold.grid`
+- [x] `art/characters/hero-barbarian/test.grid`
+- [x] `art/characters/hero-barbarian/ask.grid`
+- [x] `art/characters/hero-barbarian/blocked.grid`
+- [x] `art/characters/hero-barbarian/rest.grid`
+- [x] `art/characters/hero-barbarian/celebrate.grid`
+- [x] `art/characters/hero-barbarian/hurt.grid`
+- [x] `art/characters/hero-barbarian/outOfGold.grid`
+- [x] `art/characters/hero-ranger/test.grid`
+- [x] `art/characters/hero-ranger/ask.grid`
+- [x] `art/characters/hero-ranger/blocked.grid`
+- [x] `art/characters/hero-ranger/rest.grid`
+- [x] `art/characters/hero-ranger/celebrate.grid`
+- [x] `art/characters/hero-ranger/hurt.grid`
+- [x] `art/characters/hero-ranger/outOfGold.grid`
+- [x] `art/characters/hero-rogue/test.grid`
+- [x] `art/characters/hero-rogue/ask.grid`
+- [x] `art/characters/hero-rogue/blocked.grid`
+- [x] `art/characters/hero-rogue/rest.grid`
+- [x] `art/characters/hero-rogue/celebrate.grid`
+- [x] `art/characters/hero-rogue/hurt.grid`
+- [x] `art/characters/hero-rogue/outOfGold.grid`
 
 ### Licence
 
