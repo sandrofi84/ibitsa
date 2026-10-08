@@ -7,6 +7,7 @@ import { councilPose, HUT_DOOR_X, HUT_FEED, HUT_STEPS, seatHut, walkIns } from '
 import type { HutFeed, HutView, WalkIn } from './hut-view.types';
 import { PACK_KEY, SCENE_KEYS } from './pack-scene';
 import { recoloredCharacter, recolorOf } from './recolor';
+import { packLook } from './sitting-hut';
 
 const W = 480;
 const H = 270;
@@ -291,11 +292,9 @@ export class HutScene extends Phaser.Scene {
     }
   }
 
-  /** The pack character for an appearance, else the default councillor's. */
+  /** The pack character for an appearance, else the default councillor's (#220). */
   private character(appearance: string) {
-    const character = this.manifest.characters[appearance];
-    if (character) return { key: appearance, character };
-    const key = 'councillor.default';
+    const key = packLook({ appearance, has: (k) => this.manifest.characters[k] !== undefined });
     return { key, character: this.manifest.characters[key] as Manifest['characters'][string] };
   }
 

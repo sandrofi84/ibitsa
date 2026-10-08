@@ -97,6 +97,7 @@ export class CouncillorToken {
     return {
       key: this.view.key,
       councillorId: this.view.councillorId,
+      character: this.character,
       taskPointId: this.view.taskPointId,
       x: this.container.x,
       y: this.container.y,

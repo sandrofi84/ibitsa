@@ -7,6 +7,8 @@ import type { ReviewerView } from './reviewers.types';
 export interface ReviewerProbe {
   key: string;
   councillorId: string;
+  /** The pack character it's drawn as (#220), e.g. `councillor.tester`. */
+  character: string;
   taskPointId: string;
   /** Where its feet are, on the map. */
   x: number;

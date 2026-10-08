@@ -128,6 +128,81 @@ export const CHARACTERS: CharacterArt[] = [
       y: hex('#f2c230'),
     },
   },
+  // Architect (#220): green work tunic, a blue blueprint, its colour family in the art guide.
+  {
+    key: 'councillor.architect',
+    role: 'councillor',
+    backdrop: hex('#265c42'),
+    palette: {
+      o: INK,
+      h: hex('#3e8948'),
+      s: hex('#e4a672'),
+      e: EYE,
+      w: hex('#c8c8c8'),
+      r: hex('#63c74d'),
+      y: hex('#0099db'),
+    },
+  },
+  // Security (#220): crimson tabard, a gold lock, its colour family in the art guide.
+  {
+    key: 'councillor.security',
+    role: 'councillor',
+    backdrop: hex('#4a1a22'),
+    palette: {
+      o: INK,
+      h: hex('#a22633'),
+      s: hex('#e8b796'),
+      e: EYE,
+      w: hex('#c8c8c8'),
+      r: hex('#e43b44'),
+      y: hex('#feae34'),
+    },
+  },
+  // Tester (#220): white apron over turquoise, a turquoise flask, its colour family in the art guide.
+  {
+    key: 'councillor.tester',
+    role: 'councillor',
+    backdrop: hex('#124e89'),
+    palette: {
+      o: INK,
+      h: hex('#c0cbdc'),
+      s: hex('#b86f50'),
+      e: EYE,
+      w: hex('#c8c8c8'),
+      r: hex('#0099db'),
+      y: hex('#2ce8f5'),
+    },
+  },
+  // Accessibility (#220): orange robe, a lantern, its colour family in the art guide.
+  {
+    key: 'councillor.accessibility',
+    role: 'councillor',
+    backdrop: hex('#733e39'),
+    palette: {
+      o: INK,
+      h: hex('#d77643'),
+      s: hex('#c28569'),
+      e: EYE,
+      w: hex('#c8c8c8'),
+      r: hex('#f77622'),
+      y: hex('#fee761'),
+    },
+  },
+  // Designer (#220): magenta smock, a red beret, its colour family in the art guide.
+  {
+    key: 'councillor.designer',
+    role: 'councillor',
+    backdrop: hex('#68386c'),
+    palette: {
+      o: INK,
+      h: hex('#b55088'),
+      s: hex('#e4a672'),
+      e: EYE,
+      w: hex('#c8c8c8'),
+      r: hex('#f6757a'),
+      y: hex('#e43b44'),
+    },
+  },
   {
     key: 'councillor.default',
     role: 'councillor',

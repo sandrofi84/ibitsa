@@ -1,6 +1,28 @@
-import type { SittingView } from '@ibitsa/protocol';
+import type { CouncillorInfo, SittingView } from '@ibitsa/protocol';
 import { describe, expect, it } from 'vitest';
-import { councillorTitle, hutFromSitting, isSitting, SittingFeed } from './sitting-hut';
+import {
+  councillorAppearance,
+  councillorTitle,
+  DEFAULT_COUNCILLOR,
+  hutFromSitting,
+  isSitting,
+  packLook,
+  rememberCouncillors,
+  SittingFeed,
+} from './sitting-hut';
+
+const info = (id: string): CouncillorInfo => ({
+  id,
+  skill: id,
+  title: id,
+  description: '',
+  source: 'project',
+  portrait: null,
+  model: null,
+  tools: [],
+  modes: { planning: true, review: true },
+  hash: '',
+});
 
 const sitting = (over: Partial<SittingView> = {}): SittingView => ({
   id: 's1',
@@ -49,14 +71,14 @@ describe('hutFromSitting (#102)', () => {
       {
         id: 'architect',
         title: 'Architect',
-        appearance: 'councillor.default',
+        appearance: 'councillor.architect',
         report: 'filed',
         raisedHand: false,
       },
       {
         id: 'security',
         title: 'Security',
-        appearance: 'councillor.default',
+        appearance: 'councillor.security',
         report: 'pending',
         raisedHand: false,
       },
@@ -129,6 +151,24 @@ describe('the sitting in the game (#102)', () => {
     expect(isSitting(sitting({ status: 'awaitingApproval' }))).toBe(true);
     for (const status of ['approved', 'dismissed', 'failed'] as const)
       expect(isSitting(sitting({ status }))).toBe(false);
+  });
+
+  it('draws each councillor as its own look, a skill’s portrait first, the default when the pack has none (#220)', () => {
+    expect(councillorAppearance('elder')).toBe('councillor.elder');
+    expect(councillorAppearance('tester')).toBe('councillor.tester');
+    expect(councillorAppearance('api-design')).toBe('councillor.api-design');
+    rememberCouncillors([
+      { ...info('perf'), portrait: 'hero.rogue' },
+      { ...info('api-design'), portrait: null },
+    ]);
+    expect(councillorAppearance('perf')).toBe('hero.rogue');
+    expect(councillorAppearance('api-design')).toBe('councillor.api-design');
+    const pack = new Set(['councillor.default', 'councillor.tester', 'hero.rogue']);
+    const has = (key: string) => pack.has(key);
+    expect(packLook({ appearance: 'councillor.tester', has })).toBe('councillor.tester');
+    expect(packLook({ appearance: 'councillor.api-design', has })).toBe(DEFAULT_COUNCILLOR);
+    expect(packLook({ appearance: 'hero.rogue', has })).toBe('hero.rogue');
+    rememberCouncillors([]);
   });
 
   it('titles councillors from their ids', () => {

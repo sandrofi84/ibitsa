@@ -5,11 +5,11 @@ import type { HutEvent, HutFeed, HutMode, HutView } from '../hut-view.types';
 
 const ROSTER = [
   { id: 'elder', title: 'Elder', appearance: 'councillor.elder' },
-  { id: 'architect', title: 'Architect', appearance: 'councillor.default' },
-  { id: 'tester', title: 'Tester', appearance: 'councillor.default' },
-  { id: 'accessibility', title: 'Accessibility', appearance: 'councillor.default' },
-  { id: 'security', title: 'Security', appearance: 'councillor.default' },
-  { id: 'designer', title: 'Designer', appearance: 'councillor.default' },
+  { id: 'architect', title: 'Architect', appearance: 'councillor.architect' },
+  { id: 'tester', title: 'Tester', appearance: 'councillor.tester' },
+  { id: 'accessibility', title: 'Accessibility', appearance: 'councillor.accessibility' },
+  { id: 'security', title: 'Security', appearance: 'councillor.security' },
+  { id: 'designer', title: 'Designer', appearance: 'councillor.designer' },
 ];
 
 /** Three more, so a crowded sitting fills the table with nine (#219). */

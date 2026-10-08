@@ -542,7 +542,7 @@ Character animations:
 - **Required:** idle (4 frames), walk (4), work (4).
 - **Optional:** test, ask, blocked, rest, celebrate, hurt, review (councillors), outOfGold. Missing optional animations fall back (e.g. test → work, outOfGold → idle). (Art planning:) until now the map only played idle, walk and work; it now plays each optional one in its moment (a test running, a question for you, blocked, resting, a task done, a failed test, a councillor reviewing, out of gold), falling back as before.
 - Walking is sideways only, mirrored for left; paths up and down reuse it.
-- **Built-in councillors each get their own look** (art planning): `councillor.<id>` for the five built-ins (accessibility, architect, designer, security, tester), beside the elder; `councillor.default` stays for councillors without one.
+- **Built-in councillors each get their own look** (art planning): `councillor.<id>` for the five built-ins (accessibility, architect, designer, security, tester), beside the elder; `councillor.default` stays for councillors without one. (#220:) a councillor is drawn as its skill's `ibitsa-portrait`, else as `councillor.<id>`, and as `councillor.default` when the pack has no such character. That holds on the map (reviewers included), in the hut and for portraits. So a pack can give a custom councillor a look just by naming a character `councillor.<id>`. Recolor stays keyed by `councillor:<id>`.
 
 ### 9.3 Packs
 - A pack = folder with `pack.json` manifest + PNG images + audio. **No scripts.** Size limits enforced.

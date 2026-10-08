@@ -35,7 +35,7 @@ import {
 } from './pull-request-card';
 import { setRecolor } from './recolor';
 import { mountRestartNotice } from './restart-notice';
-import { isSitting, rememberCouncillors, SittingFeed } from './sitting-hut';
+import { isSitting, packLook, rememberCouncillors, SittingFeed } from './sitting-hut';
 import { mountSoundBoard } from './sound-board';
 import { mountTaskPanel } from './task-panel';
 import { ViewState } from './view-state';
@@ -325,7 +325,10 @@ export function startGame(root: HTMLElement, host: Host): Started {
   const camera = () => (world()?.sys.isActive() ? (world()?.cameraState() ?? null) : null);
   portraits.url = (appearance) => {
     const manifest = game.cache.json.get(PACK_KEY) as Manifest | undefined;
-    const path = manifest?.characters[appearance]?.portrait;
+    const has = (key: string) => manifest?.characters[key] !== undefined;
+    // A councillor the pack has no look for wears the default's face (#220).
+    const key = appearance.startsWith('councillor.') ? packLook({ appearance, has }) : appearance;
+    const path = manifest?.characters[key]?.portrait;
     return path ? `${game.registry.get(PACK_BASE) as string}${path}` : null;
   };
   const showHut = (feed: HutFeed) => {
