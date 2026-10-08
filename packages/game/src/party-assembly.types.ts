@@ -1,6 +1,6 @@
 import type { Plan } from '@ibitsa/protocol';
 import type { PartyRow } from './parties.types';
-import type { PartyCheck } from './party-check.types';
+import type { PartyCheck, ReviewerAgent } from './party-check.types';
 
 /** What the rest of the game can do with party assembly. */
 export interface PartyAssembly {
@@ -31,6 +31,8 @@ export interface PartyFields {
   cap: HTMLInputElement;
   noCap: HTMLInputElement;
   efforts: { councillorId: string; select: HTMLSelectElement }[];
-  /** Redraws the class's party check line (#199). */
+  /** Its reviewing councillors on ACP agents, whose agents must pass the party check too (#201). */
+  reviewers: ReviewerAgent[];
+  /** Redraws the party check lines: the class's (#199) and each reviewer's (#201). */
   refreshCheck: () => void;
 }

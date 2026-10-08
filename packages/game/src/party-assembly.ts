@@ -23,8 +23,8 @@ import type {
   PartyAssemblyOptions,
   PartyFields,
 } from './party-assembly.types';
-import { AGENTS_NOT_READY, readinessLine } from './party-check';
-import type { PartyCheck } from './party-check.types';
+import { AGENTS_NOT_READY, partyReady, readinessLine, reviewerAgentOf } from './party-check';
+import type { PartyCheck, ReviewerAgent } from './party-check.types';
 import { councillorTitle } from './sitting-hut';
 
 /**
@@ -58,18 +58,21 @@ export function mountPartyAssembly({
 
     const rows: PartyFields[] = [];
     const partyCheck = options.partyCheck;
+    const reviewerOf = reviewerAgentOf(snapshot);
     for (const row of partyRows(plan)) {
       rows.push(
         partyFields({
           row,
           taken: (self) => rows.filter((p) => p !== self).map((p) => p.name.value),
           partyCheck,
+          reviewerOf,
         }),
       );
     }
-    // The classes whose agents must pass the party check (#199). Reviewer classes on ACP agents
-    // (#201) join them when reviews are on.
+    // The classes whose agents must pass the party check (#199), and the agents the reviewing
+    // councillors review on (#201).
     const classes = () => rows.map((r) => r.classSelect.value);
+    const ready = () => partyReady({ partyCheck, classIds: classes(), fields: rows });
 
     const base = el('select');
     const repo = snapshot?.repo;
@@ -105,13 +108,14 @@ export function mountPartyAssembly({
     start.type = 'submit';
     const refreshChecks = () => {
       for (const r of rows) r.refreshCheck();
-      start.disabled = repo === null || !partyCheck.allReady(classes());
+      start.disabled = repo === null || !ready();
     };
     dialog.addEventListener('close', partyCheck.onChange(refreshChecks), { once: true });
     // A Claude class needs no check, so no answer would redraw after choosing one.
     for (const r of rows) r.classSelect.addEventListener('change', refreshChecks);
     refreshChecks();
     partyCheck.check(classes());
+    partyCheck.checkAgents(rows.flatMap((r) => r.reviewers.map((v) => v.agent)));
     form.append(
       el('h2', { text: 'Assemble the parties' }),
       el('p', {
@@ -143,7 +147,7 @@ export function mountPartyAssembly({
         namesProblem(names) ??
         caps.flatMap((c) => (c.ok ? [] : [c.problem]))[0] ??
         (base.value ? undefined : 'Choose the branch to start from.') ??
-        (partyCheck.allReady(classes()) ? undefined : AGENTS_NOT_READY);
+        (ready() ? undefined : AGENTS_NOT_READY);
       if (problem) {
         error.textContent = problem;
         return;
@@ -176,10 +180,13 @@ export function partyFields({
   row,
   taken,
   partyCheck,
+  reviewerOf = () => null,
 }: {
   row: PartyRow;
   taken: (self: PartyFields) => string[];
   partyCheck: PartyCheck;
+  /** The agent a reviewing councillor reviews on, when it's an ACP agent (#201). */
+  reviewerOf?: (councillorId: string) => ReviewerAgent | null;
 }): PartyFields {
   const box = el('fieldset', { className: 'party' });
   box.append(el('legend', { text: `${row.islandId} ${row.title}` }));
@@ -189,8 +196,17 @@ export function partyFields({
   classSelect.value = row.classId;
   // Its agent's party check (#199): nothing for a Claude class.
   const checkLine = el('div', { className: 'party-check' });
-  const refreshCheck = () =>
+  // Each reviewing councillor on an ACP agent gets that agent's check too (#201).
+  const reviewers = row.councillors.flatMap((id) => reviewerOf(id) ?? []);
+  const reviewerLines = reviewers.map((reviewer) => ({
+    reviewer,
+    line: el('div', { className: 'party-check' }),
+  }));
+  const refreshCheck = () => {
     checkLine.replaceChildren(readinessLine({ partyCheck, classId: classSelect.value }));
+    for (const { reviewer, line } of reviewerLines)
+      line.replaceChildren(readinessLine({ partyCheck, reviewer }));
+  };
   refreshCheck();
   const name = el('input');
   name.value = row.heroName;
@@ -231,6 +247,9 @@ export function partyFields({
           label: `${councillorTitle(e.councillorId)}, review effort`,
           control: e.select,
         }),
+        ...reviewerLines
+          .filter((r) => r.reviewer.councillorId === e.councillorId)
+          .map((r) => r.line),
       );
     }
   }
@@ -242,7 +261,17 @@ export function partyFields({
     noCapLabel,
     reviews,
   );
-  const fields: PartyFields = { row, box, classSelect, name, cap, noCap, efforts, refreshCheck };
+  const fields: PartyFields = {
+    row,
+    box,
+    classSelect,
+    name,
+    cap,
+    noCap,
+    efforts,
+    reviewers,
+    refreshCheck,
+  };
   classSelect.onchange = () => {
     if (!named) name.value = heroNameFor({ classId: classSelect.value, taken: taken(fields) });
     partyCheck.check([classSelect.value]);
@@ -297,7 +326,10 @@ export function mountNewParty({
       row: { ...row, heroName: heroNameFor({ classId: row.classId, taken: heroes }) },
       taken: () => heroes,
       partyCheck,
+      reviewerOf: reviewerAgentOf(snapshot),
     });
+    const ready = () =>
+      partyReady({ partyCheck, classIds: [fields.classSelect.value], fields: [fields] });
     const error = el('p', { className: 'error' });
     error.setAttribute('role', 'alert');
     const form = el('form');
@@ -305,12 +337,13 @@ export function mountNewParty({
     assemble.type = 'submit';
     const refreshCheck = () => {
       fields.refreshCheck();
-      assemble.disabled = !partyCheck.allReady([fields.classSelect.value]);
+      assemble.disabled = !ready();
     };
     dialog.addEventListener('close', partyCheck.onChange(refreshCheck), { once: true });
     fields.classSelect.addEventListener('change', refreshCheck);
     refreshCheck();
     partyCheck.check([fields.classSelect.value]);
+    partyCheck.checkAgents(fields.reviewers.map((r) => r.agent));
     const actions = el('div', { className: 'actions' });
     actions.append(assemble, button({ label: 'Cancel', onClick: () => dialog.close() }));
     form.append(
@@ -329,7 +362,7 @@ export function mountNewParty({
       const problem =
         namesProblem([...heroes, fields.name.value]) ??
         (cap.ok ? undefined : cap.problem) ??
-        (partyCheck.allReady([fields.classSelect.value]) ? undefined : AGENTS_NOT_READY);
+        (ready() ? undefined : AGENTS_NOT_READY);
       if (problem) {
         error.textContent = problem;
         return;
