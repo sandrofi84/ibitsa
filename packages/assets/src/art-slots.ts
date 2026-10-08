@@ -172,5 +172,13 @@ export function artSlots(): ArtSlot[] {
       output: 'ui/activity-icons.png',
       pieces: strip({ kinds: ACTIVITY_KINDS, folder: 'ui/activity', size: SPEC.activityIcon }),
     },
+    // The hut's room and table (#219): in the pack only once their art exists.
+    ...(['hut-interior', 'hut-table'] as const).map(
+      (name): ArtSlot => ({
+        output: `scenes/${name}.png`,
+        pieces: [{ source: `scenes/${name}`, x: 0, y: 0, frame: SPEC.scene, frames: 1 }],
+        optional: SPEC.scene,
+      }),
+    ),
   ];
 }

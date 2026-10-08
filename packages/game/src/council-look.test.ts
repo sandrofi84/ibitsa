@@ -23,15 +23,32 @@ describe('councilLook', () => {
     });
   });
 
-  it('scales the map sheet up 2× without one, borrowing the nearest animation', () => {
+  it('scales the map sheet up 3× without one, borrowing the nearest animation (#219)', () => {
     const ranger = { key: 'hero.ranger', character: character('hero.ranger') };
     expect(councilLook(ranger, 'think')).toEqual({
       texture: 'hero.ranger',
       animation: 'hero.ranger:work',
-      scale: 2,
+      scale: 3,
     });
+    expect(councilLook(ranger, 'walk').animation).toBe('hero.ranger:walk');
     expect(councilLook(ranger, 'write').animation).toBe('hero.ranger:work');
     expect(councilLook(ranger, 'idle').animation).toBe('hero.ranger:idle');
+  });
+
+  it('walks in on the council sheet, or stands idle when the sheet has no walk-in (#219)', () => {
+    const elder = character('councillor.elder');
+    expect(councilLook({ key: 'councillor.elder', character: elder }, 'walk').animation).toBe(
+      'councillor.elder:council:walk',
+    );
+    const council = elder.council;
+    if (!council) throw new Error('no council sheet');
+    const { walk: _, ...still } = council.animations;
+    const old = { key: 'old', character: { ...elder, council: { ...council, animations: still } } };
+    expect(councilLook(old, 'walk')).toEqual({
+      texture: 'old:council',
+      animation: 'old:council:idle',
+      scale: 1,
+    });
   });
 
   it('prefers an optional map animation when the pack has it', () => {

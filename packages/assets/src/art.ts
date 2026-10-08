@@ -316,47 +316,65 @@ export function portrait(art: CharacterArt): Raster {
   return p;
 }
 
-// ---------- council sheets (32×32, the council hut only, §9.2) ----------
+// ---------- council sheets (48×48 full-body, the council hut only, §9.2) ----------
 
-const C = 32;
+const C = 48;
+/** Where the hut's table hides a council figure: rows from here down (its lower third, #219). */
+const TABLE_ROW = 32;
 
-/** A councillor seen across the hut's table: hood, face, beard, robe. 'm' is the mouth. */
-const COUNCILLOR_32 = [
-  '................................',
-  '...............oo...............',
-  '..............ohho..............',
-  '.............ohhhho.............',
-  '............ohhhhhho............',
-  '...........ohhhhhhhho...........',
-  '..........ohhhhhhhhhho..........',
-  '.........ohhhhhhhhhhhho.........',
-  '........oooooooooooooooo........',
-  '.........osssssssssssso.........',
-  '.........osssssssssssso.........',
-  '.........osseesssseesso.........',
-  '.........osseesssseesso.........',
-  '.........osssssssssssso.........',
-  '.........ossssssmmsssso.........',
-  '.........owwwwwwwwwwwwo.........',
-  '........owwwwwwwwwwwwwwo........',
-  '......oorrwwwwwwwwwwwwrroo......',
-  '.....orrrrrwwwwwwwwwwrrrrro.....',
-  '....orrrrrrrwwwwwwwwrrrrrrro....',
-  '....orrrrrrrrwwwwwwrrrrrrrro....',
-  '...orrrrrrrrrrwwwwrrrrrrrrrro...',
-  '...orrrrrrrrrrrrrrrrrrrrrrrro...',
-  '...orrrrrrrrrrrrrrrrrrrrrrrro...',
-  '...orrrrrryyyyyyyyyyyyrrrrrro...',
-  '...orrrrrrrrrrrrrrrrrrrrrrrro...',
-  '...orrrrrrrrrrrrrrrrrrrrrrrro...',
-  '...orrrrrrrrrrrrrrrrrrrrrrrro...',
-  '...orrrrrrrrrrrrrrrrrrrrrrrro...',
-  '...orrrrrrrrrrrrrrrrrrrrrrrro...',
-  '...orrrrrrrrrrrrrrrrrrrrrrrro...',
-  '...oooooooooooooooooooooooooo...',
-];
+/** A councillor seen at the hut, head to hem: hood, face, beard, robe. 'm' is the mouth. Legs are drawn per frame. */
+const COUNCILLOR_48: readonly string[] = (() => {
+  const blank = '.'.repeat(C);
+  const pad = (row: string) => `${'.'.repeat(8)}${row}${'.'.repeat(8)}`;
+  const head = [
+    '...............oo...............',
+    '..............ohho..............',
+    '.............ohhhho.............',
+    '............ohhhhhho............',
+    '...........ohhhhhhhho...........',
+    '..........ohhhhhhhhhho..........',
+    '.........ohhhhhhhhhhhho.........',
+    '........oooooooooooooooo........',
+    '.........osssssssssssso.........',
+    '.........osssssssssssso.........',
+    '.........osseesssseesso.........',
+    '.........osseesssseesso.........',
+    '.........osssssssssssso.........',
+    '.........ossssssmmsssso.........',
+    '.........owwwwwwwwwwwwo.........',
+  ].map(pad);
+  const robe: string[] = [];
+  for (let y = 17; y <= 43; y++) {
+    const half = Math.round(10 + (4 * (y - 17)) / 26);
+    const beard = y <= 24 ? Math.max(1, 6 - (y - 17)) : 0;
+    const row = [...blank];
+    for (let x = C / 2 - half; x < C / 2 + half; x++) {
+      const edge = x === C / 2 - half || x === C / 2 + half - 1 || y === 43;
+      const inBeard = Math.abs(x - (C / 2 - 0.5)) < beard;
+      row[x] = edge ? 'o' : inBeard ? 'w' : y === 30 ? 'y' : 'r';
+    }
+    robe.push(row.join(''));
+  }
+  return [blank, blank, ...head, ...robe, blank, blank, blank, blank];
+})();
 
-/** One council frame. The hut's table hides the figure below row 20, so hands work above it. */
+/** Two legs under the hem in rows 44–47, the back and front one nudged sideways when walking. */
+function drawLegs({ grid, back, front }: { grid: string[][]; back: number; front: number }): void {
+  const leg = (x0: number) => {
+    for (let y = 44; y <= 46; y++) {
+      const row = grid[y] as string[];
+      row[x0] = 'o';
+      row[x0 + 1] = 'h';
+      row[x0 + 2] = 'h';
+      row[x0 + 3] = 'o';
+    }
+    for (let x = x0 - 1; x <= x0 + 4; x++) (grid[47] as string[])[x] = 'o';
+  };
+  leg(18 + back);
+  leg(26 + front);
+}
+
+/** One council frame: a full figure; hands work above row TABLE_ROW, where the table starts. */
 export function councilFrameRows({
   animation,
   i,
@@ -364,7 +382,7 @@ export function councilFrameRows({
   animation: (typeof COUNCIL_ANIMATIONS)[number];
   i: number;
 }): string[] {
-  const grid = COUNCILLOR_32.map((r) => [...r]);
+  const grid = COUNCILLOR_48.map((r) => [...r]);
   const paint = ({
     x,
     y,
@@ -382,40 +400,54 @@ export function councilFrameRows({
       for (let xx = x; xx < x + w; xx++) (grid[yy] as string[])[xx] = ch;
   };
   let bob = 0;
+  let legs = { back: 0, front: 0 };
   if (animation === 'idle') {
     bob = i >= 2 ? 1 : 0;
   } else if (animation === 'talk') {
     // The mouth opens on every other frame.
-    if (i % 2 === 1) paint({ x: 16, y: 13, w: 2, h: 2, ch: 'o' });
+    if (i % 2 === 1) paint({ x: 24, y: 15, w: 2, h: 2, ch: 'o' });
   } else if (animation === 'think') {
     // Eyes closed, a hand on the beard, a thought rising beside the head.
-    paint({ x: 11, y: 11, w: 2, ch: 's' });
-    paint({ x: 18, y: 11, w: 2, ch: 's' });
-    paint({ x: 11, y: 12, w: 2, ch: 'o' });
-    paint({ x: 18, y: 12, w: 2, ch: 'o' });
-    paint({ x: 13, y: 16, w: 4, h: 3, ch: 'o' });
-    paint({ x: 14, y: 16, w: 2, h: 2, ch: 's' });
-    for (let d = 0; d <= i; d++) paint({ x: 24 + d * 2, y: 9 - d * 3, w: 2, h: 2, ch: 'y' });
+    paint({ x: 19, y: 12, w: 2, ch: 's' });
+    paint({ x: 26, y: 12, w: 2, ch: 's' });
+    paint({ x: 19, y: 13, w: 2, ch: 'o' });
+    paint({ x: 26, y: 13, w: 2, ch: 'o' });
+    paint({ x: 21, y: 18, w: 5, h: 4, ch: 'o' });
+    paint({ x: 22, y: 19, w: 3, h: 2, ch: 's' });
+    for (let d = 0; d <= i; d++) paint({ x: 34 + d * 2, y: 10 - d * 3, w: 2, h: 2, ch: 'y' });
   } else if (animation === 'raiseHand') {
     // An arm raised on the right; the hand waves left and right.
     const dx = [0, 1, 0, -1][i] ?? 0;
-    paint({ x: 25, y: 6, w: 3, h: 12, ch: 'o' });
-    paint({ x: 26, y: 7, w: 1, h: 11, ch: 'r' });
-    paint({ x: 24 + dx, y: 2, w: 5, h: 5, ch: 'o' });
-    paint({ x: 25 + dx, y: 3, w: 3, h: 3, ch: 's' });
-  } else {
+    paint({ x: 34, y: 8, w: 3, h: 14, ch: 'o' });
+    paint({ x: 35, y: 9, w: 1, h: 13, ch: 'r' });
+    paint({ x: 33 + dx, y: 3, w: 5, h: 5, ch: 'o' });
+    paint({ x: 34 + dx, y: 4, w: 3, h: 3, ch: 's' });
+  } else if (animation === 'write') {
     // Writing: a hand with a quill moving along just above the table.
-    const dx = i * 2;
-    paint({ x: 9 + dx, y: 17, w: 5, h: 4, ch: 'o' });
-    paint({ x: 10 + dx, y: 18, w: 3, h: 2, ch: 's' });
-    paint({ x: 13 + dx, y: 13, w: 1, h: 5, ch: 'w' });
-    paint({ x: 14 + dx, y: 12, w: 1, h: 2, ch: 'w' });
+    const dx = i * 3;
+    paint({ x: 13 + dx, y: TABLE_ROW - 6, w: 5, h: 4, ch: 'o' });
+    paint({ x: 14 + dx, y: TABLE_ROW - 5, w: 3, h: 2, ch: 's' });
+    paint({ x: 17 + dx, y: TABLE_ROW - 10, w: 1, h: 5, ch: 'w' });
+    paint({ x: 18 + dx, y: TABLE_ROW - 11, w: 1, h: 2, ch: 'w' });
+  } else {
+    // Walking in, facing right: legs apart, together (body a pixel up), apart the other way, together.
+    legs = [
+      { back: -2, front: 2 },
+      { back: 0, front: 0 },
+      { back: 2, front: -2 },
+      { back: 0, front: 0 },
+    ][i] ?? { back: 0, front: 0 };
+    bob = i % 2 === 1 ? -1 : 0;
   }
+  drawLegs({ grid, ...legs });
   const rows = grid.map((g) => g.join(''));
-  return bob === 0 ? rows : ['.'.repeat(C), ...rows.slice(0, C - 1)];
+  // Bobbing moves the body above the legs: a pixel down, or a pixel up.
+  if (bob === 1) return ['.'.repeat(C), ...rows.slice(0, 43), ...rows.slice(44)];
+  if (bob === -1) return [...rows.slice(1, 44), '.'.repeat(C), ...rows.slice(44)];
+  return rows;
 }
 
-/** A councillor's 32×32 council sheet: one row per council animation, FRAMES frames each. */
+/** A councillor's 48×48 council sheet: one row per council animation, FRAMES frames each. */
 export function councilSheet(art: CharacterArt): Raster {
   const sheet = new Raster(C * FRAMES, C * COUNCIL_ANIMATIONS.length);
   COUNCIL_ANIMATIONS.forEach((animation, row) => {

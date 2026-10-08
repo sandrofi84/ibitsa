@@ -4,8 +4,8 @@
 /** Sizes fixed by the visual asset spec (§9.2). Packs must match them. */
 export const SPEC = {
   characterFrame: 16,
-  /** Council sheets, for the council hut only (§9.2). */
-  councilFrame: 32,
+  /** Council sheets, for the council hut only: full-body figures behind the table (§9.2). */
+  councilFrame: 48,
   portrait: 64,
   tile: 16,
   island: { height: 96, leftCap: 48, middle: 32, rightCap: 48 },
@@ -19,6 +19,8 @@ export const SPEC = {
   bridge: { end: 8, segment: 32, height: 24 },
   /** Small map markers, e.g. the padlock over a blocked hero (#124). */
   marker: 12,
+  /** Full-scene pictures, e.g. the hut interior and its table layer (§9.2, #219). */
+  scene: { width: 480, height: 270 },
 } as const;
 
 /**
@@ -65,8 +67,20 @@ export const OPTIONAL_ANIMATIONS = [
   'review',
   'outOfGold',
 ] as const;
-/** A council sheet's animations, all required when a character has one (§9.2). */
-export const COUNCIL_ANIMATIONS = ['idle', 'talk', 'think', 'raiseHand', 'write'] as const;
+/**
+ * A council sheet's animations, rows in this order (§9.2): the first five are required when a
+ * character has one; `walk` (#219), coming in through the hut's door, is optional.
+ */
+export const COUNCIL_ANIMATIONS = ['idle', 'talk', 'think', 'raiseHand', 'write', 'walk'] as const;
+export const REQUIRED_COUNCIL_ANIMATIONS = [
+  'idle',
+  'talk',
+  'think',
+  'raiseHand',
+  'write',
+] as const satisfies readonly (typeof COUNCIL_ANIMATIONS)[number][];
+/** The full-scene pictures a pack may fill (#219), each SPEC.scene in size; the game draws its own without. */
+export const SCENE_SLOTS = ['hutInterior', 'hutTable'] as const;
 export const TASK_POINT_STATES = ['locked', 'active', 'done', 'underReview'] as const;
 /** The protocol's `ActivityKind`s (spec §5.4); assets has no dependency on protocol, so they repeat here. */
 export const ACTIVITY_KINDS = ['read', 'search', 'edit', 'test', 'run', 'think', 'other'] as const;

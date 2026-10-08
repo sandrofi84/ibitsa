@@ -1,4 +1,12 @@
-import { cpSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -26,6 +34,18 @@ function copyPack(): string {
   const dir = mkdtempSync(join(tmpdir(), 'ibitsa-pack-'));
   temps.push(dir);
   cpSync(PACK, dir, { recursive: true });
+  return dir;
+}
+
+/** An `art/` folder with a plain 480×270 hut interior. */
+function sceneArt(): string {
+  const dir = mkdtempSync(join(tmpdir(), 'ibitsa-scene-art-'));
+  temps.push(dir);
+  mkdirSync(join(dir, 'scenes'));
+  writeFileSync(
+    join(dir, 'scenes', 'hut-interior.svg'),
+    '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="270" viewBox="0 0 480 270" shape-rendering="crispEdges"><rect width="480" height="270" fill="#ead4aa"/></svg>',
+  );
   return dir;
 }
 
@@ -153,16 +173,17 @@ describe('validatePack', () => {
     );
   });
 
-  it('gives the default councillors a 32×32 council sheet and the heroes none (§9.2)', () => {
+  it('gives the default councillors a 48×48 full-body council sheet and the heroes none (§9.2, #219)', () => {
     const { manifest } = buildDefaultPack();
     const elder = manifest.characters['councillor.elder']?.council;
-    expect(elder?.frame).toEqual({ width: 32, height: 32 });
+    expect(elder?.frame).toEqual({ width: 48, height: 48 });
     expect(Object.keys(elder?.animations ?? {})).toEqual([
       'idle',
       'talk',
       'think',
       'raiseHand',
       'write',
+      'walk',
     ]);
     expect(manifest.characters['hero.ranger']?.council).toBeUndefined();
   });
@@ -185,9 +206,19 @@ describe('validatePack', () => {
     });
     const result = validatePack(dir);
     expect(result.ok ? [] : result.errors).toEqual([
-      'character councillor.default council sheet: frame is 16×16, expected 32×32',
+      'character councillor.default council sheet: frame is 16×16, expected 48×48 (council figures are 48×48 full-body; redraw the sheet, or remove "council" to use the map sprite scaled 3×)',
       'character councillor.default council sheet: missing required animation "raiseHand"',
     ]);
+  });
+
+  it('accepts a council sheet without the walk-in: the hut slides that councillor to its seat (#219)', () => {
+    const dir = copyPack();
+    editManifest(dir, (m) => {
+      const council = m.characters['councillor.default']?.council;
+      if (!council) throw new Error('no council sheet');
+      delete council.animations.walk;
+    });
+    expect(validatePack(dir)).toMatchObject({ ok: true });
   });
 
   it('rejects a council sheet image too small for its animations', () => {
@@ -199,7 +230,38 @@ describe('validatePack', () => {
     expect(validatePack(dir)).toEqual({
       ok: false,
       errors: [
-        'character councillor.default council sheet: characters/councillor-default-council.png is 64×64, too small or not a whole number of 32×32 frames for its animations',
+        'character councillor.default council sheet: characters/councillor-default-council.png is 64×64, too small or not a whole number of 48×48 frames for its animations',
+      ],
+    });
+  });
+
+  it('accepts the hut scenes at 480×270 and rejects any other size or a missing file (#219)', () => {
+    const scene = (dir: string) => {
+      const png = buildDefaultPack({
+        art: {
+          dir: sceneArt(),
+          rasterize: rasterizeSvg,
+        },
+      }).files['scenes/hut-interior.png'] as Buffer;
+      writeFileSync(join(dir, 'hut-interior.png'), png);
+    };
+    const good = copyPack();
+    scene(good);
+    editManifest(good, (m) => {
+      m.scenes = { hutInterior: 'hut-interior.png' };
+    });
+    expect(validatePack(good)).toMatchObject({ ok: true });
+
+    const bad = copyPack();
+    cpSync(join(bad, 'map', 'hut.png'), join(bad, 'table.png'));
+    editManifest(bad, (m) => {
+      m.scenes = { hutTable: 'table.png', hutInterior: 'nowhere.png' };
+    });
+    expect(validatePack(bad)).toEqual({
+      ok: false,
+      errors: [
+        'scene hutInterior: nowhere.png is missing',
+        'scene hutTable: table.png is 64×64, expected 480×270',
       ],
     });
   });

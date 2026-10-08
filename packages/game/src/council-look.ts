@@ -10,16 +10,24 @@ const MAP_FALLBACK: Record<CouncilPose, readonly string[]> = {
   think: ['work', 'idle'],
   raiseHand: ['ask', 'idle'],
   write: ['work', 'idle'],
+  walk: ['walk', 'idle'],
 };
 
-/** How a character looks at the council table in a pose: its 32×32 council sheet, else its map sheet at 2× (§9.2). */
+/**
+ * How a character looks at the council table in a pose: its 48×48 full-body council sheet, else its
+ * map sheet at 3× (§9.2, #219). A council sheet without the optional walk-in stands idle for it.
+ */
 export function councilLook({ key, character }: PackCharacter, pose: CouncilPose): CouncilLook {
   if (character.council) {
+    if (pose === 'walk' && !character.council.animations.walk) {
+      const texture = councilTexture(key);
+      return { texture, animation: `${texture}:idle`, scale: 1 };
+    }
     const texture = councilTexture(key);
     return { texture, animation: `${texture}:${pose}`, scale: 1 };
   }
   const name =
     MAP_FALLBACK[pose].find((n) => character.animations[n as keyof typeof character.animations]) ??
     'idle';
-  return { texture: key, animation: `${key}:${name}`, scale: 2 };
+  return { texture: key, animation: `${key}:${name}`, scale: 3 };
 }

@@ -11,6 +11,8 @@ export const MARKERS_KEY = 'markers';
 export const PACK_BASE = 'packBase';
 /** Registry: the texture and animation keys the pack loaded, so a switch can drop them (#183). */
 export const PACK_KEYS = 'packKeys';
+/** Texture keys of the pack's optional hut room and table (#219); the hut draws its own without. */
+export const SCENE_KEYS = { hutInterior: 'scene:hutInterior', hutTable: 'scene:hutTable' } as const;
 
 /** Loads the art pack described by its engine-neutral manifest (spec §9.3), then starts the world. */
 export class PackScene extends Phaser.Scene {
@@ -74,6 +76,9 @@ export class PackScene extends Phaser.Scene {
         frameWidth: manifest.markers.size,
         frameHeight: manifest.markers.size,
       });
+
+    for (const [slot, file] of Object.entries(manifest.scenes ?? {}))
+      if (file) this.load.image(SCENE_KEYS[slot as keyof typeof SCENE_KEYS], this.url(file));
 
     // Sounds (§9.4, #184): a pack may leave any slot silent.
     for (const [slot, sound] of Object.entries(manifest.sounds ?? {}))

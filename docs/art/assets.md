@@ -295,7 +295,7 @@ dots. 1 px dark outline, transparent background, readable at 1x.
 
 **Files:** `art/scenes/hut-interior.svg` and `art/scenes/hut-table.svg`, each 480×270. The council's room: the background behind the councillors, and the table drawn in front of them.
 
-The **table line** is at y = 176. The table's top edge sits there, and the councillors stand behind it, their feet at about y = 192. The exact line is confirmed with the hut's code (issue #219) before this batch.
+The **table line** is at y = 176. The table's top edge sits there, and the councillors stand behind it, their feet at y = 192 (confirmed in #219). They come in through the door on the left, around x = 16, so keep that part of the wall a door.
 
 **`hut-interior.svg`** (Template S):
 

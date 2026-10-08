@@ -38,7 +38,7 @@ const Character = v.strictObject({
   /** One row per animation, facing right; the game mirrors for left (§9.2). */
   animations: v.record(v.picklist([...REQUIRED_ANIMATIONS, ...OPTIONAL_ANIMATIONS]), Animation),
   portrait: v.optional(file),
-  /** Optional 32×32 sheet for the council hut; without one the hut scales `sheet` up 2× (§9.2). */
+  /** Optional 48×48 full-body sheet for the council hut; without one the hut scales `sheet` up 3× (§9.2). */
   council: v.optional(
     v.strictObject({
       sheet: file,
@@ -95,6 +95,11 @@ export const ManifestSchema = v.strictObject({
   ui: v.strictObject({
     dialogueFrame: v.strictObject({ image: file, size, inset: size }),
   }),
+  /**
+   * Full-scene pictures (#219), each 480×270: the hut interior behind the councillors, and the table
+   * drawn in front of them (transparent above it). Optional: the game draws its own room and table.
+   */
+  scenes: v.optional(v.strictObject({ hutInterior: v.optional(file), hutTable: v.optional(file) })),
   /** Sounds by slot (§9.4, #184): OGG, MP3 or WAV; music loops when `loop` is set. Optional. */
   sounds: v.optional(
     v.record(

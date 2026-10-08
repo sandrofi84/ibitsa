@@ -45,3 +45,23 @@ export interface Seat {
   id: string;
   x: number;
 }
+
+/** A councillor walking in from the hut's door to their seat (#219). */
+export interface WalkIn {
+  id: string;
+  fromX: number;
+  toX: number;
+  /** After the walk-ins before it, so several coming in together don't overlap. */
+  delayMs: number;
+  durationMs: number;
+}
+
+/** What decides who walks in: the seats now, who already stands at one, and the scene's state. */
+export interface WalkInPlan {
+  seats: readonly Seat[];
+  seated: ReadonlySet<string>;
+  /** The scene's first view since it opened. */
+  first: boolean;
+  view: HutView;
+  reducedMotion: boolean;
+}

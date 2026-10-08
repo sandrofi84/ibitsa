@@ -20,6 +20,11 @@ export interface ArtPiece {
 export interface ArtSlot {
   output: string;
   pieces: ArtPiece[];
+  /**
+   * For an image the pack carries only once its art exists (the hut's scenes, #219): its size. The
+   * build makes it, transparent, when a piece has a source; otherwise the pack goes without it.
+   */
+  optional?: FrameSize;
 }
 
 /** Renders an SVG at its own size to premultiplied RGBA pixels (resvg's `render()`). */

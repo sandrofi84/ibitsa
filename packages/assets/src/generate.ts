@@ -35,27 +35,43 @@ import {
 import { Raster } from './raster.ts';
 import { defaultSounds, wav } from './sound.ts';
 
-/** A councillor's 32×32 council sheet (§9.2): writes the image and returns its manifest entry. */
+/**
+ * A councillor's 48×48 council sheet (§9.2): writes the image and returns its manifest entry. A
+ * council sheet drawn in art/ keeps the walk-in only when it's drawn too (#219): the placeholder's
+ * would walk in a different character, so the councillor slides in standing instead.
+ */
 function councilEntry({
   name,
   images,
   art,
+  sources,
 }: {
   name: string;
   images: Record<string, Raster>;
   art: (typeof CHARACTERS)[number];
+  sources?: ArtSources;
 }): NonNullable<Manifest['characters'][string]['council']> {
   const sheet = `characters/${name}-council.png`;
   images[sheet] = councilSheet(art);
+  const drawn = (animation: string) =>
+    sources !== undefined &&
+    hasSource({ sources, source: `characters/${name}/council/${animation}` });
+  const animations = COUNCIL_ANIMATIONS.flatMap((animation, row) => {
+    if (animation === 'walk' && drawn('idle') && !drawn('walk')) {
+      images[sheet]?.paste({
+        src: new Raster(FRAMES * SPEC.councilFrame, SPEC.councilFrame),
+        x: 0,
+        y: row * SPEC.councilFrame,
+      });
+      return [];
+    }
+    const fps = animation === 'idle' || animation === 'think' ? 3 : animation === 'walk' ? 8 : 6;
+    return [[animation, { row, frames: FRAMES, fps }] as const];
+  });
   return {
     sheet,
     frame: { width: SPEC.councilFrame, height: SPEC.councilFrame },
-    animations: Object.fromEntries(
-      COUNCIL_ANIMATIONS.map((animation, row) => [
-        animation,
-        { row, frames: FRAMES, fps: animation === 'idle' || animation === 'think' ? 3 : 6 },
-      ]),
-    ),
+    animations: Object.fromEntries(animations),
   };
 }
 
@@ -63,6 +79,14 @@ function councilEntry({
 function fpsOf(animation: string): number {
   if (animation === 'walk' || animation === 'celebrate' || animation === 'hurt') return 8;
   return animation === 'rest' ? 2 : 4;
+}
+
+/** The hut's room and table (#219), listed only when their art made them: the game draws its own. */
+function sceneEntries(images: Record<string, Raster>): Pick<Manifest, 'scenes'> {
+  const scenes: NonNullable<Manifest['scenes']> = {};
+  if (images['scenes/hut-interior.png']) scenes.hutInterior = 'scenes/hut-interior.png';
+  if (images['scenes/hut-table.png']) scenes.hutTable = 'scenes/hut-table.png';
+  return Object.keys(scenes).length > 0 ? { scenes } : {};
 }
 
 /**
@@ -110,7 +134,9 @@ export function buildDefaultPack({ art }: { art?: ArtSources } = {}): {
       frame: { width: SPEC.characterFrame, height: SPEC.characterFrame },
       animations: Object.fromEntries(animations),
       portrait: face,
-      ...(art.role === 'councillor' ? { council: councilEntry({ name, images, art }) } : {}),
+      ...(art.role === 'councillor'
+        ? { council: councilEntry({ name, images, art, ...(sources ? { sources } : {}) }) }
+        : {}),
     };
   }
   images['map/tiles.png'] = tiles();
@@ -166,6 +192,7 @@ export function buildDefaultPack({ art }: { art?: ArtSources } = {}): {
       guildHall: { image: 'map/guild-hall.png', width: SPEC.guildHall, height: SPEC.guildHall },
     },
     ui: { dialogueFrame: { image: 'ui/dialogue-frame.png', size: SPEC.dialogueFrame, inset: 8 } },
+    ...sceneEntries(images),
     sounds,
   };
   return { manifest, files };

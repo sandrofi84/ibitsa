@@ -233,7 +233,7 @@ export function readSource({
 /**
  * Lays each slot's sources over the placeholder images (keyed by their path in the pack): a piece
  * with a source replaces its area outright, transparent pixels included; one without keeps the
- * placeholder.
+ * placeholder. An optional slot has no placeholder: its image is made only when a piece has art.
  */
 export function applyArtSources({
   images,
@@ -245,11 +245,17 @@ export function applyArtSources({
   slots: readonly ArtSlot[];
 }): void {
   for (const slot of slots) {
-    const image = images[slot.output];
-    if (!image) throw new Error(`art slot ${slot.output}: the pack has no such image`);
+    let image = images[slot.output];
+    if (!image && !slot.optional)
+      throw new Error(`art slot ${slot.output}: the pack has no such image`);
     for (const piece of slot.pieces) {
       const source = readSource({ sources, piece });
-      if (source) image.paste({ src: source, x: piece.x, y: piece.y });
+      if (!source) continue;
+      if (!image && slot.optional) {
+        image = new Raster(slot.optional.width, slot.optional.height);
+        images[slot.output] = image;
+      }
+      image?.paste({ src: source, x: piece.x, y: piece.y });
     }
   }
 }
