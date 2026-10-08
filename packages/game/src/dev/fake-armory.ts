@@ -1,4 +1,6 @@
 import {
+  AGENT_PRESETS,
+  type AgentView,
   type ArmoryLayer,
   type ArmoryView,
   type HeroClassView,
@@ -7,6 +9,16 @@ import {
   resolveRecolor,
 } from '@ibitsa/protocol';
 import type { ArmoryRequest, ArmoryLayerName as Layer } from './fake-armory.types';
+
+/** The presets as the extension would report them: Codex installed, the rest not (#198). */
+const DEMO_AGENTS: AgentView[] = AGENT_PRESETS.map((a) => ({
+  id: a.id,
+  name: a.name,
+  command: a.command,
+  args: a.args,
+  preset: true,
+  found: a.id === 'codex',
+}));
 
 /**
  * Dev only (#182): `ibitsa.classes` and `ibitsa.recolor` as VS Code would hold them, at your layer
@@ -58,6 +70,7 @@ export class FakeArmory {
         recolor,
         layer: layerOf(this.recolorAt, target),
       })),
+      agents: DEMO_AGENTS,
     };
   }
 }

@@ -2049,3 +2049,132 @@ describe('hero classes (#182)', () => {
     expect(snapshot?.recolor).toEqual({});
   });
 });
+
+describe("a class's agent (§11.5, #198)", () => {
+  /** A runtime whose classes run on Claude or on ACP agents, and a two-task plan to start. */
+  function mixed(agentAdapter: (id: string) => AgentAdapter | { error: string } | undefined) {
+    const storageDir = mkdtempSync(join(tmpdir(), 'ibitsa-runtime-'));
+    const repoDir = mkdtempSync(join(tmpdir(), 'ibitsa-repo-'));
+    dirs.push(storageDir, repoDir);
+    let emit: (e: CouncilEvent) => void = () => {};
+    const claude = Object.assign(new FakeAdapter(), {
+      startSitting: (_s: SittingStart, onEvent: (e: CouncilEvent) => void) => {
+        emit = onEvent;
+        return { message: () => {}, completeTool: () => {}, answer: () => {}, close: () => {} };
+      },
+    });
+    const runtime = new Runtime({
+      storageDir,
+      adapter: claude,
+      agentAdapter,
+      gameMaster: new FakeGameMaster(),
+      clock: new ManualClock(),
+      newId: () => 'camp-1',
+      repoDir,
+      watchFolder: () => ({ close: () => {} }),
+      classes: () => resolveClasses({ seer: { agent: 'codex' }, oracle: { agent: 'nowhere' } }),
+    });
+    runtime.start();
+    const connection = runtime.connect({ post: () => {} });
+    const plan = async () => {
+      connection.receive({
+        type: 'conveneCouncil',
+        commandId: 'k',
+        task: 'Add sign-in',
+        mode: 'roundTable',
+        roster: ['security'],
+        effort: 'light',
+      });
+      await flush();
+      emit({
+        type: 'reportFiled',
+        toolUseId: 'r',
+        councillorId: 'security',
+        report: { concerns: [], questions: [], recommendations: [], notChecked: [] },
+      });
+      const second = {
+        id: 'T2',
+        title: 'Do more',
+        description: 'More.',
+        files: [],
+        dependsOn: [],
+        criteria: [],
+        decisions: [],
+      };
+      emit({
+        type: 'planProposed',
+        toolUseId: 'p',
+        plan: {
+          ...SMALL_PLAN,
+          tasks: [...SMALL_PLAN.tasks, second],
+          islands: [
+            { id: 'I1', title: 'One', tasks: ['T1'] },
+            { id: 'I2', title: 'Two', tasks: ['T2'] },
+          ],
+        },
+      });
+      connection.receive({ type: 'approvePlan', commandId: 'a', version: 1 });
+      await flush();
+      return ['I1', 'I2'];
+    };
+    const start = (parties: { heroName: string; classId: string }[], islands: string[]) =>
+      connection.receive({
+        type: 'startCampaign',
+        commandId: 'go',
+        baseRef: 'main',
+        parties: parties.map((p, i) => ({ ...p, islandId: islands[i] ?? '' })),
+      });
+    return { runtime, claude, plan, start };
+  }
+
+  it("starts each hero on its class's agent, so a party mixes Claude and an ACP agent", async () => {
+    const acp = new FakeAdapter();
+    const asked: string[] = [];
+    const { runtime, claude, plan, start } = mixed((id) => {
+      asked.push(id);
+      return id === 'codex' ? acp : undefined;
+    });
+    start(
+      [
+        { heroName: 'Ilse', classId: 'ranger' },
+        { heroName: 'Mira', classId: 'seer' },
+      ],
+      await plan(),
+    );
+    await flush();
+    await flush();
+    expect(claude.sessions.map((s) => s.start.classId)).toEqual(['ranger']);
+    expect(acp.sessions.map((s) => s.start.classId)).toEqual(['seer']);
+    // The seer names no model, so the agent runs on its own default.
+    expect(acp.sessions[0]?.start).not.toHaveProperty('model');
+    expect(claude.sessions[0]?.start.model).toBe('sonnet');
+    expect(asked).toEqual(['codex']);
+    runtime.dispose();
+  });
+
+  it("gives the hero an error naming an agent that isn't there or can't be used", async () => {
+    const { runtime, claude, plan, start } = mixed((id) =>
+      id === 'codex'
+        ? { error: "Claude runs only through Ibitsa's own Claude adapter." }
+        : undefined,
+    );
+    start(
+      [
+        { heroName: 'Mira', classId: 'seer' },
+        { heroName: 'Odo', classId: 'oracle' },
+      ],
+      await plan(),
+    );
+    await flush();
+    await flush();
+    const errors = runtime.snapshotState.needsYou.flatMap((n) =>
+      n.kind === 'error' ? [n.message] : [],
+    );
+    expect(errors).toEqual([
+      "Claude runs only through Ibitsa's own Claude adapter.",
+      'No agent "nowhere" in ibitsa.agents.',
+    ]);
+    expect(claude.sessions).toEqual([]);
+    runtime.dispose();
+  });
+});

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_CLASSES, modelName, resolveClasses, resolveRecolor } from './classes';
+import {
+  classModelName,
+  DEFAULT_CLASSES,
+  modelName,
+  resolveClasses,
+  resolveRecolor,
+} from './classes';
 
 describe('resolveClasses (#182)', () => {
   it('is the four built-ins without settings', () => {
@@ -21,6 +27,7 @@ describe('resolveClasses (#182)', () => {
     expect(classes.find((c) => c.id === 'rogue')).toEqual({
       id: 'rogue',
       name: 'Rogue',
+      agent: 'claude',
       model: 'sonnet',
       appearance: 'hero.rogue',
       names: ['Vex', 'Nim', 'Sable'],
@@ -30,6 +37,7 @@ describe('resolveClasses (#182)', () => {
       {
         id: 'bard',
         name: 'Bard',
+        agent: 'claude',
         model: 'claude-opus-5-5',
         appearance: 'hero.paladin',
         names: ['Lyra'],
@@ -38,12 +46,34 @@ describe('resolveClasses (#182)', () => {
       {
         id: 'monk',
         name: 'Monk',
+        agent: 'claude',
         model: 'sonnet',
         appearance: 'hero.ranger',
         names: [],
         builtIn: false,
       },
     ]);
+  });
+
+  it("runs a class on its agent, without the old agent's model (#198)", () => {
+    const classes = resolveClasses({
+      seer: { agent: 'codex' },
+      oracle: { agent: 'codex', model: 'gpt-6-luna' },
+      ranger: { agent: 'gemini' },
+      rogue: { name: 'Thief' },
+    });
+    const of = (id: string) => classes.find((c) => c.id === id);
+    expect(of('seer')).toMatchObject({ agent: 'codex', model: '' });
+    expect(of('oracle')).toMatchObject({ agent: 'codex', model: 'gpt-6-luna' });
+    expect(of('ranger')).toMatchObject({ agent: 'gemini', model: '' });
+    expect(of('rogue')).toMatchObject({ agent: 'claude', model: 'haiku' });
+    expect(resolveClasses({ seer: { agent: 'Not An Id' } }).map((c) => c.id)).not.toContain('seer');
+  });
+
+  it('says what a class runs on in words', () => {
+    expect(classModelName({ agent: 'claude', model: 'opus' })).toBe('Claude Opus');
+    expect(classModelName({ agent: 'codex', model: 'gpt-6-luna' })).toBe('Codex · gpt-6-luna');
+    expect(classModelName({ agent: 'mine', model: '' })).toBe('Mine · its default model');
   });
 
   it('ignores a setting that does not check out', () => {

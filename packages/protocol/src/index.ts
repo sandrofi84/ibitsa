@@ -2,6 +2,9 @@
 
 export type { ActionDraft, ActionInfo, ActionPreview } from './actions.types';
 export type { AgentEvent } from './agent-events.types';
+export { AGENT_PRESETS, agentName, CLAUDE_AGENT, resolveAgents } from './agents';
+export { type AgentSetting, AgentSettingSchema } from './agents.schema';
+export type { AgentDefinition, AgentView } from './agents.types';
 export { amendmentChanges, applyAmendment, checkAmendment } from './amendment';
 export { type Amendment, AmendmentSchema } from './amendment.schema';
 export type { AmendmentChange, AmendmentOutcome, AmendmentView } from './amendment.types';
@@ -11,7 +14,13 @@ export type {
   LessonsEvent,
 } from './campaign-record.types';
 export type { ChronicleEntry } from './chronicle.types';
-export { DEFAULT_CLASSES, modelName, resolveClasses, resolveRecolor } from './classes';
+export {
+  classModelName,
+  DEFAULT_CLASSES,
+  modelName,
+  resolveClasses,
+  resolveRecolor,
+} from './classes';
 export {
   type ClassSetting,
   RECOLOR_PRESETS,

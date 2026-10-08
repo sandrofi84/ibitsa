@@ -35,6 +35,7 @@ export class Armory {
         recolor: r,
         layer: layerOf({ key: target, layers: recolors }),
       })),
+      agents: this.deps.agents?.() ?? [],
     };
   }
 

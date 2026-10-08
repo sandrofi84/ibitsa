@@ -1,6 +1,7 @@
 import {
   type ArmoryLayer,
   type ArmoryView,
+  CLAUDE_AGENT,
   DEFAULT_CLASSES,
   RECOLOR_PRESETS,
   type Recolor,
@@ -30,6 +31,34 @@ export function newClassProblem({
   if (!/^[a-z][a-z0-9-]{0,30}$/.test(id)) return 'A lowercase word, e.g. bard.';
   if (taken.includes(id)) return 'That class exists already: edit it above.';
   return null;
+}
+
+/** One agent as the Armory offers it (#198): its name, and why it can't be picked or won't start. */
+export function agentChoice({ view, id }: { view: ArmoryView; id: string }): {
+  label: string;
+  disabled: boolean;
+  warning: string | null;
+} {
+  if (id === CLAUDE_AGENT) return { label: 'Claude', disabled: false, warning: null };
+  const agent = view.agents.find((a) => a.id === id);
+  if (!agent) {
+    return {
+      label: `${id} (unknown)`,
+      disabled: true,
+      warning: `There's no agent "${id}" in ibitsa.agents: heroes of this class can't start.`,
+    };
+  }
+  if (agent.refused) {
+    return { label: `${agent.name} (refused)`, disabled: true, warning: agent.refused };
+  }
+  if (!agent.found) {
+    return {
+      label: `${agent.name} (not installed)`,
+      disabled: false,
+      warning: `${agent.name} isn't installed: \`${agent.command}\` isn't on your PATH. Ibitsa installs no agent; install it and sign in yourself.`,
+    };
+  }
+  return { label: agent.name, disabled: false, warning: null };
 }
 
 /** The appearances a class can take: the built-ins' characters and any in use. */
@@ -87,6 +116,7 @@ export function armoryTab({
       el('h3', { text: 'Classes' }),
       ...current.classes.map((c) => classRow({ c, view: current })),
       addClass(current),
+      ...agentList(current),
       el('h3', { text: 'Councillors' }),
       ...(client.snapshot?.councillors ?? []).map((c) =>
         recolorRow({ target: `councillor:${c.id}`, label: c.title, view: current }),
@@ -104,8 +134,8 @@ export function armoryTab({
     const row = el('fieldset', { className: 'armory-class' });
     row.append(el('legend', { text: c.name }));
     const name = labelled({ text: 'Name', control: textInput(c.name) });
-    const model = textInput(c.model);
-    model.setAttribute('list', 'armory-models');
+    const agent = agentSelect({ view: v, value: c.agent });
+    const model = modelInput({ value: c.model, agent: c.agent });
     const look = el('select');
     for (const a of appearances(v)) look.add(new Option(a.replace(/^hero\./, ''), a));
     look.value = c.appearance;
@@ -116,20 +146,41 @@ export function armoryTab({
         id: c.id,
         class: {
           name: name.control.value.trim() || c.name,
-          model: model.value.trim() || c.model,
+          agent: agent.value,
+          ...modelField({ input: model, agent: agent.value, fallback: c.model }),
           appearance: look.value,
         },
         layer,
       });
     name.control.onchange = save;
+    // Another agent doesn't run the old one's model: Claude starts on Sonnet, an ACP agent on its own.
+    agent.onchange = () => {
+      model.value = agent.value === CLAUDE_AGENT ? 'sonnet' : '';
+      save();
+    };
     model.onchange = save;
     look.onchange = save;
     row.append(
       name.label,
+      labelled({ text: 'Agent', control: agent }).label,
       labelled({ text: 'Model', control: model }).label,
       labelled({ text: 'Looks like', control: look }).label,
       el('span', { className: `layer ${c.layer}`, text: LAYERS[c.layer] }),
     );
+    const { warning } = agentChoice({ view: v, id: c.agent });
+    if (c.agent !== CLAUDE_AGENT) {
+      row.append(
+        el('p', {
+          className: 'note',
+          text: "The agent picks the model if it doesn't offer this one, or when none is set.",
+        }),
+      );
+    }
+    if (warning) {
+      const p = el('p', { className: 'rule-problem', text: warning });
+      p.setAttribute('role', 'status');
+      row.append(p);
+    }
     if (c.layer !== 'default') {
       const from = c.layer;
       row.append(
@@ -198,9 +249,18 @@ export function armoryTab({
     const form = el('form', { className: 'armory-new' });
     const id = labelled({ text: 'New class id', control: textInput('') });
     const name = labelled({ text: 'Its name', control: textInput('') });
-    const model = textInput('sonnet');
-    model.setAttribute('list', 'armory-models');
-    form.append(id.label, name.label, labelled({ text: 'Its model', control: model }).label);
+    const agent = agentSelect({ view: v, value: CLAUDE_AGENT });
+    const model = modelInput({ value: 'sonnet', agent: CLAUDE_AGENT });
+    agent.onchange = () => {
+      model.value = agent.value === CLAUDE_AGENT ? 'sonnet' : '';
+      model.placeholder = agent.value === CLAUDE_AGENT ? '' : 'its default';
+    };
+    form.append(
+      id.label,
+      name.label,
+      labelled({ text: 'Its agent', control: agent }).label,
+      labelled({ text: 'Its model', control: model }).label,
+    );
     form.append(el('button', { text: 'Add the class' }));
     if (problem) {
       const p = el('p', { className: 'rule-problem', text: problem });
@@ -221,7 +281,8 @@ export function armoryTab({
         id: newId,
         class: {
           ...(name.control.value.trim() ? { name: name.control.value.trim() } : {}),
-          model: model.value.trim() || 'sonnet',
+          agent: agent.value,
+          ...modelField({ input: model, agent: agent.value, fallback: 'sonnet' }),
         },
         layer,
       });
@@ -229,10 +290,64 @@ export function armoryTab({
     return form;
   }
 
+  /** The agents a class can run on besides Claude (§11.5), and which are installed (#198). */
+  function agentList(v: ArmoryView): HTMLElement[] {
+    const list = el('ul', { className: 'armory-agents' });
+    for (const a of v.agents) {
+      const status = a.refused ?? (a.found ? 'installed' : 'not installed');
+      list.append(el('li', { text: `${a.name} (${[a.command, ...a.args].join(' ')}): ${status}` }));
+    }
+    return [
+      el('h3', { text: 'Agents' }),
+      el('p', {
+        className: 'note',
+        text: 'Claude, or an ACP agent you have installed and signed in to. Add or change agents in the ibitsa.agents setting.',
+      }),
+      list,
+    ];
+  }
+
   return {
     load: () => host.request({ channel: 'host', type: 'readArmory' }),
     render,
   };
+}
+
+/** Claude and every agent in the view, each labelled with why it can't run (#198). */
+function agentSelect({ view, value }: { view: ArmoryView; value: string }): HTMLSelectElement {
+  const select = el('select');
+  const ids = [CLAUDE_AGENT, ...view.agents.map((a) => a.id)];
+  if (!ids.includes(value)) ids.push(value);
+  for (const id of ids) {
+    const choice = agentChoice({ view, id });
+    const option = new Option(choice.label, id);
+    option.disabled = choice.disabled && id !== value;
+    select.add(option);
+  }
+  select.value = value;
+  return select;
+}
+
+function modelInput({ value, agent }: { value: string; agent: string }): HTMLInputElement {
+  const input = textInput(value);
+  input.setAttribute('list', 'armory-models');
+  if (agent !== CLAUDE_AGENT) input.placeholder = 'its default';
+  return input;
+}
+
+/** The model to write: what's typed, else Claude's fallback; an ACP agent may have none (§11.5). */
+function modelField({
+  input,
+  agent,
+  fallback,
+}: {
+  input: HTMLInputElement;
+  agent: string;
+  fallback: string;
+}): { model?: string } {
+  const typed = input.value.trim();
+  if (typed) return { model: typed };
+  return agent === CLAUDE_AGENT ? { model: fallback || 'sonnet' } : {};
 }
 
 function textInput(value: string): HTMLInputElement {
