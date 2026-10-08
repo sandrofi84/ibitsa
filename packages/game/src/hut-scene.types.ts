@@ -12,6 +12,8 @@ export interface SeatObjects {
   sprite: Phaser.GameObjects.Sprite;
   glow: Phaser.GameObjects.Ellipse;
   label: Phaser.GameObjects.Text;
+  /** The name plate behind the label, on the table's front (#233). */
+  plate: Phaser.GameObjects.Rectangle;
   hand: Phaser.GameObjects.Container;
   mark: Phaser.GameObjects.Text;
   book: Phaser.GameObjects.Rectangle;
@@ -29,6 +31,8 @@ export interface HutRendered {
   /** Whose room and table show (#219): the pack's pictures, or the ones the game draws. */
   room: 'pack' | 'drawn';
   table: 'pack' | 'drawn';
+  /** The "Book of Decisions" counter's plate (#233). */
+  decisionsPlate: PlateBox;
   councillors: {
     id: string;
     /** The seat. */
@@ -42,5 +46,16 @@ export interface HutRendered {
     mark: string | null;
     hand: boolean;
     book: boolean;
+    /** The name on its plate, and where the plate is (#233). */
+    name: string;
+    plate: PlateBox;
   }[];
+}
+
+/** A plate's box in room pixels: left, top, right, bottom (#233). */
+export interface PlateBox {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
 }

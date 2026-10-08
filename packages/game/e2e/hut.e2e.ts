@@ -19,7 +19,16 @@ interface Rendered {
     mark: string | null;
     hand: boolean;
     book: boolean;
+    name: string;
+    plate: Box;
   }[];
+  decisionsPlate: Box;
+}
+interface Box {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
 }
 interface Probe {
   hut(): Rendered | null;
@@ -187,6 +196,36 @@ test('nine councillors fit along the table, shoulder to shoulder (#219)', async 
   expect((xs[0] as number) - 24).toBeGreaterThanOrEqual(24);
   expect((xs.at(-1) as number) + 24).toBeLessThanOrEqual(456);
   await page.screenshot({ path: 'test-results/hut-nine.png' });
+});
+
+test("nine names read on their plates, clear of the drawn table's book (#233)", async ({
+  page,
+}) => {
+  await page.goto('/?scene=hut&mode=roundTable&crowd=1');
+  await expect.poll(async () => (await hut(page))?.councillors.length, { timeout: 20_000 }).toBe(9);
+  await seated(page);
+  const r = await hut(page);
+  // The default pack's table is the drawn art (#232): its Book of Decisions lies on the top.
+  expect(r?.table).toBe('pack');
+  const BOOK = { left: 194, top: 176, right: 287, bottom: 192 };
+  const clear = (b: Box) =>
+    b.right <= BOOK.left || b.left >= BOOK.right || b.bottom <= BOOK.top || b.top >= BOOK.bottom;
+  const plates = (r?.councillors ?? []).map((c) => ({ ...c.plate, name: c.name }));
+  for (const p of plates) {
+    expect(p.name, 'shown in full').not.toContain('…');
+    expect(clear(p), `${p.name} clear of the book`).toBe(true);
+    expect(p.left).toBeGreaterThanOrEqual(0);
+    expect(p.right).toBeLessThanOrEqual(480);
+  }
+  expect(clear(r?.decisionsPlate as Box), 'the counter clear of the book').toBe(true);
+  // No two plates overlap.
+  for (const [i, a] of plates.entries())
+    for (const b of plates.slice(i + 1)) {
+      const apart =
+        a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top;
+      expect(apart, `${a.name} and ${b.name}`).toBe(true);
+    }
+  await page.screenshot({ path: 'test-results/hut-names.png' });
 });
 
 test("the hut shows a pack's own room and table, and draws its own without them (#219)", async ({
