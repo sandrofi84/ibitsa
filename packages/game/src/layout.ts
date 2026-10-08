@@ -32,6 +32,17 @@ export function islandWidth(middles: number): number {
   return ISLAND.leftCap + ISLAND.middle * middles + ISLAND.rightCap;
 }
 
+/**
+ * The row where an island's shore meets the sea: the foam line on the drawn pieces and the village
+ * (rows 73–74 of 96, #239). A place's name plate sits on it, centred (#240).
+ */
+export const SHORE_ROW = 74;
+
+/** Where an island's (or Home Village's) name plate goes: its middle, on the shore line (#240). */
+export function namePlateSpot({ x, y, middles }: { x: number; y: number; middles: number }): Point {
+  return { x: x + islandWidth(middles) / 2, y: y + SHORE_ROW };
+}
+
 /** Whole middle slices that hold `n` task points with a margin each side. */
 function middlesFor(n: number): number {
   const span = TASK_SIZE + TASK_SPACING * (Math.max(1, n) - 1);
