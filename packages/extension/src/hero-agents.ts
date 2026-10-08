@@ -39,6 +39,7 @@ export class HeroAgents {
     const adapter = new AcpAdapter({
       agent: spec,
       env: this.deps.env,
+      ...(this.deps.tools ? { tools: this.deps.tools } : {}),
       ...((this.deps.platform ?? process.platform) === 'win32' ? { spawn: spawnOnWindows } : {}),
     });
     this.adapters.set(id, { entry, adapter });

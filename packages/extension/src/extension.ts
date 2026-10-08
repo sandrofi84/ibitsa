@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { ToolBridge } from '@ibitsa/agent-acp';
 import { ClaudeAdapter } from '@ibitsa/agent-claude-sdk';
 import { GitHubHost } from '@ibitsa/githost-github';
 import { heroHandle } from '@ibitsa/protocol';
@@ -51,7 +52,15 @@ export function activate(context: vscode.ExtensionContext): IbitsaApi {
   // ACP agents (§11.5, #198) start from the heroes' environment without Anthropic's credentials:
   // they're for Claude alone.
   let heroEnv: Record<string, string | undefined> = process.env;
-  const heroAgents = new HeroAgents({ agents: () => readAgents(config()), env: () => heroEnv });
+  // One MCP tool bridge for every ACP hero (#197): the agents launch `dist/mcp-bridge.cjs`, which
+  // connects back here to offer `submit_task`.
+  const toolBridge = new ToolBridge({ script: context.asAbsolutePath('dist/mcp-bridge.cjs') });
+  context.subscriptions.push({ dispose: () => toolBridge.close() });
+  const heroAgents = new HeroAgents({
+    agents: () => readAgents(config()),
+    env: () => heroEnv,
+    tools: toolBridge,
+  });
   let dependencies: DependencyFactory = ({ workspaceDir, credentials, env: base }) => {
     const env = agentEnvironment({ credentials, env: base, allowLogin: development });
     heroEnv = base;
