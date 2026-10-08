@@ -818,7 +818,9 @@
   },
   "scenes": {
     "hutInterior": "scenes/hut-interior.png",
-    "hutTable": "scenes/hut-table.png"
+    "hutTable": "scenes/hut-table.png",
+    "village": "scenes/village.png",
+    "ibitsa": "scenes/ibitsa.png"
   },
   "sounds": {
     "needsYou": {

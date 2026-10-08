@@ -330,14 +330,14 @@ Everything else is transparent: the room and the councillors show through.
 | What | Where | So |
 |---|---|---|
 | Ground (sand rim, grass) | rows 0–63 | as on the island pieces, so the village matches the other islands |
-| Cliff | rows 64–85 | as on the island pieces |
-| Foam where it meets the sea | rows 86–95 | as on the island pieces; transparent outside the island's outline |
+| Sandy front shore | rows 64–72 | as on the island pieces (`2` above, `3` lower down) |
+| Turquoise foam line (`i`) | rows 73–74, and 2 px around the rest of the outline | as on the island pieces; transparent below row 74 and outside the outline |
 | Guild Hall (drawn on top) | x 6–53, rows −14 to 33 | hidden by the building; plain ground is enough |
 | Council hut (drawn on top) | x 56–119, rows −30 to 33 | hidden by the building; plain ground is enough |
 | The hut's door | (88, 32) | heroes come out here |
 | Heroes waiting for their island | feet at x 32–68, rows 36 and 48 | keep that patch open ground, no props |
 | Paths to the islands | from (88, 36) to the right edge | a sandy path there looks right; the game draws its dotted paths over it |
-| "HOME VILLAGE" (drawn by the game) | rows 70–78, x 22 to about 100 | keep that band of cliff plain, so the text reads |
+| "HOME VILLAGE" (drawn by the game) | rows 70–78, x 22 to about 100 | it sits on the shore's lower edge; keep that stretch of shore plain, so the text reads |
 
 **Props** go in the open ground that's left: the left side (x 0–28, rows 36–62) and the right side (x 76–127, rows 40–62). For example, an olive tree or two, a stone well, a small jetty with a moored boat at the right edge, and a few flower pots.
 
@@ -347,22 +347,22 @@ With Template S:
 Asset: Home Village island
 Size: width="128" height="96" viewBox="0 0 128 96"
 What it shows: a small Mediterranean village island from above, three-quarter view.
-Rows 0-63: ground with a sand rim (2, 3) and grass (c, d). Rows 64-85: a cliff face
-(5, 4, 6). Rows 86-95: white foam (j, k) where it meets the sea. Transparent outside
-the island's rounded outline. A sandy path from (88,36) to the right edge. Keep the
+Rows 0-63: ground with a sand rim (2, 3) and grass (c, d). Rows 64-72: a sandy front
+shore (2, then 3). Rows 73-74: a turquoise foam line (i), and the same 2 px foam line
+around the rest of the outline. Transparent below row 74 and outside the outline. A sandy path from (88,36) to the right edge. Keep the
 top band (rows 0-33 from x=6 to x=119) plain grass: two buildings stand there. Keep
 x 32-76, rows 30-56 open ground: heroes wait there. Keep rows 70-78 of the cliff
 plain: the game writes the village's name there. Props in the open ground: an olive
 tree or two (d, e, 5), a stone well (l, k), a small jetty with a moored boat at the
 right edge (5, v, h), a few terracotta flower pots (1, 0).
-Must match: <paste the approved island middle piece> — the same sand, grass, cliff and foam.
+Must match: <paste the approved island middle piece> — the same sand, grass, shore and foam.
 ```
 
 **Checklist:**
 
 - [ ] 128×96, transparent outside the island;
-- [ ] the ground, cliff and foam rows line up with the island pieces;
-- [ ] the hero patch and the label band are clear;
+- [ ] the ground, shore and foam rows line up with the island pieces;
+- [ ] the hero patch and the label's stretch of shore are clear;
 - [ ] in the game, the hut and the Guild Hall stand on it naturally.
 
 ### Ibitsa
@@ -514,8 +514,8 @@ Tick each file as it lands (issue #223 tracks the batches). Generated from the l
 
 - [x] `art/scenes/hut-interior.svg`
 - [x] `art/scenes/hut-table.svg`
-- [ ] `art/scenes/village.svg`
-- [ ] `art/scenes/ibitsa.svg`
+- [x] `art/scenes/village.svg`
+- [x] `art/scenes/ibitsa.svg`
 
 ### Batch 7: extra poses
 
