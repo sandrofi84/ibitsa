@@ -1,12 +1,13 @@
 import { expect, type Page, test } from '@playwright/test';
 import { openWelcome } from './home';
 
-// The map's optional poses (#222): each moment plays its own animation from the placeholder pack.
+// The map's optional poses (#222): each moment asks for its own animation, and a character whose
+// sheet doesn't have it yet (drawn art without that pose, §9.5) plays the fallback instead.
 
 interface Probe {
   map(): {
     islands: unknown[];
-    poses?: { heroId: string; pose: string }[];
+    poses?: { heroId: string; pose: string; wants: string }[];
     blocked?: { heroId: string; reason: string }[];
     reviewers?: { walking: boolean; magnifier: boolean; pose: string }[];
   } | null;
@@ -30,10 +31,11 @@ test('a blocked hero slumps, and a reviewing councillor peers at the work (#222)
       probe(page, (p) => {
         const map = p.map();
         const blocked = map?.blocked?.[0]?.heroId;
-        return map?.poses?.find((h) => h.heroId === blocked)?.pose;
+        const hero = map?.poses?.find((h) => h.heroId === blocked);
+        return hero && `${hero.wants}:${hero.pose}`;
       }),
     )
-    .toBe('blocked');
+    .toMatch(/^blocked:(blocked|idle)$/);
 
   const pane = page.getByRole('region', { name: 'Hero' });
   await pane.getByLabel('Message to the hero').fill('Submit it');
@@ -64,6 +66,13 @@ test('a hero waiting on your answer raises a hand (#222)', async ({ page }) => {
   await expect
     .poll(() => probe(page, (p) => p.snapshot()?.heroes[0]?.state.kind))
     .toBe('waitingOnYou');
-  await expect.poll(() => probe(page, (p) => p.map()?.poses?.[0]?.pose)).toBe('ask');
+  await expect
+    .poll(() =>
+      probe(page, (p) => {
+        const hero = p.map()?.poses?.[0];
+        return hero && `${hero.wants}:${hero.pose}`;
+      }),
+    )
+    .toMatch(/^ask:(ask|idle)$/);
   await page.screenshot({ path: 'test-results/poses-ask.png' });
 });
