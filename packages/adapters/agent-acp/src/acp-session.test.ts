@@ -15,7 +15,9 @@ const sessions: AgentSession[] = [];
 
 afterEach(() => {
   for (const s of sessions.splice(0)) s.close();
-  for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });
+  // On Windows the folder stays busy until the killed agent has gone.
+  for (const d of dirs.splice(0))
+    rmSync(d, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
 });
 
 /** A hero on the fake agent, with the requests the agent received and the events it produced. */

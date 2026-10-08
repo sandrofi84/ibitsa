@@ -8,7 +8,9 @@ import { AcpAdapter } from './acp-adapter';
 const FAKE_AGENT = fileURLToPath(new URL('../test/fake-agent.mjs', import.meta.url));
 const dirs: string[] = [];
 afterEach(() => {
-  for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });
+  // On Windows the folder stays busy until the killed agent has gone.
+  for (const d of dirs.splice(0))
+    rmSync(d, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
 });
 
 function folder(): string {
