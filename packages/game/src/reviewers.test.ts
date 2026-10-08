@@ -1,6 +1,6 @@
 import type { ReviewView, Snapshot, TaskReviewView } from '@ibitsa/protocol';
 import { describe, expect, it } from 'vitest';
-import { reviewersOf } from './reviewers';
+import { reviewersOf, stackPlates } from './reviewers';
 
 const review = (
   councillorId: string,
@@ -113,5 +113,32 @@ describe('reviewersOf (#140)', () => {
         ['t1:tester:1', 0, true],
       ]);
     }
+  });
+});
+
+describe('stackPlates (#234)', () => {
+  const plate = (x: number, y: number) => ({ x, y, width: 30, height: 10 });
+
+  it('leaves plates that are clear of each other in their own place', () => {
+    expect(stackPlates([plate(0, 0), plate(40, 0), plate(0, 20)])).toEqual([0, 0, 0]);
+  });
+
+  it('stacks plates bunched in one spot down a plate at a time, in order', () => {
+    // Three reviewers leaving the hut's door together: the same spot, one name under the other.
+    expect(stackPlates([plate(10, 5), plate(10, 5), plate(10, 5)])).toEqual([0, 11, 22]);
+  });
+
+  it('moves a plate only as far as it needs, past every plate it would cover', () => {
+    // The second overlaps the first and moves under it; the third, clear of the first but over the
+    // second's new place, moves just under that.
+    expect(stackPlates([plate(0, 0), plate(20, 4), plate(25, 14)])).toEqual([0, 11, 11]);
+  });
+
+  it('treats plates that only touch as clear', () => {
+    expect(stackPlates([plate(0, 0), plate(30, 0), plate(0, 10)])).toEqual([0, 0, 0]);
+  });
+
+  it('places nothing for no plates', () => {
+    expect(stackPlates([])).toEqual([]);
   });
 });
