@@ -65,6 +65,14 @@ export class Raster {
     }
   }
 
+  /** Copy another raster in as it is, transparent pixels included: a pasted piece replaces its area. */
+  paste({ src, x, y }: { src: Raster; x: number; y: number }): void {
+    for (let j = 0; j < src.height; j++) {
+      const row = src.data.subarray(j * src.width * 4, (j + 1) * src.width * 4);
+      this.data.set(row, ((y + j) * this.width + x) * 4);
+    }
+  }
+
   png(): Buffer {
     return encodePng({ width: this.width, height: this.height, rgba: this.data });
   }

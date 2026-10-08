@@ -19,6 +19,9 @@ import {
   taskPoints,
   tiles,
 } from './art.ts';
+import { artSlots } from './art-slots.ts';
+import { applyArtSources } from './art-source.ts';
+import type { ArtSources } from './art-source.types.ts';
 import type { Manifest } from './manifest.schema.ts';
 import {
   ACTIVITY_KINDS,
@@ -28,20 +31,21 @@ import {
   SPEC,
   TASK_POINT_STATES,
 } from './manifest.ts';
+import type { Raster } from './raster.ts';
 import { defaultSounds, wav } from './sound.ts';
 
 /** A councillor's 32×32 council sheet (§9.2): writes the image and returns its manifest entry. */
 function councilEntry({
   name,
-  files,
+  images,
   art,
 }: {
   name: string;
-  files: Record<string, Buffer>;
+  images: Record<string, Raster>;
   art: (typeof CHARACTERS)[number];
 }): NonNullable<Manifest['characters'][string]['council']> {
   const sheet = `characters/${name}-council.png`;
-  files[sheet] = councilSheet(art).png();
+  images[sheet] = councilSheet(art);
   return {
     sheet,
     frame: { width: SPEC.councilFrame, height: SPEC.councilFrame },
@@ -54,16 +58,24 @@ function councilEntry({
   };
 }
 
-/** The default pack: manifest plus every image, keyed by path inside the pack. */
-export function buildDefaultPack(): { manifest: Manifest; files: Record<string, Buffer> } {
+/**
+ * The default pack: manifest plus every file, keyed by path inside the pack. Each image is the art
+ * from `art` where a source exists, else the code-drawn placeholder (§9.5); without `art`, all
+ * placeholders.
+ */
+export function buildDefaultPack({ art }: { art?: ArtSources } = {}): {
+  manifest: Manifest;
+  files: Record<string, Buffer>;
+} {
   const files: Record<string, Buffer> = {};
+  const images: Record<string, Raster> = {};
   const characters: Manifest['characters'] = {};
   for (const art of CHARACTERS) {
     const name = art.key.replace('.', '-');
     const sheet = `characters/${name}.png`;
     const face = `portraits/${name}.png`;
-    files[sheet] = characterSheet(art).png();
-    files[face] = portrait(art).png();
+    images[sheet] = characterSheet(art);
+    images[face] = portrait(art);
     characters[art.key] = {
       role: art.role,
       sheet,
@@ -75,18 +87,21 @@ export function buildDefaultPack(): { manifest: Manifest; files: Record<string, 
         ]),
       ),
       portrait: face,
-      ...(art.role === 'councillor' ? { council: councilEntry({ name, files, art }) } : {}),
+      ...(art.role === 'councillor' ? { council: councilEntry({ name, images, art }) } : {}),
     };
   }
-  files['map/tiles.png'] = tiles().png();
-  files['map/island.png'] = island().png();
-  files['map/task-points.png'] = taskPoints(TASK_POINT_STATES).png();
-  files['map/hut.png'] = hut().png();
-  files['map/guild-hall.png'] = guildHall().png();
-  files['ui/activity-icons.png'] = activityIcons(ACTIVITY_KINDS).png();
-  files['ui/dialogue-frame.png'] = dialogueFrame().png();
-  files['map/bridge.png'] = bridge().png();
-  files['ui/markers.png'] = markers().png();
+  images['map/tiles.png'] = tiles();
+  images['map/island.png'] = island();
+  images['map/task-points.png'] = taskPoints(TASK_POINT_STATES);
+  images['map/hut.png'] = hut();
+  images['map/guild-hall.png'] = guildHall();
+  images['ui/activity-icons.png'] = activityIcons(ACTIVITY_KINDS);
+  images['ui/dialogue-frame.png'] = dialogueFrame();
+  images['map/bridge.png'] = bridge();
+  images['ui/markers.png'] = markers();
+  // The real art over the placeholders, piece by piece (§9.5, #218).
+  if (art) applyArtSources({ images, sources: art, slots: artSlots() });
+  for (const [path, image] of Object.entries(images)) files[path] = image.png();
   // The default sounds (§9.4, #184), generated like the art.
   const sounds: NonNullable<Manifest['sounds']> = {};
   for (const [slot, samples] of Object.entries(defaultSounds())) {
@@ -141,8 +156,8 @@ function writeAll(dir: string, files: Record<string, Buffer | string>): void {
   }
 }
 
-export function writeDefaultPack(dir: string): void {
-  const { manifest, files } = buildDefaultPack();
+export function writeDefaultPack(dir: string, { art }: { art?: ArtSources } = {}): void {
+  const { manifest, files } = buildDefaultPack(art ? { art } : {});
   writeAll(dir, { ...files, 'pack.json': `${JSON.stringify(manifest, null, 2)}\n` });
 }
 
