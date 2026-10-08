@@ -5,9 +5,10 @@ import { ManifestSchema } from './manifest.schema.ts';
 import {
   ACTIVITY_KINDS,
   BRIDGE_FRAMES,
-  COUNCIL_ANIMATIONS,
   REQUIRED_ANIMATIONS,
+  REQUIRED_COUNCIL_ANIMATIONS,
   REQUIRED_MARKERS,
+  SCENE_SLOTS,
   SOUND_LIMITS,
   SPEC,
 } from './manifest.ts';
@@ -92,17 +93,20 @@ export function validatePack(dir: string): PackValidation {
     label,
     frameSize,
     required,
+    hint = '',
   }: {
     sheet: { sheet: string; frame: { width: number; height: number }; animations: object };
     label: string;
     frameSize: number;
     required: readonly string[];
+    /** Said after a wrong frame size, e.g. what changed and how to fix it. */
+    hint?: string;
   }) => {
     const { frame } = sheet;
     const animations = sheet.animations as Record<string, { row: number; frames: number }>;
     if (frame.width !== frameSize || frame.height !== frameSize) {
       errors.push(
-        `${label}: frame is ${frame.width}×${frame.height}, expected ${frameSize}×${frameSize}`,
+        `${label}: frame is ${frame.width}×${frame.height}, expected ${frameSize}×${frameSize}${hint}`,
       );
     }
     for (const animation of required) {
@@ -133,7 +137,10 @@ export function validatePack(dir: string): PackValidation {
         sheet: c.council,
         label: `${label} council sheet`,
         frameSize: SPEC.councilFrame,
-        required: COUNCIL_ANIMATIONS,
+        required: REQUIRED_COUNCIL_ANIMATIONS,
+        // Council figures were 32×32 torsos before the art plan (#219): one size keeps the hut's
+        // seating and table line right, and a pack without the sheet falls back to its map sprite.
+        hint: ' (council figures are 48×48 full-body; redraw the sheet, or remove "council" to use the map sprite scaled 3×)',
       });
     if (c.portrait)
       checkImage({
@@ -240,6 +247,17 @@ export function validatePack(dir: string): PackValidation {
     errors.push(`dialogue frame: size ${d.size}, expected ${SPEC.dialogueFrame}`);
   if (d.inset * 2 >= d.size) errors.push('dialogue frame: inset leaves no middle slice');
   checkImage({ file: d.image, label: 'dialogue frame', check: exactly(d.size, d.size) });
+
+  // Full-scene pictures (#219): optional, each exactly the scene size.
+  for (const slot of SCENE_SLOTS) {
+    const file = manifest.scenes?.[slot];
+    if (file)
+      checkImage({
+        file,
+        label: `scene ${slot}`,
+        check: exactly(SPEC.scene.width, SPEC.scene.height),
+      });
+  }
 
   // Sounds (§9.4, #184): there, and not too long; a WAV's length is read from its header.
   for (const [slot, sound] of Object.entries(manifest.sounds ?? {})) {

@@ -119,6 +119,7 @@ if (name === 'live') {
   const { client, zoom, showHut, hut } = startGame(root, host);
   const sitting = new ScriptedSitting(
     params.get('mode') === 'chambers' ? 'chambers' : 'roundTable',
+    params.get('crowd') === '1',
   );
   showHut(sitting);
   w.__ibitsa = {

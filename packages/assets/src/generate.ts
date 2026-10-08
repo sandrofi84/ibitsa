@@ -34,7 +34,7 @@ import {
 import type { Raster } from './raster.ts';
 import { defaultSounds, wav } from './sound.ts';
 
-/** A councillor's 32×32 council sheet (§9.2): writes the image and returns its manifest entry. */
+/** A councillor's 48×48 council sheet (§9.2): writes the image and returns its manifest entry. */
 function councilEntry({
   name,
   images,
@@ -52,7 +52,11 @@ function councilEntry({
     animations: Object.fromEntries(
       COUNCIL_ANIMATIONS.map((animation, row) => [
         animation,
-        { row, frames: FRAMES, fps: animation === 'idle' || animation === 'think' ? 3 : 6 },
+        {
+          row,
+          frames: FRAMES,
+          fps: animation === 'idle' || animation === 'think' ? 3 : animation === 'walk' ? 8 : 6,
+        },
       ]),
     ),
   };
@@ -62,6 +66,14 @@ function councilEntry({
 function fpsOf(animation: string): number {
   if (animation === 'walk' || animation === 'celebrate' || animation === 'hurt') return 8;
   return animation === 'rest' ? 2 : 4;
+}
+
+/** The hut's room and table (#219), listed only when their art made them: the game draws its own. */
+function sceneEntries(images: Record<string, Raster>): Pick<Manifest, 'scenes'> {
+  const scenes: NonNullable<Manifest['scenes']> = {};
+  if (images['scenes/hut-interior.png']) scenes.hutInterior = 'scenes/hut-interior.png';
+  if (images['scenes/hut-table.png']) scenes.hutTable = 'scenes/hut-table.png';
+  return Object.keys(scenes).length > 0 ? { scenes } : {};
 }
 
 /**
@@ -149,6 +161,7 @@ export function buildDefaultPack({ art }: { art?: ArtSources } = {}): {
       guildHall: { image: 'map/guild-hall.png', width: SPEC.guildHall, height: SPEC.guildHall },
     },
     ui: { dialogueFrame: { image: 'ui/dialogue-frame.png', size: SPEC.dialogueFrame, inset: 8 } },
+    ...sceneEntries(images),
     sounds,
   };
   return { manifest, files };

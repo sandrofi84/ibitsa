@@ -1,5 +1,5 @@
 // A scripted sitting for the standalone game: drives the council hut until the real sitting
-// events arrive with #100. `?scene=hut&mode=chambers|roundTable`.
+// events arrive with #100. `?scene=hut&mode=chambers|roundTable`, `&crowd=1` for a full table of nine.
 import { emptyHut, reduceHut } from '../hut-view';
 import type { HutEvent, HutFeed, HutMode, HutView } from '../hut-view.types';
 
@@ -12,10 +12,17 @@ const ROSTER = [
   { id: 'designer', title: 'Designer', appearance: 'councillor.default' },
 ];
 
+/** Three more, so a crowded sitting fills the table with nine (#219). */
+const CROWD = [
+  { id: 'navigator', title: 'Navigator', appearance: 'councillor.default' },
+  { id: 'scribe', title: 'Scribe', appearance: 'councillor.default' },
+  { id: 'herald', title: 'Herald', appearance: 'councillor.default' },
+];
+
 /** The sitting's events in order: reports (studied first in separate chambers), questions, the plan. */
-export function sittingScript(mode: HutMode): HutEvent[] {
+export function sittingScript(mode: HutMode, crowd = false): HutEvent[] {
   return [
-    { type: 'convened', mode, councillors: ROSTER },
+    { type: 'convened', mode, councillors: crowd ? [...ROSTER, ...CROWD] : ROSTER },
     { type: 'step', step: 'research' },
     ...['tester', 'designer', 'elder', 'architect', 'accessibility', 'security'].map(
       (councillor): HutEvent => ({ type: 'reportFiled', councillor }),
@@ -42,8 +49,8 @@ export class ScriptedSitting implements HutFeed {
   private readonly script: HutEvent[];
   private readonly listeners = new Set<(view: HutView) => void>();
 
-  constructor(mode: HutMode) {
-    this.script = sittingScript(mode);
+  constructor(mode: HutMode, crowd = false) {
+    this.script = sittingScript(mode, crowd);
     this.advance();
   }
 

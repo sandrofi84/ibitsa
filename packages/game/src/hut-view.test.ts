@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { councilPose, emptyHut, reduceHut, seatHut } from './hut-view';
+import { councilPose, emptyHut, HUT_DOOR_X, reduceHut, seatHut, walkIns } from './hut-view';
 import type { HutEvent, HutMode, HutView } from './hut-view.types';
 
 const ROSTER = [
@@ -132,5 +132,68 @@ describe('seating', () => {
       expect(s.x).toBeGreaterThanOrEqual(16);
       expect(s.x).toBeLessThanOrEqual(464);
     }
+  });
+});
+
+describe('nine at the table (#219)', () => {
+  const nine = Array.from({ length: 9 }, (_, i) => ({
+    id: i === 4 ? 'elder' : `c${i}`,
+    title: `C${i}`,
+    appearance: 'x',
+  }));
+
+  it('seats nine 48-wide figures shoulder to shoulder, all on the table', () => {
+    const seats = seatHut(run([{ type: 'convened', mode: 'roundTable', councillors: nine }]), 480);
+    const xs = seats.map((s) => s.x);
+    for (let i = 1; i < xs.length; i++) expect((xs[i] as number) - (xs[i - 1] as number)).toBe(48);
+    // The table runs from x=24 to x=456: every figure's 48 px stand on it.
+    expect((xs[0] as number) - 24).toBeGreaterThanOrEqual(24);
+    expect((xs.at(-1) as number) + 24).toBeLessThanOrEqual(456);
+  });
+});
+
+describe('walking in (#219)', () => {
+  const convened = convene('roundTable');
+  const seats = seatHut(convened, 480);
+
+  it('brings a just-convened council in from the door, the farthest first, one after another', () => {
+    const walks = walkIns({
+      seats,
+      seated: new Set(),
+      first: true,
+      view: convened,
+      reducedMotion: false,
+    });
+    expect(walks.map((w) => w.id)).toEqual([...seats].sort((a, b) => b.x - a.x).map((s) => s.id));
+    for (const w of walks) {
+      expect(w.fromX).toBe(HUT_DOOR_X);
+      expect(w.toX).toBe(seats.find((s) => s.id === w.id)?.x);
+      expect(w.durationMs).toBeGreaterThan(0);
+    }
+    expect(walks.map((w) => w.delayMs)).toEqual([0, 250, 500, 750]);
+    // Farther seats take longer to reach.
+    expect(walks[0]?.durationMs).toBeGreaterThan(walks.at(-1)?.durationMs as number);
+  });
+
+  it('shows everyone seated when the hut opens mid-sitting, so nothing replays on reopen', () => {
+    const studied = reduceHut(convened, { type: 'step', step: 'research' });
+    expect(
+      walkIns({ seats, seated: new Set(), first: true, view: studied, reducedMotion: false }),
+    ).toEqual([]);
+    const spoken = reduceHut(convened, { type: 'speaking', councillor: 'tester' });
+    expect(
+      walkIns({ seats, seated: new Set(), first: true, view: spoken, reducedMotion: false }),
+    ).toEqual([]);
+  });
+
+  it('walks in only who is new to the table, and nobody with reduced motion', () => {
+    const seated = new Set(seats.map((s) => s.id).filter((id) => id !== 'security'));
+    const later = reduceHut(convened, { type: 'step', step: 'research' });
+    expect(
+      walkIns({ seats, seated, first: false, view: later, reducedMotion: false }).map((w) => w.id),
+    ).toEqual(['security']);
+    expect(
+      walkIns({ seats, seated: new Set(), first: true, view: convened, reducedMotion: true }),
+    ).toEqual([]);
   });
 });

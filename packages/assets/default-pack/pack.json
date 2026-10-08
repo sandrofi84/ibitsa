@@ -279,8 +279,8 @@
       "council": {
         "sheet": "characters/councillor-elder-council.png",
         "frame": {
-          "width": 32,
-          "height": 32
+          "width": 48,
+          "height": 48
         },
         "animations": {
           "idle": {
@@ -307,6 +307,11 @@
             "row": 4,
             "frames": 4,
             "fps": 6
+          },
+          "walk": {
+            "row": 5,
+            "frames": 4,
+            "fps": 8
           }
         }
       }
@@ -344,8 +349,8 @@
       "council": {
         "sheet": "characters/councillor-default-council.png",
         "frame": {
-          "width": 32,
-          "height": 32
+          "width": 48,
+          "height": 48
         },
         "animations": {
           "idle": {
@@ -372,6 +377,11 @@
             "row": 4,
             "frames": 4,
             "fps": 6
+          },
+          "walk": {
+            "row": 5,
+            "frames": 4,
+            "fps": 8
           }
         }
       }
