@@ -96,10 +96,18 @@ export const ManifestSchema = v.strictObject({
     dialogueFrame: v.strictObject({ image: file, size, inset: size }),
   }),
   /**
-   * Full-scene pictures (#219), each 480×270: the hut interior behind the councillors, and the table
-   * drawn in front of them (transparent above it). Optional: the game draws its own room and table.
+   * Scene pictures (#219, #221), each its fixed size (SCENE_SIZES): the hut interior behind the
+   * councillors and the table in front of them (480×270 each, the table transparent above it), Home
+   * Village's island (128×96) and Ibitsa's silhouette (48×32). Optional: the game draws its own.
    */
-  scenes: v.optional(v.strictObject({ hutInterior: v.optional(file), hutTable: v.optional(file) })),
+  scenes: v.optional(
+    v.strictObject({
+      hutInterior: v.optional(file),
+      hutTable: v.optional(file),
+      village: v.optional(file),
+      ibitsa: v.optional(file),
+    }),
+  ),
   /** Sounds by slot (§9.4, #184): OGG, MP3 or WAV; music loops when `loop` is set. Optional. */
   sounds: v.optional(
     v.record(

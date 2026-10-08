@@ -5,6 +5,7 @@ import {
   BRIDGE_FRAMES,
   COUNCIL_ANIMATIONS,
   MARKER_KINDS,
+  SCENE_SIZES,
   SPEC,
   TASK_POINT_STATES,
 } from './manifest.ts';
@@ -58,6 +59,14 @@ function rows({
  * The layout follows the placeholders' and the manifest's: a new slot is a new entry here, beside a
  * placeholder of the same size in `generate.ts`.
  */
+/** Each scene slot's file name, in `art/scenes/` and in the pack's `scenes/` (#219, #221). */
+export const SCENE_FILES = {
+  hutInterior: 'hut-interior',
+  hutTable: 'hut-table',
+  village: 'village',
+  ibitsa: 'ibitsa',
+} as const;
+
 export function artSlots(): ArtSlot[] {
   const characters = CHARACTERS.flatMap((art): ArtSlot[] => {
     const name = art.key.replace('.', '-');
@@ -172,12 +181,13 @@ export function artSlots(): ArtSlot[] {
       output: 'ui/activity-icons.png',
       pieces: strip({ kinds: ACTIVITY_KINDS, folder: 'ui/activity', size: SPEC.activityIcon }),
     },
-    // The hut's room and table (#219): in the pack only once their art exists.
-    ...(['hut-interior', 'hut-table'] as const).map(
-      (name): ArtSlot => ({
+    // The scenes (#219, #221): the hut's room and table, Home Village and Ibitsa, each in the pack
+    // only once its art exists; the game draws its own without.
+    ...(Object.entries(SCENE_FILES) as [keyof typeof SCENE_FILES, string][]).map(
+      ([slot, name]): ArtSlot => ({
         output: `scenes/${name}.png`,
-        pieces: [{ source: `scenes/${name}`, x: 0, y: 0, frame: SPEC.scene, frames: 1 }],
-        optional: SPEC.scene,
+        pieces: [{ source: `scenes/${name}`, x: 0, y: 0, frame: SCENE_SIZES[slot], frames: 1 }],
+        optional: SCENE_SIZES[slot],
       }),
     ),
   ];

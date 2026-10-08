@@ -3,6 +3,8 @@ import type { MapPose } from './poses.types';
 
 /** What the map shows (#124), for tests and probes. */
 export interface MapProbe {
+  /** Whether Home Village and Ibitsa are the pack's art or the game's own drawing (#221). */
+  art?: { village: 'pack' | 'drawn'; ibitsa: 'pack' | 'drawn' };
   /** The pose each hero plays (#222), and the one its state asks for before any fallback. */
   poses?: { heroId: string; pose: MapPose; wants: MapPose }[];
   /** The part of the map with something on it. */

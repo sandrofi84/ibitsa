@@ -19,7 +19,7 @@ import {
   taskPoints,
   tiles,
 } from './art.ts';
-import { artSlots } from './art-slots.ts';
+import { artSlots, SCENE_FILES } from './art-slots.ts';
 import { applyArtSources, hasSource } from './art-source.ts';
 import type { ArtSources } from './art-source.types.ts';
 import type { Manifest } from './manifest.schema.ts';
@@ -29,6 +29,7 @@ import {
   COUNCIL_ANIMATIONS,
   MARKER_KINDS,
   REQUIRED_ANIMATIONS,
+  SCENE_SLOTS,
   SPEC,
   TASK_POINT_STATES,
 } from './manifest.ts';
@@ -81,11 +82,13 @@ function fpsOf(animation: string): number {
   return animation === 'rest' ? 2 : 4;
 }
 
-/** The hut's room and table (#219), listed only when their art made them: the game draws its own. */
+/** The scenes (#219, #221), listed only when their art made them: the game draws its own. */
 function sceneEntries(images: Record<string, Raster>): Pick<Manifest, 'scenes'> {
   const scenes: NonNullable<Manifest['scenes']> = {};
-  if (images['scenes/hut-interior.png']) scenes.hutInterior = 'scenes/hut-interior.png';
-  if (images['scenes/hut-table.png']) scenes.hutTable = 'scenes/hut-table.png';
+  for (const slot of SCENE_SLOTS) {
+    const path = `scenes/${SCENE_FILES[slot]}.png`;
+    if (images[path]) scenes[slot] = path;
+  }
   return Object.keys(scenes).length > 0 ? { scenes } : {};
 }
 
@@ -168,10 +171,6 @@ export function buildDefaultPack({ art }: { art?: ArtSources } = {}): {
       tileSize: SPEC.tile,
       tiles: {
         water: { index: TILE_INDEX.water, frames: 4 },
-        grass: { index: TILE_INDEX.grass },
-        sand: { index: TILE_INDEX.sand },
-        shore: { index: TILE_INDEX.shore },
-        pathDot: { index: TILE_INDEX.pathDot },
       },
     },
     island: { image: 'map/island.png', ...SPEC.island },

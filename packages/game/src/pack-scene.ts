@@ -11,8 +11,16 @@ export const MARKERS_KEY = 'markers';
 export const PACK_BASE = 'packBase';
 /** Registry: the texture and animation keys the pack loaded, so a switch can drop them (#183). */
 export const PACK_KEYS = 'packKeys';
-/** Texture keys of the pack's optional hut room and table (#219); the hut draws its own without. */
-export const SCENE_KEYS = { hutInterior: 'scene:hutInterior', hutTable: 'scene:hutTable' } as const;
+/**
+ * Texture keys of the pack's optional scenes: the hut's room and table (#219), Home Village and Ibitsa
+ * (#221). The game draws its own without them.
+ */
+export const SCENE_KEYS = {
+  hutInterior: 'scene:hutInterior',
+  hutTable: 'scene:hutTable',
+  village: 'scene:village',
+  ibitsa: 'scene:ibitsa',
+} as const;
 
 /** Loads the art pack described by its engine-neutral manifest (spec §9.3), then starts the world. */
 export class PackScene extends Phaser.Scene {

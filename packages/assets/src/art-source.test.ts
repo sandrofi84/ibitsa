@@ -285,10 +285,6 @@ describe('the default pack from art sources (§9.5, #218)', () => {
     expect(pngPixel(tiles, { x: 0, y: 0 })).toEqual(WHITE);
     expect(pngPixel(tiles, { x: 15, y: 3 })).toEqual(CLEAR);
     expect(pngPixel(tiles, { x: 63, y: 15 })).toEqual(CLEAR);
-    // Past the water's four frames, the strip is still the placeholder's.
-    expect(pngPixel(tiles, { x: 70, y: 8 })).toEqual(
-      pngPixel(placeholder.files['map/tiles.png'] as Buffer, { x: 70, y: 8 }),
-    );
     for (const [path, bytes] of Object.entries(placeholder.files))
       if (path !== 'map/tiles.png') expect(built.files[path]?.equals(bytes), path).toBe(true);
   });

@@ -475,14 +475,12 @@ const SAND_DARK = hex('#cdb56a');
 const CLIFF = hex('#8a5a2e');
 const CLIFF_DARK = hex('#5e3b1c');
 const FOAM = hex('#d8ecff');
-const DOT = hex('#f3ead2');
-const DOT_SHADOW = hex('#1f4a7c');
 
-/** Tile strip: water ×4 (animated), grass, sand, shore, path dot. */
-export const TILE_INDEX = { water: 0, grass: 4, sand: 5, shore: 6, pathDot: 7 } as const;
+/** Tile strip: water ×4, animated; the only tile the game draws (§9.2, #221). */
+export const TILE_INDEX = { water: 0 } as const;
 
 export function tiles(): Raster {
-  const t = new Raster(F * 8, F);
+  const t = new Raster(F * 4, F);
   for (let f = 0; f < 4; f++) {
     const x0 = f * F;
     t.rect({ x: x0, y: 0, w: F, h: F, color: WATER });
@@ -490,26 +488,6 @@ export function tiles(): Raster {
     t.rect({ x: x0 + ((2 + f * 3) % F), y: 4, w: 3, h: 1, color: WAVE });
     t.rect({ x: x0 + ((9 + f * 3) % 13), y: 11, w: 3, h: 1, color: WAVE });
   }
-  t.rect({ x: 4 * F, y: 0, w: F, h: F, color: GRASS });
-  for (const [x, y] of [
-    [3, 4],
-    [10, 2],
-    [7, 11],
-    [13, 9],
-  ] as const)
-    t.rect({ x: 4 * F + x, y, w: 1, h: 2, color: GRASS_DARK });
-  t.rect({ x: 5 * F, y: 0, w: F, h: F, color: SAND });
-  for (const [x, y] of [
-    [2, 3],
-    [11, 6],
-    [6, 12],
-  ] as const)
-    t.set({ x: 5 * F + x, y, color: SAND_DARK });
-  t.rect({ x: 6 * F, y: 0, w: F, h: 10, color: GRASS });
-  t.rect({ x: 6 * F, y: 10, w: F, h: 6, color: SAND });
-  t.rect({ x: 6 * F, y: 10, w: F, h: 1, color: SAND_DARK });
-  t.rect({ x: 7 * F + 7, y: 7, w: 2, h: 2, color: DOT_SHADOW });
-  t.rect({ x: 7 * F + 7, y: 6, w: 2, h: 2, color: DOT });
   return t;
 }
 

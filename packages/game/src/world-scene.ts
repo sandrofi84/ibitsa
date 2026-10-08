@@ -20,7 +20,7 @@ import {
 } from './layout';
 import type { BridgeLayout, IslandLayout, Point, WorldLayout } from './layout.types';
 import { marker } from './map-markers';
-import { BRIDGE_KEY, PACK_KEY } from './pack-scene';
+import { BRIDGE_KEY, PACK_KEY, SCENE_KEYS } from './pack-scene';
 import { activityMoment, availablePose, heroMoment, heroPose } from './poses';
 import type { MapPose } from './poses.types';
 import { badgeOf } from './pull-requests';
@@ -159,6 +159,10 @@ export class WorldScene extends Phaser.Scene {
       shipped: this.last?.campaign?.shipped ?? false,
       atIbitsa: [...this.heroes].flatMap(([heroId, token]) => (token.atIbitsa() ? [heroId] : [])),
       startScreen: this.startLabels[0]?.visible ?? false,
+      art: {
+        village: this.textures.exists(SCENE_KEYS.village) ? 'pack' : 'drawn',
+        ibitsa: this.textures.exists(SCENE_KEYS.ibitsa) ? 'pack' : 'drawn',
+      },
       charted: [...this.charted],
       voyage: this.misted ? VOYAGE_LINE : null,
       sunk: this.sunk,
@@ -268,7 +272,10 @@ export class WorldScene extends Phaser.Scene {
 
     const v = this.layout.village;
     const village = this.add.container(0, 0);
-    this.drawIsland(village, v);
+    // The pack's Home Village (#221) is the whole island in one picture; else a plain island.
+    if (this.textures.exists(SCENE_KEYS.village))
+      village.add(this.add.image(v.x, v.y, SCENE_KEYS.village).setOrigin(0));
+    else this.drawIsland(village, v);
     this.questLayer = this.add.container(0, 0);
     this.badgeLayer = this.add.container(0, 0);
     this.empty = this.add.text(330, 120, 'No quest yet', textStyle('#d8ecff')).setOrigin(0.5);
@@ -756,21 +763,15 @@ export class WorldScene extends Phaser.Scene {
 
   /**
    * Ibitsa on the horizon (§7.2): a far-off castle, out of reach. Once every PR has merged the heroes sail
-   * for it, and it fades into the mist (#180): "Not Ibitsa. The search goes on." Drawn by the game; packs
-   * have no art for it yet.
+   * for it, and it fades into the mist (#180): "Not Ibitsa. The search goes on." The pack's silhouette
+   * (#221, 48×32) stands where the game's own castle would, its base on the same line; the mist is always
+   * the game's.
    */
   private drawIbitsa(shipped: boolean): void {
     const { x, y } = this.layout.ibitsa;
-    const castle = this.add.graphics({ x: x - 16, y: y - 6 });
-    castle.fillStyle(0x9aa6b8, 1);
-    castle
-      .fillRect(0, 8, 32, 16)
-      .fillRect(2, 2, 6, 22)
-      .fillRect(24, 2, 6, 22)
-      .fillRect(12, 0, 8, 24);
-    castle.fillStyle(0x1a1420, 0.6).fillRect(14, 16, 4, 8);
-    castle.lineStyle(1, 0x5e3b1c).lineBetween(16, 0, 16, -6);
-    castle.fillStyle(0x6a6a6a).fillTriangle(16, -6, 22, -4, 16, -2);
+    const castle = this.textures.exists(SCENE_KEYS.ibitsa)
+      ? this.add.image(x, y + IBITSA_BASE, SCENE_KEYS.ibitsa).setOrigin(0.5, 1)
+      : this.drawnCastle({ x, y });
     const name = this.add.text(x, y - 14, 'IBITSA', textStyle('#c8d0dc')).setOrigin(0.5, 1);
     castle.setAlpha(0.7);
     this.questLayer.add([castle, name]);
@@ -796,6 +797,20 @@ export class WorldScene extends Phaser.Scene {
     this.tweens.add({ targets: castle, alpha: 0.12, delay: VOYAGE_MS, duration: MIST_MS });
     this.tweens.add({ targets: name, alpha: 0.3, delay: VOYAGE_MS, duration: MIST_MS });
     this.tweens.add({ targets: line, alpha: 1, delay: VOYAGE_MS + MIST_MS, duration: 400 });
+  }
+  /** The game's own Ibitsa: a small grey castle with a pennant, its base IBITSA_BASE below `y`. */
+  private drawnCastle({ x, y }: Point): Phaser.GameObjects.Graphics {
+    const castle = this.add.graphics({ x: x - 16, y: y - 6 });
+    castle.fillStyle(0x9aa6b8, 1);
+    castle
+      .fillRect(0, 8, 32, 16)
+      .fillRect(2, 2, 6, 22)
+      .fillRect(24, 2, 6, 22)
+      .fillRect(12, 0, 8, 24);
+    castle.fillStyle(0x1a1420, 0.6).fillRect(14, 16, 4, 8);
+    castle.lineStyle(1, 0x5e3b1c).lineBetween(16, 0, 16, -6);
+    castle.fillStyle(0x6a6a6a).fillTriangle(16, -6, 22, -4, 16, -2);
+    return castle;
   }
 
   /** A drawbridge (§9.2): the pack's pieces, or plain planks; a padlock while raised, a mark when behind. */
@@ -889,6 +904,8 @@ export const HERO_SELECTED = 'heroSelected';
 export const TASK_SELECTED = 'taskSelected';
 /** Emitted on `game.events` with the island's id when its PR badge is clicked (#153). */
 export const PULL_REQUEST_SELECTED = 'pullRequestSelected';
+/** Where Ibitsa's base sits below its layout point: the game's castle and a pack's silhouette alike. */
+const IBITSA_BASE = 18;
 /** What the mist says when the heroes reach the horizon (#180). */
 export const VOYAGE_LINE = 'Not Ibitsa. The search goes on.';
 /** The voyage (#180): the heroes sail before the mist rises; it takes this long to swallow the castle. */
