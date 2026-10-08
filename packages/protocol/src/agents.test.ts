@@ -53,6 +53,24 @@ describe('resolveAgents (§11.5, #198)', () => {
     expect(agents.map((a) => a.id)).not.toContain('nameless');
   });
 
+  it('knows how to sign in to each preset, and takes a sign-in command from the setting (#199)', () => {
+    expect(resolveAgents({}).map((a) => `${a.id}: ${a.signIn}`)).toEqual([
+      'codex: codex login',
+      'copilot: copilot',
+      'opencode: opencode auth login',
+      'antigravity: agy',
+      'gemini: gemini',
+    ]);
+    const agents = resolveAgents({
+      codex: { signIn: 'codex login --device-auth' },
+      local: { command: 'my-agent', signIn: 'my-agent auth' },
+      bare: { command: 'bare-agent' },
+    });
+    expect(agents.find((a) => a.id === 'codex')?.signIn).toBe('codex login --device-auth');
+    expect(agents.find((a) => a.id === 'local')?.signIn).toBe('my-agent auth');
+    expect(agents.find((a) => a.id === 'bare')).not.toHaveProperty('signIn');
+  });
+
   it('drops an entry that does not check out, keeping the rest', () => {
     const agents = resolveAgents({
       Bad: { command: 'x' },

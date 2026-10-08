@@ -748,10 +748,12 @@ describe('AcpSession: submit_task through the tool bridge (#197)', () => {
 
   it('gives the tools back when the session closes before they open', async () => {
     let closed = 0;
+    let asked = false;
     let open: () => void = () => {};
     const host: ToolHost = {
       open: () =>
         new Promise((resolve) => {
+          asked = true;
           open = () =>
             resolve({
               server: { name: 'ibitsa', command: 'bridge', args: [], env: [] },
@@ -762,7 +764,9 @@ describe('AcpSession: submit_task through the tool bridge (#197)', () => {
         }),
     };
     const { session, requests } = hero({ tools: host });
-    await until(() => expect(requests().map((r) => r.method)).toContain('initialize'));
+    // The session asks for its tools once the agent has answered `initialize`, which a slow runner
+    // (Windows) may not have done yet when the agent logs the request.
+    await until(() => expect(asked).toBe(true));
     session.close();
     open();
     await until(() => expect(closed).toBe(1));

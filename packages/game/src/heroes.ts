@@ -12,6 +12,8 @@ function heroClass(view: HeroClassView): HeroClass {
     id: view.id,
     label: view.name,
     model: classModelName(view),
+    agent: view.agent,
+    modelId: view.model,
     names: view.names,
     appearance: view.appearance,
   };

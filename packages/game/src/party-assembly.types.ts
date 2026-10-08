@@ -1,5 +1,6 @@
 import type { Plan } from '@ibitsa/protocol';
 import type { PartyRow } from './parties.types';
+import type { PartyCheck } from './party-check.types';
 
 /** What the rest of the game can do with party assembly. */
 export interface PartyAssembly {
@@ -11,6 +12,8 @@ export interface PartyAssembly {
 export interface PartyAssemblyOptions {
   /** Runs `then` once the extension has credentials (the New Quest form's first-run card). */
   withCredentials: (then: () => void) => void;
+  /** The party check of the classes' ACP agents (#199): the campaign starts once all pass. */
+  partyCheck: PartyCheck;
 }
 
 /** The party of an island an amendment added (#170). */
@@ -28,4 +31,6 @@ export interface PartyFields {
   cap: HTMLInputElement;
   noCap: HTMLInputElement;
   efforts: { councillorId: string; select: HTMLSelectElement }[];
+  /** Redraws the class's party check line (#199). */
+  refreshCheck: () => void;
 }

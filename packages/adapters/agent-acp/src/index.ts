@@ -1,9 +1,10 @@
 // Generic Agent Client Protocol adapter (spec §11.5).
 
-export { AcpAdapter, COMMANDS_WAIT_MS } from './acp-adapter';
+export { AcpAdapter, CHECK_TIMEOUT_MS, COMMANDS_WAIT_MS } from './acp-adapter';
 export type {
   AcpAdapterOptions,
   AgentPrices,
+  AgentProbe,
   AgentProcess,
   AgentSpec,
   SpawnRequest,

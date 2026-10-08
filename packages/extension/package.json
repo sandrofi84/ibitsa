@@ -201,7 +201,7 @@
         "ibitsa.agents": {
           "type": "object",
           "default": {},
-          "markdownDescription": "ACP agents heroes can run on, by id: `{ \"name\", \"command\", \"args\", \"env\", \"stateFolders\", \"domains\", \"prices\": { \"inputPerMillion\", \"outputPerMillion\" } }`. Overrides the presets (`codex`, `copilot`, `opencode`, `antigravity`, `gemini`) field by field, or adds agents. Ibitsa installs none of them: install and sign in to an agent yourself. Claude runs only through Ibitsa's own adapter. A class picks its agent in the Guild Hall's Armory.",
+          "markdownDescription": "ACP agents heroes can run on, by id: `{ \"name\", \"command\", \"args\", \"env\", \"stateFolders\", \"domains\", \"signIn\", \"prices\": { \"inputPerMillion\", \"outputPerMillion\" } }`. Overrides the presets (`codex`, `copilot`, `opencode`, `antigravity`, `gemini`) field by field, or adds agents. Ibitsa installs none of them: install and sign in to an agent yourself (`signIn` is the command the party check's Sign in runs in a terminal). Claude runs only through Ibitsa's own adapter. A class picks its agent in the Guild Hall's Armory.",
           "additionalProperties": {
             "type": "object",
             "properties": {
@@ -234,6 +234,9 @@
                 "items": {
                   "type": "string"
                 }
+              },
+              "signIn": {
+                "type": "string"
               },
               "prices": {
                 "type": "object",

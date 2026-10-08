@@ -1,4 +1,5 @@
 import * as v from 'valibot';
+import { AgentIdSchema } from './agents.schema';
 import {
   ClassIdSchema,
   ClassSettingSchema,
@@ -168,6 +169,20 @@ export const HostRequestSchema = v.variant('type', [
     type: v.literal('resetRecolor'),
     target: RecolorTargetSchema,
     layer: SettingLayerSchema,
+  }),
+  // The party check (§11.5, #199): each agent answers with an `agentCheck` event as it finishes;
+  // `force` checks again instead of using a recent answer, e.g. after signing in.
+  v.strictObject({
+    channel: v.literal('host'),
+    type: v.literal('checkAgents'),
+    agents: v.pipe(v.array(AgentIdSchema), v.minLength(1), v.maxLength(20)),
+    force: v.optional(v.boolean()),
+  }),
+  // Opens a terminal on the agent's sign-in, as its last check found it (#199).
+  v.strictObject({
+    channel: v.literal('host'),
+    type: v.literal('signInAgent'),
+    agent: AgentIdSchema,
   }),
 ]);
 

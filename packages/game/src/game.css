@@ -1921,3 +1921,22 @@ body.in-hut:has(.council-chamber:not([hidden])) .needs-you {
   align-items: center;
   margin-top: 4px;
 }
+
+/* The party check of a class's ACP agent (#199): blocked in red, the gold-pouch warning in amber. */
+.agent-check .agent-state {
+  margin: 4px 0;
+}
+
+.agent-check .agent-state.blocked {
+  color: #a32020;
+}
+
+.agent-check .agent-state.warning {
+  color: #7a4b00;
+}
+
+.agent-check .actions {
+  display: flex;
+  gap: 6px;
+  margin: 4px 0;
+}

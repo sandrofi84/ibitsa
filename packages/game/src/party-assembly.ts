@@ -23,6 +23,8 @@ import type {
   PartyAssemblyOptions,
   PartyFields,
 } from './party-assembly.types';
+import { AGENTS_NOT_READY, readinessLine } from './party-check';
+import type { PartyCheck } from './party-check.types';
 import { councillorTitle } from './sitting-hut';
 
 /**
@@ -55,14 +57,19 @@ export function mountPartyAssembly({
     error.setAttribute('role', 'alert');
 
     const rows: PartyFields[] = [];
+    const partyCheck = options.partyCheck;
     for (const row of partyRows(plan)) {
       rows.push(
         partyFields({
           row,
           taken: (self) => rows.filter((p) => p !== self).map((p) => p.name.value),
+          partyCheck,
         }),
       );
     }
+    // The classes whose agents must pass the party check (#199). Reviewer classes on ACP agents
+    // (#201) join them when reviews are on.
+    const classes = () => rows.map((r) => r.classSelect.value);
 
     const base = el('select');
     const repo = snapshot?.repo;
@@ -96,7 +103,15 @@ export function mountPartyAssembly({
     const parallel = snapshot?.campaign?.maxParallel ?? 2;
     const start = el('button', { text: 'Start the campaign' });
     start.type = 'submit';
-    start.disabled = repo === null;
+    const refreshChecks = () => {
+      for (const r of rows) r.refreshCheck();
+      start.disabled = repo === null || !partyCheck.allReady(classes());
+    };
+    dialog.addEventListener('close', partyCheck.onChange(refreshChecks), { once: true });
+    // A Claude class needs no check, so no answer would redraw after choosing one.
+    for (const r of rows) r.classSelect.addEventListener('change', refreshChecks);
+    refreshChecks();
+    partyCheck.check(classes());
     form.append(
       el('h2', { text: 'Assemble the parties' }),
       el('p', {
@@ -127,7 +142,8 @@ export function mountPartyAssembly({
       const problem =
         namesProblem(names) ??
         caps.flatMap((c) => (c.ok ? [] : [c.problem]))[0] ??
-        (base.value ? undefined : 'Choose the branch to start from.');
+        (base.value ? undefined : 'Choose the branch to start from.') ??
+        (partyCheck.allReady(classes()) ? undefined : AGENTS_NOT_READY);
       if (problem) {
         error.textContent = problem;
         return;
@@ -159,9 +175,11 @@ export function mountPartyAssembly({
 export function partyFields({
   row,
   taken,
+  partyCheck,
 }: {
   row: PartyRow;
   taken: (self: PartyFields) => string[];
+  partyCheck: PartyCheck;
 }): PartyFields {
   const box = el('fieldset', { className: 'party' });
   box.append(el('legend', { text: `${row.islandId} ${row.title}` }));
@@ -169,6 +187,11 @@ export function partyFields({
   const classSelect = el('select');
   for (const c of heroClasses()) classSelect.add(new Option(`${c.label} (${c.model})`, c.id));
   classSelect.value = row.classId;
+  // Its agent's party check (#199): nothing for a Claude class.
+  const checkLine = el('div', { className: 'party-check' });
+  const refreshCheck = () =>
+    checkLine.replaceChildren(readinessLine({ partyCheck, classId: classSelect.value }));
+  refreshCheck();
   const name = el('input');
   name.value = row.heroName;
   let named = false;
@@ -213,14 +236,17 @@ export function partyFields({
   }
   box.append(
     field({ label: 'Hero class', control: classSelect }),
+    checkLine,
     field({ label: 'Hero name', control: name }),
     field({ label: 'Gold cap in dollars', control: cap }),
     noCapLabel,
     reviews,
   );
-  const fields: PartyFields = { row, box, classSelect, name, cap, noCap, efforts };
+  const fields: PartyFields = { row, box, classSelect, name, cap, noCap, efforts, refreshCheck };
   classSelect.onchange = () => {
     if (!named) name.value = heroNameFor({ classId: classSelect.value, taken: taken(fields) });
+    partyCheck.check([classSelect.value]);
+    refreshCheck();
   };
   return fields;
 }
@@ -249,7 +275,13 @@ export function partyChoice(fields: PartyFields): {
  * The party of an island an amendment added (#170): the same fields as party assembly, for that one
  * island; **Assemble** sends `assembleParty`, and the island waits for a slot like the others.
  */
-export function mountNewParty({ client }: { client: GameClient }): NewParty {
+export function mountNewParty({
+  client,
+  partyCheck,
+}: {
+  client: GameClient;
+  partyCheck: PartyCheck;
+}): NewParty {
   const dialog = el('dialog', { className: 'party-assembly new-party' });
   dialog.setAttribute('aria-label', 'Assemble the new party');
   document.body.appendChild(dialog);
@@ -264,12 +296,21 @@ export function mountNewParty({ client }: { client: GameClient }): NewParty {
     const fields = partyFields({
       row: { ...row, heroName: heroNameFor({ classId: row.classId, taken: heroes }) },
       taken: () => heroes,
+      partyCheck,
     });
     const error = el('p', { className: 'error' });
     error.setAttribute('role', 'alert');
     const form = el('form');
     const assemble = el('button', { text: 'Assemble' });
     assemble.type = 'submit';
+    const refreshCheck = () => {
+      fields.refreshCheck();
+      assemble.disabled = !partyCheck.allReady([fields.classSelect.value]);
+    };
+    dialog.addEventListener('close', partyCheck.onChange(refreshCheck), { once: true });
+    fields.classSelect.addEventListener('change', refreshCheck);
+    refreshCheck();
+    partyCheck.check([fields.classSelect.value]);
     const actions = el('div', { className: 'actions' });
     actions.append(assemble, button({ label: 'Cancel', onClick: () => dialog.close() }));
     form.append(
@@ -286,7 +327,9 @@ export function mountNewParty({ client }: { client: GameClient }): NewParty {
       e.preventDefault();
       const cap = capFromInput({ text: fields.cap.value, noCap: fields.noCap.checked });
       const problem =
-        namesProblem([...heroes, fields.name.value]) ?? (cap.ok ? undefined : cap.problem);
+        namesProblem([...heroes, fields.name.value]) ??
+        (cap.ok ? undefined : cap.problem) ??
+        (partyCheck.allReady([fields.classSelect.value]) ? undefined : AGENTS_NOT_READY);
       if (problem) {
         error.textContent = problem;
         return;

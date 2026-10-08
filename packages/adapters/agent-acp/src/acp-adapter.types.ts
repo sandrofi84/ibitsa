@@ -34,6 +34,24 @@ export interface AgentProcess {
   once(event: 'error', listener: (error: Error) => void): unknown;
 }
 
+/**
+ * What the party check found starting the agent (§11.5, #199), before the extension adds what it
+ * knows (installed or not, its sign-in command).
+ */
+export type AgentProbe =
+  /** A session started; `models` are its `model` option's values, null when it offers none. */
+  | { kind: 'ready'; models: string[] | null }
+  /**
+   * `session/new` answered `auth_required`. `terminal`: the agent's own terminal sign-in, to run as the
+   * agent's command with these arguments and environment added; null when it offers none.
+   */
+  | {
+      kind: 'signIn';
+      message: string;
+      terminal: { args: string[]; env: Record<string, string> } | null;
+    }
+  | { kind: 'failed'; message: string };
+
 export interface AcpAdapterOptions {
   agent: AgentSpec;
   /** The environment heroes start from (§11.6, #67); the agent's own `env` goes on top. */

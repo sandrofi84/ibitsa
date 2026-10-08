@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { ToolBridge } from '@ibitsa/agent-acp';
 import { ClaudeAdapter } from '@ibitsa/agent-claude-sdk';
@@ -7,6 +7,7 @@ import { GitHubHost } from '@ibitsa/githost-github';
 import { heroHandle } from '@ibitsa/protocol';
 import { GitGameMaster } from '@ibitsa/runtime';
 import * as vscode from 'vscode';
+import { AgentChecks } from './agent-checks';
 import { agentEnvironment } from './agent-environment';
 import { Armory } from './armory';
 import { API_KEY_SECRET, resolveCredentials } from './credentials';
@@ -206,6 +207,18 @@ export function activate(context: vscode.ExtensionContext): IbitsaApi {
         join(homedir(), '.claude', 'skills'),
         vscode.Uri.joinPath(context.extensionUri, 'dist', 'plugin').fsPath,
       ],
+    },
+    // The party check (§11.5, #199): each ACP agent started once, in the workspace, nothing spent.
+    agentChecks: new AgentChecks({
+      agents: () => readAgents(config()),
+      checker: (id) => heroAgents.acpAdapter(id),
+      cwd: () => workspaceDir ?? tmpdir(),
+      env: () => heroEnv,
+    }),
+    openTerminal: ({ name, command, env }) => {
+      const terminal = vscode.window.createTerminal({ name, env });
+      terminal.show();
+      terminal.sendText(command);
     },
   });
   if (testing) {
