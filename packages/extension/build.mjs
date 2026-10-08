@@ -23,6 +23,13 @@ await esbuild.build({
   entryPoints: ['src/extension.ts'],
   outfile: 'dist/extension.cjs',
 });
+// The MCP tool bridge ACP agents launch (§11.5, #197): its own small file, run by Node outside the
+// extension host, so it must not pull in the adapters (agent-acp is side-effect free, so it doesn't).
+await esbuild.build({
+  ...common,
+  entryPoints: ['src/mcp-bridge.ts'],
+  outfile: 'dist/mcp-bridge.cjs',
+});
 await esbuild.build({
   ...common,
   entryPoints: ['src/integration/*.it.ts'],

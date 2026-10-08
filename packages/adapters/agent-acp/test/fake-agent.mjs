@@ -10,14 +10,46 @@
 //
 // Steps: { update } sends a session update; { permission } and { elicit } ask the client and say what
 // came back; { sleep } waits that many ms; { waitCancel } ends the turn when it is cancelled; { stop, usage } ends it; { fail } fails
-// the prompt; { exit } ends the process.
+// the prompt; { exit } ends the process; { mcp: { tool, arguments } } starts the session's `ibitsa` MCP
+// server, as a real agent would, calls that tool and says what it listed and what came back.
+import { spawn } from 'node:child_process';
 import { appendFileSync } from 'node:fs';
+import { createInterface } from 'node:readline';
 import { Readable, Writable } from 'node:stream';
 import { agent, methods, ndJsonStream, RequestError } from '@agentclientprotocol/sdk';
 
 const env = (name, fallback) => (process.env[name] ? JSON.parse(process.env[name]) : fallback);
 const SESSION = 'fake-session-1';
 let cancelled = () => {};
+/** The MCP servers the client listed for the session. */
+let mcpServers = [];
+
+/** An MCP client for one call: initialize, list the tools, call one, then stop the server. */
+async function callMcpTool({ tool, arguments: args }) {
+  const server = mcpServers.find((s) => s.name === 'ibitsa');
+  if (!server) return { error: 'no ibitsa server' };
+  const child = spawn(server.command, server.args, {
+    env: { ...process.env, ...Object.fromEntries(server.env.map((e) => [e.name, e.value])) },
+    stdio: ['pipe', 'pipe', 'inherit'],
+  });
+  const answers = new Map();
+  createInterface({ input: child.stdout }).on('line', (line) => {
+    const message = JSON.parse(line);
+    answers.get(message.id)?.(message);
+  });
+  let id = 0;
+  const request = (method, params) =>
+    new Promise((resolve) => {
+      answers.set(++id, resolve);
+      child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`);
+    });
+  await request('initialize', { protocolVersion: '2025-06-18', capabilities: {} });
+  child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`);
+  const listed = await request('tools/list', {});
+  const called = await request('tools/call', { name: tool, arguments: args });
+  child.stdin.end();
+  return { tools: listed.result.tools.map((t) => t.name), result: called.result };
+}
 
 function log(method, params) {
   if (process.env.FAKE_ACP_LOG) {
@@ -59,6 +91,8 @@ async function run({ client, sessionId, steps }) {
       return { stopReason: step.stop, ...(step.usage ? { usage: step.usage } : {}) };
     } else if (step.fail) {
       throw new RequestError(-32603, step.fail);
+    } else if (step.mcp) {
+      await say({ client, sessionId }, `mcp: ${JSON.stringify(await callMcpTool(step.mcp))}`);
     } else if (step.exit !== undefined) {
       process.exit(step.exit);
     }
@@ -73,6 +107,7 @@ agent({ name: 'fake-agent' })
   })
   .onRequest(methods.agent.session.new, ({ params, client }) => {
     log('session/new', params);
+    mcpServers = params.mcpServers;
     if (process.env.FAKE_ACP_AUTH === 'required') throw RequestError.authRequired();
     const commands = env('FAKE_ACP_COMMANDS', null);
     if (commands) {
@@ -110,7 +145,9 @@ agent({ name: 'fake-agent' })
   })
   .onRequest(methods.agent.session.prompt, async ({ params, client }) => {
     log('session/prompt', params);
-    const text = params.prompt[0]?.type === 'text' ? params.prompt[0].text : '';
+    // The last block is the message; any before it are instructions sent ahead of it.
+    const last = params.prompt.at(-1);
+    const text = last?.type === 'text' ? last.text : '';
     if (text.startsWith('['))
       return run({ client, sessionId: params.sessionId, steps: JSON.parse(text) });
     if (text === '/compact') {

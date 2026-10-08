@@ -17,6 +17,15 @@ import { type AgentSession, TestDetector } from '@ibitsa/runtime';
 import type { AcpSessionInit, PendingPermission, PendingQuestion } from './acp-session.types';
 import { AgentConnection } from './agent-connection';
 import { formContent, formQuestions } from './elicitation';
+import {
+  HERO_TOOL_INSTRUCTIONS,
+  SESSION_CLOSED,
+  SUBMIT_NEEDS_SUMMARY,
+  SUBMIT_TASK,
+  submitResult,
+  submittedSummary,
+} from './hero-tools.ts';
+import type { OpenTools, ToolResult } from './tool-bridge.types.ts';
 import { UpdateMapper } from './update-mapper';
 
 export const CANT_RESUME = 'This agent can’t resume a session. Start the task over.';
@@ -35,6 +44,10 @@ export class AcpSession implements AgentSession {
   private urgent: string | null = null;
   private readonly permissions = new Map<string, PendingPermission>();
   private readonly questions = new Map<string, PendingQuestion>();
+  /** `submit_task` calls waiting for the submit check's verdict, by tool use id. */
+  private readonly submits = new Map<string, (result: ToolResult) => void>();
+  /** The session's tools on the bridge, while it lasts. */
+  private tools: OpenTools | null = null;
   private requests = 0;
   private sessionId: string | null = null;
   /** Busy from the start until the session is ready, then while a prompt runs. */
@@ -131,13 +144,28 @@ export class AcpSession implements AgentSession {
     });
   }
 
-  /** `submit_task` arrives through the MCP tool bridge, which answers it (#197); nothing to do here yet. */
-  completeSubmit(_result: { toolUseId: string; accepted: boolean; reason?: string }): void {}
+  /** The submit check's verdict (§5.4), returned to the hero as `submit_task`'s result. */
+  completeSubmit({
+    toolUseId,
+    accepted,
+    reason,
+  }: {
+    toolUseId: string;
+    accepted: boolean;
+    reason?: string;
+  }): void {
+    const resolve = this.submits.get(toolUseId);
+    this.submits.delete(toolUseId);
+    resolve?.(submitResult(reason === undefined ? { accepted } : { accepted, reason }));
+  }
 
   close(): void {
     if (this.closed) return;
     this.closed = true;
     this.dropPending();
+    for (const resolve of this.submits.values()) resolve({ text: SESSION_CLOSED, isError: true });
+    this.submits.clear();
+    this.tools?.close();
     if (this.sessionId && this.agentCapabilities?.sessionCapabilities?.close) {
       void this.connection.agent
         .request(methods.agent.session.close, { sessionId: this.sessionId })
@@ -154,7 +182,12 @@ export class AcpSession implements AgentSession {
     try {
       const initialized = await this.connection.initialize();
       this.agentCapabilities = initialized.agentCapabilities ?? {};
-      const mcpServers = init.options.mcpServers?.({ heroId: init.heroId, cwd: init.cwd }) ?? [];
+      const tools = await this.openTools(init);
+      if (this.closed) return;
+      const mcpServers = [
+        ...(tools ? [tools.server] : []),
+        ...(init.options.mcpServers?.({ heroId: init.heroId, cwd: init.cwd }) ?? []),
+      ];
       const agent = this.connection.agent;
       let configOptions: SessionConfigOption[] | null | undefined;
       if (init.resume !== undefined) {
@@ -183,7 +216,9 @@ export class AcpSession implements AgentSession {
       this.emit({ type: 'sessionStarted', sessionId: this.sessionId });
       await this.chooseModel({ model: init.model, configOptions });
       if (init.prompt !== undefined) {
-        void this.turn(init.prompt, { first: true });
+        // A new hero with the bridge learns how to submit before its task; a resumed one knew.
+        const preface = tools && init.resume === undefined ? HERO_TOOL_INSTRUCTIONS : undefined;
+        void this.turn(init.prompt, { first: true, ...(preface ? { preface } : {}) });
         return;
       }
       this.busy = false;
@@ -216,8 +251,43 @@ export class AcpSession implements AgentSession {
     });
   }
 
+  /** The bridge's tools for this session (#197), when the adapter has a bridge. */
+  private async openTools(init: AcpSessionInit): Promise<OpenTools | null> {
+    if (!init.options.tools) return null;
+    const tools = await init.options.tools.open({
+      tools: [SUBMIT_TASK],
+      call: (call) => this.toolCall(call),
+    });
+    if (this.closed) tools.close();
+    else this.tools = tools;
+    return tools;
+  }
+
+  /** A call through the bridge: `submit_task` waits for the submit check, like the Claude adapter's. */
+  private toolCall({
+    name,
+    arguments: args,
+  }: {
+    name: string;
+    arguments: unknown;
+  }): Promise<ToolResult> {
+    if (name !== SUBMIT_TASK.name)
+      return Promise.resolve({ text: `Unknown tool: ${name}`, isError: true });
+    if (this.closed) return Promise.resolve({ text: SESSION_CLOSED, isError: true });
+    const summary = submittedSummary(args);
+    if (summary === null) return Promise.resolve({ text: SUBMIT_NEEDS_SUMMARY, isError: true });
+    const toolUseId = `submit-${++this.requests}`;
+    return new Promise((resolve) => {
+      this.submits.set(toolUseId, resolve);
+      this.emit({ type: 'taskSubmitted', toolUseId, summary });
+    });
+  }
+
   /** One prompt turn; when it ends, the next held message starts the following one. */
-  private async turn(text: string, { first = false }: { first?: boolean } = {}): Promise<void> {
+  private async turn(
+    text: string,
+    { first = false, preface }: { first?: boolean; preface?: string } = {},
+  ): Promise<void> {
     if (!this.sessionId) return;
     this.busy = true;
     this.failed = false;
@@ -225,7 +295,10 @@ export class AcpSession implements AgentSession {
     try {
       const response = await this.connection.agent.request(methods.agent.session.prompt, {
         sessionId: this.sessionId,
-        prompt: [{ type: 'text', text }],
+        prompt: [
+          ...(preface ? [{ type: 'text' as const, text: preface }] : []),
+          { type: 'text', text },
+        ],
       });
       if (this.closed) return;
       this.dropPending();

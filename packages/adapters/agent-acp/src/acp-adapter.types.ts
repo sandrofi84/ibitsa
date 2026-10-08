@@ -1,5 +1,6 @@
 import type { Readable, Writable } from 'node:stream';
 import type { McpServer } from '@agentclientprotocol/sdk';
+import type { ToolHost } from './tool-bridge.types.ts';
 
 /** USD per million tokens, for estimating gold when an agent reports tokens but no cost (§11.5). */
 export interface AgentPrices {
@@ -39,6 +40,11 @@ export interface AcpAdapterOptions {
   env?: () => Record<string, string | undefined>;
   /** Starts the agent's process. The default spawns it directly; #200 wraps it in the sandbox. */
   spawn?: (request: SpawnRequest) => AgentProcess;
-  /** MCP servers for a hero's session, e.g. the tool bridge (#197). None by default. */
+  /**
+   * Offers heroes Ibitsa's tools (`submit_task`) through the MCP tool bridge (#197). Without it a hero
+   * can't submit, and the user marks the task done.
+   */
+  tools?: ToolHost;
+  /** Other MCP servers for a hero's session, after the bridge. None by default. */
   mcpServers?: (session: { heroId: string; cwd: string }) => McpServer[];
 }
