@@ -1,17 +1,17 @@
 import {
+  classModelName,
   DEFAULT_CLASSES,
   type ExecutionState,
   type HeroClassView,
-  modelName,
 } from '@ibitsa/protocol';
 import type { HeroClass } from './heroes.types';
 
-/** A class as the game lists it: the protocol's view, its model in words. */
+/** A class as the game lists it: the protocol's view, its agent and model in words. */
 function heroClass(view: HeroClassView): HeroClass {
   return {
     id: view.id,
     label: view.name,
-    model: modelName(view.model),
+    model: classModelName(view),
     names: view.names,
     appearance: view.appearance,
   };

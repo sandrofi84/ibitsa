@@ -1,8 +1,10 @@
 import {
+  type AgentDefinition,
   type CouncillorOverride,
   type CouncillorOverrides,
   type HeroClassView,
   type RecolorMap,
+  resolveAgents,
   resolveClasses,
   resolveRecolor,
 } from '@ibitsa/protocol';
@@ -73,6 +75,11 @@ export function readCouncillorOverrides(config: ConfigReader): CouncillorOverrid
 
 const ELDER_MODELS = ['haiku', 'sonnet', 'opus', 'fable'];
 const COUNCIL_MODES = ['ask', 'roundTable', 'chambers'] as const;
+
+/** `ibitsa.agents` over the presets (§11.5, #198). */
+export function readAgents(config: ConfigReader): AgentDefinition[] {
+  return resolveAgents(config.get<unknown>('agents'));
+}
 
 /** `ibitsa.classes` over the built-ins (§5.2, #182). */
 export function readClasses(config: ConfigReader): HeroClassView[] {

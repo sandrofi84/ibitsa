@@ -29,6 +29,11 @@ export interface RuntimeOptions {
   pullRequestPollSeconds?: () => number;
   /** The hero classes in play (§5.2, #182); the built-ins by default. Read each time it's needed. */
   classes?: () => HeroClassView[];
+  /**
+   * The adapter for an ACP agent a class names (§11.5, #198), or why it can't run; undefined when
+   * there's no such agent. Classes on `claude` use `adapter`.
+   */
+  agentAdapter?: (agentId: string) => AgentAdapter | { error: string } | undefined;
   /** `ibitsa.recolor` (#182), for the snapshot. */
   recolor?: () => RecolorMap;
   /** How skill folders are watched; injectable for tests. */

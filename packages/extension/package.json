@@ -27,12 +27,12 @@
       },
       {
         "command": "ibitsa.messageHero",
-        "title": "Message Hero\u2026",
+        "title": "Message Hero…",
         "category": "Ibitsa"
       },
       {
         "command": "ibitsa.runAction",
-        "title": "Run Action\u2026",
+        "title": "Run Action…",
         "category": "Ibitsa"
       },
       {
@@ -173,7 +173,7 @@
         "ibitsa.classes": {
           "type": "object",
           "default": {},
-          "markdownDescription": "Hero classes by id: `{ \"name\", \"model\", \"appearance\" }`. Remaps the built-ins (`paladin`, `barbarian`, `ranger`, `rogue`) or adds new classes. Edit them in the Guild Hall's Armory.",
+          "markdownDescription": "Hero classes by id: `{ \"name\", \"agent\", \"model\", \"appearance\" }`. Remaps the built-ins (`paladin`, `barbarian`, `ranger`, `rogue`) or adds new classes. `agent` is `claude` (the default) or an id from `#ibitsa.agents#`. Edit them in the Guild Hall's Armory.",
           "additionalProperties": {
             "type": "object",
             "properties": {
@@ -190,6 +190,60 @@
                 "type": "array",
                 "items": {
                   "type": "string"
+                }
+              },
+              "agent": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "ibitsa.agents": {
+          "type": "object",
+          "default": {},
+          "markdownDescription": "ACP agents heroes can run on, by id: `{ \"name\", \"command\", \"args\", \"env\", \"stateFolders\", \"domains\", \"prices\": { \"inputPerMillion\", \"outputPerMillion\" } }`. Overrides the presets (`codex`, `copilot`, `opencode`, `antigravity`, `gemini`) field by field, or adds agents. Ibitsa installs none of them: install and sign in to an agent yourself. Claude runs only through Ibitsa's own adapter. A class picks its agent in the Guild Hall's Armory.",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "command": {
+                "type": "string"
+              },
+              "args": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "env": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "stateFolders": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "domains": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "prices": {
+                "type": "object",
+                "properties": {
+                  "inputPerMillion": {
+                    "type": "number"
+                  },
+                  "outputPerMillion": {
+                    "type": "number"
+                  }
                 }
               }
             }

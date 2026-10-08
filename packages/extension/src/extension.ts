@@ -19,6 +19,7 @@ import { githubToken } from './github-sign-in';
 import { GuildCouncil } from './guild-council';
 import { GuildSettings } from './guild-settings';
 import type { ExtensionManifest } from './guild-settings.types';
+import { HeroAgents } from './hero-agents';
 import { chooseHero } from './hero-choice';
 import { API_KEYS_URL, HostChannel } from './host-channel';
 import { anthropicKeyValidator } from './key-validator';
@@ -30,6 +31,7 @@ import { pickHero, runAction } from './run-action';
 import { RuntimeHost } from './runtime-host';
 import type { DependencyFactory, Notifier } from './runtime-host.types';
 import {
+  readAgents,
   readChecks,
   readClasses,
   readCouncillorOverrides,
@@ -46,9 +48,15 @@ export function activate(context: vscode.ExtensionContext): IbitsaApi {
   const config = () => vscode.workspace.getConfiguration('ibitsa');
   // In development the SDK may fall back to the developer's own Claude Code login (spec §11.6).
   const development = context.extensionMode === vscode.ExtensionMode.Development;
+  // ACP agents (§11.5, #198) start from the heroes' environment without Anthropic's credentials:
+  // they're for Claude alone.
+  let heroEnv: Record<string, string | undefined> = process.env;
+  const heroAgents = new HeroAgents({ agents: () => readAgents(config()), env: () => heroEnv });
   let dependencies: DependencyFactory = ({ workspaceDir, credentials, env: base }) => {
     const env = agentEnvironment({ credentials, env: base, allowLogin: development });
+    heroEnv = base;
     return {
+      agentAdapter: (id) => heroAgents.adapterFor(id),
       adapter: env
         ? new ClaudeAdapter({
             env: () => env,
@@ -119,8 +127,10 @@ export function activate(context: vscode.ExtensionContext): IbitsaApi {
     openApiKeyPage: () => void vscode.env.openExternal(vscode.Uri.parse(API_KEYS_URL)),
     openWorktree: () => void vscode.commands.executeCommand('ibitsa.openWorktree'),
     post: (event) => GamePanel.postHost(event),
-    // The Armory (#182): `ibitsa.classes` and `ibitsa.recolor`, one entry at a time.
+    // The Armory (#182, #198): `ibitsa.classes` and `ibitsa.recolor`, one entry at a time, and the
+    // agents a class can run on.
     armory: new Armory({
+      agents: () => heroAgents.views(),
       inspect: (key) => config().inspect(key),
       update: ({ key, value, layer }) =>
         config().update(

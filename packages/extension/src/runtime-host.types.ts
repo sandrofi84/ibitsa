@@ -4,6 +4,8 @@ import type { Credentials } from './credentials.types';
 
 export interface Dependencies {
   adapter: AgentAdapter;
+  /** The ACP agents classes may name (§11.5, #198); without it every class runs on `adapter`. */
+  agentAdapter?: (agentId: string) => AgentAdapter | { error: string } | undefined;
   gameMaster: GameMaster;
   /** The git host for pull requests (§5.6); without one, only pushing works. */
   gitHost?: GitHost;

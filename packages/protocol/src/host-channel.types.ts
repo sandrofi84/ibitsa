@@ -1,3 +1,4 @@
+import type { AgentView } from './agents.types';
 import type { Recolor } from './classes.schema';
 import type { HeroClassView } from './classes.types';
 import type { CouncillorOverrides } from './councillors.types';
@@ -82,4 +83,6 @@ export type ArmoryLayer = 'default' | 'user' | 'workspace';
 export interface ArmoryView {
   classes: (HeroClassView & { layer: ArmoryLayer })[];
   recolor: { target: string; recolor: Recolor; layer: ArmoryLayer }[];
+  /** The agents a class can run on besides Claude (§11.5, #198), and whether each is installed. */
+  agents: AgentView[];
 }

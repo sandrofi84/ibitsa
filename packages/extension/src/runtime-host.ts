@@ -64,7 +64,7 @@ export class RuntimeHost {
   private async start(): Promise<Runtime> {
     const o = this.options;
     const [credentials, env] = await Promise.all([o.credentials(), o.environment()]);
-    const { adapter, gameMaster, gitHost } = o.dependencies({
+    const { adapter, agentAdapter, gameMaster, gitHost } = o.dependencies({
       credentials,
       workspaceDir: o.workspaceDir,
       env,
@@ -82,6 +82,7 @@ export class RuntimeHost {
       ...(gitHost ? { gitHost } : {}),
       ...(o.pullRequestPollSeconds ? { pullRequestPollSeconds: o.pullRequestPollSeconds } : {}),
       ...(o.classes ? { classes: o.classes } : {}),
+      ...(agentAdapter ? { agentAdapter } : {}),
       ...(o.recolor ? { recolor: o.recolor } : {}),
     });
     this.connection = runtime.connect(this.watcher(runtime));

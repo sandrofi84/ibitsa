@@ -1,4 +1,5 @@
 import * as v from 'valibot';
+import { AgentIdSchema } from './agents.schema';
 
 // Hero classes and recolor in settings (spec §5.2, #182): `ibitsa.classes` and `ibitsa.recolor`. They
 // come from user files, so they're checked before use.
@@ -13,6 +14,8 @@ export const ClassSettingSchema = v.strictObject({
   /** A character in the pack, e.g. `hero.paladin`. */
   appearance: v.optional(text),
   names: v.optional(v.pipe(v.array(text), v.maxLength(10))),
+  /** The agent heroes of this class run on (§11.5, #198): `claude`, or an `ibitsa.agents` id. */
+  agent: v.optional(AgentIdSchema),
 });
 export type ClassSetting = v.InferOutput<typeof ClassSettingSchema>;
 

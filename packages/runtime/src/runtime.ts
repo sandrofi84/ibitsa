@@ -15,6 +15,7 @@ import {
 import {
   type ActionInfo,
   type CheckResult,
+  CLAUDE_AGENT,
   type Command,
   type CoreMessage,
   type CouncilContextChoice,
@@ -36,7 +37,13 @@ import { CampaignDocuments } from './campaign-documents';
 import { councilVersion, reviewPlan, seatable, sittingPlan } from './council';
 import { CouncilTallies } from './council-tallies';
 import { KeptCouncil } from './kept-council';
-import type { AgentSession, FrontEnd, ReviewSession, SittingSession } from './ports.types';
+import type {
+  AgentAdapter,
+  AgentSession,
+  FrontEnd,
+  ReviewSession,
+  SittingSession,
+} from './ports.types';
 import { ProjectRules } from './project-rules';
 import { PullRequests } from './pull-requests';
 import type { Connection, RuntimeOptions } from './runtime.types';
@@ -353,7 +360,7 @@ export class Runtime {
           this.sessions.get(heroId)?.close();
           this.sessions.set(
             heroId,
-            this.options.adapter.startSession(
+            this.adapterOf(effect.classId).startSession(
               {
                 ...effect,
                 ...this.allowRules(effect.allowRules),
@@ -368,7 +375,7 @@ export class Runtime {
             kind: 'agent',
             t: this.t(),
             heroId,
-            event: { type: 'error', message: String(e) },
+            event: { type: 'error', message: e instanceof Error ? e.message : String(e) },
           });
         }
         return;
@@ -380,7 +387,7 @@ export class Runtime {
           this.sessions.get(heroId)?.close();
           this.sessions.set(
             heroId,
-            this.options.adapter.resumeSession(
+            this.adapterOf(resume.classId).resumeSession(
               { ...resume, ...this.allowRules(resume.allowRules), ...this.modelOf(resume.classId) },
               (event) => this.input({ kind: 'agent', t: this.t(), heroId, event }),
             ),
@@ -390,7 +397,7 @@ export class Runtime {
             kind: 'agent',
             t: this.t(),
             heroId,
-            event: { type: 'error', message: String(e) },
+            event: { type: 'error', message: e instanceof Error ? e.message : String(e) },
           });
         }
         return;
@@ -1055,6 +1062,19 @@ export class Runtime {
   /** The hero classes in play (§5.2, #182): the built-ins with `ibitsa.classes` over them. */
   private classes(): HeroClassView[] {
     return this.options.classes?.() ?? [...DEFAULT_CLASSES];
+  }
+
+  /**
+   * The adapter heroes of this class run on (§11.5, #198): Claude's, or the ACP agent the class names.
+   * Throws when that agent can't be used; the caller turns it into the hero's error.
+   */
+  private adapterOf(classId: string): AgentAdapter {
+    const agent = this.classes().find((c) => c.id === classId)?.agent ?? CLAUDE_AGENT;
+    if (agent === CLAUDE_AGENT) return this.options.adapter;
+    const found = this.options.agentAdapter?.(agent);
+    if (!found) throw new Error(`No agent "${agent}" in ibitsa.agents.`);
+    if ('error' in found) throw new Error(found.error);
+    return found;
   }
 
   /** The model a hero of this class runs on (#182); none for a class nobody knows. */

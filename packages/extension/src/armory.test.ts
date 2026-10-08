@@ -2,6 +2,25 @@ import { describe, expect, it, vi } from 'vitest';
 import { Armory } from './armory';
 import type { SettingLayers } from './guild-settings.types';
 
+describe('Armory agents (#198)', () => {
+  it('lists the agents a class can run on, and a class on one', () => {
+    const agents = [
+      { id: 'codex', name: 'Codex', command: 'codex-acp', args: [], preset: true, found: true },
+    ];
+    const a = new Armory({
+      agents: () => agents,
+      inspect: (key) => (key === 'classes' ? { globalValue: { seer: { agent: 'codex' } } } : {}),
+      update: async () => {},
+    });
+    const view = a.view();
+    expect(view.agents).toEqual(agents);
+    expect(view.classes.at(-1)).toMatchObject({ id: 'seer', agent: 'codex', model: '' });
+    expect(new Armory({ inspect: () => undefined, update: async () => {} }).view().agents).toEqual(
+      [],
+    );
+  });
+});
+
 function armory(layers: { classes?: SettingLayers; recolor?: SettingLayers } = {}) {
   const update = vi.fn(async () => {});
   return { armory: new Armory({ inspect: (key) => layers[key], update }), update };

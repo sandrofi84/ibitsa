@@ -1,4 +1,5 @@
 import * as v from 'valibot';
+import { agentName, CLAUDE_AGENT } from './agents';
 import { ClassesSettingSchema, type RecolorMap, RecolorMapSchema } from './classes.schema';
 import type { HeroClassView } from './classes.types';
 
@@ -7,6 +8,7 @@ export const DEFAULT_CLASSES: readonly HeroClassView[] = [
   {
     id: 'paladin',
     name: 'Paladin',
+    agent: CLAUDE_AGENT,
     model: 'fable',
     appearance: 'hero.paladin',
     names: ['Aldric', 'Seraphine', 'Tamsin'],
@@ -15,6 +17,7 @@ export const DEFAULT_CLASSES: readonly HeroClassView[] = [
   {
     id: 'barbarian',
     name: 'Barbarian',
+    agent: CLAUDE_AGENT,
     model: 'opus',
     appearance: 'hero.barbarian',
     names: ['Brann', 'Hilda', 'Torvald'],
@@ -23,6 +26,7 @@ export const DEFAULT_CLASSES: readonly HeroClassView[] = [
   {
     id: 'ranger',
     name: 'Ranger',
+    agent: CLAUDE_AGENT,
     model: 'sonnet',
     appearance: 'hero.ranger',
     names: ['Ilse', 'Rowan', 'Wren'],
@@ -31,6 +35,7 @@ export const DEFAULT_CLASSES: readonly HeroClassView[] = [
   {
     id: 'rogue',
     name: 'Rogue',
+    agent: CLAUDE_AGENT,
     model: 'haiku',
     appearance: 'hero.rogue',
     names: ['Vex', 'Nim', 'Sable'],
@@ -51,6 +56,12 @@ export function modelName(model: string): string {
   return MODEL_NAMES[model] ?? model;
 }
 
+/** What a class runs on, in words (§5.2): Claude's model, or an ACP agent and its model. */
+export function classModelName({ agent, model }: { agent: string; model: string }): string {
+  if (agent === CLAUDE_AGENT) return modelName(model);
+  return `${agentName(agent)} · ${model || 'its default model'}`;
+}
+
 /**
  * The classes in play (§5.2, #182): the built-ins with `ibitsa.classes` laid over them by id, then the
  * classes it adds. A setting that doesn't check out is ignored, so a typo can't hide every class.
@@ -61,10 +72,15 @@ export function resolveClasses(setting: unknown): HeroClassView[] {
   const classes = DEFAULT_CLASSES.map((c) => ({ ...c, names: [...c.names] }));
   for (const [id, s] of Object.entries(configured)) {
     const known = classes.find((c) => c.id === id);
+    const agent = s.agent ?? known?.agent ?? CLAUDE_AGENT;
+    // A class moved to another agent doesn't keep the old agent's model; an ACP agent without one
+    // runs on its own default (§11.5).
+    const kept = agent === (known?.agent ?? CLAUDE_AGENT) ? known?.model : undefined;
     const merged: HeroClassView = {
       id,
       name: s.name ?? known?.name ?? id.charAt(0).toUpperCase() + id.slice(1),
-      model: s.model ?? known?.model ?? 'sonnet',
+      agent,
+      model: s.model ?? kept ?? (agent === CLAUDE_AGENT ? 'sonnet' : ''),
       appearance: s.appearance ?? known?.appearance ?? 'hero.ranger',
       names: s.names ?? known?.names ?? [],
       builtIn: known?.builtIn ?? false,

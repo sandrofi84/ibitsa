@@ -7,7 +7,7 @@ interface Probe {
   snapshot(): {
     campaign: { status: string } | null;
     heroes: { name: string; classId: string }[];
-    classes?: { id: string; model: string }[];
+    classes?: { id: string; agent: string; model: string }[];
     recolor?: Record<string, { hue: number; preset: string }>;
   } | null;
 }
@@ -100,5 +100,60 @@ test('the Armory: a new class used in party assembly, and a recolored hero (#182
     .click();
   await page.waitForTimeout(2_000);
   await page.screenshot({ path: 'test-results/recolored-hero.png' });
+  expect(errors).toEqual([]);
+});
+
+test("the Armory: a class on an ACP agent, and an agent that isn't installed (#198)", async ({
+  page,
+}) => {
+  const errors = watchErrors(page);
+  await page.goto('/?fixture=live');
+  await expect(async () => {
+    const at = await probe(page, (p) => p.guildHallOnPage());
+    expect(at).not.toBeNull();
+    if (!at) return;
+    await page.mouse.click(at.x, at.y);
+    expect(await probe(page, (p) => p.guildHall())).not.toBeNull();
+  }).toPass({ timeout: 15_000, intervals: [250, 500, 1_000] });
+
+  const hall = page.getByRole('region', { name: 'Guild Hall' });
+  await hall.getByRole('tab', { name: 'Armory' }).click();
+  // The agents a class can run on, and which the extension found (the dev host: Codex only).
+  await expect(hall.locator('.armory-agents')).toContainText('Codex (codex-acp): installed');
+  await expect(hall.locator('.armory-agents')).toContainText(
+    'Gemini CLI (gemini --acp): not installed',
+  );
+
+  // A new class on Codex, with the agent's own model.
+  await hall.getByLabel('New class id').fill('seer');
+  await hall.getByLabel('Its name').fill('Seer');
+  await hall.getByLabel('Its agent').selectOption('codex');
+  await expect(hall.getByLabel('Its model')).toHaveValue('');
+  await hall.getByRole('button', { name: 'Add the class' }).click();
+  const seer = hall.getByRole('group', { name: 'Seer' });
+  await expect(seer.getByLabel('Agent')).toHaveValue('codex');
+  await expect(seer).toContainText("The agent picks the model if it doesn't offer this one");
+  await expect
+    .poll(() =>
+      probe(page, (p) => {
+        const c = p.snapshot()?.classes?.find((k) => k.id === 'seer');
+        return c ? `${c.agent}:${c.model}` : null;
+      }),
+    )
+    .toBe('codex:');
+
+  // The Rogue moved to Gemini, which isn't installed: it says so, and the Claude model goes.
+  const rogue = hall.getByRole('group', { name: 'Rogue' });
+  await rogue.getByLabel('Agent').selectOption('gemini');
+  await expect(rogue.getByRole('status')).toContainText("Gemini CLI isn't installed");
+  await expect
+    .poll(() =>
+      probe(page, (p) => {
+        const c = p.snapshot()?.classes?.find((k) => k.id === 'rogue');
+        return c ? `${c.agent}:${c.model}` : null;
+      }),
+    )
+    .toBe('gemini:');
+  await page.screenshot({ path: 'test-results/armory-agents.png' });
   expect(errors).toEqual([]);
 });
