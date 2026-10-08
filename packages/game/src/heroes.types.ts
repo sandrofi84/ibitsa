@@ -11,4 +11,6 @@ export interface HeroClass {
   names: string[];
   /** The pack character its heroes look like (#182). */
   appearance: string;
+  /** Its heroes run without Ibitsa's sandbox (an ACP agent on Windows, or with no profile; #200). */
+  unsandboxed: boolean;
 }

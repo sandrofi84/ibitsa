@@ -201,17 +201,22 @@ function renderItem({
             }),
             client,
           }),
-          intentButton({
-            label: 'Always allow in this project',
-            intent: () => ({
-              type: 'answerPermission',
-              itemId: item.id,
-              decision: 'allow',
-              always: 'project',
-            }),
-            client,
-          }),
         );
+        // An ACP agent's own rule (#200) means nothing to other heroes: this quest only.
+        if (!item.questOnly) {
+          actions.append(
+            intentButton({
+              label: 'Always allow in this project',
+              intent: () => ({
+                type: 'answerPermission',
+                itemId: item.id,
+                decision: 'allow',
+                always: 'project',
+              }),
+              client,
+            }),
+          );
+        }
       }
       break;
     }

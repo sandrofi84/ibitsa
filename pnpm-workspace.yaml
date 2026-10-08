@@ -3,3 +3,5 @@ packages:
   - packages/adapters/*
 allowBuilds:
   esbuild: true
+minimumReleaseAgeExclude:
+  - '@anthropic-ai/sandbox-runtime@0.0.79'

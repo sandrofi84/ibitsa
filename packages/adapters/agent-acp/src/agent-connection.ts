@@ -48,6 +48,7 @@ export class AgentConnection {
       args: spec.args ?? [],
       cwd,
       env: { ...(options.env?.() ?? process.env), ...spec.env },
+      ask: handlers.ask ?? (() => Promise.resolve(false)),
     });
     const exited = (message: string) => {
       if (this.closed) return;

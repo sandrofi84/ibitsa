@@ -115,6 +115,7 @@ describe('the Armory (#182)', () => {
       modelId: 'opus',
       names: ['Lyra'],
       appearance: 'hero.ranger',
+      unsandboxed: false,
     });
     expect(defaultHeroName('bard')).toBe('Bard Lyra');
     expect(defaultHeroName('monk')).toBe('Monk');

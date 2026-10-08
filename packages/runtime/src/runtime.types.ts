@@ -34,6 +34,11 @@ export interface RuntimeOptions {
    * there's no such agent. Classes on `claude` use `adapter`.
    */
   agentAdapter?: (agentId: string) => AgentAdapter | { error: string } | undefined;
+  /**
+   * Whether heroes on an ACP agent run inside Ibitsa's sandbox (§11.5, #200); a class whose agent
+   * doesn't is marked so in the snapshot. Without it, every class counts as sandboxed.
+   */
+  agentSandboxed?: (agentId: string) => boolean;
   /** `ibitsa.recolor` (#182), for the snapshot. */
   recolor?: () => RecolorMap;
   /** How skill folders are watched; injectable for tests. */

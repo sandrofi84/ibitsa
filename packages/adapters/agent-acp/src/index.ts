@@ -14,6 +14,10 @@ export { spawnAgent } from './agent-connection';
 export { ESTIMATE_BASIS } from './gold';
 export { HERO_TOOL_INSTRUCTIONS, SUBMIT_TASK } from './hero-tools';
 export { runMcpBridge } from './mcp-bridge';
+export { AgentSandbox, SANDBOX_PLAN_ENV, sandboxConfig, sandboxSupported } from './sandbox';
+export type { NetworkRequest, SandboxProfile } from './sandbox.types';
+export { runSandboxHost } from './sandbox-host';
+export type { SandboxHostIo } from './sandbox-host.types';
 export { ToolBridge } from './tool-bridge';
 export type { BridgeTool } from './tool-bridge.schema';
 export type {

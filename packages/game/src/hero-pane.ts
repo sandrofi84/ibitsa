@@ -7,7 +7,7 @@ import { createCommandInput } from './command-input';
 import { button, el } from './dom';
 import type { HeroPane } from './hero-pane.types';
 import type { HeroSelection } from './hero-selection';
-import { BLOCKED_REASONS, heroClasses, STATE_LABELS } from './heroes';
+import { BLOCKED_REASONS, heroClasses, STATE_LABELS, sandboxNote } from './heroes';
 import type { Host } from './host.types';
 import { slashMenu } from './slash-menu';
 import type { ViewState } from './view-state';
@@ -107,6 +107,9 @@ export function mountHeroPane({
   // Auto mode (#63): a notice while it's on, so it's never on unnoticed.
   const autoNote = el('p', { className: 'auto-note' });
   autoNote.setAttribute('role', 'status');
+  // A hero whose agent runs without Ibitsa's sandbox (#200) says so, in or out of auto mode.
+  const sandboxNotice = el('p', { className: 'auto-note sandbox-note' });
+  sandboxNotice.hidden = true;
   const controls = el('div', { className: 'controls' });
   // "Always allow in this project" rules (#62), with a way to take one back.
   const rules = el('section', { className: 'project-rules' });
@@ -132,7 +135,18 @@ export function mountHeroPane({
     renderJournal({ follow: true });
   };
   client.onJournal(() => renderJournal({ follow: false }));
-  body.append(title, facts, summary, autoNote, message.element, controls, status, rules, journal);
+  body.append(
+    title,
+    facts,
+    summary,
+    autoNote,
+    sandboxNotice,
+    message.element,
+    controls,
+    status,
+    rules,
+    journal,
+  );
 
   let confirmAbandon = false;
   let confirmAuto = false;
@@ -166,6 +180,9 @@ export function mountHeroPane({
         ? 'Auto mode is on. There is no sandbox here: every command runs without asking, except writes outside the worktree.'
         : 'Auto mode is on: the hero’s requests are allowed without asking, except outside the worktree or the sandbox.'
       : '';
+    const note = sandboxNote(hero.classId);
+    sandboxNotice.hidden = note === null;
+    sandboxNotice.textContent = note ?? '';
     const heroClass = heroClasses().find((c) => c.id === hero.classId);
     title.textContent = hero.name;
     const rows: [string, string][] = [

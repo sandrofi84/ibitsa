@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -41,13 +41,16 @@ function setup({
   installed?: boolean;
 } = {}) {
   let now = 1_000;
+  const tmp = mkdtempSync(join(tmpdir(), 'ibitsa-checks-'));
+  dirs.push(tmp);
   const check = vi.fn(
-    async (): Promise<AgentProbe> => probes.shift() ?? { kind: 'ready', models: null },
+    async (_request: { cwd: string }): Promise<AgentProbe> =>
+      probes.shift() ?? { kind: 'ready', models: null },
   );
   const deps: AgentChecksDeps = {
     agents: () => agents,
     checker: () => ({ check }),
-    cwd: () => '/ws',
+    tmp: () => tmp,
     env: () => ({ PATH: '/bin' }),
     platform: 'linux',
     isFile: () => installed,
@@ -56,6 +59,7 @@ function setup({
   return {
     checks: new AgentChecks(deps),
     check,
+    tmp,
     later: (ms: number) => {
       now += ms;
     },
@@ -77,7 +81,6 @@ describe('the party check (§11.5, #199)', () => {
     });
     expect(b).toBe(a);
     expect(check).toHaveBeenCalledTimes(1);
-    expect(check).toHaveBeenCalledWith({ cwd: '/ws' });
     later(CHECK_HOLDS_MS - 1);
     await checks.check({ agent: 'codex' });
     expect(check).toHaveBeenCalledTimes(1);
@@ -183,7 +186,6 @@ describe('the party check (§11.5, #199)', () => {
     const noAdapter = new AgentChecks({
       agents: () => [codex],
       checker: () => undefined,
-      cwd: () => '/ws',
       env: () => ({ PATH: '/bin' }),
       platform: 'linux',
       isFile: () => true,
@@ -195,8 +197,6 @@ describe('the party check (§11.5, #199)', () => {
   });
 
   it('checks a real agent the way heroes start it, through HeroAgents', async () => {
-    const cwd = mkdtempSync(join(tmpdir(), 'ibitsa-check-'));
-    dirs.push(cwd);
     const fake = (env: Record<string, string>): AgentDefinition => ({
       ...codex,
       command: process.execPath,
@@ -208,7 +208,6 @@ describe('the party check (§11.5, #199)', () => {
     const checks = new AgentChecks({
       agents: () => agents,
       checker: (id) => heroAgents.acpAdapter(id),
-      cwd: () => cwd,
       env: () => process.env,
     });
     expect((await checks.check({ agent: 'codex' })).result).toEqual({
@@ -221,6 +220,39 @@ describe('the party check (§11.5, #199)', () => {
       via: 'command',
       command: 'codex login',
     });
+  });
+});
+
+describe('where the check starts the agent (#200)', () => {
+  it('a fresh empty temp folder each time, never the workspace, gone afterwards', async () => {
+    const { checks, check, tmp } = setup();
+    const seen: { cwd: string; empty: boolean }[] = [];
+    check.mockImplementation(async ({ cwd }: { cwd: string }) => {
+      seen.push({ cwd, empty: readdirSync(cwd).length === 0 });
+      return { kind: 'ready', models: null };
+    });
+    await checks.check({ agent: 'codex' });
+    await checks.check({ agent: 'codex', force: true });
+    expect(seen).toHaveLength(2);
+    expect(seen[0]?.cwd).not.toBe(seen[1]?.cwd);
+    for (const { cwd, empty } of seen) {
+      expect(empty).toBe(true);
+      expect(cwd.startsWith(realpathSync(tmp))).toBe(true);
+    }
+    await vi.waitFor(() => {
+      for (const { cwd } of seen) expect(existsSync(cwd)).toBe(false);
+    });
+  });
+
+  it('removes the folder when the check fails too', async () => {
+    const { checks, check } = setup();
+    let folder = '';
+    check.mockImplementation(async ({ cwd }: { cwd: string }) => {
+      folder = cwd;
+      throw new Error('the agent fell over');
+    });
+    await expect(checks.check({ agent: 'codex' })).rejects.toThrow('the agent fell over');
+    await vi.waitFor(() => expect(existsSync(folder)).toBe(false));
   });
 });
 

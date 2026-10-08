@@ -7,9 +7,10 @@ import {
   type AgentProcess,
   type AgentSpec,
   type SpawnRequest,
+  sandboxSupported,
   spawnAgent,
 } from '@ibitsa/agent-acp';
-import type { AgentView } from '@ibitsa/protocol';
+import type { AgentDefinition, AgentView } from '@ibitsa/protocol';
 import type { AgentAdapter } from '@ibitsa/runtime';
 import type { CommandLookup, HeroAgentsDeps } from './hero-agents.types';
 
@@ -30,17 +31,34 @@ export class HeroAgents {
     const entry = JSON.stringify(agent);
     const known = this.adapters.get(id);
     if (known?.entry === entry) return known.adapter;
+    const sandboxed = this.sandboxedAgent(agent);
+    const home = homedir();
     const spec: AgentSpec = {
-      command: expandHome({ path: agent.command, home: homedir() }),
+      command: expandHome({ path: agent.command, home }),
       args: agent.args,
       env: agent.env,
       ...(agent.prices ? { prices: agent.prices } : {}),
+      // Its own sandbox can't nest inside Ibitsa's, so it stands down there (Codex, #195).
+      ...(sandboxed && agent.sandboxedMode ? { mode: agent.sandboxedMode } : {}),
+    };
+    const sandbox = sandboxed ? this.deps.sandbox : undefined;
+    const profile = {
+      stateFolders: agent.stateFolders.map((path) => expandHome({ path, home })),
+      domains: agent.domains,
+      ...(agent.weakerNetworkIsolation ? { weakerNetworkIsolation: true } : {}),
     };
     const adapter = new AcpAdapter({
       agent: spec,
       env: this.deps.env,
       ...(this.deps.tools ? { tools: this.deps.tools } : {}),
-      ...((this.deps.platform ?? process.platform) === 'win32' ? { spawn: spawnOnWindows } : {}),
+      ...(sandbox
+        ? {
+            spawn: (request: SpawnRequest) => sandbox.spawn({ request, profile }),
+            sandboxed: true,
+          }
+        : this.platform() === 'win32'
+          ? { spawn: spawnOnWindows }
+          : {}),
     });
     this.adapters.set(id, { entry, adapter });
     return adapter;
@@ -52,10 +70,31 @@ export class HeroAgents {
     return adapter instanceof AcpAdapter ? adapter : undefined;
   }
 
+  /**
+   * Whether heroes on this agent run inside Ibitsa's sandbox (§11.5, #200): on macOS and Linux, for
+   * an agent with a sandbox profile (the domains it needs). Others run unsandboxed, and say so.
+   */
+  sandboxed(id: string): boolean {
+    const agent = this.deps.agents().find((a) => a.id === id);
+    return agent !== undefined && this.sandboxedAgent(agent);
+  }
+
+  private sandboxedAgent(agent: AgentDefinition): boolean {
+    return (
+      this.deps.sandbox !== undefined &&
+      sandboxSupported(this.platform()) &&
+      agent.domains.length > 0
+    );
+  }
+
+  private platform(): NodeJS.Platform {
+    return this.deps.platform ?? process.platform;
+  }
+
   /** The agents for the Armory: no environment (it may hold keys), and whether each is installed. */
   views(): AgentView[] {
     const env = this.deps.env();
-    const platform = this.deps.platform ?? process.platform;
+    const platform = this.platform();
     return this.deps.agents().map((agent) => ({
       id: agent.id,
       name: agent.name,

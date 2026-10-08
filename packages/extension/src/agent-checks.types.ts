@@ -7,8 +7,11 @@ export interface AgentChecksDeps {
   agents: () => AgentDefinition[];
   /** Checks an agent the way heroes would start it (`HeroAgents.acpAdapter`); undefined if none. */
   checker: (id: string) => { check(request: { cwd: string }): Promise<AgentProbe> } | undefined;
-  /** The folder the throwaway session starts in: the workspace. */
-  cwd: () => string;
+  /**
+   * Where the throwaway session's fresh folder goes (#200): the system's temp folder by default,
+   * never the workspace, which the sandbox would let the agent write.
+   */
+  tmp?: () => string;
   /** The heroes' environment, where the agent's command is looked for on PATH. */
   env: () => Record<string, string | undefined>;
   platform?: NodeJS.Platform;

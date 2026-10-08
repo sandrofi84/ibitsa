@@ -44,8 +44,19 @@ jobs:
       - name: Typecheck
         run: pnpm exec tsc -b
 
+      # ACP heroes run inside Anthropic's sandbox runtime (#200), which needs these on Linux. Ubuntu 24.04
+      # strips capabilities from unprivileged user namespaces, which bubblewrap needs.
+      - name: Sandbox tools for ACP heroes (bubblewrap, socat, ripgrep)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq bubblewrap socat ripgrep
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
       - name: Unit tests, fixture golden files and coverage floors (Vitest)
         run: pnpm exec vitest run --coverage
+        env:
+          # The sandbox tests fail here rather than skip when a tool is missing (#200).
+          IBITSA_REQUIRE_SANDBOX: '1'
 
       - name: Coverage per package in the run summary
         if: always()
@@ -147,6 +158,9 @@ jobs:
 
       - name: Unit tests and fixture golden files (Vitest)
         run: pnpm exec vitest run
+        env:
+          # macOS runs the ACP sandbox tests for real (#200); Windows has no sandbox and skips them.
+          IBITSA_REQUIRE_SANDBOX: '1'
 
       - name: Build extension and game
         run: pnpm -r build

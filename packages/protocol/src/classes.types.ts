@@ -12,4 +12,10 @@ export interface HeroClassView {
   names: string[];
   /** One of the four that ship with Ibitsa. */
   builtIn: boolean;
+  /**
+   * False when heroes of this class run without Ibitsa's sandbox (§11.5, #200): an ACP agent on
+   * native Windows, or one with no sandbox profile. Added by the runtime; absent means sandboxed as
+   * the platform allows (`Snapshot.sandboxed`).
+   */
+  sandboxed?: false;
 }

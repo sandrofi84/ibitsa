@@ -49,7 +49,6 @@ function setup(overrides: Partial<HostChannelDeps> = {}) {
     agentChecks: new AgentChecks({
       agents: () => [],
       checker: () => undefined,
-      cwd: () => '/ws',
       env: () => ({}),
     }),
     openTerminal: vi.fn(),
@@ -360,7 +359,6 @@ describe('the party check on the host channel (#199)', () => {
       checker: () => ({
         check: async () => ({ kind: 'signIn', message: 'Sign in first', terminal: null }),
       }),
-      cwd: () => '/ws',
       env: () => ({ PATH: '/bin' }),
       platform: 'linux',
       isFile: () => true,

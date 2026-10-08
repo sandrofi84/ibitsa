@@ -262,6 +262,8 @@ export type PendingItem =
       cwd: string;
       /** The rules "Always allow" would add (#62); empty when it isn't offered. */
       alwaysAllow: string[];
+      /** "Always allow" for this quest only (#200): an ACP agent's rule never reaches the project. */
+      questOnly?: boolean;
     }
   | {
       kind: 'question';

@@ -1,7 +1,8 @@
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { homedir, tmpdir } from 'node:os';
 import { delimiter, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { type AcpAdapter, AgentSandbox, SANDBOX_PLAN_ENV } from '@ibitsa/agent-acp';
 import { AGENT_PRESETS, type AgentDefinition, resolveAgents } from '@ibitsa/protocol';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { findCommand, HeroAgents } from './hero-agents';
@@ -98,6 +99,58 @@ describe('HeroAgents (§11.5, #198)', () => {
     expect(second).not.toBe(first);
     // With prices the agent's gold can be estimated (§11.5).
     expect(second && 'capabilities' in second && second.capabilities.costReported).toBe(true);
+  });
+
+  it("runs agents with a sandbox profile inside Ibitsa's sandbox on macOS and Linux (#200)", async () => {
+    const dir = folder();
+    const planFile = join(dir, 'plan.json');
+    // Stands in for the sandbox host: writes down its plan and stops.
+    const script = join(dir, 'host.cjs');
+    writeFileSync(
+      script,
+      `require('node:fs').writeFileSync(${JSON.stringify(planFile)}, process.env.${SANDBOX_PLAN_ENV});`,
+    );
+    // The plan as macOS would build it, wherever the test runs.
+    const sandbox = new AgentSandbox({
+      script,
+      node: { command: process.execPath },
+      platform: 'darwin',
+    });
+    const agents = (platform: NodeJS.Platform) =>
+      new HeroAgents({
+        agents: () => resolveAgents({ mine: { command: 'my-agent' } }),
+        env: () => ({}),
+        sandbox,
+        platform,
+      });
+    const mac = agents('darwin');
+    // Codex's preset has a profile; a custom agent without domains doesn't, and says so.
+    expect(mac.sandboxed('codex')).toBe(true);
+    expect(mac.sandboxed('mine')).toBe(false);
+    expect(mac.sandboxed('nowhere')).toBe(false);
+    expect(agents('linux').sandboxed('codex')).toBe(true);
+    // No sandbox on native Windows.
+    expect(agents('win32').sandboxed('codex')).toBe(false);
+    expect(
+      new HeroAgents({ agents: () => resolveAgents({}), env: () => ({}) }).sandboxed('codex'),
+    ).toBe(false);
+    const codex = mac.adapterFor('codex');
+    if (!codex || 'error' in codex) throw new Error('no adapter');
+    expect((codex as AcpAdapter).sandboxed).toBe(true);
+    const mine = mac.adapterFor('mine');
+    expect((mine as AcpAdapter).sandboxed).toBe(false);
+    const session = codex.startSession(
+      { heroId: 'h1', sessionId: 's1', cwd: dir, classId: 'seer', prompt: 'hi' },
+      () => {},
+    );
+    await vi.waitFor(() => expect(existsSync(planFile)).toBe(true), { timeout: 20_000 });
+    session.close();
+    const plan = JSON.parse(readFileSync(planFile, 'utf8'));
+    expect(plan.command).toBe('codex-acp');
+    expect(plan.config.network.allowedDomains).toEqual(['chatgpt.com', '*.oaiusercontent.com']);
+    // The state folder with ~ expanded, and macOS's weaker isolation for Codex's TLS.
+    expect(plan.config.filesystem.allowWrite).toContain(`${homedir()}/.codex`);
+    expect(plan.config.enableWeakerNetworkIsolation).toBe(true);
   });
 
   it('lists the agents for the Armory with whether each is installed, and no environment', () => {

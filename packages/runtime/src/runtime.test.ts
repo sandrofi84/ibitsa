@@ -2031,6 +2031,36 @@ describe('hero classes (#182)', () => {
     runtime.dispose();
   });
 
+  it("marks a class whose ACP agent runs without Ibitsa's sandbox (#200)", async () => {
+    const storageDir = mkdtempSync(join(tmpdir(), 'ibitsa-runtime-'));
+    dirs.push(storageDir);
+    const asked: string[] = [];
+    const runtime = new Runtime({
+      storageDir,
+      adapter: new FakeAdapter(),
+      gameMaster: new FakeGameMaster(),
+      clock: new ManualClock(),
+      classes: () => resolveClasses({ seer: { agent: 'codex' }, oracle: { agent: 'opencode' } }),
+      agentSandboxed: (id) => {
+        asked.push(id);
+        return id === 'codex';
+      },
+    });
+    runtime.start();
+    const received: CoreMessage[] = [];
+    runtime
+      .connect({ post: (m) => received.push(m) })
+      .receive({ type: 'hello', protocolVersion: 1 });
+    const snapshot = received.flatMap((m) => (m.type === 'snapshot' ? [m.snapshot] : [])).at(-1);
+    const sandboxed = (id: string) => snapshot?.classes?.find((c) => c.id === id)?.sandboxed;
+    expect(sandboxed('oracle')).toBe(false);
+    expect(snapshot?.classes?.find((c) => c.id === 'seer')).not.toHaveProperty('sandboxed');
+    // Claude's classes follow the platform (`Snapshot.sandboxed`), not this.
+    expect(snapshot?.classes?.find((c) => c.id === 'ranger')).not.toHaveProperty('sandboxed');
+    expect(asked).not.toContain('claude');
+    runtime.dispose();
+  });
+
   it('runs the built-ins without settings, and names no model for an unknown class', async () => {
     const env = setup();
     env.connection.receive({ ...startQuest, classId: 'bard' });

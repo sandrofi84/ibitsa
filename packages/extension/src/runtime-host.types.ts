@@ -6,6 +6,8 @@ export interface Dependencies {
   adapter: AgentAdapter;
   /** The ACP agents classes may name (§11.5, #198); without it every class runs on `adapter`. */
   agentAdapter?: (agentId: string) => AgentAdapter | { error: string } | undefined;
+  /** Whether heroes on an ACP agent run inside Ibitsa's sandbox (§11.5, #200). */
+  agentSandboxed?: (agentId: string) => boolean;
   gameMaster: GameMaster;
   /** The git host for pull requests (§5.6); without one, only pushing works. */
   gitHost?: GitHost;
