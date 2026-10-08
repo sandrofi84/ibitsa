@@ -8,8 +8,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AcpAdapter } from './acp-adapter';
 import type { AcpAdapterOptions, AgentPrices } from './acp-adapter.types';
 import { CANT_RESUME } from './acp-session';
+import { HERO_TOOL_INSTRUCTIONS, SESSION_CLOSED, SUBMIT_NEEDS_SUMMARY } from './hero-tools';
+import { ToolBridge } from './tool-bridge';
+import type { ToolHost, ToolSet } from './tool-bridge.types';
 
 const FAKE_AGENT = fileURLToPath(new URL('../test/fake-agent.mjs', import.meta.url));
+const BRIDGE_SCRIPT = fileURLToPath(new URL('../test/mcp-bridge.mjs', import.meta.url));
+const SUBMITTED_TEXT = 'Submitted. Your work will be reviewed.';
 /** Starting a Node process can take seconds on a busy CI runner (Windows especially). */
 const until = (check: () => void) => vi.waitFor(check, { timeout: 10_000, interval: 20 });
 vi.setConfig({ testTimeout: 30_000 });
@@ -31,6 +36,7 @@ function hero({
   model,
   resume,
   mcpServers,
+  tools,
 }: {
   env?: Record<string, string>;
   prices?: AgentPrices;
@@ -39,6 +45,7 @@ function hero({
   model?: string;
   resume?: string;
   mcpServers?: AcpAdapterOptions['mcpServers'];
+  tools?: AcpAdapterOptions['tools'];
 } = {}) {
   const cwd = mkdtempSync(join(tmpdir(), 'ibitsa-acp-'));
   dirs.push(cwd);
@@ -51,6 +58,7 @@ function hero({
       ...(prices ? { prices } : {}),
     },
     ...(mcpServers ? { mcpServers } : {}),
+    ...(tools ? { tools } : {}),
   });
   const events: AgentEvent[] = [];
   const steps = typeof prompt === 'function' ? prompt(cwd) : prompt;
@@ -117,7 +125,7 @@ describe('AcpSession: starting (§11.5)', () => {
     expect(created).toMatchObject({ method: 'session/new', params: { cwd, mcpServers: [] } });
   });
 
-  it('passes the MCP servers it is given (the tool bridge, #197)', async () => {
+  it('passes the other MCP servers it is given', async () => {
     const bridge = { name: 'ibitsa', command: 'bridge', args: [], env: [] };
     const { requests, settled } = hero({ mcpServers: () => [bridge] });
     await settled();
@@ -606,9 +614,158 @@ describe('AcpSession: errors and closing', () => {
     expect(events.map((e) => e.type)).toEqual(['sessionStarted', 'message', 'turnEnded']);
   });
 
-  it('acknowledges submit results until the tool bridge arrives (#197)', async () => {
+  it('ignores a submit result nobody is waiting for', async () => {
     const { session, settled } = hero();
     await settled();
     expect(() => session.completeSubmit({ toolUseId: 't', accepted: true })).not.toThrow();
+  });
+});
+
+describe('AcpSession: submit_task through the tool bridge (#197)', () => {
+  const bridges: ToolBridge[] = [];
+  afterEach(() => {
+    for (const b of bridges.splice(0)) b.close();
+  });
+  const bridge = () => {
+    const b = new ToolBridge({ script: BRIDGE_SCRIPT, node: { command: process.execPath } });
+    bridges.push(b);
+    return b;
+  };
+  /** A tool host that hands the session's tool set to the test instead of an agent. */
+  const stub = () => {
+    let set: ToolSet | null = null;
+    let closed = 0;
+    const host: ToolHost = {
+      open: async (tools) => {
+        set = tools;
+        return {
+          server: { name: 'ibitsa', command: 'bridge', args: [], env: [] },
+          close: () => {
+            closed++;
+          },
+        };
+      },
+    };
+    return { host, tools: () => set, closed: () => closed };
+  };
+  const mcpReply = (events: AgentEvent[]) =>
+    messages(events).find((m) => m.startsWith('mcp: ')) ?? '';
+
+  it('lists the bridge first, tells a new hero how to submit, and offers submit_task', async () => {
+    const { requests, events, settled, session } = hero({
+      tools: bridge(),
+      mcpServers: () => [{ name: 'other', command: 'x', args: [], env: [] }],
+      prompt: [{ mcp: { tool: 'submit_task', arguments: { summary: 'Fixed the redirect.' } } }],
+    });
+    await until(() => expect(events.map((e) => e.type)).toContain('taskSubmitted'));
+    const submitted = events.find((e) => e.type === 'taskSubmitted');
+    expect(submitted).toEqual({
+      type: 'taskSubmitted',
+      toolUseId: expect.stringMatching(/^submit-/),
+      summary: 'Fixed the redirect.',
+    });
+    session.completeSubmit({
+      toolUseId: submitted?.type === 'taskSubmitted' ? submitted.toolUseId : '',
+      accepted: true,
+    });
+    await settled();
+    expect(JSON.parse(mcpReply(events).slice(5))).toEqual({
+      tools: ['submit_task'],
+      result: { content: [{ type: 'text', text: SUBMITTED_TEXT }], isError: false },
+    });
+    const created = requests().find((r) => r.method === 'session/new');
+    const servers = created?.params.mcpServers as { name: string; env: { name: string }[] }[];
+    expect(servers.map((s) => s.name)).toEqual(['ibitsa', 'other']);
+    expect(servers[0]?.env.map((e) => e.name)).toEqual(
+      expect.arrayContaining(['IBITSA_BRIDGE', 'IBITSA_BRIDGE_TOKEN']),
+    );
+    const prompt = requests().find((r) => r.method === 'session/prompt')?.params.prompt;
+    expect(prompt).toEqual([
+      { type: 'text', text: HERO_TOOL_INSTRUCTIONS },
+      { type: 'text', text: expect.stringContaining('submit_task') },
+    ]);
+  });
+
+  it('returns a rejected submission with its reason, for the hero to fix', async () => {
+    const { events, settled, session } = hero({
+      tools: bridge(),
+      prompt: [{ mcp: { tool: 'submit_task', arguments: { summary: 'Done.' } } }],
+    });
+    await until(() => expect(events.map((e) => e.type)).toContain('taskSubmitted'));
+    const submitted = events.find((e) => e.type === 'taskSubmitted');
+    session.completeSubmit({
+      toolUseId: submitted?.type === 'taskSubmitted' ? submitted.toolUseId : '',
+      accepted: false,
+      reason: 'the tests fail.',
+    });
+    await settled();
+    expect(JSON.parse(mcpReply(events).slice(5)).result).toEqual({
+      content: [{ type: 'text', text: 'Not submitted: the tests fail.' }],
+      isError: true,
+    });
+  });
+
+  it('sends a resumed hero no instructions: it already had them', async () => {
+    const tools = stub();
+    const { requests, settled } = hero({
+      tools: tools.host,
+      resume: 'old',
+      prompt: 'carry on',
+      env: { FAKE_ACP_CAPS: JSON.stringify({ sessionCapabilities: { resume: {} } }) },
+    });
+    await settled();
+    const prompt = requests().find((r) => r.method === 'session/prompt')?.params.prompt;
+    expect(prompt).toEqual([{ type: 'text', text: 'carry on' }]);
+    expect(requests().find((r) => r.method === 'session/resume')?.params.mcpServers).toEqual([
+      { name: 'ibitsa', command: 'bridge', args: [], env: [] },
+    ]);
+  });
+
+  it('turns away calls it can’t submit, and answers waiting ones when the session closes', async () => {
+    const tools = stub();
+    const { session, events, settled } = hero({ tools: tools.host });
+    await settled();
+    const set = tools.tools();
+    expect(set?.tools.map((t) => t.name)).toEqual(['submit_task']);
+    expect(await set?.call({ name: 'dispute_finding', arguments: {} })).toEqual({
+      text: 'Unknown tool: dispute_finding',
+      isError: true,
+    });
+    expect(await set?.call({ name: 'submit_task', arguments: { summary: '  ' } })).toEqual({
+      text: SUBMIT_NEEDS_SUMMARY,
+      isError: true,
+    });
+    const waiting = set?.call({ name: 'submit_task', arguments: { summary: 'Done.' } });
+    await until(() => expect(events.map((e) => e.type)).toContain('taskSubmitted'));
+    session.close();
+    expect(await waiting).toEqual({ text: SESSION_CLOSED, isError: true });
+    expect(tools.closed()).toBe(1);
+    expect(await set?.call({ name: 'submit_task', arguments: { summary: 'Again.' } })).toEqual({
+      text: SESSION_CLOSED,
+      isError: true,
+    });
+  });
+
+  it('gives the tools back when the session closes before they open', async () => {
+    let closed = 0;
+    let open: () => void = () => {};
+    const host: ToolHost = {
+      open: () =>
+        new Promise((resolve) => {
+          open = () =>
+            resolve({
+              server: { name: 'ibitsa', command: 'bridge', args: [], env: [] },
+              close: () => {
+                closed++;
+              },
+            });
+        }),
+    };
+    const { session, requests } = hero({ tools: host });
+    await until(() => expect(requests().map((r) => r.method)).toContain('initialize'));
+    session.close();
+    open();
+    await until(() => expect(closed).toBe(1));
+    expect(requests().map((r) => r.method)).not.toContain('session/new');
   });
 });

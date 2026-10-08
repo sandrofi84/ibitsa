@@ -205,6 +205,9 @@ importers:
       '@ibitsa/runtime':
         specifier: workspace:*
         version: link:../../runtime
+      valibot:
+        specifier: ^1.5.0
+        version: 1.5.0(typescript@7.0.2)
 
   packages/adapters/agent-claude-sdk:
     dependencies:
@@ -259,6 +262,9 @@ importers:
       '@anthropic-ai/sdk':
         specifier: 0.131.0
         version: 0.131.0(zod@4.6.5)
+      '@ibitsa/agent-acp':
+        specifier: workspace:*
+        version: link:../adapters/agent-acp
       '@ibitsa/agent-claude-sdk':
         specifier: workspace:*
         version: link:../adapters/agent-claude-sdk
