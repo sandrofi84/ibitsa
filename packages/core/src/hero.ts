@@ -410,7 +410,11 @@ export class Hero {
           r.hp = { kind: 'exact', value: { used: event.contextUsed, max: event.contextMax } };
         }
         if (event.totalCost !== undefined) {
-          r.gold = { kind: 'exact', value: event.totalCost };
+          // An agent that reports tokens but no cost gets an estimate from its prices (§11.5).
+          r.gold =
+            event.costBasis === undefined
+              ? { kind: 'exact', value: event.totalCost }
+              : { kind: 'estimated', value: event.totalCost, basis: event.costBasis };
           // Without a native cap, core enforces the pouch at each usage report (may overshoot a turn).
           if (r.cap?.enforcement === 'turnEnd' && this.overBudget() && !r.outOfGold) {
             this.ctx.outbox.effect({ type: 'interrupt', heroId: r.id });

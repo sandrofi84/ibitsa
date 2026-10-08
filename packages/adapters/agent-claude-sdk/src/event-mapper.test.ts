@@ -4,8 +4,8 @@ import type {
   PreToolUseHookInput,
   SDKMessage,
 } from '@anthropic-ai/claude-agent-sdk';
+import { TestDetector } from '@ibitsa/runtime';
 import { describe, expect, it } from 'vitest';
-import { TestDetector } from './activity';
 import { EventMapper } from './event-mapper';
 import { Worktree } from './worktree';
 

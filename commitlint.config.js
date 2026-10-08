@@ -13,6 +13,7 @@ export default {
         'runtime',
         'agent-fake',
         'agent-claude-sdk',
+        'agent-acp',
         'githost-github',
         'game',
         'extension',

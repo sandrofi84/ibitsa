@@ -508,6 +508,20 @@ describe('gold pouch', () => {
     });
   });
 
+  it('shows an estimated cost as estimated gold, and still enforces the pouch with it (§11.5)', () => {
+    const h = quest({ budgetMicroUsd: 500_000, budget: 'turnEnd' });
+    h.drain();
+    h.agent({ type: 'usage', totalCost: 200_000, costBasis: 'tokens × agent prices' });
+    expect(h.hero().gold).toEqual({
+      kind: 'estimated',
+      value: 200_000,
+      basis: 'tokens × agent prices',
+    });
+    h.agent({ type: 'usage', totalCost: 510_000, costBasis: 'tokens × agent prices' });
+    expect(h.effects).toContainEqual({ type: 'interrupt', heroId: 'h4' });
+    expect(h.items().map((i) => i.kind)).toEqual(['outOfGold']);
+  });
+
   it('has no pouch when no cap is set or the agent reports no cost', () => {
     for (const settings of [
       { budgetMicroUsd: null },

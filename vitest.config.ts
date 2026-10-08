@@ -6,6 +6,7 @@ const PACKAGES = [
   'packages/runtime/src/**',
   'packages/adapters/agent-fake/src/**',
   'packages/adapters/agent-claude-sdk/src/**',
+  'packages/adapters/agent-acp/src/**',
   'packages/adapters/githost-github/src/**',
   'packages/assets/src/**',
   'packages/game/src/**',

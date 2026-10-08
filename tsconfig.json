@@ -27,6 +27,9 @@
     },
     {
       "path": "packages/adapters/githost-github"
+    },
+    {
+      "path": "packages/adapters/agent-acp"
     }
   ]
 }
