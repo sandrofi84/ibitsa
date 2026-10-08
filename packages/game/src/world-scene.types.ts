@@ -1,7 +1,10 @@
 import type { ReviewerProbe } from './councillor-token.types';
+import type { MapPose } from './poses.types';
 
 /** What the map shows (#124), for tests and probes. */
 export interface MapProbe {
+  /** The pose each hero plays (#222). */
+  poses?: { heroId: string; pose: MapPose }[];
   /** The part of the map with something on it. */
   bounds: { x: number; y: number; width: number; height: number };
   islands: {

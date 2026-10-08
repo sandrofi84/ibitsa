@@ -1,4 +1,4 @@
-import type { CharacterArt } from './art.types.ts';
+import type { CharacterArt, MapAnimation } from './art.types.ts';
 import { type ACTIVITY_KINDS, COUNCIL_ANIMATIONS } from './manifest.ts';
 import { CLEAR, hex, Raster } from './raster.ts';
 
@@ -144,8 +144,34 @@ export const CHARACTERS: CharacterArt[] = [
   },
 ];
 
-export const ANIMATIONS = ['idle', 'walk', 'work'] as const;
+/**
+ * The map animations each role's placeholder sheet has, one row each in this order (#222): heroes get
+ * every optional pose but `review`, which is a councillor's.
+ */
+export const HERO_ANIMATIONS = [
+  'idle',
+  'walk',
+  'work',
+  'test',
+  'ask',
+  'blocked',
+  'rest',
+  'celebrate',
+  'hurt',
+  'outOfGold',
+] as const satisfies readonly MapAnimation[];
+export const COUNCILLOR_ANIMATIONS = [
+  'idle',
+  'walk',
+  'work',
+  'review',
+] as const satisfies readonly MapAnimation[];
 export const FRAMES = 4;
+
+/** A role's placeholder map animations, in row order. */
+export function characterAnimations(role: CharacterArt['role']): readonly MapAnimation[] {
+  return role === 'hero' ? HERO_ANIMATIONS : COUNCILLOR_ANIMATIONS;
+}
 
 /** One animation frame as template rows: bobbing, stepping or tool motion applied to the base pose. */
 function frameRows({
@@ -156,12 +182,26 @@ function frameRows({
 }: {
   base: readonly string[];
   role: CharacterArt['role'];
-  animation: (typeof ANIMATIONS)[number];
+  animation: MapAnimation;
   i: number;
 }): string[] {
   let rows = base.map((r) => r);
   const shiftDown = (n: number) => {
     rows = [...Array(n).fill('.'.repeat(F)), ...rows.slice(0, F - n)];
+  };
+  const shiftUp = (n: number) => {
+    rows = [...rows.slice(n), ...Array(n).fill('.'.repeat(F))];
+  };
+  const shiftLeft = (n: number) => {
+    rows = rows.map((r) => r.slice(n) + '.'.repeat(n));
+  };
+  const swap = (from: string, to: string) => {
+    rows = rows.map((r) => r.replaceAll(from, to));
+  };
+  const put = ({ x, y, key }: { x: number; y: number; key: string }) => {
+    const grid = rows.map((r) => [...r]);
+    (grid[y] as string[])[x] = key;
+    rows = grid.map((g) => g.join(''));
   };
   const liftColumns = ({ from, to, top }: { from: number; to: number; top: number }) => {
     // Move pixels in columns [from, to) of rows top..15 up by one.
@@ -190,6 +230,41 @@ function frameRows({
 
   if (animation === 'idle') {
     if (i >= 2) shiftDown(1);
+  } else if (animation === 'test') {
+    // A flask raised and shaken, a bubble rising from it.
+    moveKey('w', i % 2 === 0 ? -2 : -1);
+    put({ x: 13, y: 3 - (i % 2), key: 'l' });
+  } else if (animation === 'ask') {
+    // A hand up, waving.
+    moveKey('w', -3);
+    if (i % 2 === 1) shiftDown(1);
+  } else if (animation === 'blocked') {
+    // Slumped, the weapon lowered, barely moving.
+    shiftDown(1);
+    moveKey('w', 1);
+    if (i === 2) shiftDown(1);
+  } else if (animation === 'rest') {
+    // Sitting down, breathing slowly.
+    shiftDown(3);
+    if (i >= 2) shiftDown(1);
+  } else if (animation === 'celebrate') {
+    // A jump with the weapon up.
+    shiftUp([0, 2, 3, 1][i] ?? 0);
+    moveKey('w', -2);
+  } else if (animation === 'hurt') {
+    // Knocked back, flashing its accent colour.
+    if (i % 2 === 0) {
+      shiftLeft(1);
+      swap('b', 'l');
+    }
+  } else if (animation === 'outOfGold') {
+    // Empty-handed, head down.
+    swap('w', '.');
+    shiftDown(i >= 2 ? 2 : 1);
+  } else if (animation === 'review') {
+    // Peering closely: a lens sweeps across in front of the face.
+    put({ x: 10 + (i % 2 === 0 ? i / 2 : 3 - i), y: 6, key: 'y' });
+    put({ x: 10 + (i % 2 === 0 ? i / 2 : 3 - i), y: 7, key: 'o' });
   } else if (animation === 'walk') {
     if (role === 'hero') {
       if (i === 1) liftColumns({ from: 4, to: 8, top: 12 });
@@ -211,8 +286,9 @@ function frameRows({
 
 export function characterSheet(art: CharacterArt): Raster {
   const base = art.role === 'hero' ? HERO : COUNCILLOR;
-  const sheet = new Raster(F * FRAMES, F * ANIMATIONS.length);
-  ANIMATIONS.forEach((animation, row) => {
+  const animations = characterAnimations(art.role);
+  const sheet = new Raster(F * FRAMES, F * animations.length);
+  animations.forEach((animation, row) => {
     for (let i = 0; i < FRAMES; i++) {
       sheet.pattern({
         x: i * F,

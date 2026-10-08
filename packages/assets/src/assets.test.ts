@@ -199,7 +199,7 @@ describe('validatePack', () => {
     expect(validatePack(dir)).toEqual({
       ok: false,
       errors: [
-        'character councillor.default council sheet: characters/councillor-default-council.png is 64×48, too small or not a whole number of 32×32 frames for its animations',
+        'character councillor.default council sheet: characters/councillor-default-council.png is 64×64, too small or not a whole number of 32×32 frames for its animations',
       ],
     });
   });

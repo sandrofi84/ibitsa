@@ -1,5 +1,6 @@
 import type * as Phaser from 'phaser';
 import type { Point } from './layout.types';
+import type { MapPose } from './poses.types';
 import type { ReviewerView } from './reviewers.types';
 
 /** A reviewing councillor on the map as tests and probes see it (#140). */
@@ -19,6 +20,8 @@ export interface ReviewerProbe {
   /** The grey "?" of a review that failed. */
   failed: boolean;
   leaving: boolean;
+  /** The pose it plays (#222): `review` while its review runs. */
+  pose: MapPose;
 }
 
 export interface CouncillorTokenOptions {

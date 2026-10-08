@@ -21,6 +21,8 @@ import {
 import type { BridgeLayout, IslandLayout, Point, WorldLayout } from './layout.types';
 import { marker } from './map-markers';
 import { BRIDGE_KEY, PACK_KEY } from './pack-scene';
+import { activityMoment, availablePose, heroMoment, heroPose } from './poses';
+import type { MapPose } from './poses.types';
 import { badgeOf } from './pull-requests';
 import type { PullRequestBadge } from './pull-requests.types';
 import { recoloredCharacter, recolorOf } from './recolor';
@@ -149,6 +151,7 @@ export class WorldScene extends Phaser.Scene {
         token.underReview() ? [heroId] : [],
       ),
       reviewers: [...this.reviewers.values()].map((t) => t.probe()),
+      poses: [...this.heroes].map(([heroId, token]) => ({ heroId, pose: token.pose() })),
       shipped: this.last?.campaign?.shipped ?? false,
       atIbitsa: [...this.heroes].flatMap(([heroId, token]) => (token.atIbitsa() ? [heroId] : [])),
       startScreen: this.startLabels[0]?.visible ?? false,
@@ -936,6 +939,13 @@ export class HeroToken {
   private readonly hourglass: Phaser.GameObjects.Sprite | Phaser.GameObjects.Graphics;
   private readonly blockedLabel: Phaser.GameObjects.Text;
   private blocked: 'slot' | 'previousIsland' | 'dependency' | null = null;
+  /** The pose it holds for its state (#222), and the one it plays: a brief pose interrupts it. */
+  private held: MapPose = 'idle';
+  private playing: MapPose = 'idle';
+  private brief = false;
+  /** Its first snapshot sets the scene; brief poses only greet a change seen live. */
+  private seen = false;
+  private activity: HeroView['activity'] = null;
 
   private readonly scene: Phaser.Scene;
   private readonly layer: Phaser.GameObjects.Container;
@@ -1165,9 +1175,11 @@ export class HeroToken {
     else this.blockedLabel.setVisible(false);
     this.hourglass.setVisible(s.kind === 'underReview');
 
-    const working = s.kind === 'working' && hero.activity && hero.activity.kind !== 'think';
-    const animation = s.kind === 'traveling' || this.travel ? 'walk' : working ? 'work' : 'idle';
-    this.play(animation);
+    this.activity = hero.activity;
+    this.hold(heroPose({ state: s.kind, activity: hero.activity, walking: this.travel !== null }));
+    const moment = this.seen ? heroMoment({ previous, next: s.kind }) : null;
+    if (moment) this.strike(moment);
+    this.seen = true;
 
     this.sprite.clearTint();
     if (s.kind === 'unknown') {
@@ -1217,10 +1229,36 @@ export class HeroToken {
     this.drawHp(hero.hp);
   }
 
-  private play(animation: 'walk' | 'work' | 'idle'): void {
-    const key = `${this.character}:${animation}`;
+  /** The pose it plays, for tests and probes (#222). */
+  pose(): MapPose {
+    return this.playing;
+  }
+
+  /** Holds a pose for its state, or the nearest one its sheet has (§9.2); a brief pose finishes first. */
+  private hold(pose: MapPose): void {
+    this.held = pose;
+    if (this.brief) return;
+    const shown = availablePose({ pose, has: (p) => this.has(p) }) ?? 'idle';
+    this.playing = shown;
+    const key = `${this.character}:${shown}`;
     if (this.sprite.anims.currentAnim?.key !== key) this.sprite.play(key);
     else if (this.sprite.anims.isPaused) this.sprite.anims.resume();
+  }
+
+  /** A brief pose played once, then back to the held one; skipped when the sheet has none (#222). */
+  private strike(pose: MapPose): void {
+    if (this.travel || !this.has(pose)) return;
+    this.brief = true;
+    this.playing = pose;
+    this.sprite.play({ key: `${this.character}:${pose}`, repeat: 0 });
+    this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
+      this.brief = false;
+      this.hold(this.held);
+    });
+  }
+
+  private has(pose: MapPose): boolean {
+    return this.scene.anims.exists(`${this.character}:${pose}`);
   }
 
   private walk(path: Point[]): void {
@@ -1254,7 +1292,8 @@ export class HeroToken {
         this.travel = null;
         this.traveled = true;
         this.sprite.setFlipX(false);
-        if (this.state !== 'traveling') this.play('idle');
+        if (this.state !== 'traveling')
+          this.hold(heroPose({ state: this.state, activity: this.activity, walking: false }));
       },
     });
   }
@@ -1276,6 +1315,8 @@ export class HeroToken {
   }
 
   flash({ outcome, kind }: { outcome: 'ok' | 'failed'; kind?: string }): void {
+    const moment = activityMoment({ kind, outcome });
+    if (moment) this.strike(moment);
     if (kind === 'test' && this.showIcon('test')) {
       // The flask turns green or red and stays a moment, so a quick test run is still seen.
       this.icon.setTint(outcome === 'ok' ? 0x7fdc7f : 0xff6a5a);

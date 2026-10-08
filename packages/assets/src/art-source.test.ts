@@ -225,6 +225,17 @@ describe('the default pack from art sources (§9.5, #218)', () => {
     }
   });
 
+  it('takes art for every row of a character sheet, the optional poses included (#222)', () => {
+    const sources = new Set(artSlots().flatMap((slot) => slot.pieces.map((p) => p.source)));
+    for (const [key, character] of Object.entries(placeholder.manifest.characters)) {
+      const folder = `characters/${key.replace('.', '-')}`;
+      for (const animation of Object.keys(character.animations))
+        expect(sources.has(`${folder}/${animation}`), `${folder}/${animation}`).toBe(true);
+    }
+    expect(sources.has('characters/hero-paladin/celebrate')).toBe(true);
+    expect(sources.has('characters/councillor-elder/review')).toBe(true);
+  });
+
   it('replaces a piece with its art, transparency included, and keeps every other placeholder', () => {
     const water = `size 16x16\nframes 4\n${`---\n${`${'j'.repeat(15)}.\n`.repeat(16)}`.repeat(4)}`;
     const built = buildDefaultPack({ art: { dir: artDir({ 'map/water.grid': water }) } });
