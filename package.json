@@ -14,7 +14,8 @@
     "test": "vitest run --coverage",
     "prepare": "husky",
     "conventions": "node scripts/check-conventions.mjs",
-    "test:integration:docker": "node scripts/test-integration-docker.mjs"
+    "test:integration:docker": "node scripts/test-integration-docker.mjs",
+    "acp:probe": "node scripts/acp-probe.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
