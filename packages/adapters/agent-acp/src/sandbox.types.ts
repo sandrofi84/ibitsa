@@ -48,4 +48,6 @@ export interface SandboxConfigInput {
   /** The main repository's `.git`, which a worktree's git commands write to; null outside a worktree. */
   sharedGit: string | null;
   bridgeSocket?: string;
+  /** A reviewer (#201): the worktree and the repository's `.git` stay read-only. */
+  readOnly?: boolean;
 }

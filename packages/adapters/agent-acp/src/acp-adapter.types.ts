@@ -27,6 +27,8 @@ export interface SpawnRequest {
   env: Record<string, string | undefined>;
   /** Asks "Needs you" whether the agent may reach a new domain; only a sandbox asks (#200). */
   ask?: (request: NetworkRequest) => Promise<boolean>;
+  /** A reviewer's agent (#201): a sandbox keeps the worktree read-only. */
+  readOnly?: boolean;
 }
 
 /** The started process, as much of Node's `ChildProcess` as the adapter uses. */

@@ -53,6 +53,8 @@ export class AcpReview implements ReviewSession {
   constructor(init: AcpReviewInit) {
     this.init = init;
     this.gold = new GoldMeter(undefined);
+    // Inside Ibitsa's sandbox (#200) the worktree is read-only for it, and with no network handler a
+    // new domain is refused: a reviewer reads the code and the diff it was given, nothing more.
     this.connection = new AgentConnection({
       options: init.options,
       cwd: init.start.cwd,
@@ -61,6 +63,7 @@ export class AcpReview implements ReviewSession {
         update: (notification) => this.update(notification),
         exited: (message) => this.fail(message),
       },
+      readOnly: true,
     });
     void this.run();
   }

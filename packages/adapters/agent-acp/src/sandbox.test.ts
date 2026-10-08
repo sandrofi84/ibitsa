@@ -91,6 +91,19 @@ describe('sandboxConfig (§11.5, #200)', () => {
     expect(config).not.toHaveProperty('enableWeakerNetworkIsolation');
   });
 
+  it("keeps a reviewer's worktree and the repository's .git read-only (#201)", () => {
+    const config = sandboxConfig({
+      cwd: '/work/tree',
+      profile,
+      platform: 'darwin',
+      home: '/home/me',
+      tmp: '/tmp/x',
+      sharedGit: '/work/repo/.git',
+      readOnly: true,
+    });
+    expect(config.filesystem?.allowWrite).toEqual(['/tmp/x', '/home/me/.codex']);
+  });
+
   it('without a bridge on macOS, no socket is allowed', () => {
     const config = sandboxConfig({
       cwd: '/w',

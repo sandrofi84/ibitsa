@@ -7,6 +7,7 @@ import type { ReviewEvent, Verdict } from '@ibitsa/protocol';
 import { REVIEW_INSTRUCTIONS, type ReviewSession, type ReviewStart } from '@ibitsa/runtime';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AcpAdapter } from './acp-adapter';
+import type { AcpAdapterOptions, SpawnRequest } from './acp-adapter.types';
 import {
   FINISH_MS,
   NO_BRIDGE,
@@ -15,6 +16,7 @@ import {
   REVIEW_STEPS,
   TOO_MANY_STEPS,
 } from './acp-review';
+import { spawnAgent } from './agent-connection';
 import { VERDICT_TOOL_NOTE } from './review-tools';
 import { ToolBridge } from './tool-bridge';
 import type { ToolHost, ToolResult, ToolSet } from './tool-bridge.types';
@@ -100,11 +102,13 @@ function review({
   env = {},
   tools,
   start = {},
+  spawn,
 }: {
   script?: unknown[];
   env?: Record<string, string>;
   tools?: ToolHost | null;
   start?: Partial<ReviewStart>;
+  spawn?: AcpAdapterOptions['spawn'];
 } = {}) {
   const cwd = mkdtempSync(join(tmpdir(), 'ibitsa-acp-review-'));
   dirs.push(cwd);
@@ -116,6 +120,7 @@ function review({
       env: { ...env, FAKE_ACP_LOG: log, FAKE_ACP_SCRIPT: JSON.stringify(script) },
     },
     ...(tools === null ? {} : { tools: tools ?? stubHost().host }),
+    ...(spawn ? { spawn } : {}),
   });
   const events: ReviewEvent[] = [];
   const session = adapter.startReview({ cwd, ...brief(start) }, (event) => events.push(event));
@@ -357,6 +362,19 @@ describe('AcpReview: a reviewer only reads (§5.5, #201)', () => {
       'permission: {"outcome":"selected","optionId":"no"}',
       'permission: {"outcome":"selected","optionId":"no"}',
     ]);
+  });
+
+  it('asks a sandbox for a read-only worktree, and refuses every new domain without asking (#200)', async () => {
+    const requests: SpawnRequest[] = [];
+    const { events } = review({
+      spawn: (request) => {
+        requests.push(request);
+        return spawnAgent(request);
+      },
+    });
+    await until(() => expect(types(events)).toContain('error'));
+    expect(requests[0]?.readOnly).toBe(true);
+    await expect(requests[0]?.ask?.({ host: 'example.com', port: 443 })).resolves.toBe(false);
   });
 
   it('cancels a request it has no fitting option for', async () => {

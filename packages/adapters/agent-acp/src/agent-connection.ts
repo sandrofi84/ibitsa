@@ -59,7 +59,7 @@ export class AgentConnection {
   private exitMessage: string | null = null;
   private readonly exitWaiters = new Set<(message: string) => void>();
 
-  constructor({ options, cwd, handlers }: AgentConnectionInit) {
+  constructor({ options, cwd, handlers, readOnly }: AgentConnectionInit) {
     const spec = options.agent;
     this.process = (options.spawn ?? spawnAgent)({
       command: spec.command,
@@ -67,6 +67,7 @@ export class AgentConnection {
       cwd,
       env: { ...(options.env?.() ?? process.env), ...spec.env },
       ask: handlers.ask ?? (() => Promise.resolve(false)),
+      ...(readOnly ? { readOnly } : {}),
     });
     const exited = (message: string) => {
       if (this.closed) return;
