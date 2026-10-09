@@ -2,7 +2,7 @@ import type { Manifest } from '@ibitsa/assets';
 import * as Phaser from 'phaser';
 import { councilLook } from './council-look';
 import type { CouncilPose } from './council-look.types';
-import type { HutRendered, PlateBox, SeatObjects } from './hut-scene.types';
+import type { BubbleKind, HutRendered, PlateBox, SeatObjects } from './hut-scene.types';
 import {
   councilPose,
   DECISIONS_Y,
@@ -13,7 +13,10 @@ import {
   HUT_STEPS,
   PLATE_PAD,
   placeNames,
+  STATUS_BUBBLE,
+  STUDY_DOT_STEPS,
   seatHut,
+  statusMark,
   TABLE_TOP,
   walkIns,
 } from './hut-view';
@@ -28,7 +31,11 @@ const H = 270;
 /** Where a councillor's feet are: 16 px below the table's edge, so it hides their lower third. */
 const FOOT = TABLE_TOP + 16;
 const TABLE_DEPTH = 10;
-const STUDY_DOTS = ['•', '••', '•••'];
+/** A status bubble's box (#267), in room pixels: room for "•••" or "✓" in the pixel font. */
+const BUBBLE_W = 14;
+const BUBBLE_H = 10;
+/** The bubble's colours as Phaser numbers. */
+const bubbleColour = (hex: string) => Number.parseInt(hex.slice(1), 16);
 /** How the council sits, under the tracker; nothing while the elder is alone (#244). */
 const MODE_LABELS = { roundTable: 'Round table', chambers: 'Separate chambers', none: '' };
 
@@ -87,7 +94,7 @@ export class HutScene extends Phaser.Scene {
       delay: 400,
       loop: true,
       callback: () => {
-        this.dots = (this.dots + 1) % STUDY_DOTS.length;
+        this.dots = (this.dots + 1) % STUDY_DOT_STEPS;
         this.renderMarks();
       },
     });
@@ -121,7 +128,7 @@ export class HutScene extends Phaser.Scene {
         walking: s.walking,
         animation: s.sprite.anims.currentAnim?.key ?? null,
         scale: s.sprite.scaleX,
-        mark: s.mark.visible ? s.mark.text : null,
+        mark: s.mark.visible ? s.markText.text : null,
         hand: s.hand.visible,
         book: s.book.visible,
         name: s.label.text,
@@ -322,14 +329,49 @@ export class HutScene extends Phaser.Scene {
 
   private renderMarks(): void {
     for (const [id, s] of this.seats) {
-      const c = this.view.councillors.find((x) => x.id === id);
-      const show = this.view.stage === 'study' && c !== undefined && !s.walking;
-      const filed = c?.report === 'filed';
-      s.mark
-        .setVisible(show)
-        .setText(filed ? '✓' : (STUDY_DOTS[this.dots] as string))
-        .setColor(filed ? '#4fd16a' : CREAM);
+      const mark = statusMark({ view: this.view, id, dots: this.dots });
+      s.mark.setVisible(mark !== null && !s.walking);
+      if (mark)
+        s.markText.setText(mark.text).setColor(mark.done ? STATUS_BUBBLE.done : STATUS_BUBBLE.ink);
     }
+  }
+
+  /**
+   * A status bubble over a head (#267): a light box with a dark, rounded rim, drawn in whole pixels so
+   * it stays crisp at every zoom, with a tail down to the head: two trailing dots for a thought, a
+   * point for speech. Its origin is the box's middle.
+   */
+  private bubble(kind: BubbleKind): Phaser.GameObjects.Graphics {
+    const rim = bubbleColour(STATUS_BUBBLE.rim);
+    const fill = bubbleColour(STATUS_BUBBLE.fill);
+    const [w, h] = [BUBBLE_W, BUBBLE_H];
+    const [x, y] = [-w / 2, -h / 2];
+    const g = this.add.graphics();
+    // The rim with its corners cut, then the fill one pixel in.
+    g.fillStyle(rim)
+      .fillRect(x + 1, y, w - 2, h)
+      .fillRect(x, y + 1, w, h - 2);
+    g.fillStyle(fill)
+      .fillRect(x + 2, y + 1, w - 4, h - 2)
+      .fillRect(x + 1, y + 2, w - 2, h - 4);
+    if (kind === 'thought') {
+      // Two trailing dots, down and left towards the head.
+      g.fillStyle(rim)
+        .fillRect(x + 3, y + h + 1, 4, 4)
+        .fillRect(x + 1, y + h + 5, 2, 2);
+      g.fillStyle(fill).fillRect(x + 4, y + h + 2, 2, 2);
+    } else {
+      // A point under the box, rim either side.
+      g.fillStyle(rim)
+        .fillRect(x + 3, y + h - 1, 5, 1)
+        .fillRect(x + 3, y + h, 4, 1)
+        .fillRect(x + 3, y + h + 1, 3, 1)
+        .fillRect(x + 3, y + h + 2, 2, 1);
+      g.fillStyle(fill)
+        .fillRect(x + 4, y + h - 1, 3, 1)
+        .fillRect(x + 4, y + h, 2, 1);
+    }
+    return g;
   }
 
   /** The pack character for an appearance, else the default councillor's (#220). */
@@ -369,10 +411,13 @@ export class HutScene extends Phaser.Scene {
         o.destroy();
     }
     const look = councilLook(this.character(appearance), 'idle');
-    const bubble = this.add.container(x + 16, FOOT - 56, [
-      this.add.rectangle(0, 0, 9, 11, 0xfdfaf0).setStrokeStyle(1, 0x1a1420),
-      addPixelText(this, { x: 0, y: 0, text: '!', color: '#1a1420' }).setOrigin(0.5),
+    const hand = this.add.container(x + 12, FOOT - 58, [
+      this.bubble('speech'),
+      addPixelText(this, { x: 0, y: 0, text: '!', color: STATUS_BUBBLE.ink }).setOrigin(0.5),
     ]);
+    const markText = addPixelText(this, { x: 0, y: 0, text: '', color: STATUS_BUBBLE.ink });
+    markText.setOrigin(0.5);
+    const mark = this.add.container(x + 6, FOOT - 60, [this.bubble('thought'), markText]);
     const objects: SeatObjects = {
       x,
       appearance,
@@ -386,11 +431,9 @@ export class HutScene extends Phaser.Scene {
       plate: this.plate({ x: plate.x, y: plate.y })
         .setSize(plate.width, PLATE_HEIGHT)
         .setOrigin(0.5),
-      hand: bubble.setDepth(TABLE_DEPTH + 3).setVisible(false),
-      mark: addPixelText(this, { x: x, y: FOOT - 54, text: '', color: CREAM })
-        .setOrigin(0.5)
-        .setDepth(TABLE_DEPTH + 3)
-        .setVisible(false),
+      hand: hand.setDepth(TABLE_DEPTH + 3).setVisible(false),
+      mark: mark.setDepth(TABLE_DEPTH + 3).setVisible(false),
+      markText,
       book: this.add
         .rectangle(x, TABLE_TOP - 1, 12, 5, 0xfdfaf0)
         .setStrokeStyle(1, 0x3a6ac0)
