@@ -234,8 +234,10 @@ export class Review {
       return;
     }
     this.ctx.state.needsYou = this.ctx.state.needsYou.filter((i) => i.id !== item.id);
-    const { task, hero } = found;
-    if (command.decision === 'accept') {
+    const { task, hero, island } = found;
+    if (command.decision === 'retry') {
+      this.retry({ island, task });
+    } else if (command.decision === 'accept') {
       this.pass({ task, hero });
     } else if (command.decision === 'sendBack') {
       this.sendBack({ task, hero, note: command.note });
@@ -312,13 +314,45 @@ export class Review {
     this.roundDone({ task, hero });
   }
 
+  /** The round's reviews that couldn't finish start again (#264), each as a fresh record in its place. */
+  private retry({ island, task }: { island: Island; task: TaskPoint }): void {
+    const review = task.review;
+    if (!review) return;
+    const failed = review.reviews.filter(
+      (r) => r.round === review.round && r.status === 'failed' && !r.retried,
+    );
+    review.phase = 'reviewing';
+    for (const old of failed) {
+      old.retried = true;
+      const record: ReviewRecord = {
+        id: newId(this.ctx.state, 'r'),
+        councillorId: old.councillorId,
+        effort: old.effort,
+        round: old.round,
+        status: 'running',
+        verdict: null,
+        error: null,
+        gold: { kind: 'unknown' },
+        head: task.submitHead ?? null,
+        waived: false,
+      };
+      review.reviews.push(record);
+      this.startReviewer({ island, task, record });
+    }
+  }
+
   /** Once every review of the round is in: pass, send back, or go to the user. */
   private roundDone({ task, hero }: { task: TaskPoint; hero: HeroRecord }): void {
     const review = task.review;
     if (!review) return;
-    const round = review.reviews.filter((r) => r.round === review.round);
+    const round = review.reviews.filter((r) => r.round === review.round && !r.retried);
     if (round.some((r) => r.status === 'running')) return;
-    const failed = round.some((r) => r.status === 'failed');
+    const failures = round.flatMap((r) =>
+      r.status === 'failed'
+        ? [{ councillorId: r.councillorId, reason: r.error ?? 'no reason given' }]
+        : [],
+    );
+    const failed = failures.length > 0;
     const open = this.open(review);
     if (!failed && open.length === 0) {
       this.pass({ task, hero });
@@ -333,6 +367,7 @@ export class Review {
         taskPointId: task.id,
         reason: failed ? 'reviewFailed' : 'loopLimit',
         findings: open.flatMap((r) => blockingOf(r)),
+        failures,
       });
       return;
     }

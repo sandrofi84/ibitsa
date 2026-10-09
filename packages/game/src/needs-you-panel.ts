@@ -339,19 +339,32 @@ function renderItem({
       break;
     case 'reviewEscalation': {
       // The loop limit, or a reviewer that couldn't finish (§5.5, #141): the user settles it.
+      // Who couldn't finish, and why (#264): the reviewer's own words, such as running out of gold.
+      const failures = item.failures ?? [];
       box.append(
         el('p', {
           text:
             item.reason === 'loopLimit'
               ? `${hero}'s review went round too many times.`
-              : `A reviewer of ${hero}'s task couldn't finish.`,
+              : `${failures.map((f) => councillorTitle(f.councillorId)).join(', ') || 'A reviewer'} couldn't finish reviewing ${hero}'s task.`,
         }),
+        ...failures.map((f) =>
+          el('p', { className: 'muted', text: `${councillorTitle(f.councillorId)}: ${f.reason}` }),
+        ),
         findings(item.findings),
       );
       const note = el('textarea');
       note.rows = 2;
       note.setAttribute('aria-label', 'A note for the hero (optional)');
       note.placeholder = 'A note for the hero (optional)';
+      if (failures.length > 0)
+        actions.append(
+          intentButton({
+            label: 'Run again',
+            intent: () => ({ type: 'resolveReview', itemId: item.id, decision: 'retry' }),
+            client,
+          }),
+        );
       actions.append(
         intentButton({
           label: 'Accept anyway',

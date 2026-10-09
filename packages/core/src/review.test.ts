@@ -1,5 +1,6 @@
 import type { AgentEvent, Command, Cue, Plan, PlanTask, Verdict } from '@ibitsa/protocol';
 import { describe, expect, it } from 'vitest';
+import { Consultation } from './consultation';
 import type { Effect } from './effects.types';
 import type { CoreInput, GameMasterEvent } from './inputs.types';
 import { DEFAULT_SETTINGS, initialState } from './state';
@@ -383,6 +384,53 @@ describe('the review loop (spec §5.5, M5)', () => {
     // A late verdict for a review that has ended is turned down.
     run.verdict(security?.reviewId ?? '', PASS);
     expect(run.effects.at(-1)).toMatchObject({ accepted: false, reason: 'This review has ended.' });
+  });
+
+  describe("a reviewer that can't finish (#264)", () => {
+    const failing = () => {
+      const run = new Run().started().submit('a').checks();
+      const [security, tester] = run.reviews();
+      run.verdict(tester?.reviewId ?? '', PASS);
+      run.feed({
+        kind: 'review',
+        t: 0,
+        reviewId: security?.reviewId ?? '',
+        event: { type: 'error', message: 'The reviewer ran out of gold before its verdict.' },
+      });
+      return run;
+    };
+    const escalation = (run: Run) =>
+      view(run.state).needsYou.find((i) => i.kind === 'reviewEscalation');
+
+    it('names who failed and why', () => {
+      expect(escalation(failing())).toMatchObject({
+        reason: 'reviewFailed',
+        failures: [
+          { councillorId: 'security', reason: 'The reviewer ran out of gold before its verdict.' },
+        ],
+      });
+    });
+
+    it('runs the failed reviews again, and only those, when asked', () => {
+      const run = failing();
+      run.effects = [];
+      run.do({ type: 'resolveReview', itemId: escalation(run)?.id ?? '', decision: 'retry' });
+      expect(run.rejections()).toEqual([]);
+      const started = run.effects.filter((e) => e.type === 'startReview');
+      expect(started).toEqual([
+        expect.objectContaining({ councillorId: 'security', round: 1, effort: 'deep' }),
+      ]);
+      expect(escalation(run)).toBeUndefined();
+      // The second try passes and, with the tester's pass, the task is through.
+      run.verdict(run.reviews().at(-1)?.reviewId ?? '', PASS);
+      expect(run.task().state).toBe('done');
+    });
+
+    it('tells the council about it when the user asks', () => {
+      expect(Consultation.status(failing().state)).toContain(
+        "security's review couldn't finish: The reviewer ran out of gold before its verdict.",
+      );
+    });
   });
 
   it("puts the hero's dispute to the user: dropping the findings lets the task through without that reviewer", () => {

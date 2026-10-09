@@ -179,6 +179,8 @@ export type NeedsYouItem =
       reason: 'loopLimit' | 'reviewFailed';
       /** The open blocking findings, by councillor. */
       findings: (Finding & { councillorId: string })[];
+      /** The reviews of the round that couldn't finish, and why (#264); empty at the loop limit. */
+      failures: { councillorId: string; reason: string }[];
     }
   /** dismiss: "Revisit D3?" from a reviewer; a recorded decision is the user's to reopen (§4.5). */
   | {
