@@ -173,17 +173,26 @@ test('a council that waits on you says so, hears you from the command bar, and c
     .poll(() => probe(page, (p) => p.status().waitingFor), { timeout: 20_000 })
     .toBe('consultCouncil');
 
-  // The elder's last word shows in the hut, over the command bar, which talks to the council.
+  // The elder's last word shows in the hut, over the command bar, which talks to the council; that
+  // it waits on the user comes last, just above the bar (#268), so Needs you leaves it out here.
   const word = page.locator('.council-word');
   await expect(word).toContainText('Elder: This repo has no Gatsby');
+  await expect(word.locator('.council-word-note')).toHaveText(
+    'The council is waiting on you: reply below, or dismiss it from the council pane.',
+  );
   const bar = page.getByRole('combobox', { name: 'Command bar' });
   await expect(bar).toBeVisible();
-
-  // Needs you says the council waits; Reply puts the keyboard in the bar.
   const item = page.locator('.needs-you .item.council');
+  await expect(item).toBeHidden();
+  const [wordBox, barBox] = [await word.boundingBox(), await bar.boundingBox()];
+  expect((wordBox?.y ?? 0) + (wordBox?.height ?? 0)).toBeLessThanOrEqual(barBox?.y ?? 0);
+
+  // On the map, Needs you says the council waits; Reply goes back in, the keyboard in the bar.
+  await page.getByRole('button', { name: 'Back to the map' }).click();
   await expect(item).toContainText('The council is waiting on you: tell it something');
   await item.getByRole('button', { name: 'Reply' }).click();
   await expect(bar).toBeFocused();
+  await expect(word).toBeVisible();
 
   // The council's pane: what it is doing, its reports and the journal.
   const pane = page.getByRole('region', { name: 'The council' });
@@ -206,6 +215,11 @@ test('a council that waits on you says so, hears you from the command bar, and c
     'You: Add Gatsby fresh, as a recipe site.',
   );
   await expect(word).toContainText('Architect: Then it is a new site');
+  // It reads top to bottom: the user's line, then the answer to it.
+  await expect(word.locator('.council-word-lines li')).toHaveText([
+    'You: Add Gatsby fresh, as a recipe site.',
+    /^Architect: Then it is a new site/,
+  ]);
 
   // Dismiss asks once more, then the sitting ends and the map comes back.
   await expect.poll(() => probe(page, (p) => p.status().waitingFor)).toBe('dismissCouncil');

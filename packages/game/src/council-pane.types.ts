@@ -28,3 +28,10 @@ export interface JournalLine {
   name: string;
   text: string;
 }
+
+/** The conversation over the command bar (#268): its latest lines, oldest first, and what's next. */
+export interface CouncilConversation {
+  lines: JournalLine[];
+  /** "The council is thinking…", or that it waits on the user; null when neither. */
+  note: string | null;
+}
