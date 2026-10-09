@@ -274,7 +274,7 @@ test('a reply after "Ready for review!" shows over the bubble and in full in the
   await page.goto('/?fixture=live');
   await openWelcome(page);
   await page.getByLabel('Task').fill('Tidy the README');
-  await page.getByRole('button', { name: 'I know the way' }).click();
+  await page.getByRole('button', { name: 'Start a quick quest now' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   const speech = () => probe(page, (p) => p.hero.speech());
   const pane = page.getByRole('region', { name: 'Hero' });
