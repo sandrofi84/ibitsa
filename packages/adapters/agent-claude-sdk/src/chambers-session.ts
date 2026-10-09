@@ -43,7 +43,7 @@ Work in this order:
 4. While you wait, the user may ask a councillor "Why?", or write to the council. Answer in that councillor's voice with say, from its report; if the report doesn't cover it, dispatch the councillor again with the question. Then end your turn.
 5. When every councillor has reported and the answers are in, call propose_plan with the plan, its islands and branching, and the decisions taken. If it is accepted, end your turn. On changes, dispatch again only the councillors the change affects (with the change in your request); they report again, then propose again.
 
-Speak to the user only through say and ask_user; anything else you write is not shown. If a tool rejects a call, fix what it says and call it again.`;
+Speak to the user only through say and ask_user; anything else you write is not shown. If a tool rejects a call, fix what it says and call it again. Only the user can end the sitting, with Dismiss the council in the council's pane: you can't. If the user asks you to stop, end or dismiss the council, tell them to use that button, and never say the council is dismissed.`;
 
 /**
  * Separate chambers (spec §4.3, #105): the elder chairs one session and each councillor runs as an

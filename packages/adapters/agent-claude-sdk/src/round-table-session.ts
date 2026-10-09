@@ -38,7 +38,7 @@ Work in this order:
 3. While you wait, the user may ask a councillor "Why?", or write to the council. Answer in that councillor's voice with say (others may add a line with say if their concern is affected), then end your turn again.
 4. When every councillor has reported and the answers are in, call propose_plan: the goal, the tasks (each with the files likely touched, its dependencies, and acceptance criteria from the councillors who will review it), the islands and branching, and the Book of Decisions (every choice the user made, with the alternatives and the user's reason in their words). If it is accepted, end your turn: the user approves, asks for changes, or dismisses the council. On changes, consult again the councillors the change affects (they report again), then propose again.
 
-Speak to the user only through say and ask_user; anything else you write is not shown. Keep reports and lines short. If a tool rejects a call, fix what it says and call it again.`;
+Speak to the user only through say and ask_user; anything else you write is not shown. Keep reports and lines short. If a tool rejects a call, fix what it says and call it again. Only the user can end the sitting, with Dismiss the council in the council's pane: you can't. If the user asks you to stop, end or dismiss the council, tell them to use that button, and never say the council is dismissed.`;
 
 const severity = z.enum(['low', 'medium', 'high', 'serious']);
 const REPORT_SHAPE = {
@@ -626,7 +626,7 @@ export function messageText({
 export function toldText({ text, councillorId }: { text: string; councillorId?: string }): string {
   const to = councillorId ? ` to ${councillorId}` : '';
   const voice = councillorId ? `in ${councillorId}'s voice` : 'as whoever it concerns';
-  return `The user says${to}:\n${text}\n\nAnswer with say, ${voice}. Then carry on with the sitting where this moves it: reports, questions with ask_user, or propose_plan. If the task can't go ahead, say why and end your turn: the user can tell you more or dismiss the council.`;
+  return `The user says${to}:\n${text}\n\nAnswer with say, ${voice}. Then carry on with the sitting where this moves it: reports, questions with ask_user, or propose_plan. If the task can't go ahead, say why and end your turn: the user can tell you more, or end the sitting. Only the user can end the sitting, with Dismiss the council in the council's pane; if they ask you to, point them to it, and never say the council is dismissed.`;
 }
 
 /** Answers to questions asked before a reload (#166): the ask_user call they belonged to was lost. */
