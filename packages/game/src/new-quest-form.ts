@@ -189,6 +189,8 @@ export function mountNewQuestForm({
     heroFields.hidden = !quest;
     askNote.hidden = quest;
     skip.hidden = quest;
+    // The task is written by now: one row leaves room for the hero's fields under the elder (#254).
+    description.rows = quest ? 1 : 2;
     start.textContent = quest ? 'Start quest' : 'Help me find it';
     heroName.required = quest;
     if (quest) partyCheck.check([classSelect.value]);

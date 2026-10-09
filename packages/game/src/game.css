@@ -2105,16 +2105,33 @@ body.in-hut:has(.council-chamber:not([hidden])) .needs-you {
   max-height: 42vh;
   overflow: auto;
   box-sizing: border-box;
-  padding: 8px 10px;
-  background: rgba(239, 224, 184, 0.97);
+  padding: 8px 10px 0;
+  background: #efe0b8;
 }
 
 .council-welcome.docked .note {
   margin-bottom: 4px;
 }
 
+/* The buttons stay in view at the box's foot while the fields above them scroll. */
 .council-welcome.docked .actions {
-  margin-top: 4px;
+  position: sticky;
+  bottom: 0;
+  margin-top: 0;
+  padding: 4px 0 8px;
+  background: #efe0b8;
+}
+
+.council-welcome.docked .error:empty {
+  display: none;
+}
+
+.council-welcome.docked label > span {
+  margin-bottom: 1px;
+}
+
+.council-welcome.docked :is(input, select, textarea) {
+  padding: 2px 6px;
 }
 
 /* The hut stays in sight behind the welcome. */
@@ -2123,7 +2140,7 @@ body.in-hut:has(.council-chamber:not([hidden])) .needs-you {
 }
 
 .council-welcome.docked .elder-speech {
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .council-welcome.docked label {

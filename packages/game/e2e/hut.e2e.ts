@@ -295,6 +295,10 @@ test("the welcome docks low as the elder's dialogue box, the elder in view above
   if (!box || !viewport) throw new Error('No welcome.');
   expect(box.y + box.height).toBeGreaterThan(viewport.height - 24);
   expect(box.y).toBeGreaterThan(await onPage(page, 150));
+  // Opaque, so the table and the elder don't show through it.
+  expect(await welcome.evaluate((d) => getComputedStyle(d).backgroundColor)).toBe(
+    'rgb(239, 224, 184)',
+  );
   await page.screenshot({ path: 'test-results/welcome-docked.png' });
 });
 
@@ -311,7 +315,13 @@ test('in the smallest panel the docked welcome scrolls, and a quick quest still 
   expect(box.height).toBeLessThanOrEqual(270 * 0.42 + 1);
   await welcome.getByLabel('Task').fill('Tidy the README');
   await welcome.getByRole('button', { name: 'I know the way' }).click();
+  // The buttons stay whole at the box's foot while the fields scroll above them.
+  const start = welcome.getByRole('button', { name: 'Start quest' });
+  const button = await start.boundingBox();
+  if (!button) throw new Error('No Start quest.');
+  expect(button.y).toBeGreaterThanOrEqual(box.y);
+  expect(button.y + button.height).toBeLessThanOrEqual(box.y + box.height);
   await welcome.getByLabel('Hero name').fill('Ranger Ilse');
-  await welcome.getByRole('button', { name: 'Start quest' }).click();
+  await start.click();
   await expect(welcome).toBeHidden();
 });
