@@ -18,7 +18,7 @@ test('Message Hero… focuses the bar; Run Action… fills it, with its preview'
   await page.goto('/?fixture=live');
   await openWelcome(page);
   await page.getByLabel('Task').fill('Tidy the README');
-  await page.getByRole('button', { name: 'I know the way' }).click();
+  await page.getByRole('button', { name: 'Start a quick quest now' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   await expect.poll(() => probe(page, (p) => p.snapshot()?.heroes[0]?.state.kind)).toBe('idle');
   const bar = page.getByRole('combobox', { name: 'Command bar' });

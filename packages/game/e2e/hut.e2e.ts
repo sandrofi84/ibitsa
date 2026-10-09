@@ -339,7 +339,7 @@ test('in the smallest panel the docked welcome scrolls, and a quick quest still 
   // Never taller than the lower part of the panel.
   expect(box.height).toBeLessThanOrEqual(270 * 0.42 + 1);
   await welcome.getByLabel('Task').fill('Tidy the README');
-  await welcome.getByRole('button', { name: 'I know the way' }).click();
+  await welcome.getByRole('button', { name: 'Start a quick quest now' }).click();
   // The buttons stay whole at the box's foot while the fields scroll above them.
   const start = welcome.getByRole('button', { name: 'Start quest' });
   const button = await start.boundingBox();
@@ -349,4 +349,23 @@ test('in the smallest panel the docked welcome scrolls, and a quick quest still 
   await welcome.getByLabel('Hero name').fill('Ranger Ilse');
   await start.click();
   await expect(welcome).toBeHidden();
+});
+
+test('the welcome says what each way to start does (#270)', async ({ page }) => {
+  await page.goto('/?fixture=live');
+  await openWelcome(page);
+  const welcome = page.getByRole('dialog', { name: 'Welcome' });
+  const ask = welcome.getByRole('button', { name: 'Ask the elder to research it first' });
+  const quick = welcome.getByRole('button', { name: 'Start a quick quest now' });
+  await expect(ask).toHaveAccessibleDescription(/reads the code and writes a short brief/);
+  await expect(ask).toHaveAccessibleDescription(/a few cents/);
+  await expect(quick).toHaveAccessibleDescription(/starts on the task straight away/);
+  // The lines are on screen too, not only for screen readers.
+  await expect(welcome.getByText('Quick quest:')).toBeVisible();
+  // Once the quick quest is chosen, the choices make way for the hero's fields.
+  await quick.click();
+  await expect(welcome.getByText('Quick quest:')).toBeHidden();
+  await expect(welcome.getByRole('button', { name: 'Start quest' })).not.toHaveAttribute(
+    'aria-describedby',
+  );
 });

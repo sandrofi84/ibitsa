@@ -63,7 +63,7 @@ test('the Armory: a new class used in party assembly, and a recolored hero (#182
   // Party assembly offers the new class.
   await openWelcome(page);
   await page.getByLabel('Task').fill('Fix the login redirect');
-  await page.getByRole('button', { name: 'Help me find it' }).click();
+  await page.getByRole('button', { name: 'Ask the elder to research it first' }).click();
   const elder = page.getByRole('region', { name: 'Elder' });
   await elder.getByRole('button', { name: 'Convene council' }).click();
   await page

@@ -12,7 +12,7 @@ const probe = <T>(page: Page, read: (p: Probe) => T) =>
     return new Function('p', `return (${src})(p)`)(p);
   }, read.toString()) as Promise<T>;
 
-test('the start screen: the hut welcomes you, "I know the way" charts an island, and it sinks after (#180)', async ({
+test('the start screen: the hut welcomes you, "Start a quick quest now" charts an island, and it sinks after (#180)', async ({
   page,
 }) => {
   await page.goto('/?fixture=live');
@@ -26,12 +26,14 @@ test('the start screen: the hut welcomes you, "I know the way" charts an island,
   const welcome = page.getByRole('dialog', { name: 'Welcome' });
   await expect(welcome).toContainText('We heard you are looking for Ibitsa…');
   await expect(welcome).toContainText('…what do you want to do there?');
-  await expect(welcome.getByRole('button', { name: 'Help me find it' })).toBeVisible();
+  await expect(
+    welcome.getByRole('button', { name: 'Ask the elder to research it first' }),
+  ).toBeVisible();
   await page.screenshot({ path: 'test-results/welcome.png' });
 
-  // I know the way: a quick quest, with the hero's fields.
+  // Start a quick quest now: a quick quest, with the hero's fields.
   await welcome.getByLabel('Task').fill('Tidy the README');
-  await welcome.getByRole('button', { name: 'I know the way' }).click();
+  await welcome.getByRole('button', { name: 'Start a quick quest now' }).click();
   await expect(welcome.getByLabel('Hero class')).toBeFocused();
   await welcome.getByRole('button', { name: 'Start quest' }).click();
   await expect(welcome).toBeHidden();
@@ -91,7 +93,7 @@ test('the hut opens on the elder alone, who walks in before the welcome; the wor
   // Asking the elder keeps the user in the hut, with its findings.
   await openWelcome(page);
   await welcome.getByLabel('Task').fill('Fix the login redirect');
-  await welcome.getByRole('button', { name: 'Help me find it' }).click();
+  await welcome.getByRole('button', { name: 'Ask the elder to research it first' }).click();
   const elder = page.getByRole('region', { name: 'Elder' });
   await expect(elder).toContainText("The elder's findings");
   await expect.poll(async () => (await hut(page))?.step).toBe('research');

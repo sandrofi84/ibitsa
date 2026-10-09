@@ -10,14 +10,27 @@ import type { PartyCheck } from './party-check.types';
 import { recolorFilter, recolorOf } from './recolor';
 import { councillorAppearance } from './sitting-hut';
 
+/** The welcome's two ways to start (#270): labels that say what happens. */
+export const ASK_LABEL = 'Ask the elder to research it first';
+export const QUICK_LABEL = 'Start a quick quest now';
+const ASK_CHOICE = {
+  label: 'Ask the elder:',
+  text: 'the elder reads the code and writes a short brief, in about a minute, for a few cents. Then you choose a quick quest or the council.',
+};
+const QUICK_CHOICE = {
+  label: 'Quick quest:',
+  text: 'you pick a hero, who starts on the task straight away, without research or a plan.',
+};
+
 /**
  * The council's welcome (§1.1, §7.1 screen 9, #180), once the New Quest form (spec §14.1, §4.1), and the
  * first-run API-key card (§11.6). Plain DOM in a native <dialog>, so it is keyboard-accessible.
  * Credentials go over the host channel, never the protocol. It opens in the council hut once the elder
  * has walked in (#244), from the hut, "Ibitsa: New Quest" or the command bar.
  *
- * The elder asks what you want to do on Ibitsa (the task): **Help me find it** researches it first
- * (#101); **I know the way** shows the hero's fields for a quick quest straight away. After the elder's
+ * The elder asks what you want to do on Ibitsa (the task): **Ask the elder to research it first**
+ * (#101), or **Start a quick quest now**, which shows the hero's fields straight away. A line under
+ * the buttons says what each one does and costs (#270). After the elder's
  * brief it opens again with the hero's fields for the quick quest.
  *
  * The welcome docks low in the hut as the elder's dialogue box, with its portrait, so the elder stays
@@ -129,9 +142,9 @@ export function mountNewQuestForm({
     wrapper.append(el('span', { text: label }), control);
     return wrapper;
   };
-  const start = el('button', { text: 'Help me find it' });
+  const start = el('button', { text: ASK_LABEL });
   start.type = 'submit';
-  const skip = button({ label: 'I know the way', onClick: () => setMode('quest') });
+  const skip = button({ label: QUICK_LABEL, onClick: () => setMode('quest') });
   const heroFields = el('div', { className: 'hero-fields' });
   heroFields.append(
     field('Hero class', classSelect),
@@ -141,10 +154,18 @@ export function mountNewQuestForm({
     field('Start from branch', baseSelect),
     repoNote,
   );
-  const askNote = el('p', {
-    className: 'note',
-    text: 'The elder searches the old charts (reads the code) and writes a short brief, for a few cents. Then you choose a quick quest or the council.',
-  });
+  // What each way to start does and costs (#270), each line describing its button.
+  const askNote = el('ul', { className: 'note choices' });
+  for (const [b, choice] of [
+    [start, ASK_CHOICE],
+    [skip, QUICK_CHOICE],
+  ] as const) {
+    const line = el('li');
+    line.id = `welcome-${b === start ? 'ask' : 'quick'}`;
+    line.append(el('strong', { text: choice.label }), ` ${choice.text}`);
+    b.setAttribute('aria-describedby', line.id);
+    askNote.append(line);
+  }
   // The elder speaks (§1.1): the welcome, then the question the task answers. Its portrait is set on
   // each opening, since the pack's portraits load after the form is mounted.
   const face = el('img', { className: 'portrait' });
@@ -191,7 +212,9 @@ export function mountNewQuestForm({
     skip.hidden = quest;
     // The task is written by now: one row leaves room for the hero's fields under the elder (#254).
     description.rows = quest ? 1 : 2;
-    start.textContent = quest ? 'Start quest' : 'Help me find it';
+    start.textContent = quest ? 'Start quest' : ASK_LABEL;
+    if (quest) start.removeAttribute('aria-describedby');
+    else start.setAttribute('aria-describedby', 'welcome-ask');
     heroName.required = quest;
     if (quest) partyCheck.check([classSelect.value]);
     refreshBranches();

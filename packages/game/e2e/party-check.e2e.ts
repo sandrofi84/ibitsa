@@ -46,7 +46,7 @@ test('the party check: a party on Codex waits for its sign-in, then sets out (#1
   // The council's plan, and its party on the Seer.
   await openWelcome(page);
   await page.getByLabel('Task').fill('Fix the login redirect');
-  await page.getByRole('button', { name: 'Help me find it' }).click();
+  await page.getByRole('button', { name: 'Ask the elder to research it first' }).click();
   const elder = page.getByRole('region', { name: 'Elder' });
   await elder.getByRole('button', { name: 'Convene council' }).click();
   await page
@@ -117,7 +117,7 @@ test("the party check: a quick quest on an agent that isn't installed can't star
 
   await openWelcome(page);
   await page.getByLabel('Task').fill('Fix the login redirect');
-  await page.getByRole('button', { name: 'I know the way' }).click();
+  await page.getByRole('button', { name: 'Start a quick quest now' }).click();
   await page.getByLabel('Hero class').selectOption('rogue');
   const welcome = page.getByRole('dialog', { name: 'Welcome' });
   await expect(welcome.locator('.agent-check')).toContainText("Gemini CLI isn't installed");

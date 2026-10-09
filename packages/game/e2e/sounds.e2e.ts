@@ -18,7 +18,7 @@ const startQuest = async (page: Page, task: string) => {
   // Through the council hut's welcome (#180).
   await openWelcome(page);
   await page.getByLabel('Task').fill(task);
-  await page.getByRole('button', { name: 'I know the way' }).click();
+  await page.getByRole('button', { name: 'Start a quick quest now' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
 };
 

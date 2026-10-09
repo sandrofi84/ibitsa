@@ -130,7 +130,7 @@ test('bubbles keep their size when the map zooms (#75)', async ({ page }) => {
   await page.goto('/?fixture=live');
   await openWelcome(page);
   await page.getByLabel('Task').fill('Tidy the README');
-  await page.getByRole('button', { name: 'I know the way' }).click();
+  await page.getByRole('button', { name: 'Start a quick quest now' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   await expect.poll(() => heroState(page)).toBe('idle');
   const pane = page.getByRole('region', { name: 'Hero' });
