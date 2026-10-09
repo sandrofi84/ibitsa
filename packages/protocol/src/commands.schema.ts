@@ -56,14 +56,14 @@ export const CommandSchema = v.variant('type', [
     ),
   }),
   /**
-   * Settles an escalated review (§5.5, #136): accept the task anyway, send it back with a note, or stop
-   * the hero.
+   * Settles an escalated review (§5.5, #136): accept the task anyway, send it back with a note, stop
+   * the hero, or run the reviews that couldn't finish again (#264).
    */
   v.strictObject({
     type: v.literal('resolveReview'),
     commandId: id,
     itemId: id,
-    decision: v.picklist(['accept', 'sendBack', 'stop']),
+    decision: v.picklist(['accept', 'sendBack', 'stop', 'retry']),
     note: v.optional(v.pipe(v.string(), v.trim(), v.nonEmpty())),
   }),
   /** Settles the hero's dispute: drop the disputed findings, or keep them (with an optional note). */

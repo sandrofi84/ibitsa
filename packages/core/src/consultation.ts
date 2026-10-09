@@ -47,7 +47,8 @@ export class Consultation {
       const head = `- ${island.name} (${island.branch})${pr ? `, PR #${pr.number} ${pr.state}` : ''}`;
       const tasks = island.taskPoints.map((tp) => {
         const findings = openFindings(tp).map((f) => `; blocking from ${f}`);
-        return `  - ${tp.title}: ${tp.state}${findings.join('')}`;
+        const failed = failedReviews(tp).map((f) => `; ${f}`);
+        return `  - ${tp.title}: ${tp.state}${findings.join('')}${failed.join('')}`;
       });
       return [head, ...tasks].join('\n');
     });
@@ -248,6 +249,18 @@ function openFindings(task: Island['taskPoints'][number]): string[] {
         .filter((f) => f.severity === 'blocking')
         .map((f) => `${r.councillorId}: ${f.message}`),
     );
+}
+
+/**
+ * The reviews of the task's latest round that couldn't finish and weren't run again (#264), so the
+ * council can explain what happened when asked: "security's review couldn't finish: <why>".
+ */
+function failedReviews(task: Island['taskPoints'][number]): string[] {
+  const review = task.review;
+  if (!review) return [];
+  return review.reviews
+    .filter((r) => r.round === review.round && r.status === 'failed' && !r.retried)
+    .map((r) => `${r.councillorId}'s review couldn't finish: ${r.error ?? 'no reason given'}`);
 }
 
 function islandName(state: CoreState, islandId: string): string {

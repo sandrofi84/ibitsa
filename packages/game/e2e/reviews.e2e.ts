@@ -125,6 +125,24 @@ test('past the loop limit the review comes to you, and Accept anyway passes the 
   expect(errors).toEqual([]);
 });
 
+test("a reviewer that can't finish is named with its reason, and Run again lets the task pass (#264)", async ({
+  page,
+}) => {
+  const errors = watchErrors(page);
+  await submit(page, 'broken');
+  const item = page
+    .getByRole('region', { name: 'Needs you' })
+    .getByRole('article')
+    .filter({ hasText: "couldn't finish reviewing" });
+  await expect(item).toBeVisible({ timeout: 15_000 });
+  await expect(item.getByText(/ran out of gold before finishing/)).toBeVisible();
+  await expect(item.getByText(/^A reviewer couldn't/)).toBeHidden();
+  await item.getByRole('button', { name: 'Run again' }).click();
+  await expect.poll(() => taskState(page), { timeout: 15_000 }).toBe('done');
+  await expect(item).toBeHidden();
+  expect(errors).toEqual([]);
+});
+
 test('the hero disputes a finding, and Drop the findings lets the task pass (#141)', async ({
   page,
 }) => {

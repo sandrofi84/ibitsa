@@ -236,7 +236,7 @@ function itemText(
         text:
           item.reason === 'loopLimit'
             ? 'The review went round too many times: over to you.'
-            : "A reviewer couldn't finish: over to you.",
+            : `${item.failures.map((f) => `${f.councillorId} couldn't finish (${f.reason})`).join('; ') || "A reviewer couldn't finish"}: over to you.`,
       };
     case 'revisitDecision':
       return {

@@ -170,7 +170,7 @@ function describe(
     case 'reviewEscalation':
       return item.reason === 'loopLimit'
         ? `${name}'s review went round too many times: over to you.`
-        : `A reviewer of ${name}'s task couldn't finish: over to you.`;
+        : `${(item.failures ?? []).map((f) => f.councillorId).join(', ') || 'A reviewer'} couldn't finish reviewing ${name}'s task: over to you.`;
     case 'revisitDecision':
       return `${item.councillorId} asks to revisit ${item.decisionId}.`;
     case 'dispute':

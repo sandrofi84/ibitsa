@@ -300,6 +300,7 @@ export type PendingItem =
       taskPointId: string;
       reason: 'loopLimit' | 'reviewFailed';
       findings: (Finding & { councillorId: string })[];
+      failures: { councillorId: string; reason: string }[];
     }
   | {
       kind: 'revisitDecision';
@@ -363,4 +364,6 @@ export interface ReviewRecord {
   head: string | null;
   /** The user dropped its blocking findings after a dispute: it doesn't hold the task back. */
   waived: boolean;
+  /** It couldn't finish and the user ran it again (#264): a fresh record in the round takes its place. */
+  retried?: boolean;
 }
