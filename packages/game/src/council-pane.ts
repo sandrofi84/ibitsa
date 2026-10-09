@@ -1,5 +1,6 @@
 import type { SittingView } from '@ibitsa/protocol';
 import type {
+  CouncilConversation,
   CouncilPaneOptions,
   CouncilWordOptions,
   JournalLine,
@@ -50,16 +51,30 @@ export function journalOf(sitting: SittingView): JournalLine[] {
   }));
 }
 
+/** How many lines the conversation over the command bar keeps (#268); the journal has them all. */
+const CONVERSATION_LINES = 4;
+
 /**
- * The council's latest word for the user (#242): its last line, unless the user spoke last or the
- * line is about a question still open, which the dialogue box shows.
+ * The conversation over the command bar (#242, #268), oldest first so it reads down to the bar: the
+ * council's latest word (after the user's lines it answers), then what the user has said since, then
+ * what happens next. Null when nobody has spoken, or when the last line is about a question still
+ * open, which the dialogue box shows.
  */
-export function latestWord(sitting: SittingView): JournalLine | null {
-  const line = journalOf(sitting).at(-1);
-  if (!line || line.speaker === 'you') return null;
-  const about = sitting.dialogue.at(-1)?.questionId;
-  const open = sitting.questions?.items.some((q) => q.id === about) ?? false;
-  return open ? null : line;
+export function conversation(sitting: SittingView): CouncilConversation | null {
+  const dialogue = sitting.dialogue;
+  const about = dialogue.at(-1)?.questionId;
+  if (about !== undefined && (sitting.questions?.items.some((q) => q.id === about) ?? false))
+    return null;
+  const lastWord = dialogue.findLastIndex((line) => line.speaker !== 'you');
+  let start = lastWord === -1 ? dialogue.length : lastWord;
+  while (start > 0 && dialogue[start - 1]?.speaker === 'you') start--;
+  const lines = journalOf(sitting).slice(start).slice(-CONVERSATION_LINES);
+  const note = sitting.waiting
+    ? 'The council is waiting on you: reply below, or dismiss it from the council pane.'
+    : dialogue.at(-1)?.speaker === 'you'
+      ? 'The council is thinking…'
+      : null;
+  return lines.length === 0 && !note ? null : { lines, note };
 }
 
 /**
@@ -167,8 +182,9 @@ export function mountCouncilPane({ client, portrait }: CouncilPaneOptions): void
 }
 
 /**
- * The council's latest word over the command bar (#242): a line that isn't about an open question
- * (say, the elder ending its turn) would otherwise show nowhere in the hut.
+ * The conversation over the command bar (#242, #268): lines that aren't about an open question (say,
+ * the elder ending its turn) would otherwise show nowhere in the hut. It reads down to the bar that
+ * answers it: the council's latest word, what the user said since, then what happens next.
  */
 export function mountCouncilWord({ client, portrait, into }: CouncilWordOptions): void {
   const word = el('div', { className: 'council-word' });
@@ -178,14 +194,21 @@ export function mountCouncilWord({ client, portrait, into }: CouncilWordOptions)
   let shown = '';
   client.onSnapshot((snapshot) => {
     const sitting = snapshot.sitting;
-    const line = isSitting(sitting) ? latestWord(sitting) : null;
-    word.hidden = !line;
-    if (!line || line.id === shown) {
-      if (!line) shown = '';
+    const said = isSitting(sitting) ? conversation(sitting) : null;
+    word.hidden = !said;
+    const key = JSON.stringify(said);
+    if (!said || key === shown) {
+      if (!said) shown = '';
       return;
     }
-    shown = line.id;
-    word.replaceChildren(lineItem({ line, portrait, tag: 'div' }));
+    shown = key;
+    const lines = el('ol', { className: 'council-word-lines' });
+    for (const line of said.lines) lines.append(lineItem({ line, portrait }));
+    word.replaceChildren(
+      lines,
+      ...(said.note ? [el('p', { className: 'note council-word-note', text: said.note })] : []),
+    );
+    word.scrollTop = word.scrollHeight;
   });
 }
 
@@ -193,13 +216,11 @@ export function mountCouncilWord({ client, portrait, into }: CouncilWordOptions)
 function lineItem({
   line,
   portrait,
-  tag = 'li',
 }: {
   line: JournalLine;
   portrait: CouncilPaneOptions['portrait'];
-  tag?: 'li' | 'div';
 }): HTMLElement {
-  const item = el(tag, { className: line.speaker === 'you' ? 'you' : 'councillor' });
+  const item = el('li', { className: line.speaker === 'you' ? 'you' : 'councillor' });
   const src = line.speaker === 'you' ? null : portrait(councillorAppearance(line.speaker));
   if (src) {
     const img = el('img', { className: 'portrait' });

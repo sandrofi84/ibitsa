@@ -1739,10 +1739,34 @@ body.in-hut:has(.council-chamber:not([hidden])) .needs-you {
   box-shadow: 0 0 0 2px #1a1420;
 }
 
-.council-word > div {
+/* The conversation reads down to the bar (#268): the council's word, the user's reply, what's next. */
+.council-word-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.council-word .council-word-lines > .councillor,
+.council-word .council-word-lines > .you {
   display: flex;
   align-items: flex-start;
   gap: 8px;
+}
+
+.council-word .council-word-lines > .you {
+  color: #4a3a6a;
+}
+
+.council-word .council-word-note {
+  margin: 4px 0 0;
+  font-style: italic;
+}
+
+/* In the hut the conversation says the council waits, just above the bar that answers it (#268). */
+body.in-hut .needs-you .item.council[data-waiting] {
+  display: none;
 }
 
 .council-word .portrait,

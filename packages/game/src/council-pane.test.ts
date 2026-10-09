@@ -1,6 +1,6 @@
 import type { CouncilReport, SittingView } from '@ibitsa/protocol';
 import { describe, expect, it } from 'vitest';
-import { councilState, journalOf, latestWord, reportRows } from './council-pane';
+import { conversation, councilState, journalOf, reportRows } from './council-pane';
 
 const REPORT: CouncilReport = {
   concerns: [{ summary: 'No Gatsby here', severity: 'serious', reason: 'package.json' }],
@@ -93,16 +93,45 @@ describe("the council's words (#242)", () => {
     ]);
   });
 
-  it('shows its latest word, unless the user spoke last or the dialogue box has it', () => {
-    expect(latestWord(sitting({ dialogue: said }))).toMatchObject({
-      speaker: 'elder',
-      text: 'There is nothing to plan here.',
-    });
-    expect(latestWord(sitting({ dialogue: said.slice(0, 1) }))).toBeNull();
-    expect(latestWord(sitting())).toBeNull();
+  const named = (ids: string[]) => (c: ReturnType<typeof conversation>) =>
+    expect(c?.lines.map((l) => l.id)).toEqual(ids);
+
+  it("reads top to bottom (#268): the council's latest word, then what the user said since", () => {
+    const told = [...said, { id: 'd4', speaker: 'you', text: 'Add it fresh.' }];
+    named(['d3'])(conversation(sitting({ dialogue: said })));
+    named(['d3', 'd4'])(conversation(sitting({ dialogue: told })));
+    expect(conversation(sitting({ dialogue: told }))?.note).toBe('The council is thinking…');
+    // The answer follows the line it answers.
+    const answered = [...told, { id: 'd5', speaker: 'architect', text: 'Then it is a new site.' }];
+    named(['d4', 'd5'])(conversation(sitting({ dialogue: answered })));
+    expect(conversation(sitting({ dialogue: answered }))?.note).toBeNull();
+  });
+
+  it('says the council waits on the user last, just above the bar that answers it', () => {
+    expect(conversation(sitting({ dialogue: said, waiting: true }))?.note).toBe(
+      'The council is waiting on you: reply below, or dismiss it from the council pane.',
+    );
+  });
+
+  it("shows the user's words before the council has said anything, and nothing when nobody has", () => {
+    named(['d1'])(
+      conversation(sitting({ dialogue: [{ id: 'd1', speaker: 'you', text: 'Hello' }] })),
+    );
+    expect(conversation(sitting())).toBeNull();
+  });
+
+  it('leaves a question still open to the dialogue box', () => {
     const open = { batchId: 'b1', items: [question] };
-    expect(latestWord(sitting({ dialogue: said.slice(0, 2), questions: open }))).toBeNull();
+    expect(conversation(sitting({ dialogue: said.slice(0, 2), questions: open }))).toBeNull();
     // Once the question is answered, its last line is just the council's latest word.
-    expect(latestWord(sitting({ dialogue: said.slice(0, 2) }))).toMatchObject({ id: 'd2' });
+    named(['d1', 'd2'])(conversation(sitting({ dialogue: said.slice(0, 2) })));
+  });
+
+  it('keeps to the last few lines however much the user says', () => {
+    const many = [
+      ...said,
+      ...[4, 5, 6, 7, 8].map((n) => ({ id: `d${n}`, speaker: 'you', text: `line ${n}` })),
+    ];
+    named(['d5', 'd6', 'd7', 'd8'])(conversation(sitting({ dialogue: many })));
   });
 });
