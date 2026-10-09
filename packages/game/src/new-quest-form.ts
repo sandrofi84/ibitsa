@@ -3,9 +3,12 @@ import type { GameClient } from './client';
 import { button, el } from './dom';
 import { DEFAULT_CLASS, defaultHeroName, heroClasses } from './heroes';
 import type { Host } from './host.types';
+import { ELDER } from './hut-view';
 import type { NewQuestForm } from './new-quest-form.types';
 import { AGENTS_NOT_READY, readinessLine } from './party-check';
 import type { PartyCheck } from './party-check.types';
+import { recolorFilter, recolorOf } from './recolor';
+import { councillorAppearance } from './sitting-hut';
 
 /**
  * The council's welcome (§1.1, §7.1 screen 9, #180), once the New Quest form (spec §14.1, §4.1), and the
@@ -16,17 +19,23 @@ import type { PartyCheck } from './party-check.types';
  * The elder asks what you want to do on Ibitsa (the task): **Help me find it** researches it first
  * (#101); **I know the way** shows the hero's fields for a quick quest straight away. After the elder's
  * brief it opens again with the hero's fields for the quick quest.
+ *
+ * The welcome docks low in the hut as the elder's dialogue box, with its portrait, so the elder stays
+ * in view at the table above it (#254). The API-key card is a plain card in the middle.
  */
 export function mountNewQuestForm({
   client,
   host,
   partyCheck,
+  portrait,
   onCancel,
 }: {
   client: GameClient;
   host: Host;
   /** The quick quest's hero sets out once its class's ACP agent passes the party check (#199). */
   partyCheck: PartyCheck;
+  /** A portrait's URL for a pack character, e.g. `councillor.elder`; null without one. */
+  portrait?: (appearance: string) => string | null;
   /** Cancel or Escape: with no campaign, the welcome is over and the hut closes (#244). */
   onCancel?: () => void;
 }): NewQuestForm {
@@ -77,7 +86,7 @@ export function mountNewQuestForm({
 
   const form = el('form');
   const description = el('textarea');
-  description.rows = 5;
+  description.rows = 2;
   description.required = true;
   description.placeholder = 'The task. Its first line becomes the quest title.';
   const classSelect = el('select');
@@ -136,13 +145,24 @@ export function mountNewQuestForm({
     className: 'note',
     text: 'The elder searches the old charts (reads the code) and writes a short brief, for a few cents. Then you choose a quick quest or the council.',
   });
-  // The elder speaks (§1.1): the welcome, then the question the task answers.
-  const speech = el('div', { className: 'elder-speech' });
-  speech.append(
+  // The elder speaks (§1.1): the welcome, then the question the task answers. Its portrait is set on
+  // each opening, since the pack's portraits load after the form is mounted.
+  const face = el('img', { className: 'portrait' });
+  face.alt = '';
+  const words = el('div');
+  words.append(
     el('p', { className: 'speaker', text: 'Elder' }),
-    el('p', { text: 'We heard you are looking for Ibitsa…' }),
-    el('p', { text: '…what do you want to do there?' }),
+    el('p', { text: 'We heard you are looking for Ibitsa… …what do you want to do there?' }),
   );
+  const speech = el('header', { className: 'elder-speech' });
+  speech.append(face, words);
+  const showFace = () => {
+    const src = portrait?.(councillorAppearance(ELDER)) ?? null;
+    face.hidden = !src;
+    if (!src) return;
+    face.src = src;
+    face.style.filter = recolorFilter(recolorOf(`councillor:${ELDER}`));
+  };
   form.append(
     speech,
     field('Task', description),
@@ -169,6 +189,8 @@ export function mountNewQuestForm({
     heroFields.hidden = !quest;
     askNote.hidden = quest;
     skip.hidden = quest;
+    // The task is written by now: one row leaves room for the hero's fields under the elder (#254).
+    description.rows = quest ? 1 : 2;
     start.textContent = quest ? 'Start quest' : 'Help me find it';
     heroName.required = quest;
     if (quest) partyCheck.check([classSelect.value]);
@@ -272,7 +294,10 @@ export function mountNewQuestForm({
           renderOnboarding = null;
           pendingStart = null;
           if (forOthers) dialog.close();
-          else dialog.replaceChildren(form);
+          else {
+            dialog.replaceChildren(form);
+            dialog.classList.add('docked');
+          }
         },
       }),
     );
@@ -287,6 +312,7 @@ export function mountNewQuestForm({
       if (reason) message.textContent = reason;
     };
     dialog.replaceChildren(card);
+    dialog.classList.remove('docked');
     if (!dialog.open) dialog.showModal();
     key.focus();
   }
@@ -320,6 +346,8 @@ export function mountNewQuestForm({
     pendingStart = null;
     error.textContent = '';
     dialog.replaceChildren(form);
+    dialog.classList.add('docked');
+    showFace();
     fillClasses();
     fillSuggestions();
     dialog.showModal();

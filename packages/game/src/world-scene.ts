@@ -6,6 +6,7 @@ import type { CameraState } from './camera-director.types';
 import type { GameClient } from './client';
 import { CouncillorToken } from './councillor-token';
 import { heroClasses, speechExcerpt } from './heroes';
+import { HUT_FEED } from './hut-view';
 import {
   BRIDGE,
   bridgeState,
@@ -355,6 +356,12 @@ export class WorldScene extends Phaser.Scene {
       offSnapshot();
       offCue();
     });
+    // The hut was asked for while this scene was starting, after the pack had chosen the map
+    // (`Started.showHut`): it takes over now, the map asleep under it as when the hut opens later.
+    if (this.registry.has(HUT_FEED)) {
+      this.scene.sleep();
+      this.scene.run('hut');
+    }
   }
 
   private setUpCamera(): void {

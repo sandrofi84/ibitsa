@@ -1,5 +1,6 @@
 import { crc32, deflateSync } from 'node:zlib';
 import { expect, type Page, test } from '@playwright/test';
+import { openWelcome } from './home';
 
 interface Rendered {
   mode: string;
@@ -269,4 +270,83 @@ test("the hut shows a pack's own room and table, and draws its own without them 
   await seated(page);
   await page.screenshot({ path: 'test-results/hut-pack-room.png' });
   expect(errors).toEqual([]);
+});
+
+test('New Quest the moment the pack has loaded, as the map starts, still opens the hut (#254)', async ({
+  page,
+}) => {
+  // On the frame the pack scene hands over to the map, before the map is up.
+  await page.addInitScript(() => {
+    const watch = () => {
+      const p = (
+        window as unknown as {
+          __ibitsa?: { packLoads(): number; hostEvent(e: unknown): void };
+        }
+      ).__ibitsa;
+      if (p && p.packLoads() > 0) p.hostEvent({ channel: 'host', type: 'openNewQuest' });
+      else requestAnimationFrame(watch);
+    };
+    requestAnimationFrame(watch);
+  });
+  await page.goto('/?fixture=live');
+  const welcome = page.getByRole('dialog', { name: 'Welcome' });
+  await expect(welcome.getByLabel('Task')).toBeFocused({ timeout: 15_000 });
+  // Cancel: back to the map, which was asleep under the hut.
+  await welcome.getByRole('button', { name: 'Cancel' }).click();
+  await expect.poll(() => hut(page)).toBeNull();
+  await expect(page.getByRole('button', { name: 'Back to the map' })).toBeHidden();
+});
+
+/** Where a row of the 480×270 hut is on the page: the canvas is scaled by whole numbers. */
+async function onPage(page: Page, y: number): Promise<number> {
+  const canvas = await page.locator('canvas').boundingBox();
+  if (!canvas) throw new Error('No canvas.');
+  return canvas.y + y * (canvas.height / 270);
+}
+
+test("the welcome docks low as the elder's dialogue box, the elder in view above it (#254)", async ({
+  page,
+}) => {
+  await page.goto('/?fixture=live');
+  await openWelcome(page);
+  const welcome = page.getByRole('dialog', { name: 'Welcome' });
+  // The elder's portrait heads its words, as the council's do in their dialogue box.
+  const face = welcome.locator('.elder-speech img.portrait');
+  await expect(face).toBeVisible();
+  expect(await face.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+  // Docked at the bottom, below the seated elder's head and shoulders (behind the table's top at 176).
+  const box = await welcome.boundingBox();
+  const viewport = page.viewportSize();
+  if (!box || !viewport) throw new Error('No welcome.');
+  expect(box.y + box.height).toBeGreaterThan(viewport.height - 24);
+  expect(box.y).toBeGreaterThan(await onPage(page, 150));
+  // Opaque, so the table and the elder don't show through it.
+  expect(await welcome.evaluate((d) => getComputedStyle(d).backgroundColor)).toBe(
+    'rgb(239, 224, 184)',
+  );
+  await page.screenshot({ path: 'test-results/welcome-docked.png' });
+});
+
+test('in the smallest panel the docked welcome scrolls, and a quick quest still starts (#254)', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 480, height: 270 });
+  await page.goto('/?fixture=live');
+  await openWelcome(page);
+  const welcome = page.getByRole('dialog', { name: 'Welcome' });
+  const box = await welcome.boundingBox();
+  if (!box) throw new Error('No welcome.');
+  // Never taller than the lower part of the panel.
+  expect(box.height).toBeLessThanOrEqual(270 * 0.42 + 1);
+  await welcome.getByLabel('Task').fill('Tidy the README');
+  await welcome.getByRole('button', { name: 'I know the way' }).click();
+  // The buttons stay whole at the box's foot while the fields scroll above them.
+  const start = welcome.getByRole('button', { name: 'Start quest' });
+  const button = await start.boundingBox();
+  if (!button) throw new Error('No Start quest.');
+  expect(button.y).toBeGreaterThanOrEqual(box.y);
+  expect(button.y + button.height).toBeLessThanOrEqual(box.y + box.height);
+  await welcome.getByLabel('Hero name').fill('Ranger Ilse');
+  await start.click();
+  await expect(welcome).toBeHidden();
 });

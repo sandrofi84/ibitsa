@@ -2077,9 +2077,92 @@ body.in-hut:has(.council-chamber:not([hidden])) .needs-you {
 }
 
 .council-welcome .elder-speech {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin: 0 0 10px;
   padding-bottom: 6px;
   border-bottom: 1px dashed #8a6a3a;
+}
+
+.council-welcome .elder-speech .portrait {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+  border: 2px solid #5a3e1c;
+  background: #3a2a1a;
+}
+
+/*
+ * Docked low in the hut like the council's dialogue box (#254), so the elder stays in view at the
+ * table above it. It scrolls when the quick quest's fields don't fit.
+ */
+.new-quest.council-welcome.docked {
+  inset: auto 0 12px;
+  margin: 0 auto;
+  width: min(720px, calc(100vw - 32px));
+  max-height: 42vh;
+  overflow: auto;
+  box-sizing: border-box;
+  padding: 8px 10px 0;
+  background: #efe0b8;
+}
+
+.council-welcome.docked .note {
+  margin-bottom: 4px;
+}
+
+/* The buttons stay in view at the box's foot while the fields above them scroll. */
+.council-welcome.docked .actions {
+  position: sticky;
+  bottom: 0;
+  margin-top: 0;
+  padding: 4px 0 8px;
+  background: #efe0b8;
+}
+
+.council-welcome.docked .error:empty {
+  display: none;
+}
+
+.council-welcome.docked label > span {
+  margin-bottom: 1px;
+}
+
+.council-welcome.docked :is(input, select, textarea) {
+  padding: 2px 6px;
+}
+
+/* The hut stays in sight behind the welcome. */
+.new-quest.council-welcome.docked::backdrop {
+  background: transparent;
+}
+
+.council-welcome.docked .elder-speech {
+  margin-bottom: 4px;
+}
+
+.council-welcome.docked label {
+  margin-bottom: 6px;
+}
+
+/* The hero's class, name and branch side by side; the notes about them below. */
+.council-welcome.docked .hero-fields:not([hidden]) {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: 8px;
+}
+
+@media (max-width: 520px) {
+  .council-welcome.docked .hero-fields:not([hidden]) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+.council-welcome.docked .hero-fields > :is(.party-check, .note) {
+  grid-column: 1 / -1;
+  order: 1;
 }
 
 .council-welcome .elder-speech p {
