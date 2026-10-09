@@ -1,5 +1,6 @@
 import type { CouncillorInfo, SittingView } from '@ibitsa/protocol';
 import { describe, expect, it } from 'vitest';
+import { elderHut } from './elder-hut';
 import {
   councillorAppearance,
   councillorTitle,
@@ -192,5 +193,16 @@ describe('the sitting in the game (#102)', () => {
     off();
     feed.update({ sitting: sitting(), focus: null });
     expect(seen).toHaveLength(2);
+  });
+
+  it('feeds the elder alone before the sitting, then the sitting (#244)', () => {
+    const feed = new SittingFeed();
+    const seen: string[][] = [];
+    feed.onChange((v) => seen.push(v.councillors.map((c) => c.id)));
+    const alone = elderHut(null);
+    feed.show(alone);
+    feed.show({ ...alone });
+    feed.update({ sitting: sitting(), focus: null });
+    expect(seen).toEqual([['elder'], ['elder', 'architect', 'security']]);
   });
 });

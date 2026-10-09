@@ -21,7 +21,7 @@ export interface SeatObjects {
 
 /** What the hut scene is actually showing, read from its game objects, for tests. */
 export interface HutRendered {
-  mode: HutMode;
+  mode: HutMode | null;
   /** The step the tracker highlights. */
   step: HutStep;
   stage: 'study' | 'dialogue';

@@ -23,6 +23,9 @@ export const HUT_STEPS: readonly { step: HutStep; label: string }[] = [
 /** Registry key: the feed the hut scene renders from (`Started.showHut`). */
 export const HUT_FEED = 'hutFeed';
 
+/** Game event: everyone at the table is in their seat, no one still walking in (#244). */
+export const HUT_SEATED = 'hutSeated';
+
 /** The elder chairs the table, and writes in the Book of Decisions while the plan is drawn up. */
 export const ELDER = 'elder';
 

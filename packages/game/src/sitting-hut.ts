@@ -107,7 +107,10 @@ function stepOf({ sitting, allIn }: { sitting: SittingView; allIn: boolean }): H
   return sitting.questions || allIn ? 'questions' : 'research';
 }
 
-/** The hut's feed from snapshots: a new view only when what it shows changes. */
+/**
+ * The hut's feed from snapshots: a new view only when what it shows changes. The same feed shows the
+ * elder alone before the sitting (#244), so the scene goes on and the councillors walk in to join it.
+ */
 export class SittingFeed implements HutFeed {
   private current: HutView = emptyHut();
   private key = '';
@@ -123,7 +126,11 @@ export class SittingFeed implements HutFeed {
   }
 
   update(input: SittingFocus): void {
-    const next = hutFromSitting(input);
+    this.show(hutFromSitting(input));
+  }
+
+  /** Any view of the hut, such as the elder's alone (#244). */
+  show(next: HutView): void {
     const key = JSON.stringify(next);
     if (key === this.key) return;
     this.key = key;

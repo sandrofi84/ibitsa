@@ -14,7 +14,8 @@ export interface HutCouncillor {
 }
 
 export interface HutView {
-  mode: HutMode;
+  /** How the council sits; null before it convenes, while the elder is alone (#244). */
+  mode: HutMode | null;
   step: HutStep;
   /** Separate chambers start by studying until every report is in; a round table goes straight to dialogue. */
   stage: 'study' | 'dialogue';

@@ -81,13 +81,13 @@ test('answers the council from the keyboard, asks "Why?", and returns to the map
   await send.focus();
   await page.keyboard.press('Enter');
 
-  // The replay carries on to the approved plan; the map and the command bar come back.
+  // The replay carries on to the approved plan; the council has gone and the elder offers it (#244).
   await expect(box).toBeHidden();
   await expect
     .poll(() => probe(page, (p) => p.snapshot()?.sitting?.status), { timeout: 20_000 })
     .toBe('approved');
-  await expect.poll(() => probe(page, (p) => p.hut())).toBeNull();
-  await expect(page.locator('.command-bar')).toBeVisible();
+  await expect.poll(() => probe(page, (p) => p.hut()?.step)).toBe('dispatch');
+  await expect(page.getByRole('region', { name: 'Elder' })).toContainText("The council's plan");
   expect(errors).toEqual([]);
 });
 
@@ -215,6 +215,7 @@ test('a council that waits on you says so, hears you from the command bar, and c
   await expect
     .poll(() => probe(page, (p) => p.snapshot()?.sitting?.status), { timeout: 20_000 })
     .toBe('dismissed');
+  // Convened without the elder's research, the council leaves nothing in the hut: the map comes back.
   await expect.poll(() => probe(page, (p) => p.hut())).toBeNull();
   await expect(pane).toBeHidden();
   expect(errors).toEqual([]);

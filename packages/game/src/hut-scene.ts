@@ -9,6 +9,7 @@ import {
   fitTitle,
   HUT_DOOR_X,
   HUT_FEED,
+  HUT_SEATED,
   HUT_STEPS,
   PLATE_PAD,
   placeNames,
@@ -27,6 +28,8 @@ const H = 270;
 const FOOT = TABLE_TOP + 16;
 const TABLE_DEPTH = 10;
 const STUDY_DOTS = ['•', '••', '•••'];
+/** How the council sits, under the tracker; nothing while the elder is alone (#244). */
+const MODE_LABELS = { roundTable: 'Round table', chambers: 'Separate chambers', none: '' };
 
 const text = (color: string): Phaser.Types.GameObjects.Text.TextStyle => ({
   fontFamily: 'monospace',
@@ -222,7 +225,7 @@ export class HutScene extends Phaser.Scene {
     this.steps.forEach((s, i) => {
       s.label.setColor(i === current ? GOLD : i < current ? CREAM : DIM);
     });
-    this.modeLabel.setText(view.mode === 'chambers' ? 'Separate chambers' : 'Round table');
+    this.modeLabel.setText(MODE_LABELS[view.mode ?? 'none']);
     this.decisionsLabel.setText(`Book of Decisions · ${view.decisions}`);
     this.decisionsPlate.setSize(this.decisionsLabel.width + 2 * PLATE_PAD, PLATE_HEIGHT);
     this.decisionsPlate.setOrigin(0.5);
@@ -275,6 +278,8 @@ export class HutScene extends Phaser.Scene {
       objects.book.setVisible(view.stage === 'study' && c.report === 'pending' && !objects.walking);
     });
     this.renderMarks();
+    // The welcome's form waits for the elder to reach its seat (#244).
+    if (![...this.seats.values()].some((s) => s.walking)) this.game.events.emit(HUT_SEATED);
   }
 
   /** A councillor's texture and animation for a pose, recolored as its settings say (#182). */
