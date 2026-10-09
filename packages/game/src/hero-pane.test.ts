@@ -1,6 +1,6 @@
 import type { JournalEntry } from '@ibitsa/protocol';
 import { describe, expect, it } from 'vitest';
-import { replyTo } from './hero-pane';
+import { paneTurn, replyTo } from './hero-pane';
 
 type Line = { t: number; text: string; heroId?: string };
 
@@ -64,5 +64,29 @@ describe('replyTo (#262)', () => {
       said({ t: 2, text: 'Fine.', heroId: 'h2' }),
     ];
     expect(texts(replyTo({ journal: other, heroId: 'h2' }))).toEqual(['Fine.']);
+  });
+});
+
+describe('paneTurn (#263)', () => {
+  const first = { id: 'c1', status: 'active' } as const;
+
+  it('collapses once the campaign it showed ends', () => {
+    expect(paneTurn({ was: first, now: { id: 'c1', status: 'finished' } })).toBe('collapse');
+    expect(paneTurn({ was: first, now: { id: 'c1', status: 'abandoned' } })).toBe('collapse');
+  });
+
+  it("reopens for the next campaign's work, whether it plans first or not", () => {
+    const ended = { id: 'c1', status: 'finished' } as const;
+    const planning = { id: 'c2', status: 'planning' } as const;
+    expect(paneTurn({ was: ended, now: planning })).toBeNull();
+    expect(paneTurn({ was: planning, now: { id: 'c2', status: 'active' } })).toBe('reopen');
+    expect(paneTurn({ was: ended, now: { id: 'c2', status: 'active' } })).toBe('reopen');
+  });
+
+  it('does nothing on a first look, while the campaign carries on, or with none', () => {
+    expect(paneTurn({ was: null, now: { id: 'c1', status: 'finished' } })).toBeNull();
+    expect(paneTurn({ was: null, now: first })).toBeNull();
+    expect(paneTurn({ was: first, now: first })).toBeNull();
+    expect(paneTurn({ was: first, now: null })).toBeNull();
   });
 });

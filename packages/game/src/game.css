@@ -683,8 +683,9 @@ input:disabled,
   }
 }
 
-/* With the hero pane open on the right, the Needs You panel centres in the space to its left. */
-body.hero-pane-open .needs-you {
+/* With the hero pane open on the right, the Needs You panel centres in the space to its left (not in
+   the hut, where the pane waits, #263). */
+body.hero-pane-open:not(.in-hut) .needs-you {
   left: 16px;
   right: 288px;
   margin: 0 auto;
@@ -746,7 +747,7 @@ body.hero-pane-open .needs-you {
 }
 
 /* With the hero pane open on the right, the bar centres in the space to its left, like Needs you. */
-body.hero-pane-open .command-bar {
+body.hero-pane-open:not(.in-hut) .command-bar {
   left: 16px;
   right: 288px;
   margin: 0 auto;
@@ -952,6 +953,11 @@ body.in-hut .command-bar {
 
 body.in-hut .needs-you {
   bottom: 12px;
+}
+
+/* The hut is the council's: the hero pane waits on the map (#263). */
+body.in-hut .hero-pane {
+  display: none;
 }
 
 /*
