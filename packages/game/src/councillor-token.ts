@@ -5,7 +5,7 @@ import { marker } from './map-markers';
 import { addPixelText, type PixelText } from './pixel-text';
 import { availablePose } from './poses';
 import type { MapPose } from './poses.types';
-import type { PlateBox, ReviewerView } from './reviewers.types';
+import type { PlateBox, ReviewerView, Standing } from './reviewers.types';
 
 /** A councillor's walk between the hut and a task point; a little quicker than a hero's. */
 const WALK_MS = 2_400;
@@ -14,6 +14,8 @@ export const LINGER_MS = 1_500;
 const PARCHMENT = 0xf3ead2;
 /** A plate's offset under its token. */
 const PLATE_Y = 2;
+/** Where the magnifier, badge or "?" sits: the token's outer top corner. */
+const CORNER_Y = -16;
 
 /**
  * A reviewing councillor on the map (§7.2, #140): a square token with a parchment border and a name
@@ -60,7 +62,7 @@ export class CouncillorToken {
     }).setOrigin(side === 1 ? 0 : 1, 0);
     this.plate = plate;
     // The magnifier, badge or "?" on the token's outer top corner.
-    const corner = { x: 8 * side, y: -16 };
+    const corner = { x: 8 * side, y: CORNER_Y };
     this.magnifier = marker({ scene, kind: 'magnifier', at: corner });
     this.badge = addPixelText(scene, { x: corner.x, y: corner.y, text: '', color: '#ffffff' })
       .setOrigin(0.5)
@@ -112,6 +114,18 @@ export class CouncillorToken {
       pose: this.playing,
       plate: this.plateBox({ stacked: true }),
     };
+  }
+
+  /** The token on the map, for the scene's drawing order (#271). */
+  target(): Phaser.GameObjects.Container {
+    return this.container;
+  }
+
+  /** Where it stands and its top edge on the map, so a hero's speech can clear it (#271). */
+  footprint(): Standing {
+    const { x, y } = this.container;
+    // The sprite stands on the token's feet; the 8 px magnifier or badge is centred on its top corner.
+    return { x, y, top: y + Math.min(-this.sprite.height, CORNER_Y - 4) };
   }
 
   /** Its name plate's box on the map: in its own place, or where it's drawn now (#234). */

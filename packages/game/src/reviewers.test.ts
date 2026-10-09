@@ -1,6 +1,6 @@
 import type { ReviewView, Snapshot, TaskReviewView } from '@ibitsa/protocol';
 import { describe, expect, it } from 'vitest';
-import { reviewersOf, stackPlates } from './reviewers';
+import { reviewersOf, SPEECH_REACH, speechCeiling, stackPlates } from './reviewers';
 
 const review = (
   councillorId: string,
@@ -140,5 +140,32 @@ describe('stackPlates (#234)', () => {
 
   it('places nothing for no plates', () => {
     expect(stackPlates([])).toEqual([]);
+  });
+});
+
+describe('speechCeiling (#271)', () => {
+  const hero = { x: 100, y: 200 };
+
+  it('is the top of the highest councillor standing over the hero', () => {
+    const around = [
+      { x: 118, y: 186, top: 162 },
+      { x: 82, y: 186, top: 158 },
+    ];
+    expect(speechCeiling({ hero, around })).toBe(158);
+  });
+
+  it('leaves out councillors standing below the hero, far off to the side or elsewhere', () => {
+    const around = [
+      // Right below: its top is under the hero's feet.
+      { x: 118, y: 230, top: 206 },
+      // Beside another hero's task point.
+      { x: 100 + SPEECH_REACH + 1, y: 186, top: 150 },
+      { x: 400, y: 50, top: 26 },
+    ];
+    expect(speechCeiling({ hero, around })).toBeNull();
+  });
+
+  it('is null with nobody around', () => {
+    expect(speechCeiling({ hero, around: [] })).toBeNull();
   });
 });
