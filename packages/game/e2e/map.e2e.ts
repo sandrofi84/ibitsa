@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { heroAwaitsOrders } from './home';
 
 interface MapProbe {
   bounds: { x: number; y: number; width: number; height: number };
@@ -77,6 +78,7 @@ test('stacked islands are bridged; raised until the island before is cleared, th
   await page.screenshot({ path: 'test-results/map-stacked.png' });
 
   // The first hero hands in its task: the island is cleared and the first bridge comes down.
+  await heroAwaitsOrders(page);
   const pane = page.getByRole('region', { name: 'Hero' });
   await pane.getByLabel('Message to the hero').fill('Submit it');
   await pane.getByRole('button', { name: 'Send now' }).click();

@@ -21,6 +21,8 @@ export interface Started {
     speechWidth(): number | null;
     /** The activity icon showing beside it. */
     icon(): string | null;
+    /** Every activity icon it has shown, in order, each change once (#289). */
+    icons(): string[];
   };
   /** The map camera, for tests; null before the game is ready. */
   camera(): CameraState | null;

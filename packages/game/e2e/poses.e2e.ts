@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { openWelcome } from './home';
+import { heroAwaitsOrders, openWelcome } from './home';
 
 // The map's optional poses (#222): each moment asks for its own animation, and a character whose
 // sheet doesn't have it yet (drawn art without that pose, §9.5) plays the fallback instead.
@@ -37,6 +37,7 @@ test('a blocked hero slumps, and a reviewing councillor peers at the work (#222)
     )
     .toMatch(/^blocked:(blocked|idle)$/);
 
+  await heroAwaitsOrders(page);
   const pane = page.getByRole('region', { name: 'Hero' });
   await pane.getByLabel('Message to the hero').fill('Submit it');
   await pane.getByRole('button', { name: 'Send now' }).click();

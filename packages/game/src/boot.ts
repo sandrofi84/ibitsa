@@ -80,6 +80,7 @@ const NO_HERO: Started['hero'] = {
   speech: () => null,
   speechWidth: () => null,
   icon: () => null,
+  icons: () => [],
 };
 
 export function startGame(root: HTMLElement, host: Host): Started {
@@ -354,6 +355,7 @@ export function startGame(root: HTMLElement, host: Host): Started {
     speech: () => token()?.speaking() ?? null,
     speechWidth: () => token()?.speechWidth(world()?.cameras.main.zoom ?? 1) ?? null,
     icon: () => token()?.showingIcon() ?? null,
+    icons: () => token()?.iconsShown() ?? [],
   };
   const camera = () => (world()?.sys.isActive() ? (world()?.cameraState() ?? null) : null);
   portraits.url = (appearance) => {

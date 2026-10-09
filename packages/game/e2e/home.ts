@@ -18,3 +18,31 @@ export async function openWelcome(page: Page): Promise<void> {
     await expect(welcome).toBeVisible({ timeout: 3_000 });
   }).toPass({ timeout: 15_000, intervals: [250, 500, 1_000] });
 }
+
+/**
+ * Waits until the first hero has arrived and ended its first turn, waiting for orders (#289). Core turns
+ * away a message sent before the hero's session has started ("The hero has not arrived yet."), and
+ * before it arrives a hero shows as idle just as it does after its turn, so its state alone can't tell.
+ */
+export async function heroAwaitsOrders(page: Page): Promise<void> {
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() => {
+          const s = (
+            window as unknown as {
+              __ibitsa: {
+                snapshot(): {
+                  heroes: { id: string }[];
+                  needsYou: { kind: string; heroId?: string }[];
+                } | null;
+              };
+            }
+          ).__ibitsa.snapshot();
+          const heroId = s?.heroes[0]?.id;
+          return s?.needsYou.some((n) => n.kind === 'reply' && n.heroId === heroId) ?? false;
+        }),
+      { timeout: 15_000 },
+    )
+    .toBe(true);
+}

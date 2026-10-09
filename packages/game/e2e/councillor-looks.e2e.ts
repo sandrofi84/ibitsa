@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { heroAwaitsOrders } from './home';
 
 // Each built-in councillor has its own look (#220): in the council hut, and out on the map as a
 // reviewer. A councillor the pack has no look for wears the default's.
@@ -56,6 +57,7 @@ test('the council sits as itself: each councillor at the table in its own look (
 test('reviewers walk out in their own looks (#220)', async ({ page }) => {
   await page.goto('/?fixture=live&campaign=separate&review=demo');
   await expect.poll(() => probe(page, (p) => p.map()?.islands.length), { timeout: 10_000 }).toBe(3);
+  await heroAwaitsOrders(page);
   const pane = page.getByRole('region', { name: 'Hero' });
   await pane.getByLabel('Message to the hero').fill('Submit it');
   await pane.getByRole('button', { name: 'Send now' }).click();

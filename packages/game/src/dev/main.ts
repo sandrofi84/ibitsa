@@ -152,13 +152,26 @@ if (name === 'live') {
     // Back into the hut after leaving it (#245).
     hutOnPage,
   };
+  // Autoplay starts once the map is up (#289): played any sooner, a slow-loading pack misses the first
+  // things the hero does.
+  let waiting = false;
+  const playWhenMapIsUp = () => {
+    if (!camera()) {
+      requestAnimationFrame(playWhenMapIsUp);
+      return;
+    }
+    waiting = false;
+    host.replay.play();
+  };
   client.onSnapshot(() => {
     if (
       params.get('autoplay') === '1' &&
+      !waiting &&
       !host.replay.status.playing &&
       host.replay.status.position === 0
     ) {
-      host.replay.play();
+      waiting = true;
+      playWhenMapIsUp();
     }
   });
 }

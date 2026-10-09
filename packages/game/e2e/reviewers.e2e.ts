@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { heroAwaitsOrders } from './home';
 
 interface Reviewer {
   councillorId: string;
@@ -28,7 +29,7 @@ interface Probe {
     speech?: Speech[];
   } | null;
   hero: { speech(): string | null };
-  camera(): { zoom: number } | null;
+  camera(): { zoom: number; aim: { zoom: number; follow: boolean } } | null;
   snapshot(): {
     heroes: { id: string }[];
     islands: { taskPoints: { state: string }[] }[];
@@ -60,7 +61,10 @@ async function submitFirst(page: Page): Promise<void> {
   const auto = page.getByRole('button', { name: 'Auto-focus' });
   if ((await auto.getAttribute('aria-pressed')) === 'true') await auto.click();
   await page.locator('body').press('0');
-  await expect.poll(() => probe(page, (p) => p.camera()?.zoom)).toBe(1);
+  // Aimed at the whole map (#289): the zoom eases there frame by frame, slowly under load, and nothing
+  // below needs it to have landed.
+  await expect.poll(() => probe(page, (p) => p.camera()?.aim)).toEqual({ zoom: 1, follow: false });
+  await heroAwaitsOrders(page);
   const pane = page.getByRole('region', { name: 'Hero' });
   await pane.getByLabel('Message to the hero').fill('Submit it');
   await pane.getByRole('button', { name: 'Send now' }).click();
