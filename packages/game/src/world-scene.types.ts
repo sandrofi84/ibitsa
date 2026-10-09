@@ -29,6 +29,11 @@ export interface MapProbe {
   underReview?: string[];
   /** The councillors out reviewing (#140): where they are and what they show. */
   reviewers?: ReviewerProbe[];
+  /**
+   * Heroes' speech bubbles showing (#271): the tail's tip on the map, the top of the councillors it
+   * must clear (null with none around), and whether it's drawn over every character.
+   */
+  speech?: { heroId: string; bottom: number; ceiling: number | null; overCharacters: boolean }[];
   /** Every island's PR is merged (#153). */
   shipped?: boolean;
   /** Heroes at (or walking to) Ibitsa. */

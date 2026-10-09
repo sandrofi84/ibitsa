@@ -13,8 +13,21 @@ interface Reviewer {
   plate: { x: number; y: number; width: number; height: number };
 }
 
+interface Speech {
+  heroId: string;
+  bottom: number;
+  ceiling: number | null;
+  overCharacters: boolean;
+}
+
 interface Probe {
-  map(): { islands: unknown[]; reviewers?: Reviewer[]; underReview?: string[] } | null;
+  map(): {
+    islands: unknown[];
+    reviewers?: Reviewer[];
+    underReview?: string[];
+    speech?: Speech[];
+  } | null;
+  hero: { speech(): string | null };
   camera(): { zoom: number } | null;
   snapshot(): {
     heroes: { id: string }[];
@@ -83,6 +96,30 @@ test('councillors walk out to review, a magnifier each, and the hero waits under
   const placed = (await probe(page, (p) => p.map()?.reviewers)) ?? [];
   expect(new Set(placed.map((r) => `${r.x},${r.y}`)).size).toBe(3);
   expect(errors).toEqual([]);
+});
+
+test("a hero's speech shows over the councillors reviewing it, above their heads (#271)", async ({
+  page,
+}) => {
+  await submitFirst(page);
+  // They stand around the hero, magnifiers out.
+  await expect
+    .poll(() => probe(page, (p) => p.map()?.reviewers?.filter((r) => !r.walking).length), {
+      timeout: 10_000,
+    })
+    .toBe(3);
+  const pane = page.getByRole('region', { name: 'Hero' });
+  await pane.getByLabel('Message to the hero').fill('What are you waiting for?');
+  await pane.getByRole('button', { name: 'Send now' }).click();
+  await expect
+    .poll(() => probe(page, (p) => p.hero.speech()))
+    .toBe('Done: What are you waiting for?');
+  const [speech] = (await probe(page, (p) => p.map()?.speech)) ?? [];
+  expect(speech?.overCharacters).toBe(true);
+  // Councillors stand above the hero, so the bubble lifts clear of their heads.
+  expect(speech?.ceiling).not.toBeNull();
+  expect(speech?.bottom).toBeLessThanOrEqual(speech?.ceiling ?? 0);
+  await page.screenshot({ path: 'test-results/reviewers-speech.png', style: UNCOVER });
 });
 
 test('reviewers setting out together keep their names apart, and back under them once spread out (#234)', async ({

@@ -1,5 +1,6 @@
 import type { Snapshot } from '@ibitsa/protocol';
-import type { PlateBox, ReviewerView } from './reviewers.types';
+import type { Point } from './layout.types';
+import type { PlateBox, ReviewerView, Standing } from './reviewers.types';
 
 /**
  * The councillors to show on the map (§5.5, #140): while a task is being reviewed, everyone reviewing it
@@ -49,6 +50,24 @@ export function stackPlates(plates: readonly PlateBox[]): number[] {
     placed.push(at());
     return dy;
   });
+}
+
+/** How far either side of a hero a councillor can stand under its speech bubble, in map pixels. */
+export const SPEECH_REACH = 40;
+
+/**
+ * The height a hero's speech bubble must clear (#271): the top of the councillors standing around and
+ * above the hero, so what it says shows over them; null with nobody there.
+ */
+export function speechCeiling({
+  hero,
+  around,
+}: {
+  hero: Point;
+  around: readonly Standing[];
+}): number | null {
+  const under = around.filter((c) => Math.abs(c.x - hero.x) <= SPEECH_REACH && c.top < hero.y);
+  return under.length === 0 ? null : Math.min(...under.map((c) => c.top));
 }
 
 function overlaps(a: PlateBox, b: PlateBox): boolean {
