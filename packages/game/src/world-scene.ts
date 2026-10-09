@@ -30,7 +30,7 @@ import type { MapPose } from './poses.types';
 import { badgeOf } from './pull-requests';
 import type { PullRequestBadge } from './pull-requests.types';
 import { recoloredCharacter, recolorOf } from './recolor';
-import { reviewersOf, stackPlates } from './reviewers';
+import { reviewersOf, speechCeiling, stackPlates } from './reviewers';
 import { councillorAppearance, councillorTitle, packLook } from './sitting-hut';
 import type { ViewState } from './view-state';
 import type { MapProbe } from './world-scene.types';
@@ -85,6 +85,8 @@ export class WorldScene extends Phaser.Scene {
    * take the click meant for it.
    */
   private badgeLayer!: Phaser.GameObjects.Container;
+  /** Heroes' speech and status bubbles, above every character and below the badges (#271). */
+  private speechLayer!: Phaser.GameObjects.Container;
   private hud!: PixelText;
   private empty!: PixelText;
   private readonly heroes = new Map<string, HeroToken>();
@@ -150,6 +152,7 @@ export class WorldScene extends Phaser.Scene {
         token.underReview() ? [heroId] : [],
       ),
       reviewers: [...this.reviewers.values()].map((t) => t.probe()),
+      speech: this.speechProbe(),
       poses: [...this.heroes].map(([heroId, token]) => ({
         heroId,
         pose: token.pose(),
@@ -166,6 +169,27 @@ export class WorldScene extends Phaser.Scene {
       voyage: this.misted ? VOYAGE_LINE : null,
       sunk: this.sunk,
     };
+  }
+
+  /** The heroes' speech bubbles showing, against the councillors around them (#271). */
+  private speechProbe(): NonNullable<MapProbe['speech']> {
+    // Probed before the scene has built its layers: nothing shows yet.
+    if (!this.speechLayer) return [];
+    const characters = [
+      ...[...this.heroes.values()].map((t) => t.target()),
+      ...[...this.reviewers.values()].map((t) => t.target()),
+    ];
+    const highest = Math.max(-1, ...characters.map((c) => this.world.getIndex(c)));
+    const overCharacters = this.world.getIndex(this.speechLayer) > highest;
+    const around = [...this.reviewers.values()].map((t) => t.footprint());
+    return [...this.heroes].flatMap(([heroId, token]) => {
+      const bottom = token.speechBottom();
+      if (bottom === null) return [];
+      const { x, y } = token.target();
+      return [
+        { heroId, bottom, ceiling: speechCeiling({ hero: { x, y }, around }), overCharacters },
+      ];
+    });
   }
 
   /** Where a PR badge sits on the map, for clicks in tests (#153); null when the island has none. */
@@ -319,6 +343,7 @@ export class WorldScene extends Phaser.Scene {
     else this.drawIsland(village, v);
     this.questLayer = this.add.container(0, 0);
     this.badgeLayer = this.add.container(0, 0);
+    this.speechLayer = this.add.container(0, 0);
     // Over the village's labels, where the opening view looks (#243).
     const home = villageCenter(this.layout);
     this.empty = addPixelText(this, {
@@ -342,6 +367,7 @@ export class WorldScene extends Phaser.Scene {
       this.namePlate({ at: namePlateSpot(v), text: 'HOME VILLAGE' }),
       this.questLayer,
       this.empty,
+      this.speechLayer,
       this.badgeLayer,
     ]);
     this.hud = addPixelText(this, { x: 6, y: 4, text: '', color: '#ffffff' });
@@ -442,14 +468,26 @@ export class WorldScene extends Phaser.Scene {
     const inset = ((this.registry.get(RIGHT_INSET) as number | undefined) ?? 0) / this.scale.zoom;
     // Phaser centres on target − offset: a negative x puts the hero left of the middle.
     cam.setFollowOffset(-inset / 2 / cam.zoom, 0);
-    // Bubbles and icons keep their whole-map size while the map zooms (#75).
-    for (const token of this.heroes.values()) token.keepSize(cam.zoom);
-    // Reviewers' name plates never overlap, while they walk together or stand side by side (#234).
     const reviewers = [...this.reviewers.values()];
+    const around = reviewers.map((t) => t.footprint());
+    for (const token of this.heroes.values()) {
+      // Bubbles and icons keep their whole-map size while the map zooms (#75).
+      token.keepSize(cam.zoom);
+      // A hero's speech follows it over every character, clear of the councillors around it (#271).
+      const { x, y } = token.target();
+      token.follow(speechCeiling({ hero: { x, y }, around }));
+    }
+    // Reviewers' name plates never overlap, while they walk together or stand side by side (#234).
     const offsets = stackPlates(reviewers.map((t) => t.plateBox({ stacked: false })));
     reviewers.forEach((token, i) => {
       token.stackPlate(offsets[i] ?? 0);
     });
+  }
+
+  /** Speech above the characters a new token joined, and the badges above that (#162, #271). */
+  private raiseOverlays(): void {
+    this.world.bringToTop(this.speechLayer);
+    this.world.bringToTop(this.badgeLayer);
   }
 
   /** Moves the main camera to the director's aim: zoom, follow the hero, or ease back to the map. */
@@ -584,6 +622,7 @@ export class WorldScene extends Phaser.Scene {
         token = new HeroToken({
           scene: this,
           layer: this.world,
+          overlay: this.speechLayer,
           hero,
           iconKinds: this.manifest.activityIcons.kinds,
           character: this.characterKey(hero.classId),
@@ -593,7 +632,7 @@ export class WorldScene extends Phaser.Scene {
               : spot,
         });
         this.heroes.set(hero.id, token);
-        this.world.bringToTop(this.badgeLayer);
+        this.raiseOverlays();
       }
       token.update({
         hero,
@@ -679,7 +718,7 @@ export class WorldScene extends Phaser.Scene {
           },
         });
         this.reviewers.set(view.key, token);
-        this.world.bringToTop(this.badgeLayer);
+        this.raiseOverlays();
       }
       token.update(view);
     }
@@ -810,7 +849,7 @@ export class WorldScene extends Phaser.Scene {
       })
       .on('pointerout', () => this.game.events.emit(PULL_REQUEST_HOVERED, null));
     this.badgeLayer.add(text);
-    this.world.bringToTop(this.badgeLayer);
+    this.raiseOverlays();
     this.prSpots.set(islandId, { x: at.x - text.width / 2, y: at.y + text.height / 2 });
   }
 
@@ -1043,6 +1082,8 @@ export class HeroToken {
   private readonly bubble: PixelText;
   /** Speech: a message excerpt that fades, or "Ready for review!" while submitted (#57). */
   private readonly speech: Phaser.GameObjects.Container;
+  /** The speech and status bubbles, in the layer above every character (#271). */
+  private readonly above: Phaser.GameObjects.Container;
   private readonly speechBox: Phaser.GameObjects.Graphics;
   private readonly speechText: PixelText;
   private speechKind: 'none' | 'message' | 'submitted' = 'none';
@@ -1079,6 +1120,7 @@ export class HeroToken {
   constructor({
     scene,
     layer,
+    overlay,
     hero,
     iconKinds,
     character,
@@ -1087,6 +1129,8 @@ export class HeroToken {
     scene: Phaser.Scene;
     /** The map layer the token lives in, so the camera zooms it. */
     layer: Phaser.GameObjects.Container;
+    /** The map layer above every character, where its speech and status bubbles go (#271). */
+    overlay: Phaser.GameObjects.Container;
     hero: HeroView;
     iconKinds: readonly string[];
     character: string;
@@ -1153,13 +1197,27 @@ export class HeroToken {
       this.sprite,
       this.hpBar,
       this.icon,
-      this.bubble,
-      this.speech,
       this.padlock,
       this.hourglass,
       this.blockedLabel,
     ]);
     layer.add(this.container);
+    // Above every character, so a councillor standing in front never hides what the hero says (#271).
+    this.above = scene.add.container(start.x, start.y, [this.bubble, this.speech]);
+    overlay.add(this.above);
+  }
+
+  /**
+   * Keeps the speech and status bubbles over the hero, where it is and as it shows (#271), and the
+   * speech above `clearOf` (a map y: the top of the councillors standing around it), if given.
+   */
+  follow(clearOf: number | null): void {
+    const { x, y, alpha, visible } = this.container;
+    this.above.setPosition(x, y).setAlpha(alpha).setVisible(visible);
+    // Above the status bubble when one shows, so neither covers the other or the HP bar.
+    const own = this.bubble.visible ? -32 : -22;
+    // The tail's tip sits 3 below the speech's origin; a pixel's gap above the councillors.
+    this.speech.setY(clearOf === null ? own : Math.min(own, clearOf - y - 4));
   }
 
   /** Whether it waits under the hourglass while councillors review its task (#140). */
@@ -1251,6 +1309,11 @@ export class HeroToken {
     if (frame < 0) return false;
     this.icon.setFrame(frame).setVisible(true);
     return true;
+  }
+
+  /** The speech bubble's tail tip on the map while it shows, else null (#271). */
+  speechBottom(): number | null {
+    return this.speech.visible ? this.above.y + this.speech.y + 3 * this.speech.scaleY : null;
   }
 
   /** The speech bubble's text while it shows, else null. */
@@ -1369,8 +1432,6 @@ export class HeroToken {
     } else if (!this.readyForReview && this.speechKind === 'submitted') {
       this.hideSpeech();
     }
-    // Above the status bubble when one shows, so neither covers the other or the HP bar.
-    this.speech.setY(this.bubble.visible ? -32 : -22);
 
     this.drawHp(hero.hp);
   }
@@ -1508,5 +1569,6 @@ export class HeroToken {
   destroy(): void {
     this.travel?.stop();
     this.container.destroy();
+    this.above.destroy();
   }
 }

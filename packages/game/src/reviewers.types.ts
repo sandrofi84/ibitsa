@@ -14,6 +14,13 @@ export interface ReviewerView {
   index: number;
 }
 
+/** A councillor standing on the map (#271): its feet and its top edge, in map pixels. */
+export interface Standing {
+  x: number;
+  y: number;
+  top: number;
+}
+
 /** A name plate's box on the map, in map pixels (#234). */
 export interface PlateBox {
   x: number;
