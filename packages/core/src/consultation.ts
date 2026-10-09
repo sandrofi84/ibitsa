@@ -200,6 +200,7 @@ export class Consultation {
         this.fail({ record, message: event.message });
         return;
       case 'sessionStarted':
+      case 'idle':
         return;
       case 'amendmentProposed':
         new PlanAmendment(this.ctx).propose({ record, event });

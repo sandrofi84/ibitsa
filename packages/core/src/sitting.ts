@@ -75,6 +75,7 @@ export class Sitting {
       comparisonOf: record.comparisonOf,
       consultations: record.consultations ?? [],
       amendments: PlanAmendment.views(record),
+      waiting: Sitting.active(record) && record.waiting === true,
     };
   }
 
@@ -164,7 +165,8 @@ export class Sitting {
       return true;
     }
     record.dormant = true;
-    if (record.status !== 'deliberating' || pendingBatch(record)) return false;
+    // A council waiting on the user (#242) has nothing to carry on with until the user acts.
+    if (record.status !== 'deliberating' || pendingBatch(record) || record.waiting) return false;
     this.wake({ record, prompt: RESUME_PROMPT });
     return true;
   }
@@ -273,6 +275,35 @@ export class Sitting {
     });
   }
 
+  /**
+   * The user's own words to the council while it sits (#242): a dialogue line, and a message to the
+   * lead session, to the whole council or to one councillor on the roster.
+   */
+  tell(command: Extract<Command, { type: 'consultCouncil' }>): void {
+    const record = this.current(command.commandId);
+    if (!record) return;
+    const { councillorId, text } = command;
+    const problem =
+      record.status === 'awaitingApproval'
+        ? 'A plan is waiting: approve it, or ask for changes.'
+        : councillorId !== undefined && !onRoster(record, councillorId)
+          ? `${councillorId} isn't on the council's roster.`
+          : undefined;
+    if (problem) {
+      this.ctx.outbox.reject(command.commandId, problem);
+      return;
+    }
+    addLine({
+      record,
+      line: { speaker: YOU, text: councillorId ? `@${councillorId} ${text}` : text },
+    });
+    record.waiting = false;
+    this.message({
+      record,
+      message: { kind: 'told', text, ...(councillorId !== undefined && { councillorId }) },
+    });
+  }
+
   approve(command: Extract<Command, { type: 'approvePlan' }>): void {
     const plan = this.waitingPlan(command);
     if (!plan) return;
@@ -374,7 +405,7 @@ export class Sitting {
       seriousConcerns: concerns.filter((c) => c.severity === 'serious' || c.severity === 'high')
         .length,
       questionsAsked: record.batches.reduce((n, b) => n + b.items.length, 0),
-      whys: record.dialogue.filter((d) => d.speaker === YOU).length,
+      whys: record.dialogue.filter((d) => d.speaker === YOU && d.questionId !== undefined).length,
       revisions: record.revision,
       reconsultations: record.reconsultations.length,
       plansProposed: record.plans.length,
@@ -405,7 +436,12 @@ export class Sitting {
     switch (event.type) {
       case 'sessionStarted':
         record.sessionId = event.sessionId;
+        record.waiting = false;
         if (record.status === 'convening') record.status = 'deliberating';
+        return;
+      case 'idle':
+        // Nothing open for the user and no plan to review: the council waits, and says so (#242).
+        if (record.status === 'deliberating' && !pendingBatch(record)) record.waiting = true;
         return;
       case 'usage':
         record.gold = { kind: 'exact', value: event.totalCost };

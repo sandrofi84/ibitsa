@@ -4,6 +4,7 @@ import m1Demo from '../fixtures/m1-demo.jsonl?raw';
 import m1Real from '../fixtures/m1-real.jsonl?raw';
 import m1RealLive from '../fixtures/m1-real.live.json';
 import m1Trouble from '../fixtures/m1-trouble.jsonl?raw';
+import m3CouncilWaits from '../fixtures/m3-council-waits.jsonl?raw';
 import m3RoundTable from '../fixtures/m3-round-table.jsonl?raw';
 import m6PullRequest from '../fixtures/m6-pull-request.jsonl?raw';
 import { parseLog } from './log';
@@ -16,6 +17,7 @@ const fixtures = {
   'm1-trouble': m1Trouble,
   'm1-real': m1Real,
   'm1-demo': m1Demo,
+  'm3-council-waits': m3CouncilWaits,
   'm3-round-table': m3RoundTable,
   'm6-pull-request': m6PullRequest,
 };

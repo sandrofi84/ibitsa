@@ -108,9 +108,70 @@ test('"Later" puts the questions in "Needs you", and "Answer" brings them back (
   await expect(item).toBeVisible();
   await expect(item).toContainText('The council asks you 2 questions (Architect, Security).');
   await expect.poll(() => probe(page, (p) => p.hut()?.speaker)).toBeNull();
+  // With the box away, the command bar talks to the council (#242).
+  await expect(page.getByRole('combobox', { name: 'Command bar' })).toHaveAttribute(
+    'placeholder',
+    /Tell the council/,
+  );
 
   await item.getByRole('button', { name: 'Answer' }).click();
   await expect(box).toBeVisible();
   await expect(box.getByRole('radio', { name: /Email and password/ })).toBeFocused();
   await expect.poll(() => probe(page, (p) => p.hut()?.speaker)).toBe('architect');
+});
+
+test('a council that waits on you says so, hears you from the command bar, and can be dismissed (#242)', async ({
+  page,
+}) => {
+  const errors = watchErrors(page);
+  await page.goto('/?fixture=m3-council-waits&autoplay=1&speed=16&mode=interactive');
+  await expect
+    .poll(() => probe(page, (p) => p.status().waitingFor), { timeout: 20_000 })
+    .toBe('consultCouncil');
+
+  // The elder's last word shows in the hut, over the command bar, which talks to the council.
+  const word = page.locator('.council-word');
+  await expect(word).toContainText('Elder: This repo has no Gatsby');
+  const bar = page.getByRole('combobox', { name: 'Command bar' });
+  await expect(bar).toBeVisible();
+
+  // Needs you says the council waits; Reply puts the keyboard in the bar.
+  const item = page.locator('.needs-you .item.council');
+  await expect(item).toContainText('The council is waiting on you: tell it something');
+  await item.getByRole('button', { name: 'Reply' }).click();
+  await expect(bar).toBeFocused();
+
+  // The council's pane: what it is doing, its reports and the journal.
+  const pane = page.getByRole('region', { name: 'The council' });
+  const tab = pane.getByRole('button', { name: /^Council · / });
+  await expect(tab).toContainText('waiting on you');
+  await tab.click();
+  await expect(pane.getByRole('list', { name: 'Reports' })).toContainText(
+    'Architect: 1 concern, 1 question',
+  );
+  await expect(pane.getByRole('list', { name: 'Reports' })).toContainText(
+    'Tester: Nothing to test',
+  );
+  await expect(pane.getByRole('list', { name: 'Journal' })).toContainText('Elder:');
+  await page.screenshot({ path: 'test-results/council-waits.png' });
+
+  // Telling the council something: the user's line, then the council's answer.
+  await bar.fill('Add Gatsby fresh, as a recipe site.');
+  await bar.press('Enter');
+  await expect(pane.getByRole('list', { name: 'Journal' })).toContainText(
+    'You: Add Gatsby fresh, as a recipe site.',
+  );
+  await expect(word).toContainText('Architect: Then it is a new site');
+
+  // Dismiss asks once more, then the sitting ends and the map comes back.
+  await expect.poll(() => probe(page, (p) => p.status().waitingFor)).toBe('dismissCouncil');
+  // (By keyboard: the standalone build's replay controls sit over the pane's foot.)
+  await pane.getByRole('button', { name: 'Dismiss the council' }).press('Enter');
+  await pane.getByRole('button', { name: 'Dismiss', exact: true }).press('Enter');
+  await expect
+    .poll(() => probe(page, (p) => p.snapshot()?.sitting?.status), { timeout: 20_000 })
+    .toBe('dismissed');
+  await expect.poll(() => probe(page, (p) => p.hut())).toBeNull();
+  await expect(pane).toBeHidden();
+  expect(errors).toEqual([]);
 });

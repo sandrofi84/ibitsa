@@ -3,7 +3,14 @@ import type { GameClient } from './client';
 import type { MenuItem, MenuProvider } from './command-menu.types';
 import { rankPaths } from './file-search';
 import { STATE_LABELS } from './heroes';
-import { ALL, addressedHero, COUNCIL, councilHandles, parseMessage } from './mentions';
+import {
+  ALL,
+  addressedHero,
+  COUNCIL,
+  councilHandles,
+  parseMessage,
+  sittingHandles,
+} from './mentions';
 import { councillorTitle } from './sitting-hut';
 
 /**
@@ -26,6 +33,12 @@ export function atMenu({
     trigger: '@',
     async suggest({ query, before }) {
       const snapshot = client.snapshot;
+      // While the council sits it is the only one to talk to, and it reads no worktree (#242).
+      const sitting = sittingHandles(snapshot);
+      if (sitting.length > 0) {
+        const named = parseMessage({ text: before, recipients: sitting }).recipient;
+        return recipients && !named ? councilItems({ council: sitting, query }) : [];
+      }
       if (snapshot?.campaign?.status !== 'active') return [];
       const heroes = snapshot.heroes;
       const council = councilHandles(snapshot);
@@ -85,7 +98,7 @@ function recipientItems({
   return items.filter((item) => item.label.slice(1).startsWith(q));
 }
 
-/** `@council` and each councillor who sat, once the council can be asked mid-campaign (#169). */
+/** `@council` and each councillor who sat: while it sits (#242), or mid-campaign (#169). */
 function councilItems({ council, query }: { council: string[]; query: string }): MenuItem[] {
   const q = query.toLowerCase();
   return council

@@ -65,6 +65,11 @@ export type CouncilEvent =
       /** Tokens per councillor, from its chamber's messages (separate chambers only, #106). */
       byCouncillor?: { councillorId: string; tokens: number }[];
     }
+  /**
+   * The lead session ended its turn with no chamber still at work (#242): until the user acts or the
+   * session takes another turn, nothing moves.
+   */
+  | { type: 'idle' }
   /** The session cannot continue. */
   | { type: 'error'; message: string };
 
@@ -111,6 +116,11 @@ export interface SittingView {
   consultations: ConsultationView[];
   /** Changes to the approved plan (§4.8, #170), oldest first; at most one is `proposed`. */
   amendments: AmendmentView[];
+  /**
+   * The council ended its turn with no question open and no plan (#242): it waits for the user, who
+   * can tell it something (`consultCouncil`) or dismiss it.
+   */
+  waiting: boolean;
 }
 
 /** One question to the council mid-campaign; its answers are dialogue lines. */
@@ -204,5 +214,7 @@ export type SittingMessage =
   | { kind: 'councillorAdded'; councillorId: string; effort: Effort }
   /** "Why?" (§4.4): the councillor who asked `question` explains; `text` is the user's follow-up. */
   | { kind: 'why'; questionId: string; councillorId: string; question: string; text?: string }
+  /** The user's own words to the sitting (#242), to the whole council or to one councillor. */
+  | { kind: 'told'; text: string; councillorId?: string }
   /** Answers to questions asked before a reload (#166), whose tool call the resumed session lost. */
   | { kind: 'answered'; answers: { question: string; answer: string }[] };

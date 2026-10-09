@@ -355,6 +355,7 @@ describe('separate chambers (#105)', () => {
       await next();
       await next();
       await next();
+      await next();
       yield result;
     });
     await until(() => inputs.length === 1);
@@ -367,7 +368,9 @@ describe('separate chambers (#105)', () => {
       question: 'How long?',
       text: 'Why so short?',
     });
-    await until(() => inputs.length === 4);
+    session.message({ kind: 'told', text: 'Keep it small.', councillorId: 'security' });
+    await until(() => inputs.length === 5);
+    expect(inputs[4]).toMatch(/^The user says to security:\nKeep it small\./);
     expect(inputs[1]).toBe(
       'The user asked for changes to plan v1:\nAdd Google\n\nDispatch again only the councillors this change affects, with the change in your request; they report again. Then call propose_plan again.',
     );

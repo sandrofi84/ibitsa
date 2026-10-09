@@ -95,7 +95,7 @@ export class RuntimeHost {
   /** An internal front end: notifications while the game is hidden, and the waiting count. */
   /**
    * The council's questions and plans while the game is hidden (#103): one notification for each new
-   * batch of questions and each plan waiting for approval.
+   * batch of questions, each plan waiting for approval, and each time the council waits on the user.
    */
   private noticeCouncil(sitting: SittingView | null): void {
     const news = councilNews({ sitting, noticed: this.noticed });
@@ -110,8 +110,9 @@ export class RuntimeHost {
     return {
       post: (message) => {
         if (message.type === 'snapshot') {
-          // The council's open questions count as one more thing waiting (#102).
-          const council = message.snapshot.sitting?.questions ? 1 : 0;
+          // The council's open questions, or the council waiting on the user (#242), count as one more.
+          const sitting = message.snapshot.sitting;
+          const council = sitting?.questions || sitting?.waiting ? 1 : 0;
           this.options.onWaitingChanged(message.snapshot.needsYou.length + council);
           this.noticeCouncil(message.snapshot.sitting);
         }

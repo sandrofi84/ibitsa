@@ -215,7 +215,8 @@ export const CommandSchema = v.variant('type', [
   v.strictObject({ type: v.literal('approvePlan'), commandId: id, version: positiveInt }),
   /**
    * Talk to the council mid-campaign (§4.8, #169): `@council`, `@<councillor id>` or the hut. The
-   * approved sitting's lead session answers; heroes keep working.
+   * approved sitting's lead session answers; heroes keep working. While the council still sits, the
+   * words go to the sitting instead (#242).
    */
   v.strictObject({
     type: v.literal('consultCouncil'),

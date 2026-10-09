@@ -23,6 +23,9 @@ const ANSWERABLE: Command['type'][] = [
   'resumeHero',
   'raiseBudget',
   'answerCouncil',
+  // Talking to a council that waits on you, and dismissing it (#242).
+  'consultCouncil',
+  'dismissCouncil',
 ];
 
 /**

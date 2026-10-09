@@ -165,7 +165,10 @@ function command(ctx: StepContext, command: Command): void {
       new Sitting(ctx).approve(command);
       return;
     case 'consultCouncil':
-      new Consultation(ctx).ask(command);
+      // While the council sits, the user's words go to the sitting (#242); once approved, a consultation.
+      if (Sitting.active(ctx.state.sitting) && ctx.state.sitting.status !== 'approved')
+        new Sitting(ctx).tell(command);
+      else new Consultation(ctx).ask(command);
       return;
     case 'approveAmendment':
       new PlanAmendment(ctx).approve(command);

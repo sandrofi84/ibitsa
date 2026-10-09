@@ -35,7 +35,7 @@ export const ROUND_TABLE_INSTRUCTIONS = `You are Ibitsa's council, sitting at a 
 Work in this order:
 1. For every councillor on the roster, think as that councillor (their guidance is in the first message) and call report once for them: their concerns (with severity and reason), questions for the user, recommendations, and what they didn't check. A councillor with nothing to add files a short bow-out saying why. Read code only where a councillor needs more than the brief.
 2. Put the questions that matter to the user with ask_user, in one batch where you can: each names the councillor asking, offers options with their trade-offs, recommends one with a reason, and allows free text when the user might want something else. When ask_user accepts the batch, end your turn: the answers arrive as a message.
-3. While you wait, the user may ask a councillor "Why?". Answer in that councillor's voice with say (others may add a line with say if their concern is affected), then end your turn again.
+3. While you wait, the user may ask a councillor "Why?", or write to the council. Answer in that councillor's voice with say (others may add a line with say if their concern is affected), then end your turn again.
 4. When every councillor has reported and the answers are in, call propose_plan: the goal, the tasks (each with the files likely touched, its dependencies, and acceptance criteria from the councillors who will review it), the islands and branching, and the Book of Decisions (every choice the user made, with the alternatives and the user's reason in their words). If it is accepted, end your turn: the user approves, asks for changes, or dismisses the council. On changes, consult again the councillors the change affects (they report again), then propose again.
 
 Speak to the user only through say and ask_user; anything else you write is not shown. Keep reports and lines short. If a tool rejects a call, fix what it says and call it again.`;
@@ -150,6 +150,8 @@ export class RoundTableSession implements SittingSession {
   /** Agent calls that started a chamber, and the councillor each one is for (#106). */
   private readonly startedChambers = new Map<string, string>();
   private readonly tokens = new Map<string, number>();
+  /** Subagents and other tasks still running (#242): a chamber can outlive the elder's turn. */
+  private readonly tasks = new Set<string>();
   private query: Query | null = null;
   private closed = false;
   private failed = false;
@@ -446,6 +448,10 @@ export class RoundTableSession implements SittingSession {
       this.countTokens(m);
       return;
     }
+    if (m.type === 'system') {
+      this.noteTask(m);
+      return;
+    }
     if (m.type !== 'result') return;
     const byCouncillor = [...this.tokens].map(([councillorId, tokens]) => ({
       councillorId,
@@ -464,7 +470,12 @@ export class RoundTableSession implements SittingSession {
       })),
       ...(byCouncillor.length > 0 ? { byCouncillor } : {}),
     });
-    if (this.closed || m.subtype === 'success') return;
+    if (this.closed) return;
+    if (m.subtype === 'success') {
+      // The turn is over and no chamber is still at work: nothing moves until the user acts (#242).
+      if (this.tasks.size === 0) this.emit({ type: 'idle' });
+      return;
+    }
     this.emit({
       type: 'error',
       message:
@@ -474,6 +485,16 @@ export class RoundTableSession implements SittingSession {
             ? 'The council took too many steps.'
             : `The sitting stopped: ${m.subtype.replaceAll('_', ' ')}.`,
     });
+  }
+
+  /** Keeps the set of running tasks: started and settled edges, or the SDK's full background set. */
+  private noteTask(m: Extract<SDKMessage, { type: 'system' }>): void {
+    if (m.subtype === 'task_started') this.tasks.add(m.task_id);
+    else if (m.subtype === 'task_notification') this.tasks.delete(m.task_id);
+    else if (m.subtype === 'background_tasks_changed') {
+      this.tasks.clear();
+      for (const t of m.tasks) if (!t.ambient) this.tasks.add(t.task_id);
+    }
   }
 
   /**
@@ -587,9 +608,18 @@ export function messageText({
         message.text && message.text !== 'Why?' ? `\nThey added: ${message.text}` : '';
       return `The user asked ${message.councillorId} "Why?" about: "${message.question}" (questionId ${message.questionId}).${followUp}\n\nAnswer in ${message.councillorId}'s voice with say, using that questionId. Others may add a line with say if their concern is affected. Then end your turn: the questions are still open.`;
     }
+    case 'told':
+      return toldText(message);
     case 'answered':
       return answeredText(message.answers);
   }
+}
+
+/** The user's own words to the council (#242), and what to do with them. */
+export function toldText({ text, councillorId }: { text: string; councillorId?: string }): string {
+  const to = councillorId ? ` to ${councillorId}` : '';
+  const voice = councillorId ? `in ${councillorId}'s voice` : 'as whoever it concerns';
+  return `The user says${to}:\n${text}\n\nAnswer with say, ${voice}. Then carry on with the sitting where this moves it: reports, questions with ask_user, or propose_plan. If the task can't go ahead, say why and end your turn: the user can tell you more or dismiss the council.`;
 }
 
 /** Answers to questions asked before a reload (#166): the ask_user call they belonged to was lost. */

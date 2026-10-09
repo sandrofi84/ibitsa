@@ -219,6 +219,11 @@ export interface SittingRecord {
    * once if it was deliberating; questions asked before the reload are answered as a message.
    */
   dormant?: boolean;
+  /**
+   * The lead session ended its turn with no question open and no plan (#242): the council waits for
+   * the user. Cleared when the session takes another turn.
+   */
+  waiting?: boolean;
   comparisonOf: string | null;
   rating: SittingRating | null;
   usage: { byModel: ModelUsage[]; byCouncillor: { councillorId: string; tokens: number }[] };

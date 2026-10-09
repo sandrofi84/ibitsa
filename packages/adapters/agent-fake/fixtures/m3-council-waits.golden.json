@@ -1,0 +1,490 @@
+{
+  "cues": [],
+  "marks": [
+    {
+      "mark": "convened",
+      "t": 0,
+      "snapshot": {
+        "campaign": {
+          "id": "c-s1",
+          "title": "Upgrade Gatsby to the latest",
+          "status": "planning",
+          "autoApprove": false,
+          "branching": "separate",
+          "stackedStart": null,
+          "capMicroUsd": null,
+          "maxParallel": 2,
+          "shipped": false,
+          "ending": null,
+          "gold": {
+            "kind": "exact",
+            "value": 0
+          }
+        },
+        "elder": null,
+        "sitting": {
+          "id": "s1",
+          "task": "Upgrade Gatsby to the latest",
+          "mode": "chambers",
+          "status": "convening",
+          "effort": "standard",
+          "roster": [
+            {
+              "councillorId": "architect",
+              "effort": "standard",
+              "reported": false
+            },
+            {
+              "councillorId": "tester",
+              "effort": "light",
+              "reported": false
+            }
+          ],
+          "reports": [],
+          "questions": null,
+          "plans": [],
+          "revision": 0,
+          "reconsultations": [],
+          "dialogue": [],
+          "gold": {
+            "kind": "unknown"
+          },
+          "error": null,
+          "rating": null,
+          "comparisonOf": null,
+          "consultations": [],
+          "amendments": [],
+          "waiting": false
+        },
+        "islands": [],
+        "heroes": [],
+        "needsYou": []
+      }
+    },
+    {
+      "mark": "waiting",
+      "t": 8300,
+      "snapshot": {
+        "campaign": {
+          "id": "c-s1",
+          "title": "Upgrade Gatsby to the latest",
+          "status": "planning",
+          "autoApprove": false,
+          "branching": "separate",
+          "stackedStart": null,
+          "capMicroUsd": null,
+          "maxParallel": 2,
+          "shipped": false,
+          "ending": null,
+          "gold": {
+            "kind": "exact",
+            "value": 0
+          }
+        },
+        "elder": null,
+        "sitting": {
+          "id": "s1",
+          "task": "Upgrade Gatsby to the latest",
+          "mode": "chambers",
+          "status": "deliberating",
+          "effort": "standard",
+          "roster": [
+            {
+              "councillorId": "architect",
+              "effort": "standard",
+              "reported": true
+            },
+            {
+              "councillorId": "tester",
+              "effort": "light",
+              "reported": true
+            }
+          ],
+          "reports": [
+            {
+              "id": "r2",
+              "councillorId": "architect",
+              "revision": 0,
+              "report": {
+                "concerns": [
+                  {
+                    "summary": "No Gatsby in this repo",
+                    "severity": "serious",
+                    "reason": "package.json has no dependencies and there are no gatsby-* files"
+                  }
+                ],
+                "questions": [
+                  "Is this the wrong repo?"
+                ],
+                "recommendations": [
+                  "Do no work until the user says what they meant"
+                ],
+                "notChecked": []
+              }
+            },
+            {
+              "id": "r3",
+              "councillorId": "tester",
+              "revision": 0,
+              "report": {
+                "concerns": [],
+                "questions": [],
+                "recommendations": [],
+                "notChecked": [],
+                "bowOut": "Nothing to test: there is no Gatsby here."
+              }
+            }
+          ],
+          "questions": null,
+          "plans": [],
+          "revision": 0,
+          "reconsultations": [],
+          "dialogue": [
+            {
+              "id": "d1",
+              "speaker": "elder",
+              "text": "This repo has no Gatsby, so there is nothing to upgrade here. Tell me what you meant, or dismiss the council and start again in the right repo."
+            }
+          ],
+          "gold": {
+            "kind": "exact",
+            "value": 140000
+          },
+          "error": null,
+          "rating": null,
+          "comparisonOf": null,
+          "consultations": [],
+          "amendments": [],
+          "waiting": true
+        },
+        "islands": [],
+        "heroes": [],
+        "needsYou": []
+      }
+    },
+    {
+      "mark": "told",
+      "t": 20000,
+      "snapshot": {
+        "campaign": {
+          "id": "c-s1",
+          "title": "Upgrade Gatsby to the latest",
+          "status": "planning",
+          "autoApprove": false,
+          "branching": "separate",
+          "stackedStart": null,
+          "capMicroUsd": null,
+          "maxParallel": 2,
+          "shipped": false,
+          "ending": null,
+          "gold": {
+            "kind": "exact",
+            "value": 0
+          }
+        },
+        "elder": null,
+        "sitting": {
+          "id": "s1",
+          "task": "Upgrade Gatsby to the latest",
+          "mode": "chambers",
+          "status": "deliberating",
+          "effort": "standard",
+          "roster": [
+            {
+              "councillorId": "architect",
+              "effort": "standard",
+              "reported": true
+            },
+            {
+              "councillorId": "tester",
+              "effort": "light",
+              "reported": true
+            }
+          ],
+          "reports": [
+            {
+              "id": "r2",
+              "councillorId": "architect",
+              "revision": 0,
+              "report": {
+                "concerns": [
+                  {
+                    "summary": "No Gatsby in this repo",
+                    "severity": "serious",
+                    "reason": "package.json has no dependencies and there are no gatsby-* files"
+                  }
+                ],
+                "questions": [
+                  "Is this the wrong repo?"
+                ],
+                "recommendations": [
+                  "Do no work until the user says what they meant"
+                ],
+                "notChecked": []
+              }
+            },
+            {
+              "id": "r3",
+              "councillorId": "tester",
+              "revision": 0,
+              "report": {
+                "concerns": [],
+                "questions": [],
+                "recommendations": [],
+                "notChecked": [],
+                "bowOut": "Nothing to test: there is no Gatsby here."
+              }
+            }
+          ],
+          "questions": null,
+          "plans": [],
+          "revision": 0,
+          "reconsultations": [],
+          "dialogue": [
+            {
+              "id": "d1",
+              "speaker": "elder",
+              "text": "This repo has no Gatsby, so there is nothing to upgrade here. Tell me what you meant, or dismiss the council and start again in the right repo."
+            },
+            {
+              "id": "d2",
+              "speaker": "you",
+              "text": "Add Gatsby fresh, as a recipe site."
+            }
+          ],
+          "gold": {
+            "kind": "exact",
+            "value": 140000
+          },
+          "error": null,
+          "rating": null,
+          "comparisonOf": null,
+          "consultations": [],
+          "amendments": [],
+          "waiting": false
+        },
+        "islands": [],
+        "heroes": [],
+        "needsYou": []
+      }
+    },
+    {
+      "mark": "dismissed",
+      "t": 30000,
+      "snapshot": {
+        "campaign": {
+          "id": "c-s1",
+          "title": "Upgrade Gatsby to the latest",
+          "status": "planning",
+          "autoApprove": false,
+          "branching": "separate",
+          "stackedStart": null,
+          "capMicroUsd": null,
+          "maxParallel": 2,
+          "shipped": false,
+          "ending": null,
+          "gold": {
+            "kind": "exact",
+            "value": 0
+          }
+        },
+        "elder": null,
+        "sitting": {
+          "id": "s1",
+          "task": "Upgrade Gatsby to the latest",
+          "mode": "chambers",
+          "status": "dismissed",
+          "effort": "standard",
+          "roster": [
+            {
+              "councillorId": "architect",
+              "effort": "standard",
+              "reported": true
+            },
+            {
+              "councillorId": "tester",
+              "effort": "light",
+              "reported": true
+            }
+          ],
+          "reports": [
+            {
+              "id": "r2",
+              "councillorId": "architect",
+              "revision": 0,
+              "report": {
+                "concerns": [
+                  {
+                    "summary": "No Gatsby in this repo",
+                    "severity": "serious",
+                    "reason": "package.json has no dependencies and there are no gatsby-* files"
+                  }
+                ],
+                "questions": [
+                  "Is this the wrong repo?"
+                ],
+                "recommendations": [
+                  "Do no work until the user says what they meant"
+                ],
+                "notChecked": []
+              }
+            },
+            {
+              "id": "r3",
+              "councillorId": "tester",
+              "revision": 0,
+              "report": {
+                "concerns": [],
+                "questions": [],
+                "recommendations": [],
+                "notChecked": [],
+                "bowOut": "Nothing to test: there is no Gatsby here."
+              }
+            }
+          ],
+          "questions": null,
+          "plans": [],
+          "revision": 0,
+          "reconsultations": [],
+          "dialogue": [
+            {
+              "id": "d1",
+              "speaker": "elder",
+              "text": "This repo has no Gatsby, so there is nothing to upgrade here. Tell me what you meant, or dismiss the council and start again in the right repo."
+            },
+            {
+              "id": "d2",
+              "speaker": "you",
+              "text": "Add Gatsby fresh, as a recipe site."
+            },
+            {
+              "id": "d3",
+              "speaker": "architect",
+              "text": "Then it is a new site, not an upgrade: that is a bigger plan. Shall we start over with that task?"
+            }
+          ],
+          "gold": {
+            "kind": "exact",
+            "value": 190000
+          },
+          "error": null,
+          "rating": null,
+          "comparisonOf": null,
+          "consultations": [],
+          "amendments": [],
+          "waiting": false
+        },
+        "islands": [],
+        "heroes": [],
+        "needsYou": []
+      }
+    }
+  ],
+  "final": {
+    "campaign": {
+      "id": "c-s1",
+      "title": "Upgrade Gatsby to the latest",
+      "status": "planning",
+      "autoApprove": false,
+      "branching": "separate",
+      "stackedStart": null,
+      "capMicroUsd": null,
+      "maxParallel": 2,
+      "shipped": false,
+      "ending": null,
+      "gold": {
+        "kind": "exact",
+        "value": 0
+      }
+    },
+    "elder": null,
+    "sitting": {
+      "id": "s1",
+      "task": "Upgrade Gatsby to the latest",
+      "mode": "chambers",
+      "status": "dismissed",
+      "effort": "standard",
+      "roster": [
+        {
+          "councillorId": "architect",
+          "effort": "standard",
+          "reported": true
+        },
+        {
+          "councillorId": "tester",
+          "effort": "light",
+          "reported": true
+        }
+      ],
+      "reports": [
+        {
+          "id": "r2",
+          "councillorId": "architect",
+          "revision": 0,
+          "report": {
+            "concerns": [
+              {
+                "summary": "No Gatsby in this repo",
+                "severity": "serious",
+                "reason": "package.json has no dependencies and there are no gatsby-* files"
+              }
+            ],
+            "questions": [
+              "Is this the wrong repo?"
+            ],
+            "recommendations": [
+              "Do no work until the user says what they meant"
+            ],
+            "notChecked": []
+          }
+        },
+        {
+          "id": "r3",
+          "councillorId": "tester",
+          "revision": 0,
+          "report": {
+            "concerns": [],
+            "questions": [],
+            "recommendations": [],
+            "notChecked": [],
+            "bowOut": "Nothing to test: there is no Gatsby here."
+          }
+        }
+      ],
+      "questions": null,
+      "plans": [],
+      "revision": 0,
+      "reconsultations": [],
+      "dialogue": [
+        {
+          "id": "d1",
+          "speaker": "elder",
+          "text": "This repo has no Gatsby, so there is nothing to upgrade here. Tell me what you meant, or dismiss the council and start again in the right repo."
+        },
+        {
+          "id": "d2",
+          "speaker": "you",
+          "text": "Add Gatsby fresh, as a recipe site."
+        },
+        {
+          "id": "d3",
+          "speaker": "architect",
+          "text": "Then it is a new site, not an upgrade: that is a bigger plan. Shall we start over with that task?"
+        }
+      ],
+      "gold": {
+        "kind": "exact",
+        "value": 190000
+      },
+      "error": null,
+      "rating": null,
+      "comparisonOf": null,
+      "consultations": [],
+      "amendments": [],
+      "waiting": false
+    },
+    "islands": [],
+    "heroes": [],
+    "needsYou": []
+  }
+}

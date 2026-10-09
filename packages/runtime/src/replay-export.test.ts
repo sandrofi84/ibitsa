@@ -398,6 +398,12 @@ describe('blanking the elder and the council (#103)', () => {
       },
     },
     { t: 10, kind: 'council', sittingId: 's3', event: { type: 'usage', totalCost: 5 } },
+    { t: 11, kind: 'council', sittingId: 's3', event: { type: 'idle' } },
+    {
+      t: 12,
+      kind: 'command',
+      command: { type: 'consultCouncil', commandId: 'c2', text: 'Contoso, carry on' },
+    },
   ];
   const log: EventLog = {
     header: {
