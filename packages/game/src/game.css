@@ -2226,8 +2226,9 @@ body.in-hut:has(.council-chamber:not([hidden])) .needs-you {
   white-space: pre-wrap;
 }
 
-.hero-pane .reply h3 {
+.hero-pane .reply .from {
   font-size: 12px;
+  font-weight: bold;
   margin: 0 0 4px;
 }
 

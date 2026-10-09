@@ -365,7 +365,7 @@ export function mountHeroPane({
     replyMark.hidden = key === '' || key === seenReply;
     if (!current) return;
     reply.replaceChildren(
-      el('h3', { text: `${current.name} replied` }),
+      el('p', { className: 'from', text: `${current.name} replied` }),
       ...lines.map((l) => el('p', { text: l.text })),
     );
   }
