@@ -20,6 +20,8 @@ export class GamePanel {
   static hostChannel: HostChannel | null = null;
   /** Host events sent to the webview, kept only when integration tests ask for them. */
   static hostTestLog: HostEvent[] | null = null;
+  /** Called when the user closes the game tab (#265); not when VS Code reloads. */
+  static onClosed: (() => void) | null = null;
   private static waiting = 0;
 
   static get visible(): boolean {
@@ -103,7 +105,9 @@ export class GamePanel {
     panel.webview.onDidReceiveMessage((message: unknown) => this.receive(message));
     panel.onDidDispose(() => {
       this.connection?.close();
-      if (GamePanel.current?.panel === panel) GamePanel.current = undefined;
+      if (GamePanel.current?.panel !== panel) return;
+      GamePanel.current = undefined;
+      GamePanel.onClosed?.();
     });
     this.updateTitle();
     this.connect().catch((e: unknown) =>

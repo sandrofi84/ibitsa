@@ -16,6 +16,7 @@ import type { ExportReplayArgs } from './export-replay.types';
 import { exportTallies } from './export-tallies';
 import type { ExportTalliesArgs } from './export-tallies.types';
 import type { IbitsaApi } from './extension.types';
+import { CLOSED_CHOICES, CLOSED_DETAIL, CLOSED_QUESTION, gameClosed } from './game-closed';
 import { GAME_VIEW_TYPE, GamePanel } from './game-panel';
 import { githubToken } from './github-sign-in';
 import { GuildCouncil } from './guild-council';
@@ -125,6 +126,21 @@ export function activate(context: vscode.ExtensionContext): IbitsaApi {
         })
       : null;
   GamePanel.host = host;
+  // Closing the game tab mid-campaign asks whether Ibitsa keeps running (#265).
+  GamePanel.onClosed = () => {
+    void gameClosed({
+      host,
+      ask: async () => {
+        const picked = await vscode.window.showWarningMessage(
+          CLOSED_QUESTION,
+          { modal: true, detail: CLOSED_DETAIL },
+          ...CLOSED_CHOICES.map((c) => c.label),
+        );
+        return CLOSED_CHOICES.find((c) => c.label === picked)?.choice ?? null;
+      },
+      tell: (text) => void vscode.window.showInformationMessage(text),
+    });
+  };
   // Asset packs (#183): the user's and the project's, the active one drawn when the game opens.
   const packs = new PackLibrary({
     home: homedir(),
