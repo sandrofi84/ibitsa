@@ -57,7 +57,12 @@ export function mountHeroPane({
   const badge = el('span', { className: 'badge' });
   const autoBadge = el('span', { className: 'auto-badge', text: 'AUTO' });
   autoBadge.title = 'Auto mode is on';
-  tab.append(dot, tabName, autoBadge, badge);
+  // A reply came in while the pane was collapsed (#262).
+  const replyMark = el('span', { className: 'reply-mark', text: '✉' });
+  replyMark.title = 'New reply';
+  replyMark.setAttribute('aria-label', 'new reply');
+  replyMark.hidden = true;
+  tab.append(dot, tabName, autoBadge, replyMark, badge);
   const body = el('div', { className: 'hero-pane-body' });
   body.id = 'hero-pane-body';
   // With several heroes (#125): one button each, open or collapsed, to choose whom the pane shows.
@@ -104,6 +109,12 @@ export function mountHeroPane({
   // The hero's own summary once it submits: what the "Ready for review!" bubble leads to (#57).
   const summary = el('p', { className: 'summary' });
   summary.hidden = true;
+  // What the hero said back to your last message, in full (#262): not only in the journal.
+  const reply = el('section', { className: 'reply' });
+  reply.setAttribute('aria-live', 'polite');
+  reply.hidden = true;
+  // The reply last seen with the pane open; a newer one marks the collapsed tab.
+  let seenReply = '';
   // Auto mode (#63): a notice while it's on, so it's never on unnoticed.
   const autoNote = el('p', { className: 'auto-note' });
   autoNote.setAttribute('role', 'status');
@@ -134,11 +145,15 @@ export function mountHeroPane({
     view.set(JOURNAL_KEY, journalOpen);
     renderJournal({ follow: true });
   };
-  client.onJournal(() => renderJournal({ follow: false }));
+  client.onJournal(() => {
+    renderReply();
+    renderJournal({ follow: false });
+  });
   body.append(
     title,
     facts,
     summary,
+    reply,
     autoNote,
     sandboxNotice,
     message.element,
@@ -337,7 +352,22 @@ export function mountHeroPane({
       }),
     );
     // The first journal page can arrive before the snapshot naming the hero.
+    renderReply();
     renderJournal({ follow: false });
+  }
+
+  function renderReply(): void {
+    const current = shown(last);
+    const lines = current ? replyTo({ journal: client.journal, heroId: current.id }) : [];
+    reply.hidden = lines.length === 0;
+    const key = lines.map((l) => `${l.t}:${l.text}`).join('\n');
+    if (open && !pane.hidden) seenReply = key;
+    replyMark.hidden = key === '' || key === seenReply;
+    if (!current) return;
+    reply.replaceChildren(
+      el('h3', { text: `${current.name} replied` }),
+      ...lines.map((l) => el('p', { text: l.text })),
+    );
   }
 
   function renderJournal({ follow }: { follow: boolean }): void {
@@ -422,6 +452,25 @@ export function gold(reading: Reading<number>): string {
   if (reading.kind === 'unknown') return 'unknown';
   const dollars = `$${(reading.value / 1_000_000).toFixed(2)}`;
   return reading.kind === 'estimated' ? `~${dollars}` : dollars;
+}
+
+/**
+ * What a hero said back to your last message to it (#262): its lines since then, in order. Nothing
+ * while you haven't written to it, or it hasn't answered yet.
+ */
+export function replyTo({
+  journal,
+  heroId,
+}: {
+  journal: readonly JournalEntry[];
+  heroId: string;
+}): Extract<JournalEntry, { kind: 'said' }>[] {
+  const own = journal.filter((e) => e.heroId === heroId);
+  const asked = own.findLastIndex((e) => e.kind === 'you');
+  if (asked < 0) return [];
+  return own
+    .slice(asked + 1)
+    .filter((e): e is Extract<JournalEntry, { kind: 'said' }> => e.kind === 'said');
 }
 
 /** One journal line: when, who, and what, by kind. */

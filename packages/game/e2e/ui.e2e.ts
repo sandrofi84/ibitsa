@@ -268,6 +268,49 @@ test('speech bubbles: a message excerpt that fades, then "Ready for review!" unt
   await expect.poll(speech).toBeNull();
 });
 
+test('a reply after "Ready for review!" shows over the bubble and in full in the pane (#262)', async ({
+  page,
+}) => {
+  await page.goto('/?fixture=live');
+  await openWelcome(page);
+  await page.getByLabel('Task').fill('Tidy the README');
+  await page.getByRole('button', { name: 'I know the way' }).click();
+  await page.getByRole('button', { name: 'Start quest' }).click();
+  const speech = () => probe(page, (p) => p.hero.speech());
+  const pane = page.getByRole('region', { name: 'Hero' });
+  const reply = pane.locator('.reply');
+  await expect.poll(() => heroState(page)).toBe('idle');
+  // Nothing asked yet, so no reply block.
+  await expect(reply).toBeHidden();
+
+  await pane.getByLabel('Message to the hero').fill('Looks good, submit it');
+  await pane.getByRole('button', { name: 'Send now' }).click();
+  await expect.poll(speech).toBe('Ready for review!');
+
+  // Asked after submitting, the hero's answer shows over "Ready for review!", which then comes back.
+  await pane.getByLabel('Message to the hero').fill('What did you do?');
+  await pane.getByRole('button', { name: 'Send now' }).click();
+  await expect.poll(speech).toBe('Done: What did you do?');
+  await expect(reply).toContainText('Ranger Ilse replied');
+  await expect(reply).toContainText('Done: What did you do?');
+  await page.screenshot({ path: 'test-results/ui-reply-submitted.png' });
+  await expect.poll(speech, { timeout: 8_000 }).toBe('Ready for review!');
+
+  // Collapsed, the pane's tab marks a new reply until it's opened.
+  const tab = pane.getByRole('button', { name: /hero pane/ });
+  await tab.click();
+  const mark = pane.getByLabel('new reply');
+  await expect(mark).toBeHidden();
+  const bar = page.getByRole('combobox', { name: 'Command bar' });
+  await bar.fill('And why?');
+  await page.keyboard.press('Alt+Enter');
+  await expect(mark).toBeVisible();
+  await tab.click();
+  await expect(reply).toContainText('Done: And why?');
+  await expect(reply).not.toContainText('Done: What did you do?');
+  await expect(mark).toBeHidden();
+});
+
 test('the journal lists what happened, newest last, and stays open across collapses (#58)', async ({
   page,
 }) => {

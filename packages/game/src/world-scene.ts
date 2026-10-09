@@ -1046,6 +1046,8 @@ export class HeroToken {
   private readonly speechBox: Phaser.GameObjects.Graphics;
   private readonly speechText: PixelText;
   private speechKind: 'none' | 'message' | 'submitted' = 'none';
+  /** Whether "Ready for review!" belongs over the hero: a message shows over it, then it comes back. */
+  private readyForReview = false;
   /** What the hero is doing, as an icon beside its head (#60); lingers briefly after a test. */
   private readonly icon: Phaser.GameObjects.Sprite;
   private readonly iconKinds: readonly string[];
@@ -1200,17 +1202,25 @@ export class HeroToken {
     return { x: this.container.x, y: this.container.y - this.sprite.height / 2 };
   }
 
-  /** A message from the hero: its excerpt shows for a few seconds, unless "Ready for review!" is up. */
+  /**
+   * A message from the hero: its excerpt shows for a few seconds, whatever the hero is doing (#262). Over
+   * "Ready for review!" too, which comes back once the message has faded.
+   */
   say(text: string): void {
-    if (this.speechKind === 'submitted') return;
     this.showSpeech({ text: speechExcerpt(text), kind: 'message' });
     this.speechFade = this.scene.tweens.add({
       targets: this.speech,
       alpha: 0,
       delay: SPEECH_MS,
       duration: 500,
-      onComplete: () => this.hideSpeech(),
+      onComplete: () => this.settleSpeech(),
     });
+  }
+
+  /** After a message: "Ready for review!" if it still belongs, else no bubble. */
+  private settleSpeech(): void {
+    if (this.readyForReview) this.showSpeech({ text: 'Ready for review!', kind: 'submitted' });
+    else this.hideSpeech();
   }
 
   /**
@@ -1352,10 +1362,11 @@ export class HeroToken {
     }
 
     // "Ready for review!" stays until the quest is finished or the hero gets back to work.
-    const readyForReview = s.kind === 'submitted' && questActive;
-    if (readyForReview && this.speechKind !== 'submitted') {
+    // A message showing keeps the floor; it gives way to "Ready for review!" once it fades (#262).
+    this.readyForReview = s.kind === 'submitted' && questActive;
+    if (this.readyForReview && this.speechKind === 'none') {
       this.showSpeech({ text: 'Ready for review!', kind: 'submitted' });
-    } else if (!readyForReview && this.speechKind === 'submitted') {
+    } else if (!this.readyForReview && this.speechKind === 'submitted') {
       this.hideSpeech();
     }
     // Above the status bubble when one shows, so neither covers the other or the HP bar.
