@@ -272,6 +272,31 @@ test("the hut shows a pack's own room and table, and draws its own without them 
   expect(errors).toEqual([]);
 });
 
+test('New Quest the moment the pack has loaded, as the map starts, still opens the hut (#254)', async ({
+  page,
+}) => {
+  // On the frame the pack scene hands over to the map, before the map is up.
+  await page.addInitScript(() => {
+    const watch = () => {
+      const p = (
+        window as unknown as {
+          __ibitsa?: { packLoads(): number; hostEvent(e: unknown): void };
+        }
+      ).__ibitsa;
+      if (p && p.packLoads() > 0) p.hostEvent({ channel: 'host', type: 'openNewQuest' });
+      else requestAnimationFrame(watch);
+    };
+    requestAnimationFrame(watch);
+  });
+  await page.goto('/?fixture=live');
+  const welcome = page.getByRole('dialog', { name: 'Welcome' });
+  await expect(welcome.getByLabel('Task')).toBeFocused({ timeout: 15_000 });
+  // Cancel: back to the map, which was asleep under the hut.
+  await welcome.getByRole('button', { name: 'Cancel' }).click();
+  await expect.poll(() => hut(page)).toBeNull();
+  await expect(page.getByRole('button', { name: 'Back to the map' })).toBeHidden();
+});
+
 /** Where a row of the 480×270 hut is on the page: the canvas is scaled by whole numbers. */
 async function onPage(page: Page, y: number): Promise<number> {
   const canvas = await page.locator('canvas').boundingBox();
