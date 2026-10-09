@@ -881,4 +881,29 @@ describe('a council waiting on the user (#242)', () => {
     reload.do({ type: 'consultCouncil', text: 'Carry on.' });
     expect(reload.effects.map((e) => e.type)).toEqual(['startSitting', 'sittingMessage']);
   });
+
+  it('waits after a reload when its last turn had ended, even with no idle in the log (#259)', () => {
+    // A log from before #242 never says idle: its turn ended with the usage, every report in.
+    const reload = deliberating()
+      .event({ type: 'said', councillorId: 'elder', text: 'There is nothing to plan here.' })
+      .event({ type: 'usage', totalCost: 1_000 });
+    reload.effects = [];
+    reload.feed({ kind: 'gm', t: 0, event: { type: 'runtimeRestarted' } });
+    expect(reload.effects).toEqual([]);
+    expect(reload.sitting().waiting).toBe(true);
+    expect(reload.cues).not.toContainEqual(expect.objectContaining({ type: 'resumed' }));
+  });
+
+  it('still resumes after a reload while a councillor has yet to report (#259)', () => {
+    // A chamber may still have been studying when the lead's turn ended.
+    const reload = new Council()
+      .convene()
+      .event({ type: 'sessionStarted', sessionId: 's-1' }, 's1')
+      .report('architect')
+      .event({ type: 'usage', totalCost: 1_000 });
+    reload.effects = [];
+    reload.feed({ kind: 'gm', t: 0, event: { type: 'runtimeRestarted' } });
+    expect(reload.effects.map((e) => e.type)).toEqual(['startSitting']);
+    expect(reload.sitting().waiting).toBe(false);
+  });
 });

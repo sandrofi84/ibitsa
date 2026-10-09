@@ -224,6 +224,11 @@ export interface SittingRecord {
    * the user. Cleared when the session takes another turn.
    */
   waiting?: boolean;
+  /**
+   * The lead session's turn ended (its usage came in) and no other has started (#259): on a reload, a
+   * council whose reports are all in had nothing running, so it waits rather than resumes.
+   */
+  turnEnded?: boolean;
   comparisonOf: string | null;
   rating: SittingRating | null;
   usage: { byModel: ModelUsage[]; byCouncillor: { councillorId: string; tokens: number }[] };

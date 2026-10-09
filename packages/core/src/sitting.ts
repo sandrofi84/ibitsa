@@ -165,8 +165,15 @@ export class Sitting {
       return true;
     }
     record.dormant = true;
+    if (record.status !== 'deliberating' || pendingBatch(record)) return false;
+    // A turn that ended with every report in had nothing left running, though a log from before
+    // #242 never said idle (#259): the council waits, as it would have.
+    const allIn = record.roster.every((c) =>
+      record.reports.some((r) => r.councillorId === c.councillorId),
+    );
+    if (record.turnEnded && allIn) record.waiting = true;
     // A council waiting on the user (#242) has nothing to carry on with until the user acts.
-    if (record.status !== 'deliberating' || pendingBatch(record) || record.waiting) return false;
+    if (record.waiting) return false;
     this.wake({ record, prompt: RESUME_PROMPT });
     return true;
   }
@@ -437,6 +444,7 @@ export class Sitting {
       case 'sessionStarted':
         record.sessionId = event.sessionId;
         record.waiting = false;
+        record.turnEnded = false;
         if (record.status === 'convening') record.status = 'deliberating';
         return;
       case 'idle':
@@ -444,6 +452,7 @@ export class Sitting {
         if (record.status === 'deliberating' && !pendingBatch(record)) record.waiting = true;
         return;
       case 'usage':
+        record.turnEnded = true;
         record.gold = { kind: 'exact', value: event.totalCost };
         if (event.byModel) record.usage.byModel = event.byModel;
         if (event.byCouncillor) record.usage.byCouncillor = event.byCouncillor;
