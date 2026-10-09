@@ -319,7 +319,7 @@ test('the hero pane folds away when the quest ends, stays out of the hut, and op
   await page.goto('/?fixture=live');
   await openWelcome(page);
   await page.getByLabel('Task').fill('Tidy the README');
-  await page.getByRole('button', { name: 'I know the way' }).click();
+  await page.getByRole('button', { name: 'Start a quick quest now' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   const pane = page.getByRole('region', { name: 'Hero' });
   const body = page.locator('#hero-pane-body');
@@ -345,7 +345,7 @@ test('the hero pane folds away when the quest ends, stays out of the hut, and op
 
   // The next quest's hero gets it, open.
   await page.getByLabel('Task').fill('Fix the footer');
-  await page.getByRole('button', { name: 'I know the way' }).click();
+  await page.getByRole('button', { name: 'Start a quick quest now' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   await expect.poll(() => probe(page, (p) => p.snapshot()?.campaign?.status)).toBe('active');
   await expect(body).toBeVisible();
