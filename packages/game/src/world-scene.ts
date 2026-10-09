@@ -213,7 +213,11 @@ export class WorldScene extends Phaser.Scene {
     g.fillStyle(0x2a1a10).fillRect(19, 32, 10, 14);
     g.fillStyle(0x2f5fb0).fillRect(8, 22, 6, 10);
     return g
-      .setInteractive(new Phaser.Geom.Rectangle(0, 0, 48, 48), Phaser.Geom.Rectangle.Contains)
+      .setInteractive({
+        hitArea: new Phaser.Geom.Rectangle(0, 0, 48, 48),
+        hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+        useHandCursor: true,
+      })
       .on('pointerdown', open);
   }
 
