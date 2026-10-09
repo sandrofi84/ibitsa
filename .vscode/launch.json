@@ -11,6 +11,25 @@
       ],
       "outFiles": ["${workspaceFolder}/packages/extension/dist/**/*.cjs"],
       "preLaunchTask": "build"
+    },
+    {
+      "name": "Run Ibitsa in a folder…",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--disable-extensions",
+        "--extensionDevelopmentPath=${workspaceFolder}/packages/extension",
+        "${input:folder}"
+      ],
+      "outFiles": ["${workspaceFolder}/packages/extension/dist/**/*.cjs"],
+      "preLaunchTask": "build"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "folder",
+      "type": "promptString",
+      "description": "The repository to open Ibitsa in (absolute path)"
     }
   ]
 }
