@@ -2,6 +2,7 @@ import { expect, type Page, test } from '@playwright/test';
 
 interface Probe {
   hut(): { speaker: string | null; step: string } | null;
+  hutOnPage(): { x: number; y: number } | null;
   status(): { waitingFor: string | null };
   snapshot(): { sitting: { status: string } | null } | null;
 }
@@ -118,6 +119,49 @@ test('"Later" puts the questions in "Needs you", and "Answer" brings them back (
   await expect(box).toBeVisible();
   await expect(box.getByRole('radio', { name: /Email and password/ })).toBeFocused();
   await expect.poll(() => probe(page, (p) => p.hut()?.speaker)).toBe('architect');
+});
+
+test("the hut's door leads back to the map; the council keeps sitting, and the hut or Answer leads back in (#245)", async ({
+  page,
+}) => {
+  const errors = watchErrors(page);
+  await page.goto('/?fixture=m3-round-table&autoplay=1&speed=16&mode=interactive');
+  await expect
+    .poll(() => probe(page, (p) => p.status().waitingFor), { timeout: 20_000 })
+    .toBe('answerCouncil');
+  const box = page.getByRole('dialog', { name: 'The council asks' });
+  const item = page.locator('.needs-you .item.council');
+  const exit = page.getByRole('button', { name: 'Back to the map' });
+  await expect(box).toBeVisible();
+  await expect(exit).toBeVisible();
+  await page.screenshot({ path: 'test-results/hut-exit.png' });
+
+  await exit.click();
+  // The map, with the questions waiting in Needs you; the sitting goes on.
+  await expect.poll(() => probe(page, (p) => p.hut())).toBeNull();
+  await expect(exit).toBeHidden();
+  await expect(box).toBeHidden();
+  await expect(item).toBeVisible();
+  expect(await probe(page, (p) => p.snapshot()?.sitting?.status)).toBe('deliberating');
+
+  // Clicking the council hut goes back in, to the same questions.
+  await expect(async () => {
+    const at = await probe(page, (p) => p.hutOnPage());
+    expect(at).not.toBeNull();
+    if (at) await page.mouse.click(at.x, at.y);
+    expect(await probe(page, (p) => p.hut())).not.toBeNull();
+  }).toPass({ timeout: 10_000 });
+  await expect(box).toBeVisible();
+  await expect(box).toContainText('Which sign-in methods?');
+
+  // Out again, and Answer in Needs you leads back in too.
+  await exit.click();
+  await expect.poll(() => probe(page, (p) => p.hut())).toBeNull();
+  await item.getByRole('button', { name: 'Answer' }).click();
+  await expect.poll(() => probe(page, (p) => p.hut())).not.toBeNull();
+  await expect(box).toBeVisible();
+  await expect(box.getByRole('radio', { name: /Email and password/ })).toBeFocused();
+  expect(errors).toEqual([]);
 });
 
 test('a council that waits on you says so, hears you from the command bar, and can be dismissed (#242)', async ({
