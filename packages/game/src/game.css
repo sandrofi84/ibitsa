@@ -1773,8 +1773,17 @@ body.in-hut:has(.council-chamber:not([hidden])) .needs-you {
   color: #4a3a6a;
 }
 
+/* What happens next, and OK to put it away until something new is said (#269). */
+.council-word .council-word-foot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+}
+
 .council-word .council-word-note {
-  margin: 4px 0 0;
+  margin: 0;
   font-style: italic;
 }
 
@@ -1893,13 +1902,25 @@ body.in-hut .needs-you .item.council[data-waiting] {
     sans-serif;
   color: #1a1420;
   z-index: 30;
-  display: flex;
+  display: grid;
   gap: 6px;
-  align-items: center;
 }
 
 .council-notice[hidden] {
   display: none;
+}
+
+/* It stays until read (#269): a long reply scrolls, its OK below it. */
+.council-notice .council-notice-words {
+  margin: 0;
+  max-height: 30vh;
+  overflow: auto;
+}
+
+.council-notice .council-notice-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
 }
 
 /* An amendment to the approved plan (#170): its change set, each line marked, over the map. */

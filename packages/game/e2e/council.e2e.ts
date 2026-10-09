@@ -59,6 +59,11 @@ test('asks the council mid-campaign with @council and @tester, and in its chambe
   await bar.fill('@tester anything to add?');
   await bar.press('Enter');
   await expect(notice).toContainText('tester here', { timeout: 10_000 });
+  // A reply stays until read (#269): a newer one took the elder's place; OK or Escape puts it away.
+  await expect(notice).not.toContainText('The campaign is on track');
+  await notice.getByRole('button', { name: 'OK' }).focus();
+  await page.keyboard.press('Escape');
+  await expect(notice).toBeHidden();
   const lines = await probe(page, (p) => p.snapshot()?.sitting?.dialogue.map((d) => d.speaker));
   expect(lines?.slice(-4)).toEqual(['you', 'elder', 'you', 'tester']);
 
@@ -92,4 +97,24 @@ test('asks the council mid-campaign with @council and @tester, and in its chambe
   await expect(chamber).toBeHidden();
   expect(await probe(page, (p) => p.councilChamber())).toBe(false);
   expect(errors).toEqual([]);
+});
+
+test("the council's reply on the map stays until read, however long that takes (#269)", async ({
+  page,
+}) => {
+  await page.clock.install();
+  await page.goto('/?fixture=live&campaign=separate');
+  await expect
+    .poll(() => probe(page, (p) => p.snapshot()?.sitting?.status), { timeout: 15_000 })
+    .toBe('approved');
+  const bar = page.getByRole('combobox', { name: 'Command bar' });
+  await bar.fill('@council how is the campaign going?');
+  await bar.press('Enter');
+  const notice = page.getByRole('status').filter({ hasText: 'Open the hut' });
+  await expect(notice).toContainText('The campaign is on track', { timeout: 10_000 });
+  // Long past the ten seconds it used to stay for.
+  await page.clock.fastForward('01:00');
+  await expect(notice).toContainText('The campaign is on track');
+  await notice.getByRole('button', { name: 'OK' }).click();
+  await expect(notice).toBeHidden();
 });
