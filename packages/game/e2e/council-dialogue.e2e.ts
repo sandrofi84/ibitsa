@@ -220,6 +220,11 @@ test('a council that waits on you says so, hears you from the command bar, and c
     'You: Add Gatsby fresh, as a recipe site.',
     /^Architect: Then it is a new site/,
   ]);
+  // It stays until read (#269): OK puts it away, back to the bar, until something new is said.
+  // (By keyboard: the standalone build's replay controls sit over its corner.)
+  await word.getByRole('button', { name: 'OK' }).press('Enter');
+  await expect(word).toBeHidden();
+  await expect(bar).toBeFocused();
 
   // Dismiss asks once more, then the sitting ends and the map comes back.
   await expect.poll(() => probe(page, (p) => p.status().waitingFor)).toBe('dismissCouncil');
