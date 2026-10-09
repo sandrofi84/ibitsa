@@ -5,7 +5,7 @@ import type { GameClient } from './client';
 import type { CommandHistory } from './command-history';
 import { createCommandInput } from './command-input';
 import { button, el } from './dom';
-import type { HeroPane } from './hero-pane.types';
+import type { CampaignMark, HeroPane } from './hero-pane.types';
 import type { HeroSelection } from './hero-selection';
 import { BLOCKED_REASONS, heroClasses, STATE_LABELS, sandboxNote } from './heroes';
 import type { Host } from './host.types';
@@ -165,7 +165,26 @@ export function mountHeroPane({
 
   let confirmAbandon = false;
   let confirmAuto = false;
-  client.onSnapshot((snapshot) => render(snapshot));
+  // The campaign the last snapshot showed, and whether its end collapsed the pane (#263).
+  let mark: CampaignMark | null = null;
+  let collapsedByEnd = false;
+  client.onSnapshot((snapshot) => {
+    const now = snapshot.campaign
+      ? { id: snapshot.campaign.id, status: snapshot.campaign.status }
+      : null;
+    const turn = paneTurn({ was: mark, now });
+    mark = now;
+    if (turn === 'collapse' && open) {
+      collapsedByEnd = true;
+      open = false;
+      view.set(OPEN_KEY, false);
+    } else if (turn === 'reopen' && collapsedByEnd) {
+      collapsedByEnd = false;
+      open = true;
+      view.set(OPEN_KEY, true);
+    }
+    render(snapshot);
+  });
 
   function render(snapshot: Snapshot): void {
     last = snapshot;
@@ -452,6 +471,25 @@ export function gold(reading: Reading<number>): string {
   if (reading.kind === 'unknown') return 'unknown';
   const dollars = `$${(reading.value / 1_000_000).toFixed(2)}`;
   return reading.kind === 'estimated' ? `~${dollars}` : dollars;
+}
+
+/**
+ * What a campaign's turn does to the pane (#263): it collapses to its tab once the campaign it showed
+ * ends, keeping **Remove worktree** a click away; the next campaign's work reopens it. Nothing on a
+ * first look (a reload keeps your choice) or while the campaign carries on.
+ */
+export function paneTurn({
+  was,
+  now,
+}: {
+  was: CampaignMark | null;
+  now: CampaignMark | null;
+}): 'collapse' | 'reopen' | null {
+  if (!was || !now) return null;
+  const going = was.status === 'active' && was.id === now.id;
+  if (going && now.status !== 'active') return 'collapse';
+  if (!going && now.status === 'active') return 'reopen';
+  return null;
 }
 
 /**
