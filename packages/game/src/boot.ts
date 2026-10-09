@@ -19,6 +19,9 @@ import { HeroSelection } from './hero-selection';
 import { setHeroClasses } from './heroes';
 import { reportDiagnostics } from './host';
 import type { Diagnostics, Host } from './host.types';
+import { HutDoor } from './hut-door';
+import type { HutDoorInput } from './hut-door.types';
+import { mountHutExit } from './hut-exit';
 import { HutScene } from './hut-scene';
 import { HUT_FEED } from './hut-view';
 import type { HutFeed } from './hut-view.types';
@@ -153,6 +156,8 @@ export function startGame(root: HTMLElement, host: Host): Started {
       if (sitting) sittingFeed.update({ sitting, focus });
     },
   });
+  /** Back into the hut, if the user had left it (#245); set once the game is up. */
+  let enterHut = () => {};
   const view = new ViewState(host.viewStorage);
   // Which hero the pane shows and the bar speaks to (#125); the map follows it too.
   const selection = new HeroSelection(view);
@@ -170,9 +175,16 @@ export function startGame(root: HTMLElement, host: Host): Started {
   const newParty = mountNewParty({ client, partyCheck });
   mountNeedsYouPanel({
     client,
-    openCouncil: () => councilDialogue.focus(),
+    // Answered in the hut: back in first, if the user had left it (#245).
+    openCouncil: () => {
+      enterHut();
+      return councilDialogue.focus();
+    },
     // The council waiting on the user (#242): the command bar talks to it while it sits.
-    replyToCouncil: () => commandBar.focus(),
+    replyToCouncil: () => {
+      enterHut();
+      commandBar.focus();
+    },
     selectHero: (heroId) => selection.select(heroId),
     openTask: (taskPointId) => taskPanel.open(taskPointId),
     reviewAmendment: () => amendmentReview.focus(),
@@ -412,20 +424,22 @@ export function startGame(root: HTMLElement, host: Host): Started {
   game.events.on(HUT_SELECTED, () => {
     const status = client.snapshot?.campaign?.status;
     if (!status || status === 'finished' || status === 'abandoned') newQuest.open();
-    else chamber.open();
+    else if (status === 'active') chamber.open();
+    // While the council sits, back in to it (#245).
+    else enterHut();
   });
   // The pack's sounds on what happens, at the user's volumes (#184).
   const soundBoard = mountSoundBoard({ game, client, host });
   // The Guild Hall in Home Village opens Ibitsa's settings (#179).
   const guildHall = mountGuildHall({ client, host, partyCheck });
   game.events.on(GUILD_HALL_SELECTED, () => guildHall.open());
-  // The hut shows while the council sits (§7.1 screen 2), and the map comes back after.
+  // The hut shows while the council sits (§7.1 screen 2), and the map comes back after, or when the
+  // user leaves by the hut's door (#245).
+  const door = new HutDoor();
   let sittingHut = false;
-  client.onSnapshot((snapshot) => {
-    sitting = isSitting(snapshot.sitting) ? snapshot.sitting : null;
-    // The command bar talks to the council while it sits (#242).
-    document.body.classList.toggle('council-sitting', sitting !== null);
-    if (sitting) {
+  const placeHut = (snapshot: HutDoorInput) => {
+    if (chamberHut) return;
+    if (door.see(snapshot) === 'sitting' && sitting) {
       sittingFeed.update({ sitting, focus });
       if (!sittingHut) {
         sittingHut = true;
@@ -435,6 +449,24 @@ export function startGame(root: HTMLElement, host: Host): Started {
       sittingHut = false;
       hideHut();
     }
+  };
+  client.onSnapshot((snapshot) => {
+    sitting = isSitting(snapshot.sitting) ? snapshot.sitting : null;
+    // The command bar talks to the council while it sits (#242).
+    document.body.classList.toggle('council-sitting', sitting !== null);
+    placeHut(snapshot);
+  });
+  enterHut = () => {
+    door.enter();
+    placeHut(client.snapshot);
+  };
+  mountHutExit(() => {
+    if (chamber.shown()) {
+      chamber.close();
+      return;
+    }
+    door.leave(client.snapshot);
+    placeHut(client.snapshot);
   });
   const hutScene = () => game.scene.getScene('hut') as HutScene | null;
   const hut = () => (hutScene()?.sys.isActive() ? (hutScene()?.rendered() ?? null) : null);

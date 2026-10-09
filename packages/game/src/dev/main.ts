@@ -140,7 +140,7 @@ if (name === 'live') {
   }
 } else {
   const host = new DevHost(parseLog(text), options);
-  const { client, zoom, hero, camera, hut } = startGame(root, host);
+  const { client, zoom, hero, camera, hut, hutOnPage } = startGame(root, host);
   mountOverlay({ host, fixtures: [...Object.keys(fixtures), 'live'], current: name });
   w.__ibitsa = {
     snapshot: () => client.snapshot,
@@ -149,6 +149,8 @@ if (name === 'live') {
     hero,
     camera,
     hut,
+    // Back into the hut after leaving it (#245).
+    hutOnPage,
   };
   client.onSnapshot(() => {
     if (

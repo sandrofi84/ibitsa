@@ -957,6 +957,37 @@ body.in-hut:has(.plan-review:not([hidden])) .command-bar {
   display: none;
 }
 
+/*
+ * The hut's door back to the map (#245), top left, where the map's camera buttons are. Out of the hut
+ * the council's boxes wait for the user to come back; its questions are in Needs you.
+ */
+.hut-exit {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  display: none;
+  font:
+    13px / 1.4 system-ui,
+    sans-serif;
+  padding: 3px 10px;
+  border: 1px solid #5e3b1c;
+  background: #efe0b8;
+  color: #1a1420;
+  border-radius: 3px;
+}
+
+body.in-hut .hut-exit {
+  display: block;
+}
+
+.hut-exit:focus-visible {
+  outline: 2px solid #f2c230;
+}
+
+body:not(.in-hut) :is(.council-dialogue, .plan-review, .council-pane, .council-word) {
+  display: none;
+}
+
 .council-dialogue {
   position: fixed;
   left: 50%;
