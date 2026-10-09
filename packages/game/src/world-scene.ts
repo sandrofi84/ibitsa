@@ -23,6 +23,7 @@ import {
 import type { BridgeLayout, IslandLayout, Point, WorldLayout } from './layout.types';
 import { marker } from './map-markers';
 import { BRIDGE_KEY, PACK_KEY, SCENE_KEYS } from './pack-scene';
+import { addPixelText, type PixelText } from './pixel-text';
 import { activityMoment, availablePose, heroMoment, heroPose } from './poses';
 import type { MapPose } from './poses.types';
 import { badgeOf } from './pull-requests';
@@ -65,12 +66,6 @@ const TASK_FRAME: Record<TaskPointState, number> = {
   doneUnreviewed: 2,
 };
 
-const textStyle = (color = '#ffffff'): Phaser.Types.GameObjects.Text.TextStyle => ({
-  fontFamily: 'monospace',
-  fontSize: '8px',
-  color,
-});
-
 /** The world map (spec §7.2), drawn only from snapshots. */
 export class WorldScene extends Phaser.Scene {
   private manifest!: Manifest;
@@ -89,8 +84,8 @@ export class WorldScene extends Phaser.Scene {
    * take the click meant for it.
    */
   private badgeLayer!: Phaser.GameObjects.Container;
-  private hud!: Phaser.GameObjects.Text;
-  private empty!: Phaser.GameObjects.Text;
+  private hud!: PixelText;
+  private empty!: PixelText;
   private readonly heroes = new Map<string, HeroToken>();
   /** Councillors out reviewing (#140), by review; and the reviews whose councillor has gone home. */
   private readonly reviewers = new Map<string, CouncillorToken>();
@@ -105,7 +100,7 @@ export class WorldScene extends Phaser.Scene {
   /** Ibitsa has faded into the mist this campaign (#180), so a redraw shows it faded at once. */
   private misted = false;
   /** "GUILD HALL" and "COUNCIL HUT" over Home Village's buildings on the start screen (#180). */
-  private startLabels: Phaser.GameObjects.Text[] = [];
+  private startLabels: PixelText[] = [];
   /** The hero the camera follows when chosen in the hero pane (#125); else the first one working. */
   private selected: string | null = null;
   private last: Snapshot | null = null;
@@ -179,12 +174,20 @@ export class WorldScene extends Phaser.Scene {
 
   /** The middle of the council hut on the map (#169), for tests that click it. */
   /** The start screen's labels over the Guild Hall and the council hut (#180). */
-  private labelBuildings(v: WorldLayout['village']): Phaser.GameObjects.Text[] {
+  private labelBuildings(v: WorldLayout['village']): PixelText[] {
     this.startLabels = [
-      this.add
-        .text(v.guildHall.x + 24, v.guildHall.y - 2, 'GUILD HALL', textStyle('#f2c230'))
-        .setOrigin(0.5, 1),
-      this.add.text(v.hut.x + 32, v.hut.y, 'COUNCIL HUT', textStyle('#f2c230')).setOrigin(0.5, 1),
+      addPixelText(this, {
+        x: v.guildHall.x + 24,
+        y: v.guildHall.y - 2,
+        text: 'GUILD HALL',
+        color: '#f2c230',
+      }).setOrigin(0.5, 1),
+      addPixelText(this, {
+        x: v.hut.x + 32,
+        y: v.hut.y,
+        text: 'COUNCIL HUT',
+        color: '#f2c230',
+      }).setOrigin(0.5, 1),
     ];
     return this.startLabels;
   }
@@ -204,7 +207,12 @@ export class WorldScene extends Phaser.Scene {
     text: string;
     dim?: boolean;
   }): Phaser.GameObjects.Container {
-    const label = this.add.text(0, 0, text, textStyle(dim ? '#5a6988' : '#3e2731')).setOrigin(0.5);
+    const label = addPixelText(this, {
+      x: 0,
+      y: 0,
+      text,
+      color: dim ? '#5a6988' : '#3e2731',
+    }).setOrigin(0.5);
     const width = Math.ceil(label.width) + 6;
     const height = Math.ceil(label.height) + 2;
     const plate = this.add
@@ -312,9 +320,12 @@ export class WorldScene extends Phaser.Scene {
     this.badgeLayer = this.add.container(0, 0);
     // Over the village's labels, where the opening view looks (#243).
     const home = villageCenter(this.layout);
-    this.empty = this.add
-      .text(home.x, v.hut.y - 24, 'No quest yet', textStyle('#d8ecff'))
-      .setOrigin(0.5);
+    this.empty = addPixelText(this, {
+      x: home.x,
+      y: v.hut.y - 24,
+      text: 'No quest yet',
+      color: '#d8ecff',
+    }).setOrigin(0.5);
     this.world.add([
       village,
       // Mid-campaign the hut opens the council's chamber (#169).
@@ -332,7 +343,7 @@ export class WorldScene extends Phaser.Scene {
       this.empty,
       this.badgeLayer,
     ]);
-    this.hud = this.add.text(6, 4, '', textStyle());
+    this.hud = addPixelText(this, { x: 6, y: 4, text: '', color: '#ffffff' });
 
     this.setUpCamera();
 
@@ -774,11 +785,13 @@ export class WorldScene extends Phaser.Scene {
     const g = (badge.color >> 8) & 0xff;
     const b = badge.color & 0xff;
     const light = 0.299 * r + 0.587 * g + 0.114 * b > 140;
-    const text = this.add
-      .text(at.x, at.y, ` ${badge.label} `, {
-        ...textStyle(light ? '#1a1420' : '#ffffff'),
-        backgroundColor: `#${badge.color.toString(16).padStart(6, '0')}`,
-      })
+    const text = addPixelText(this, {
+      x: at.x,
+      y: at.y,
+      text: ` ${badge.label} `,
+      color: light ? '#1a1420' : '#ffffff',
+      background: `#${badge.color.toString(16).padStart(6, '0')}`,
+    })
       .setOrigin(1, 0)
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', (pointer: Phaser.Input.Pointer) => {
@@ -845,7 +858,10 @@ export class WorldScene extends Phaser.Scene {
     const castle = this.textures.exists(SCENE_KEYS.ibitsa)
       ? this.add.image(x, y + IBITSA_BASE, SCENE_KEYS.ibitsa).setOrigin(0.5, 1)
       : this.drawnCastle({ x, y });
-    const name = this.add.text(x, y - 14, 'IBITSA', textStyle('#c8d0dc')).setOrigin(0.5, 1);
+    const name = addPixelText(this, { x, y: y - 14, text: 'IBITSA', color: '#c8d0dc' }).setOrigin(
+      0.5,
+      1,
+    );
     castle.setAlpha(0.7);
     this.questLayer.add([castle, name]);
     if (!shipped) return;
@@ -853,9 +869,13 @@ export class WorldScene extends Phaser.Scene {
     mist.fillStyle(0xe8eef4, 0.75);
     for (let k = 0; k < 4; k++) mist.fillEllipse(x - 24 + k * 16, y + 4 - (k % 2) * 8, 40, 22);
     // Above the castle's name, clear of the heroes who sail up below it.
-    const line = this.add
-      .text(x, y - 28, VOYAGE_LINE, { ...textStyle('#ffffff'), backgroundColor: '#1a1420' })
-      .setOrigin(0.5, 1);
+    const line = addPixelText(this, {
+      x,
+      y: y - 28,
+      text: VOYAGE_LINE,
+      color: '#ffffff',
+      background: '#1a1420',
+    }).setOrigin(0.5, 1);
     this.questLayer.add([mist, line]);
     if (this.misted || reducedMotion()) {
       this.misted = true;
@@ -1013,11 +1033,11 @@ export class HeroToken {
   private readonly container: Phaser.GameObjects.Container;
   private readonly sprite: Phaser.GameObjects.Sprite;
   private readonly hpBar: Phaser.GameObjects.Graphics;
-  private readonly bubble: Phaser.GameObjects.Text;
+  private readonly bubble: PixelText;
   /** Speech: a message excerpt that fades, or "Ready for review!" while submitted (#57). */
   private readonly speech: Phaser.GameObjects.Container;
   private readonly speechBox: Phaser.GameObjects.Graphics;
-  private readonly speechText: Phaser.GameObjects.Text;
+  private readonly speechText: PixelText;
   private speechKind: 'none' | 'message' | 'submitted' = 'none';
   /** What the hero is doing, as an icon beside its head (#60); lingers briefly after a test. */
   private readonly icon: Phaser.GameObjects.Sprite;
@@ -1033,7 +1053,7 @@ export class HeroToken {
   private state: HeroView['state']['kind'] = 'traveling';
   private readonly padlock: Phaser.GameObjects.Sprite;
   private readonly hourglass: Phaser.GameObjects.Sprite | Phaser.GameObjects.Graphics;
-  private readonly blockedLabel: Phaser.GameObjects.Text;
+  private readonly blockedLabel: PixelText;
   private blocked: 'slot' | 'previousIsland' | 'dependency' | null = null;
   /** The pose it holds for its state (#222), and the one it plays: a brief pose interrupts it. */
   private held: MapPose = 'idle';
@@ -1078,11 +1098,18 @@ export class HeroToken {
         if (onCanvas(pointer)) scene.game.events.emit(HERO_SELECTED, hero.id);
       });
     this.hpBar = scene.add.graphics();
-    this.bubble = scene.add
-      .text(0, -26, '', { ...textStyle('#1a1420'), backgroundColor: '#f2c230' })
-      .setOrigin(0.5);
+    this.bubble = addPixelText(scene, {
+      x: 0,
+      y: -26,
+      text: '',
+      color: '#1a1420',
+      background: '#f2c230',
+    }).setOrigin(0.5);
     this.speechBox = scene.add.graphics();
-    this.speechText = scene.add.text(0, -3, '', textStyle('#1a1420')).setOrigin(0.5, 1);
+    this.speechText = addPixelText(scene, { x: 0, y: -3, text: '', color: '#1a1420' }).setOrigin(
+      0.5,
+      1,
+    );
     this.speechText
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', (pointer: Phaser.Input.Pointer) => {
@@ -1100,8 +1127,13 @@ export class HeroToken {
     // Under review (#140): it waits idle on its task point under an hourglass.
     this.hourglass = marker({ scene, kind: 'hourglass', at: { x: 0, y: -26 } });
     this.hourglass.setVisible(false);
-    this.blockedLabel = scene.add
-      .text(0, -36, '', { ...textStyle('#1a1420'), backgroundColor: '#f3ead2' })
+    this.blockedLabel = addPixelText(scene, {
+      x: 0,
+      y: -36,
+      text: '',
+      color: '#1a1420',
+      background: '#f3ead2',
+    })
       .setOrigin(0.5)
       .setVisible(false);
     this.sprite

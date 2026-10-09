@@ -40,6 +40,7 @@ export default defineConfig({
         'packages/game/src/parties.ts',
         'packages/game/src/slash-menu.ts',
         'packages/game/src/layout.ts',
+        'packages/game/src/font.ts',
         'packages/game/src/reviewers.ts',
         'packages/game/src/view-state.ts',
         'packages/game/src/viewport.ts',

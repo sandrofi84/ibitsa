@@ -1,5 +1,6 @@
 import type * as Phaser from 'phaser';
 import type { HutMode, HutStep } from './hut-view.types';
+import type { PixelText } from './pixel-text';
 
 /** The game objects for one seat at the table. */
 export interface SeatObjects {
@@ -11,11 +12,11 @@ export interface SeatObjects {
   pose: { texture: string; animation: string; scale: number };
   sprite: Phaser.GameObjects.Sprite;
   glow: Phaser.GameObjects.Ellipse;
-  label: Phaser.GameObjects.Text;
+  label: PixelText;
   /** The name plate behind the label, on the table's front (#233). */
   plate: Phaser.GameObjects.Rectangle;
   hand: Phaser.GameObjects.Container;
-  mark: Phaser.GameObjects.Text;
+  mark: PixelText;
   book: Phaser.GameObjects.Rectangle;
 }
 

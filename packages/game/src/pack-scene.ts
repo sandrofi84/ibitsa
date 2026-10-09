@@ -1,6 +1,7 @@
 import type { Manifest } from '@ibitsa/assets';
 import * as Phaser from 'phaser';
 import { councilTexture } from './council-look';
+import { FONT_FILES, FONT_KEY } from './font';
 import { HUT_FEED } from './hut-view';
 
 export const PACK_KEY = 'pack';
@@ -44,6 +45,11 @@ export class PackScene extends Phaser.Scene {
       anims: new Set(this.anims.toJSON().anims.map((a) => a.key)),
     };
     this.load.json(PACK_KEY, this.url('pack.json'));
+    // The game's own font (#246), loaded once beside the first pack and kept across switches.
+    if (!this.cache.bitmapFont.exists(FONT_KEY)) {
+      const base = this.registry.get('assetBase') as string;
+      this.load.bitmapFont(FONT_KEY, `${base}${FONT_FILES.image}`, `${base}${FONT_FILES.data}`);
+    }
   }
 
   create(): void {
@@ -99,7 +105,9 @@ export class PackScene extends Phaser.Scene {
         ((this.registry.get('packLoads') as number | undefined) ?? 0) + 1,
       );
       this.registry.set(PACK_KEYS, {
-        textures: this.textures.getTextureKeys().filter((k) => !this.before.textures.has(k)),
+        textures: this.textures
+          .getTextureKeys()
+          .filter((k) => !this.before.textures.has(k) && k !== FONT_KEY),
         anims: this.anims
           .toJSON()
           .anims.map((a) => a.key)

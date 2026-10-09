@@ -18,6 +18,7 @@ import {
 } from './hut-view';
 import type { HutFeed, HutView, NamePlate, WalkIn } from './hut-view.types';
 import { PACK_KEY, SCENE_KEYS } from './pack-scene';
+import { addPixelText, type PixelText } from './pixel-text';
 import { recoloredCharacter, recolorOf } from './recolor';
 import { packLook } from './sitting-hut';
 
@@ -28,11 +29,6 @@ const FOOT = TABLE_TOP + 16;
 const TABLE_DEPTH = 10;
 const STUDY_DOTS = ['•', '••', '•••'];
 
-const text = (color: string): Phaser.Types.GameObjects.Text.TextStyle => ({
-  fontFamily: 'monospace',
-  fontSize: '8px',
-  color,
-});
 const CREAM = '#f3ead2';
 const DIM = '#8a7a66';
 const GOLD = '#f2c230';
@@ -62,12 +58,12 @@ export class HutScene extends Phaser.Scene {
   private manifest!: Manifest;
   private view!: HutView;
   private readonly seats = new Map<string, SeatObjects>();
-  private steps: { step: string; label: Phaser.GameObjects.Text }[] = [];
-  private modeLabel!: Phaser.GameObjects.Text;
-  private decisionsLabel!: Phaser.GameObjects.Text;
+  private steps: { step: string; label: PixelText }[] = [];
+  private modeLabel!: PixelText;
+  private decisionsLabel!: PixelText;
   private decisionsPlate!: Phaser.GameObjects.Rectangle;
   /** Measures titles in the plates' font, to size and place the plates (#233). */
-  private measurer!: Phaser.GameObjects.Text;
+  private measurer!: PixelText;
   private dots = 0;
   /** Until the first view is drawn: a hut opened mid-sitting shows everyone seated (#219). */
   private first = true;
@@ -105,7 +101,7 @@ export class HutScene extends Phaser.Scene {
   /** What the scene shows, read back from its objects. */
   rendered(): HutRendered {
     const lit = [...this.seats].find(([, s]) => s.glow.visible)?.[0] ?? null;
-    const step = this.steps.find((s) => s.label.style.color === GOLD)?.step ?? 'goal';
+    const step = this.steps.find((s) => s.label.color === GOLD)?.step ?? 'goal';
     return {
       mode: this.view.mode,
       step: step as HutRendered['step'],
@@ -189,11 +185,10 @@ export class HutScene extends Phaser.Scene {
         .fillRect(W / 2 + 1, TABLE_TOP - 3, 9, 6);
     }
     this.decisionsPlate = this.plate({ x: W / 2, y: DECISIONS_Y });
-    this.decisionsLabel = this.add
-      .text(W / 2, DECISIONS_Y, '', text(INK))
+    this.decisionsLabel = addPixelText(this, { x: W / 2, y: DECISIONS_Y, text: '', color: INK })
       .setOrigin(0.5)
       .setDepth(TABLE_DEPTH + 3);
-    this.measurer = this.add.text(0, 0, '', text(INK)).setVisible(false);
+    this.measurer = addPixelText(this, { x: 0, y: 0, text: '', color: INK }).setVisible(false);
   }
 
   private drawTracker(): void {
@@ -202,18 +197,21 @@ export class HutScene extends Phaser.Scene {
     const row = this.add.container(0, 4);
     let x = 0;
     this.steps = HUT_STEPS.map(({ step, label }, i) => {
-      const t = this.add.text(x, 0, label, text(DIM));
+      const t = addPixelText(this, { x: x, y: 0, text: label, color: DIM });
       row.add(t);
       x += t.width + 4;
       if (i < HUT_STEPS.length - 1) {
-        const sep = this.add.text(x, 0, '›', text(DIM));
+        const sep = addPixelText(this, { x: x, y: 0, text: '›', color: DIM });
         row.add(sep);
         x += sep.width + 4;
       }
       return { step, label: t };
     });
     row.setX(Math.round((W - (x - 4)) / 2));
-    this.modeLabel = this.add.text(W / 2, 15, '', text(CREAM)).setOrigin(0.5, 0);
+    this.modeLabel = addPixelText(this, { x: W / 2, y: 15, text: '', color: CREAM }).setOrigin(
+      0.5,
+      0,
+    );
   }
 
   private render(view: HutView): void {
@@ -368,7 +366,7 @@ export class HutScene extends Phaser.Scene {
     const look = councilLook(this.character(appearance), 'idle');
     const bubble = this.add.container(x + 16, FOOT - 56, [
       this.add.rectangle(0, 0, 9, 11, 0xfdfaf0).setStrokeStyle(1, 0x1a1420),
-      this.add.text(0, 0, '!', text('#1a1420')).setOrigin(0.5),
+      addPixelText(this, { x: 0, y: 0, text: '!', color: '#1a1420' }).setOrigin(0.5),
     ]);
     const objects: SeatObjects = {
       x,
@@ -377,16 +375,14 @@ export class HutScene extends Phaser.Scene {
       pose: { texture: look.texture, animation: look.animation, scale: look.scale },
       glow: this.add.ellipse(x, FOOT - 26, 58, 66, 0xfff2b0, 0.3).setVisible(false),
       sprite: this.add.sprite(x, FOOT, look.texture).setOrigin(0.5, 1).setDepth(1),
-      label: this.add
-        .text(plate.x, plate.y, title, text(INK))
+      label: addPixelText(this, { x: plate.x, y: plate.y, text: title, color: INK })
         .setOrigin(0.5)
         .setDepth(TABLE_DEPTH + 3),
       plate: this.plate({ x: plate.x, y: plate.y })
         .setSize(plate.width, PLATE_HEIGHT)
         .setOrigin(0.5),
       hand: bubble.setDepth(TABLE_DEPTH + 3).setVisible(false),
-      mark: this.add
-        .text(x, FOOT - 54, '', text(CREAM))
+      mark: addPixelText(this, { x: x, y: FOOT - 54, text: '', color: CREAM })
         .setOrigin(0.5)
         .setDepth(TABLE_DEPTH + 3)
         .setVisible(false),

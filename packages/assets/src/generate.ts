@@ -33,6 +33,7 @@ import {
   SPEC,
   TASK_POINT_STATES,
 } from './manifest.ts';
+import { FONT_FACE, pixelFont } from './pixel-font.ts';
 import { Raster } from './raster.ts';
 import { defaultSounds, wav } from './sound.ts';
 
@@ -210,9 +211,16 @@ export function writeDefaultPack(dir: string, { art }: { art?: ArtSources } = {}
   writeAll(dir, { ...files, 'pack.json': `${JSON.stringify(manifest, null, 2)}\n` });
 }
 
+/** The files bundled with the game: Phaser's built-in textures and the pixel font (#246). */
+export function engineFiles(): Record<string, Buffer | string> {
+  const font = pixelFont();
+  return {
+    ...Object.fromEntries(Object.entries(engineTextures()).map(([name, r]) => [name, r.png()])),
+    [`${FONT_FACE}.png`]: font.image.png(),
+    [`${FONT_FACE}.xml`]: font.xml,
+  };
+}
+
 export function writeEngineTextures(dir: string): void {
-  writeAll(
-    dir,
-    Object.fromEntries(Object.entries(engineTextures()).map(([name, r]) => [name, r.png()])),
-  );
+  writeAll(dir, engineFiles());
 }
