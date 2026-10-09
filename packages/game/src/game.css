@@ -12,6 +12,27 @@ body {
   height: 100vh;
 }
 
+/* Everything clickable shows the hand (#247); a panel's own rules still win. */
+button,
+summary,
+select,
+a[href],
+label:has(> input[type="checkbox"], > input[type="radio"]),
+input[type="checkbox"],
+input[type="radio"],
+[role="tab"],
+[role="option"],
+[role="radio"] {
+  cursor: pointer;
+}
+
+button:disabled,
+select:disabled,
+input:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
 .notice {
   color: #ddd;
   font:
