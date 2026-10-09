@@ -313,11 +313,11 @@ export class Hero {
   }
 
   /**
-   * The agent process is gone (spec §12). A hero who was working resumes its session and carries on
-   * (#166), as does one whose worktree was still being made; any other hero resumes with its next
-   * message. Returns whether it resumed now.
+   * The agent process is gone (spec §12). Says what the hero would do now, without doing it: `resume`
+   * its session, as a hero who was working does (#166); `start`, as one whose worktree was still being
+   * made does, having no session yet; or `wait` for its next message. `carryOn` does it.
    */
-  restarted(): boolean {
+  restarted(): 'resume' | 'start' | 'wait' {
     const r = this.record;
     const island = this.island();
     const wasWorking = r.inTurn && !r.stopping;
@@ -330,15 +330,27 @@ export class Hero {
     r.resting = false;
     r.pendingSubmit = null;
     this.ctx.outbox.effect({ type: 'cancelTimer', timerId: Hero.silenceTimer(r.id) });
-    if (r.error !== null || r.outOfGold || r.stalled !== null) return false;
-    if (!wasWorking && !(traveling && r.sessionId === null)) return false;
+    if (r.error !== null || r.outOfGold || r.stalled !== null) return 'wait';
+    if (wasWorking && r.sessionId) return 'resume';
+    if (wasWorking || (traveling && r.sessionId === null)) return 'start';
+    return 'wait';
+  }
+
+  /** Picks the work back up after a restart (#166), unless something already got it going. */
+  carryOn(): void {
+    const r = this.record;
+    if (r.sessionLive) return;
     if (r.sessionId) {
       this.revive(RESTART_PROMPT);
       // It works on that prompt straight away, as a new session works on its first.
       r.inTurn = true;
     } else this.revive();
     this.watchSilence();
-    return true;
+  }
+
+  /** How long since its session was last heard from, at input time `t`; null when never. */
+  idleAt(t: number): number | null {
+    return this.record.heardAt === undefined ? null : Math.max(0, t - this.record.heardAt);
   }
 
   // ---------- agent events ----------
@@ -346,6 +358,7 @@ export class Hero {
   handle(event: AgentEvent): void {
     const r = this.record;
     r.unknownReason = null; // any event proves contact
+    r.heardAt = this.ctx.t;
     switch (event.type) {
       case 'sessionStarted':
         r.sessionStarted = true;

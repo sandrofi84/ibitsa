@@ -794,6 +794,72 @@ describe('after a restart', () => {
   });
 });
 
+describe('asking before resuming (#293)', () => {
+  const resumes = (h: Harness) => h.effects.filter((e) => e.type === 'resumeSession');
+  const reloaded = (resume: 'ask' | 'never') => {
+    const h = quest().agent({ type: 'activityStarted', toolUseId: 't1', kind: 'edit' });
+    h.drain();
+    h.gm({ type: 'runtimeRestarted', resume });
+    return h;
+  };
+
+  it('offers a hero who was working, how long since it was heard from, and resumes nothing yet', () => {
+    const h = reloaded('ask');
+    expect(resumes(h)).toEqual([]);
+    expect(view(h.state).resumeOffer).toEqual({
+      heroes: [{ heroId: 'h4', idleMs: 10 }],
+      council: null,
+    });
+    expect(h.cues.some((c) => c.type === 'resumed')).toBe(false);
+  });
+
+  it('resumes what the user picks and says so; the offer goes', () => {
+    const h = reloaded('ask').command({ type: 'answerResume', commandId: 'a1', resume: ['h4'] });
+    expect(resumes(h)).toEqual([
+      expect.objectContaining({ heroId: 'h4', sessionId: 's1', prompt: RESTART_PROMPT }),
+    ]);
+    expect(h.cues).toContainEqual(expect.objectContaining({ type: 'resumed', heroIds: ['h4'] }));
+    expect(view(h.state).resumeOffer).toBeUndefined();
+  });
+
+  it("leaves what the user didn't pick waiting for its next message", () => {
+    const h = reloaded('ask').command({ type: 'answerResume', commandId: 'a1', resume: [] });
+    expect(resumes(h)).toEqual([]);
+    expect(view(h.state).resumeOffer).toBeUndefined();
+    h.command({
+      type: 'sendMessage',
+      commandId: 'm1',
+      heroId: 'h4',
+      text: 'Carry on.',
+      priority: 'next',
+    });
+    expect(resumes(h)).toHaveLength(1);
+  });
+
+  it('refuses an answer when nothing is offered', () => {
+    const h = reloaded('never');
+    expect(view(h.state).resumeOffer).toBeUndefined();
+    expect(resumes(h)).toEqual([]);
+    h.command({ type: 'answerResume', commandId: 'a1', resume: ['h4'] });
+    expect(h.cues).toContainEqual(
+      expect.objectContaining({ type: 'commandRejected', commandId: 'a1' }),
+    );
+    expect(resumes(h)).toEqual([]);
+  });
+
+  it("doesn't resume a hero twice when its message got it going first", () => {
+    const h = reloaded('ask').command({
+      type: 'sendMessage',
+      commandId: 'm1',
+      heroId: 'h4',
+      text: 'Carry on.',
+      priority: 'next',
+    });
+    h.command({ type: 'answerResume', commandId: 'a1', resume: ['h4'] });
+    expect(resumes(h)).toHaveLength(1);
+  });
+});
+
 describe('removing the worktree', () => {
   it('only after the quest ends, once, reporting failures', () => {
     const h = quest().command({ type: 'removeWorktree', commandId: 'w1', islandId: 'i2' });

@@ -6,6 +6,7 @@ import {
   readDisabledCouncillors,
   readElderSettings,
   readPollSeconds,
+  readResumeMode,
   readSessionCaps,
   readUserSettings,
 } from './settings';
@@ -87,6 +88,16 @@ describe('readElderSettings (#101)', () => {
         budgetMicroUsd: null,
       });
     }
+  });
+});
+
+describe('readResumeMode (#293)', () => {
+  it('reads the setting, and asks when it is missing or unknown', () => {
+    const config = (value: unknown) => ({ get: <T>() => value as T });
+    expect(readResumeMode(config('never'))).toBe('never');
+    expect(readResumeMode(config('always'))).toBe('always');
+    expect(readResumeMode(config(undefined))).toBe('ask');
+    expect(readResumeMode(config('sometimes'))).toBe('ask');
   });
 });
 

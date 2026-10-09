@@ -34,6 +34,8 @@ export interface RuntimeHostOptions {
   settings: () => UserSettings;
   /** `ibitsa.council.mode` (#103). */
   councilMode?: () => 'ask' | 'roundTable' | 'chambers';
+  /** `ibitsa.resume` (#293). */
+  resume?: () => 'ask' | 'always' | 'never';
   /** The elder's model and cap from `ibitsa.elder.*` (#101). */
   elder?: () => { model: string; budgetMicroUsd: number | null };
   /** The user's caps from `ibitsa.council.{sitting,review,lessons}BudgetUsd` (#272); none by default. */

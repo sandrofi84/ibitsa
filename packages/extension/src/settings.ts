@@ -105,6 +105,14 @@ export function readCouncilMode(config: ConfigReader): (typeof COUNCIL_MODES)[nu
   return COUNCIL_MODES.find((m) => m === mode) ?? 'ask';
 }
 
+const RESUME_MODES = ['ask', 'always', 'never'] as const;
+
+/** `ibitsa.resume` (§12, #293): whether a restart asks before resuming sessions; `ask` by default. */
+export function readResumeMode(config: ConfigReader): (typeof RESUME_MODES)[number] {
+  const mode = config.get<unknown>('resume');
+  return RESUME_MODES.find((m) => m === mode) ?? 'ask';
+}
+
 /** `ibitsa.elder.*`: the elder's model and cap (spec §4.1, #101); Haiku, and no cap unless set (#272). */
 export function readElderSettings(config: ConfigReader): {
   model: string;

@@ -20,6 +20,8 @@ export interface Snapshot {
   heroes: HeroView[];
   /** Oldest first. */
   needsYou: NeedsYouItem[];
+  /** What a restart would resume, waiting for the user's answer (#293); absent when nothing is. */
+  resumeOffer?: ResumeOfferView;
   /** The workspace repository, for the New Quest form. Added by the runtime, not core; null if not a git repo. */
   repo?: RepoView | null;
   /** "Always allow in this project" rules (#62), passed to every hero session. Added by the runtime. */
@@ -212,3 +214,12 @@ export type NeedsYouItem =
     }
   /** resumeHero or stopHero; `fresh` when resuming starts a fresh session (#292). */
   | { kind: 'error'; id: string; heroId: string; message: string; fresh?: true };
+
+/**
+ * Sessions a restart would resume (#293): heroes who were working and a deliberating council. Each
+ * resume re-sends its whole conversation; `idleMs` is how long since it was last heard from.
+ */
+export interface ResumeOfferView {
+  heroes: { heroId: string; idleMs: number | null }[];
+  council: { idleMs: number | null } | null;
+}

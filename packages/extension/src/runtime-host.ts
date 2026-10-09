@@ -97,6 +97,7 @@ export class RuntimeHost {
       ...(o.elder ? { elder: o.elder } : {}),
       ...(o.caps ? { caps: o.caps } : {}),
       ...(o.councilMode ? { councilMode: o.councilMode } : {}),
+      ...(o.resume ? { resume: o.resume } : {}),
       ...(o.disabledCouncillors ? { disabledCouncillors: o.disabledCouncillors } : {}),
       ...(gitHost ? { gitHost } : {}),
       ...(o.pullRequestPollSeconds ? { pullRequestPollSeconds: o.pullRequestPollSeconds } : {}),

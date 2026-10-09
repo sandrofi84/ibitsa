@@ -43,6 +43,7 @@ import {
   readElderSettings,
   readPollSeconds,
   readRecolor,
+  readResumeMode,
   readSessionCaps,
   readUserSettings,
 } from './settings';
@@ -115,6 +116,7 @@ export function activate(context: vscode.ExtensionContext): IbitsaApi {
           elder: () => readElderSettings(vscode.workspace.getConfiguration('ibitsa')),
           caps: () => readSessionCaps(vscode.workspace.getConfiguration('ibitsa')),
           councilMode: () => readCouncilMode(vscode.workspace.getConfiguration('ibitsa')),
+          resume: () => readResumeMode(vscode.workspace.getConfiguration('ibitsa')),
           disabledCouncillors: () =>
             readDisabledCouncillors(vscode.workspace.getConfiguration('ibitsa')),
           pullRequestPollSeconds: () =>

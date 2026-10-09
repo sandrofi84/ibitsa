@@ -60,5 +60,13 @@ export function view(state: CoreState): Snapshot {
       const { requestId: _requestId, ...visible } = item;
       return visible;
     }),
+    ...(state.resumeOffer
+      ? {
+          resumeOffer: {
+            heroes: state.resumeOffer.heroes.map((h) => ({ ...h })),
+            council: state.resumeOffer.council && { ...state.resumeOffer.council },
+          },
+        }
+      : {}),
   };
 }

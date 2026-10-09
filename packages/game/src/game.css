@@ -2305,3 +2305,41 @@ body.in-hut .needs-you .item.council[data-waiting] {
 .hero-pane-tab .reply-mark {
   color: #f2c230;
 }
+
+/* After a reload: what would resume, since when and about what it costs (#293). */
+.resume-offer:not([hidden]) {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 7;
+  width: min(480px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  padding: 14px 16px;
+  box-sizing: border-box;
+  background: #efe0b8;
+  color: #1a1420;
+  border: 2px solid #8a6a3a;
+  border-radius: 4px;
+  font:
+    13px / 1.45 system-ui,
+    sans-serif;
+}
+
+.resume-offer h2 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.resume-offer .resume-items {
+  margin: 8px 0;
+  padding-left: 18px;
+}
+
+.resume-offer .resume-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}

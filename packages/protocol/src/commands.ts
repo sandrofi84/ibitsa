@@ -13,3 +13,6 @@ export function parseCommand(input: unknown): ParseCommandResult {
     }),
   };
 }
+
+/** The resume offer's id for the council (#293), beside the heroes' ids in `answerResume`. */
+export const COUNCIL_RESUME = 'council';

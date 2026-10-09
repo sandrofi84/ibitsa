@@ -1,4 +1,4 @@
-import type { Command } from '@ibitsa/protocol';
+import { COUNCIL_RESUME, type Command } from '@ibitsa/protocol';
 import { Campaign } from './campaign';
 import { CampaignRecord } from './campaign-record';
 import { Consultation } from './consultation';
@@ -188,6 +188,9 @@ function command(ctx: StepContext, command: Command): void {
     case 'rateSitting':
       new Sitting(ctx).rate(command);
       return;
+    case 'answerResume':
+      answerResume({ ctx, command });
+      return;
     case 'dismissCouncil':
       new Sitting(ctx).dismiss(command.commandId);
       return;
@@ -284,32 +287,82 @@ function gameMaster(ctx: StepContext, event: GameMasterEvent): void {
       new PullRequest(ctx).handle(event);
       return;
     case 'runtimeRestarted':
-      restarted(ctx);
+      restarted({ ctx, resume: event.resume ?? 'always' });
       return;
   }
 }
 
 /**
- * VS Code reloaded (spec §12, #166): everything that was running resumes on its own: the elder's
- * research, a sitting, heroes who were working, checks and reviewers. A cue tells the user what did.
+ * VS Code reloaded (spec §12, #166). What starts afresh goes ahead: the elder's research, checks,
+ * reviewers, and sessions that never started. What would resume a session, re-sending its whole
+ * conversation, follows `ibitsa.resume` (#293): heroes who were working and a deliberating council
+ * resume on their own (`always`), wait for the user's answer to an offer (`ask`), or wait as idle
+ * heroes and councils do (`never`). A cue tells the user what carried on.
  */
-function restarted(ctx: StepContext): void {
+function restarted({ ctx, resume }: { ctx: StepContext; resume: 'always' | 'ask' | 'never' }) {
   // A question the council hadn't answered is dropped: its turn is gone (#169).
   new Consultation(ctx).stop('VS Code reloaded before the council answered. Ask again.');
   new PullRequest(ctx).restarted();
+  delete ctx.state.resumeOffer;
   const status = ctx.state.campaign?.status;
   const planning = status === 'planning';
   const elder = planning && new Elder(ctx).restarted();
-  const council = planning && new Sitting(ctx).restarted();
-  let heroIds: string[] = [];
+  const sitting = new Sitting(ctx);
+  const council = planning ? sitting.restarted() : 'wait';
   let work = { checks: 0, reviews: 0 };
+  const started: Hero[] = [];
+  const resumable: Hero[] = [];
   if (status === 'active') {
     // A permission or question that was waiting belonged to a turn that's gone: the hero asks again.
     ctx.needsYou.dropRequests();
-    heroIds = heroes(ctx).flatMap((h) => (h.restarted() ? [h.id] : []));
+    for (const h of heroes(ctx)) {
+      const next = h.restarted();
+      if (next === 'start') started.push(h);
+      if (next === 'resume') resumable.push(h);
+    }
     work = new Review(ctx).restarted();
   }
-  if (heroIds.length > 0 || work.checks > 0 || work.reviews > 0 || elder || council) {
-    ctx.outbox.cue({ type: 'resumed', heroIds, ...work, council, elder });
+  if (council === 'start') sitting.carryOn();
+  for (const h of started) h.carryOn();
+  const offered = resumable.length > 0 || council === 'resume';
+  if (resume === 'ask' && offered) {
+    ctx.state.resumeOffer = {
+      heroes: resumable.map((h) => ({ heroId: h.id, idleMs: h.idleAt(ctx.t) })),
+      council: council === 'resume' ? { idleMs: sitting.idleAt(ctx.t) } : null,
+    };
+  }
+  const now = resume === 'always';
+  if (now) {
+    if (council === 'resume') sitting.carryOn();
+    for (const h of resumable) h.carryOn();
+  }
+  const heroIds = [...started, ...(now ? resumable : [])].map((h) => h.id);
+  const councilOn = council === 'start' || (now && council === 'resume');
+  if (heroIds.length > 0 || work.checks > 0 || work.reviews > 0 || elder || councilOn) {
+    ctx.outbox.cue({ type: 'resumed', heroIds, ...work, council: councilOn, elder });
+  }
+}
+
+/** The user's answer to the resume offer (#293): what they picked resumes, the rest waits. */
+function answerResume({
+  ctx,
+  command,
+}: {
+  ctx: StepContext;
+  command: Extract<Command, { type: 'answerResume' }>;
+}): void {
+  const offer = ctx.state.resumeOffer;
+  if (!offer) {
+    ctx.outbox.reject(command.commandId, 'Nothing is waiting to resume.');
+    return;
+  }
+  delete ctx.state.resumeOffer;
+  const picked = new Set(command.resume);
+  const heroIds = offer.heroes.map((h) => h.heroId).filter((id) => picked.has(id));
+  for (const id of heroIds) hero(ctx, id)?.carryOn();
+  const council = offer.council !== null && picked.has(COUNCIL_RESUME);
+  if (council) new Sitting(ctx).carryOn();
+  if (heroIds.length > 0 || council) {
+    ctx.outbox.cue({ type: 'resumed', heroIds, checks: 0, reviews: 0, council, elder: false });
   }
 }

@@ -923,6 +923,36 @@ describe('the journal (#58)', () => {
 });
 
 describe('recovery', () => {
+  it('asks before resuming when ibitsa.resume says so, and logs that it asked (#293)', async () => {
+    const first = await arrived();
+    first.session.emit({ type: 'activityStarted', toolUseId: 'u1', kind: 'test' });
+    first.runtime.dispose();
+
+    const adapter = new FakeAdapter();
+    const runtime = new Runtime({
+      storageDir: first.storageDir,
+      adapter,
+      gameMaster: new FakeGameMaster(),
+      clock: new ManualClock(),
+      resume: () => 'ask',
+    });
+    runtime.start();
+    expect(adapter.resumed).toEqual([]);
+    expect(view(runtime.snapshotState).resumeOffer?.heroes).toEqual([
+      { heroId: 'h4', idleMs: expect.any(Number) },
+    ]);
+    expect(logOf(first.storageDir).records.at(-1)).toMatchObject({
+      event: { type: 'runtimeRestarted', resume: 'ask' },
+    });
+    runtime.connect({ post: () => {} }).receive({
+      type: 'answerResume',
+      commandId: 'a1',
+      resume: ['h4'],
+    });
+    expect(adapter.resumed).toEqual([expect.objectContaining({ heroId: 'h4' })]);
+    runtime.dispose();
+  });
+
   it('rebuilds the campaign from the log without carrying out effects again, then resumes the hero who was working (#166)', async () => {
     const first = await arrived();
     first.session.emit({
