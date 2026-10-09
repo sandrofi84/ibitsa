@@ -252,6 +252,11 @@ export const CommandSchema = v.variant('type', [
     reviewEfforts: v.optional(v.record(id, EffortSchema)),
   }),
   v.strictObject({ type: v.literal('dismissCouncil'), commandId: id }),
+  /**
+   * The answer to a resume offer (#293): the heroes' ids and `council` (`COUNCIL_RESUME`) that
+   * resume; whatever was offered and isn't listed waits.
+   */
+  v.strictObject({ type: v.literal('answerResume'), commandId: id, resume: v.array(id) }),
   /** Refused unless the worktree is clean. */
   v.strictObject({ type: v.literal('removeWorktree'), commandId: id, islandId: id }),
   /** Push the island's branch and open its PR (§5.6): a draft before the island is cleared. */

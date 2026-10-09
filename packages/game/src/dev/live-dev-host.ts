@@ -297,9 +297,16 @@ export class LiveDevHost implements Host {
     return Date.now() - this.started;
   }
 
-  /** Dev only (#166): as if VS Code reloaded, the core hears the old sessions are gone. */
-  reload(): void {
-    this.input({ kind: 'gm', t: this.t(), event: { type: 'runtimeRestarted' } });
+  /**
+   * Dev only (#166): as if VS Code reloaded, the core hears the old sessions are gone. `resume` is
+   * `ibitsa.resume` (#293); without it everything resumes on its own.
+   */
+  reload(resume?: 'ask' | 'never'): void {
+    this.input({
+      kind: 'gm',
+      t: this.t(),
+      event: { type: 'runtimeRestarted', ...(resume ? { resume } : {}) },
+    });
   }
 
   /**

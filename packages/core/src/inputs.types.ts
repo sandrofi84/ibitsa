@@ -66,8 +66,12 @@ export type GameMasterEvent =
   /** `record.md` was saved (§4.9, #167), or couldn't be. */
   | { type: 'recordWritten'; path: string }
   | { type: 'recordFailed'; message: string }
-  /** The runtime rebuilt state after a restart; every live session is gone (spec §12). */
-  | { type: 'runtimeRestarted' };
+  /**
+   * The runtime rebuilt state after a restart; every live session is gone (spec §12). `resume` is
+   * `ibitsa.resume` (#293): `ask` offers the resumes first, `never` leaves them waiting; absent, as
+   * in logs from before #293, everything resumes on its own.
+   */
+  | { type: 'runtimeRestarted'; resume?: 'ask' | 'never' };
 
 /**
  * Everything core reacts to. `t` is milliseconds since the campaign's log header and is core's only clock

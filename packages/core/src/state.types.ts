@@ -51,6 +51,8 @@ export interface QuestSettings {
 export interface CoreState {
   nextId: number;
   settings: QuestSettings;
+  /** What would resume after a restart, waiting for the user's answer (#293). */
+  resumeOffer?: ResumeOffer;
   campaign: Campaign | null;
   /** The elder's research for this campaign (spec §4.1). */
   elder: ElderRecord | null;
@@ -183,6 +185,8 @@ export interface HeroRecord {
   /** The gold pouch, if a cap is set and can be enforced. */
   cap: { microUsd: number; enforcement: 'native' | 'turnEnd' } | null;
   watch: StallWatch;
+  /** When its session was last heard from (input time), for the resume offer (#293). */
+  heardAt?: number;
 }
 
 /** Counters behind the stall rules (spec §10 item 11). */
@@ -205,6 +209,8 @@ export interface SittingRecord {
   roster: { councillorId: string; effort: Effort }[];
   sessionId: string | null;
   reports: { id: string; councillorId: string; revision: number; report: CouncilReport }[];
+  /** When its lead session was last heard from (input time), for the resume offer (#293). */
+  heardAt?: number;
   batches: QuestionBatch[];
   plans: { version: number; plan: PlanProposal; outcome: PlanOutcome }[];
   /** Change requests so far. */
@@ -371,4 +377,13 @@ export interface ReviewRecord {
   waived: boolean;
   /** It couldn't finish and the user ran it again (#264): a fresh record in the round takes its place. */
   retried?: boolean;
+}
+
+/**
+ * Sessions a restart would resume, offered first (#293): heroes who were working and a council that
+ * was deliberating. `idleMs` is how long since each last heard from, when known.
+ */
+export interface ResumeOffer {
+  heroes: { heroId: string; idleMs: number | null }[];
+  council: { idleMs: number | null } | null;
 }

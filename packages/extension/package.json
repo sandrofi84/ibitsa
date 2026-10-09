@@ -152,6 +152,21 @@
           "exclusiveMinimum": 0,
           "markdownDescription": "The most the elder's research may cost, in US dollars. It stops when the cap is reached. Leave empty for no cap (the default)."
         },
+        "ibitsa.resume": {
+          "type": "string",
+          "enum": [
+            "ask",
+            "always",
+            "never"
+          ],
+          "enumDescriptions": [
+            "Ask before resuming: each resume re-sends the whole conversation, which costs more after a break.",
+            "Resume what was running on its own, as before.",
+            "Never resume on its own: heroes wait for your next message, the council for your next action."
+          ],
+          "default": "ask",
+          "markdownDescription": "When VS Code reloads or the game reopens mid-campaign, whether heroes who were working and a deliberating council resume their sessions. Fresh restarts (the elder's research, checks, reviews) always go ahead."
+        },
         "ibitsa.council.mode": {
           "type": "string",
           "enum": [

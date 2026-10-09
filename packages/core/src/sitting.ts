@@ -157,15 +157,18 @@ export class Sitting {
    * the session resumes (#166): at once if the council was deliberating, else when the user next acts.
    * A sitting whose session never started starts again. Returns whether it resumed now.
    */
-  restarted(): boolean {
+  /**
+   * The agent process is gone (spec §12). Says what the sitting would do now, without doing it:
+   * `start` its session, which never started; `resume` a council that was deliberating; or `wait`
+   * for the user, as one with questions, a plan, or nothing left running does (#242, #259). A
+   * dormant sitting wakes when the user acts; `carryOn` wakes it now.
+   */
+  restarted(): 'resume' | 'start' | 'wait' {
     const record = this.ctx.state.sitting;
-    if (!Sitting.active(record)) return false;
-    if (!record.sessionId) {
-      this.ctx.outbox.effect(startOf({ state: this.ctx.state, record }));
-      return true;
-    }
+    if (!Sitting.active(record)) return 'wait';
+    if (!record.sessionId) return 'start';
     record.dormant = true;
-    if (record.status !== 'deliberating' || pendingBatch(record)) return false;
+    if (record.status !== 'deliberating' || pendingBatch(record)) return 'wait';
     // A turn that ended with every report in had nothing left running, though a log from before
     // #242 never said idle (#259): the council waits, as it would have.
     const allIn = record.roster.every((c) =>
@@ -173,9 +176,21 @@ export class Sitting {
     );
     if (record.turnEnded && allIn) record.waiting = true;
     // A council waiting on the user (#242) has nothing to carry on with until the user acts.
-    if (record.waiting) return false;
-    this.wake({ record, prompt: RESUME_PROMPT });
-    return true;
+    return record.waiting ? 'wait' : 'resume';
+  }
+
+  /** Gets the sitting going after a restart: starts its session, or resumes a dormant one. */
+  carryOn(): void {
+    const record = this.ctx.state.sitting;
+    if (!Sitting.active(record)) return;
+    if (!record.sessionId) this.ctx.outbox.effect(startOf({ state: this.ctx.state, record }));
+    else if (record.dormant) this.wake({ record, prompt: RESUME_PROMPT });
+  }
+
+  /** How long since the lead session was last heard from, at input time `t`; null when never. */
+  idleAt(t: number): number | null {
+    const heard = this.ctx.state.sitting?.heardAt;
+    return heard === undefined ? null : Math.max(0, t - heard);
   }
 
   /** Ends an active sitting as failed, e.g. when its campaign is abandoned. */
@@ -440,6 +455,7 @@ export class Sitting {
         this.complete({ record, toolUseId: event.toolUseId, reason: 'The sitting has ended.' });
       return;
     }
+    record.heardAt = this.ctx.t;
     switch (event.type) {
       case 'sessionStarted':
         record.sessionId = event.sessionId;

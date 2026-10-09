@@ -31,6 +31,8 @@ export interface RuntimeOptions {
   elder?: () => { model: string; budgetMicroUsd: number | null };
   /** The user's caps for a sitting, a review and the lessons (#272); none by default. */
   caps?: () => SessionCaps;
+  /** `ibitsa.resume` (§12, #293): after a restart, ask before resuming sessions; resumes without asking when absent. */
+  resume?: () => 'ask' | 'always' | 'never';
   /** `ibitsa.council.mode` (§4.2, #103); `ask` by default. */
   councilMode?: () => 'ask' | 'roundTable' | 'chambers';
   /** Councillor ids the user turned off (§4.7, #98); read each time the roster is asked for. */

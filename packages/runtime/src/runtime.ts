@@ -159,7 +159,12 @@ export class Runtime {
       this.journal.add({ record: input, state: this.state });
     }
     if (this.live()) {
-      this.input({ kind: 'gm', t: this.t(), event: { type: 'runtimeRestarted' } });
+      const resume = this.options.resume?.() ?? 'always';
+      this.input({
+        kind: 'gm',
+        t: this.t(),
+        event: { type: 'runtimeRestarted', ...(resume === 'always' ? {} : { resume }) },
+      });
     }
   }
 

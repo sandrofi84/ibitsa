@@ -7,6 +7,7 @@ import type {
   Plan,
   SittingView,
 } from '@ibitsa/protocol';
+import { COUNCIL_RESUME } from '@ibitsa/protocol';
 import { describe, expect, it } from 'vitest';
 import type { Effect } from './effects.types';
 import { Sitting } from './sitting';
@@ -739,6 +740,33 @@ describe('the sitting and its campaign (#103)', () => {
       }),
     ]);
     expect(reload.cues).toContainEqual(expect.objectContaining({ type: 'resumed', council: true }));
+  });
+
+  it('offers a deliberating council first when asked to, and resumes it on the answer (#293)', () => {
+    const reload = deliberating();
+    reload.effects = [];
+    reload.feed({ kind: 'gm', t: 5_000, event: { type: 'runtimeRestarted', resume: 'ask' } });
+    expect(reload.effects).toEqual([]);
+    expect(view(reload.state).resumeOffer).toEqual({
+      heroes: [],
+      council: { idleMs: expect.any(Number) },
+    });
+    reload.do({ type: 'answerResume', resume: [COUNCIL_RESUME] });
+    expect(reload.effects).toEqual([
+      expect.objectContaining({ type: 'startSitting', resume: expect.objectContaining({}) }),
+    ]);
+    expect(reload.cues).toContainEqual(expect.objectContaining({ type: 'resumed', council: true }));
+  });
+
+  it("leaves a council the user didn't pick dormant until they act (#293)", () => {
+    const reload = deliberating();
+    reload.feed({ kind: 'gm', t: 0, event: { type: 'runtimeRestarted', resume: 'never' } });
+    reload.effects = [];
+    expect(view(reload.state).resumeOffer).toBeUndefined();
+    reload.do({ type: 'consultCouncil', text: 'Where are we?' });
+    expect(reload.effects).toContainEqual(
+      expect.objectContaining({ type: 'startSitting', resume: { sessionId: 's-1' } }),
+    );
   });
 
   it('waits for the user when questions were open, and sends their answers as words (#166)', () => {

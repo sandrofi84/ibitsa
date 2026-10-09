@@ -39,6 +39,7 @@ import {
 } from './pull-request-card';
 import { setRecolor } from './recolor';
 import { mountRestartNotice } from './restart-notice';
+import { mountResumeOffer } from './resume-offer';
 import { isSitting, packLook, rememberCouncillors, SittingFeed } from './sitting-hut';
 import { mountSoundBoard } from './sound-board';
 import { mountTaskPanel } from './task-panel';
@@ -214,6 +215,8 @@ export function startGame(root: HTMLElement, host: Host): Started {
   });
   mountPlanReview({ client });
   mountCampaignEnd({ client });
+  // After a reload, what would resume waits for the user's say (#293).
+  mountResumeOffer({ client });
   mountElderPanel({
     client,
     options: {

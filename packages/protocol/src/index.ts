@@ -40,7 +40,7 @@ export {
   type RecolorPreset,
 } from './classes.schema';
 export type { HeroClassView } from './classes.types';
-export { parseCommand } from './commands';
+export { COUNCIL_RESUME, parseCommand } from './commands';
 export {
   type Command,
   CommandSchema,
@@ -133,6 +133,7 @@ export type {
   IslandView,
   NeedsYouItem,
   RepoView,
+  ResumeOfferView,
   Snapshot,
   TaskPointState,
   TaskPointView,
