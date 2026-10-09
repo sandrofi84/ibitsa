@@ -91,6 +91,8 @@ test('start a quest, message the hero, stop, and finish', async ({ page }) => {
   await expect.poll(() => heroState(page)).toBe('submitted');
   await page.screenshot({ path: 'test-results/ui-hero-pane.png' });
   await pane.getByRole('button', { name: 'Finish quest' }).click();
+  // The ended quest folds the pane to its tab (#263), which opens on its branch and worktree.
+  await pane.getByRole('button', { name: /Expand the hero pane/ }).click();
   await expect(pane.getByRole('status')).toHaveText('The quest has ended. Its branch is kept.');
   await pane.getByRole('button', { name: 'Remove worktree' }).click();
   await expect(pane.getByRole('status')).toHaveText(
@@ -309,6 +311,44 @@ test('a reply after "Ready for review!" shows over the bubble and in full in the
   await expect(reply).toContainText('Done: And why?');
   await expect(reply).not.toContainText('Done: What did you do?');
   await expect(mark).toBeHidden();
+});
+
+test('the hero pane folds away when the quest ends, stays out of the hut, and opens for the next hero (#263)', async ({
+  page,
+}) => {
+  await page.goto('/?fixture=live');
+  await openWelcome(page);
+  await page.getByLabel('Task').fill('Tidy the README');
+  await page.getByRole('button', { name: 'I know the way' }).click();
+  await page.getByRole('button', { name: 'Start quest' }).click();
+  const pane = page.getByRole('region', { name: 'Hero' });
+  const body = page.locator('#hero-pane-body');
+  await expect.poll(() => heroState(page)).toBe('idle');
+  await expect(body).toBeVisible();
+
+  await pane.getByLabel('Message to the hero').fill('Looks good, submit it');
+  await pane.getByRole('button', { name: 'Send now' }).click();
+  await expect.poll(() => heroState(page)).toBe('submitted');
+  await pane.getByRole('button', { name: 'Finish quest' }).click();
+  // The quest is over: the pane folds to its tab, which still leads to the worktree.
+  await expect(body).toBeHidden();
+  await expect(
+    pane.getByRole('button', { name: /Ranger Ilse.*Expand the hero pane/ }),
+  ).toBeVisible();
+  const over = page.getByRole('dialog', { name: /The (campaign|quest) is over/ });
+  if (await over.isVisible()) await over.getByRole('button', { name: 'Close' }).click();
+
+  // In the hut it's out of the way altogether.
+  await openWelcome(page);
+  await expect(pane).toBeHidden();
+  await page.screenshot({ path: 'test-results/ui-pane-hut.png' });
+
+  // The next quest's hero gets it, open.
+  await page.getByLabel('Task').fill('Fix the footer');
+  await page.getByRole('button', { name: 'I know the way' }).click();
+  await page.getByRole('button', { name: 'Start quest' }).click();
+  await expect.poll(() => probe(page, (p) => p.snapshot()?.campaign?.status)).toBe('active');
+  await expect(body).toBeVisible();
 });
 
 test('the journal lists what happened, newest last, and stays open across collapses (#58)', async ({
@@ -622,6 +662,8 @@ test('the brief convenes a round table; its approved plan becomes a quest, task 
   await expect(finish).toBeEnabled();
   await finish.click();
   await expect.poll(() => probe(page, (p) => p.snapshot()?.campaign?.status)).toBe('finished');
+  // Folded at the end (#263): its tab opens it again.
+  await pane.getByRole('button', { name: /Expand the hero pane/ }).click();
   await pane.getByRole('button', { name: 'Remove worktree' }).click();
   await expect
     .poll(() => probe(page, (p) => p.snapshot()?.islands.map((i) => i.worktree)))
