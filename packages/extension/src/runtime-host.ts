@@ -95,6 +95,7 @@ export class RuntimeHost {
       settings: o.settings,
       repoDir: o.workspaceDir,
       ...(o.elder ? { elder: o.elder } : {}),
+      ...(o.caps ? { caps: o.caps } : {}),
       ...(o.councilMode ? { councilMode: o.councilMode } : {}),
       ...(o.disabledCouncillors ? { disabledCouncillors: o.disabledCouncillors } : {}),
       ...(gitHost ? { gitHost } : {}),

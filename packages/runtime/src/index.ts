@@ -39,7 +39,7 @@ export { BLANKED, ReplayExport } from './replay-export';
 export type { ReplayExportOptions } from './replay-export.types';
 export { REVIEW_INSTRUCTIONS, reviewBrief } from './review-brief';
 export { Runtime, SNAPSHOT_INTERVAL_MS } from './runtime';
-export type { Connection, RuntimeOptions } from './runtime.types';
+export type { Connection, RuntimeOptions, SessionCaps } from './runtime.types';
 export type { FolderWatcher } from './skill-catalog.types';
 export { CampaignLog, CampaignStore, LOG_SIZE_CAP } from './storage';
 export { systemClock } from './system-clock';

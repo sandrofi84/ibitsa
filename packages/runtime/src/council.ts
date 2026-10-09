@@ -23,27 +23,19 @@ export function seatable(
   return councillors.filter((c) => !disabled.includes(c.id));
 }
 
-/** A round table's model and cap by effort (spec §4.2); starting numbers, to be tuned from tallies. */
-const ROUND_TABLE: Record<Effort, { model: string; budgetMicroUsd: number }> = {
-  light: { model: 'haiku', budgetMicroUsd: 500_000 },
-  standard: { model: 'sonnet', budgetMicroUsd: 2_000_000 },
-  deep: { model: 'opus', budgetMicroUsd: 6_000_000 },
-};
+/** A round table's model by effort (spec §4.2). Effort no longer sets a gold cap (#272). */
+const ROUND_TABLE: Record<Effort, string> = { light: 'haiku', standard: 'sonnet', deep: 'opus' };
 
-/** A chamber's model and share of the cap by its councillor's effort (spec §4.2). */
-const CHAMBER: Record<Effort, { model: string; budgetMicroUsd: number }> = {
-  light: { model: 'haiku', budgetMicroUsd: 100_000 },
-  standard: { model: 'sonnet', budgetMicroUsd: 400_000 },
-  deep: { model: 'sonnet', budgetMicroUsd: 1_200_000 },
-};
+/** A chamber's model by its councillor's effort (spec §4.2). */
+const CHAMBER: Record<Effort, string> = { light: 'haiku', standard: 'sonnet', deep: 'sonnet' };
 
-/** What the chairing elder keeps for summing up in separate chambers (spec §4.2). */
-const ELDER_RESERVE = 300_000;
+/** A reviewer's model by its review effort (§5.5, M5). */
+const REVIEWER: Record<Effort, string> = { light: 'haiku', standard: 'sonnet', deep: 'opus' };
 
 /**
- * The models and cap a sitting runs with (#103, #105). A round table runs on its effort's model and
- * cap. In separate chambers each councillor gets its effort's model, the elder chairs on the sitting's
- * effort model, and the cap is every chamber's share plus the elder's reserve.
+ * The models a sitting runs with (#103, #105). A round table runs on its effort's model. In separate
+ * chambers each councillor gets its effort's model, and the elder chairs on the sitting's effort
+ * model. A sitting's gold cap is the user's, if they set one (#272).
  */
 export function sittingPlan({
   mode,
@@ -54,25 +46,12 @@ export function sittingPlan({
   effort: Effort;
   roster: readonly { councillorId: string; effort: Effort }[];
 }): SittingPlan {
-  const table = ROUND_TABLE[effort];
-  if (mode === 'roundTable') {
-    return { model: table.model, maxBudgetMicroUsd: table.budgetMicroUsd, roster: [...roster] };
-  }
-  return {
-    model: table.model,
-    maxBudgetMicroUsd: roster.reduce(
-      (sum, c) => sum + CHAMBER[c.effort].budgetMicroUsd,
-      ELDER_RESERVE,
-    ),
-    roster: roster.map((c) => ({ ...c, model: CHAMBER[c.effort].model })),
-  };
+  const model = ROUND_TABLE[effort];
+  if (mode === 'roundTable') return { model, roster: [...roster] };
+  return { model, roster: roster.map((c) => ({ ...c, model: CHAMBER[c.effort] })) };
 }
 
-/** A reviewer's model and cap by its review effort (§5.5, M5); starting numbers, to be tuned. */
-export function reviewPlan(effort: Effort): { model: string; budgetMicroUsd: number } {
-  return {
-    light: { model: 'haiku', budgetMicroUsd: 100_000 },
-    standard: { model: 'sonnet', budgetMicroUsd: 400_000 },
-    deep: { model: 'opus', budgetMicroUsd: 1_200_000 },
-  }[effort];
+/** A reviewer's model by its review effort; its gold cap is the user's, if they set one (#272). */
+export function reviewModel(effort: Effort): string {
+  return REVIEWER[effort];
 }

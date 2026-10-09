@@ -136,7 +136,6 @@ function run(script: Script, start: Partial<SittingStart> = {}) {
         { councillorId: 'ghost', effort: 'standard' },
       ],
       model: 'sonnet',
-      maxBudgetMicroUsd: 2_000_000,
       ...start,
     },
     (e) => events.push(e),
@@ -156,11 +155,24 @@ const QUESTION = {
 };
 
 describe('the round table (#103)', () => {
-  it('opens a read-only, capped session told the task, the brief, the roster and the budget', async () => {
+  it('opens a read-only session told the task, the brief and the roster, with no cap by default (#272)', async () => {
     const { calls, inputs } = run(async function* ({ next }) {
       await next();
       yield result('success');
     });
+    await until(() => inputs.length > 0);
+    expect(calls[0]?.options).not.toHaveProperty('maxBudgetUsd');
+    expect(inputs[0]).not.toContain('Your budget is');
+  });
+
+  it("is capped, and told its budget, when the user set a sitting's cap (#272)", async () => {
+    const { calls, inputs } = run(
+      async function* ({ next }) {
+        await next();
+        yield result('success');
+      },
+      { maxBudgetMicroUsd: 2_000_000 },
+    );
     await until(() => inputs.length > 0);
     expect(calls[0]?.options).toMatchObject({
       model: 'sonnet',
@@ -370,7 +382,10 @@ describe('the round table (#103)', () => {
   });
 
   it.each([
-    ['error_max_budget_usd', 'The council ran out of gold. Its reports so far are kept.'],
+    [
+      'error_max_budget_usd',
+      'The council reached the spend cap you set (ibitsa.council.sittingBudgetUsd, or ibitsa.council.consultBudgetUsd for a question). Its reports so far are kept.',
+    ],
     ['error_max_turns', 'The council took too many steps.'],
     ['error_during_execution', 'The sitting stopped: error during execution.'],
   ])('reports %s once, with the cost', async (subtype, text) => {

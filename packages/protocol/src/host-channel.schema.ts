@@ -25,6 +25,9 @@ export const RULE_BOOK = [
   'elder.budgetUsd',
   'council.mode',
   'council.consultBudgetUsd',
+  'council.sittingBudgetUsd',
+  'council.reviewBudgetUsd',
+  'council.lessonsBudgetUsd',
   'pullRequests.pollSeconds',
   'worktree.setup',
 ] as const;

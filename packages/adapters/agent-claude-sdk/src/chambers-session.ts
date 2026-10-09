@@ -141,7 +141,12 @@ export class ChambersSession extends RoundTableSession {
         ? `The elder's research brief (each councillor has its own slice of it):\n\n${briefMarkdown(start.brief)}`
         : 'There is no research brief: the councillors read what they need.',
       `The roster (dispatch every one; each must report before you propose a plan):\n${roster}`,
-      `The sitting's budget is $${(start.maxBudgetMicroUsd / 1_000_000).toFixed(2)}, shared by every chamber and you: keep requests short.`,
+      // Only a cap the user set (#272): with none, the sitting is held by its steps alone.
+      ...(start.maxBudgetMicroUsd === undefined
+        ? []
+        : [
+            `The sitting's budget is $${(start.maxBudgetMicroUsd / 1_000_000).toFixed(2)}, shared by every chamber and you: keep requests short.`,
+          ]),
     ].join('\n\n---\n\n');
   }
 

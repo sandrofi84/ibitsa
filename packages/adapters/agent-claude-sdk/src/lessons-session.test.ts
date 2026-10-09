@@ -112,7 +112,10 @@ describe('the lessons session (#167)', () => {
   });
 
   it.each([
-    ['error_max_budget_usd', 'The elder ran out of gold before filing lessons.'],
+    [
+      'error_max_budget_usd',
+      'The elder reached the spend cap you set for lessons (ibitsa.council.lessonsBudgetUsd) before filing them.',
+    ],
     ['error_max_turns', 'The lessons stopped: error max turns.'],
     ['success', 'The elder finished without filing lessons.'],
   ])('reports one error when it ends on %s without lessons', async (subtype, text) => {

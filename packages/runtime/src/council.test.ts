@@ -57,27 +57,22 @@ describe('sittingPlan (#103, #105)', () => {
     { councillorId: 'security', effort: 'deep' as const },
   ];
 
-  it("runs a round table on its effort's model and cap", () => {
+  it("runs a round table on its effort's model, with no cap of its own (#272)", () => {
     expect(sittingPlan({ mode: 'roundTable', effort: 'standard', roster })).toEqual({
       model: 'sonnet',
-      maxBudgetMicroUsd: 2_000_000,
       roster,
     });
     expect(sittingPlan({ mode: 'roundTable', effort: 'light', roster })).toMatchObject({
       model: 'haiku',
-      maxBudgetMicroUsd: 500_000,
     });
     expect(sittingPlan({ mode: 'roundTable', effort: 'deep', roster })).toMatchObject({
       model: 'opus',
-      maxBudgetMicroUsd: 6_000_000,
     });
   });
 
-  it("gives each chamber its effort's model, and caps the sitting at every share plus the elder's reserve", () => {
+  it("gives each chamber its effort's model (#105), with no cap of its own (#272)", () => {
     expect(sittingPlan({ mode: 'chambers', effort: 'light', roster })).toEqual({
       model: 'haiku',
-      // $0.10 + $0.40 + $1.20 + the elder's $0.30.
-      maxBudgetMicroUsd: 2_000_000,
       roster: [
         { councillorId: 'architect', effort: 'light', model: 'haiku' },
         { councillorId: 'tester', effort: 'standard', model: 'sonnet' },

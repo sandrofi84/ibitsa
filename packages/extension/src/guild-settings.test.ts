@@ -41,6 +41,9 @@ describe('GuildSettings (#179)', () => {
       'elder.budgetUsd',
       'council.mode',
       'council.consultBudgetUsd',
+      'council.sittingBudgetUsd',
+      'council.reviewBudgetUsd',
+      'council.lessonsBudgetUsd',
       'pullRequests.pollSeconds',
       'worktree.setup',
       // Then the volumes (#184), for the Packs tab.

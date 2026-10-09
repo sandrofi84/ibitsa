@@ -35,6 +35,9 @@ const RULE_TITLES: Record<RuleKey, string> = {
   'elder.budgetUsd': "The elder's cap ($)",
   'council.mode': 'How the council sits',
   'council.consultBudgetUsd': 'A question to the council ($)',
+  'council.sittingBudgetUsd': 'A sitting of the council ($)',
+  'council.reviewBudgetUsd': 'One review ($)',
+  'council.lessonsBudgetUsd': 'The lessons at the end ($)',
   'pullRequests.pollSeconds': 'Pull request polling (seconds)',
   'worktree.setup': 'Worktree setup command',
 };

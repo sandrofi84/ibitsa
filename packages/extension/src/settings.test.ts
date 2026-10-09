@@ -6,6 +6,7 @@ import {
   readDisabledCouncillors,
   readElderSettings,
   readPollSeconds,
+  readSessionCaps,
   readUserSettings,
 } from './settings';
 
@@ -74,15 +75,16 @@ describe('readElderSettings (#101)', () => {
     });
   });
 
-  it('falls back to Haiku and $0.25 for anything else', () => {
+  it('falls back to Haiku and no cap for anything else (#272)', () => {
     for (const values of [
       {},
       { 'elder.model': 'gpt', 'elder.budgetUsd': 0 },
       { 'elder.budgetUsd': '1' },
+      { 'elder.budgetUsd': null },
     ]) {
       expect(readElderSettings(config(values))).toEqual({
         model: 'haiku',
-        budgetMicroUsd: 250_000,
+        budgetMicroUsd: null,
       });
     }
   });
@@ -126,13 +128,35 @@ describe('readPollSeconds (#152)', () => {
 });
 
 describe('council.consultBudgetUsd (#169)', () => {
-  it('is $0.50 by default, in micro-dollars', () => {
-    expect(readUserSettings(config({})).consultBudgetMicroUsd).toBe(500_000);
+  it('is no cap by default, else the cap in micro-dollars (#272)', () => {
+    expect(readUserSettings(config({})).consultBudgetMicroUsd).toBeNull();
     expect(
       readUserSettings(config({ 'council.consultBudgetUsd': 1.25 })).consultBudgetMicroUsd,
     ).toBe(1_250_000);
-    expect(readUserSettings(config({ 'council.consultBudgetUsd': 0 })).consultBudgetMicroUsd).toBe(
-      500_000,
-    );
+    expect(
+      readUserSettings(config({ 'council.consultBudgetUsd': 0 })).consultBudgetMicroUsd,
+    ).toBeNull();
+  });
+});
+
+describe('readSessionCaps (#272)', () => {
+  it('caps nothing by default', () => {
+    expect(readSessionCaps(config({}))).toEqual({
+      sittingMicroUsd: null,
+      reviewMicroUsd: null,
+      lessonsMicroUsd: null,
+    });
+  });
+
+  it('reads each cap the user set, in micro-dollars', () => {
+    expect(
+      readSessionCaps(
+        config({
+          'council.sittingBudgetUsd': 3,
+          'council.reviewBudgetUsd': 0.4,
+          'council.lessonsBudgetUsd': 0.05,
+        }),
+      ),
+    ).toEqual({ sittingMicroUsd: 3_000_000, reviewMicroUsd: 400_000, lessonsMicroUsd: 50_000 });
   });
 });

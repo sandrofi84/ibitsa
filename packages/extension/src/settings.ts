@@ -8,32 +8,40 @@ import {
   resolveClasses,
   resolveRecolor,
 } from '@ibitsa/protocol';
-import type { UserSettings } from '@ibitsa/runtime';
+import type { SessionCaps, UserSettings } from '@ibitsa/runtime';
 import type { ConfigReader } from './settings.types';
 
 const DEFAULT_STALL = { testFailures: 4, fileEdits: 12, noProgressTurns: 6 };
 
+/**
+ * A spend cap from a setting in dollars, in micro-dollars (#272): null when it's empty, zero or not a
+ * number, so nothing is capped unless the user set a cap.
+ */
+function capOf(config: ConfigReader, key: string): number | null {
+  const usd = config.get<unknown>(key);
+  return typeof usd === 'number' && usd > 0 ? Math.round(usd * 1_000_000) : null;
+}
+
 /** `ibitsa.*` settings → what the runtime logs before each quest. The budget is in dollars in settings. */
 export function readUserSettings(config: ConfigReader): UserSettings {
-  const budgetUsd = config.get<number | null>('hero.budgetUsd');
   const parallel = config.get<number>('parties.maxParallel');
   const loopLimit = config.get<number>('review.loopLimit');
-  const campaignUsd = config.get<number | null>('campaign.budgetUsd');
-  const consultUsd = config.get<number>('council.consultBudgetUsd');
   return {
-    budgetMicroUsd:
-      typeof budgetUsd === 'number' && budgetUsd > 0 ? Math.round(budgetUsd * 1_000_000) : null,
+    budgetMicroUsd: capOf(config, 'hero.budgetUsd'),
     stall: DEFAULT_STALL,
     maxParallel: typeof parallel === 'number' && parallel >= 1 ? Math.floor(parallel) : 2,
     loopLimit: typeof loopLimit === 'number' && loopLimit >= 1 ? Math.floor(loopLimit) : 3,
-    consultBudgetMicroUsd:
-      typeof consultUsd === 'number' && consultUsd > 0
-        ? Math.round(consultUsd * 1_000_000)
-        : 500_000,
-    campaignBudgetMicroUsd:
-      typeof campaignUsd === 'number' && campaignUsd > 0
-        ? Math.round(campaignUsd * 1_000_000)
-        : null,
+    consultBudgetMicroUsd: capOf(config, 'council.consultBudgetUsd'),
+    campaignBudgetMicroUsd: capOf(config, 'campaign.budgetUsd'),
+  };
+}
+
+/** `ibitsa.council.{sitting,review,lessons}BudgetUsd` (#272): the user's caps, none by default. */
+export function readSessionCaps(config: ConfigReader): SessionCaps {
+  return {
+    sittingMicroUsd: capOf(config, 'council.sittingBudgetUsd'),
+    reviewMicroUsd: capOf(config, 'council.reviewBudgetUsd'),
+    lessonsMicroUsd: capOf(config, 'council.lessonsBudgetUsd'),
   };
 }
 
@@ -97,14 +105,15 @@ export function readCouncilMode(config: ConfigReader): (typeof COUNCIL_MODES)[nu
   return COUNCIL_MODES.find((m) => m === mode) ?? 'ask';
 }
 
-/** `ibitsa.elder.*`: the elder's model and cap (spec §4.1, #101); Haiku and $0.25 unless set. */
-export function readElderSettings(config: ConfigReader): { model: string; budgetMicroUsd: number } {
+/** `ibitsa.elder.*`: the elder's model and cap (spec §4.1, #101); Haiku, and no cap unless set (#272). */
+export function readElderSettings(config: ConfigReader): {
+  model: string;
+  budgetMicroUsd: number | null;
+} {
   const model = config.get<unknown>('elder.model');
-  const budgetUsd = config.get<unknown>('elder.budgetUsd');
   return {
     model: typeof model === 'string' && ELDER_MODELS.includes(model) ? model : 'haiku',
-    budgetMicroUsd:
-      typeof budgetUsd === 'number' && budgetUsd > 0 ? Math.round(budgetUsd * 1_000_000) : 250_000,
+    budgetMicroUsd: capOf(config, 'elder.budgetUsd'),
   };
 }
 

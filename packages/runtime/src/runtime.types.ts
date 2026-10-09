@@ -2,6 +2,16 @@ import type { HeroClassView, RecolorMap } from '@ibitsa/protocol';
 import type { AgentAdapter, Clock, GameMaster, GitHost, UserSettings } from './ports.types';
 import type { FolderWatcher } from './skill-catalog.types';
 
+/** Spend caps the user set (#272), in micro-USD; null where they set none, the default. */
+export interface SessionCaps {
+  /** One sitting of the council, whichever way it sits. */
+  sittingMicroUsd: number | null;
+  /** One reviewer's review of one task. */
+  reviewMicroUsd: number | null;
+  /** The elder's lessons at a campaign's end. */
+  lessonsMicroUsd: number | null;
+}
+
 export interface RuntimeOptions {
   storageDir: string;
   adapter: AgentAdapter;
@@ -17,8 +27,10 @@ export interface RuntimeOptions {
   home?: string;
   /** The workspace repository, where project-scope actions are saved (#86). */
   repoDir?: string;
-  /** The elder's model and cap (spec §4.1); Haiku and $0.25 by default. */
-  elder?: () => { model: string; budgetMicroUsd: number };
+  /** The elder's model and cap (spec §4.1); Haiku and no cap by default (#272). */
+  elder?: () => { model: string; budgetMicroUsd: number | null };
+  /** The user's caps for a sitting, a review and the lessons (#272); none by default. */
+  caps?: () => SessionCaps;
   /** `ibitsa.council.mode` (§4.2, #103); `ask` by default. */
   councilMode?: () => 'ask' | 'roundTable' | 'chambers';
   /** Councillor ids the user turned off (§4.7, #98); read each time the roster is asked for. */

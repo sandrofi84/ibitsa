@@ -122,7 +122,8 @@ export interface ElderStart {
   councillors: readonly CouncillorInfo[];
   /** A model alias or id; Haiku by default. */
   model: string;
-  maxBudgetMicroUsd: number;
+  /** The user's spend cap for it, if they set one (#272): none by default. */
+  maxBudgetMicroUsd?: number;
   /** An index of past campaigns' records (§4.1, #168): it reads only those that look related. */
   pastRecords: readonly PastRecord[];
   /** The council's context kept from an earlier campaign (§4.9), named by that campaign; else null. */
@@ -140,7 +141,8 @@ export interface LessonsStart {
   /** What happened in the reviews, one line each (core's `CampaignRecord.material`). */
   material: string;
   model: string;
-  maxBudgetMicroUsd: number;
+  /** The user's spend cap for it, if they set one (#272): none by default. */
+  maxBudgetMicroUsd?: number;
 }
 
 /** Starting a sitting's lead session (spec §4.3): read-only, capped, with the council's tools. */
@@ -155,7 +157,8 @@ export interface SittingStart {
   roster: readonly { councillorId: string; effort: Effort; model?: string }[];
   /** From the sitting's effort (§4.2); in separate chambers, the chairing elder's. */
   model: string;
-  maxBudgetMicroUsd: number;
+  /** The user's spend cap for it, if they set one (#272): none by default. */
+  maxBudgetMicroUsd?: number;
   /**
    * Resume an earlier lead session instead of starting one (#166): `prompt` is its next message, e.g.
    * a question to the council mid-campaign (#169); without one nothing is sent. `kept` (#167): the
@@ -180,7 +183,8 @@ export interface ReviewStart {
   cwd: string;
   councillorId: string;
   model: string;
-  maxBudgetMicroUsd: number;
+  /** The user's spend cap for it, if they set one (#272): none by default. */
+  maxBudgetMicroUsd?: number;
   round: number;
   /** The task's commits, or only what changed since this councillor's last review. */
   diff: string;
@@ -323,5 +327,5 @@ export interface UserSettings {
   /** `ibitsa.review.loopLimit` (M5). */
   loopLimit?: number;
   /** `ibitsa.council.consultBudgetUsd` in micro-dollars (#169): one question to the council. */
-  consultBudgetMicroUsd?: number;
+  consultBudgetMicroUsd?: number | null;
 }

@@ -43,8 +43,8 @@ export interface QuestSettings {
   reviews: boolean;
   /** Review rounds before a task goes to the user (§5.5). */
   loopLimit: number;
-  /** The cap on one question to the council mid-campaign (§4.8, #169). */
-  consultBudgetMicroUsd: number;
+  /** The cap on one question to the council mid-campaign (§4.8, #169); none unless set (#272). */
+  consultBudgetMicroUsd: number | null;
 }
 
 /** Core's own state. Plain JSON so it can be cloned, compared and rebuilt by replay. */
