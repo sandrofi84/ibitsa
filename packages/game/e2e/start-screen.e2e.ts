@@ -47,6 +47,12 @@ test('the start screen: the hut welcomes you, "I know the way" charts an island,
   await pane.getByRole('button', { name: 'Really abandon?' }).click();
   await expect.poll(() => probe(page, (p) => p.map()?.sunk)).toBe(true);
   await expect.poll(() => probe(page, (p) => p.map()?.startScreen)).toBe(true);
+  // The campaign's end opens over the map once its record is written (#255): close it, as a player would.
+  const ended = page.getByRole('dialog').filter({ hasText: 'The campaign was abandoned' });
+  await ended.getByRole('button', { name: 'Close' }).click();
+  await expect(ended).toBeHidden();
+  // Nothing waits on a hero whose quest is over.
+  await expect(page.getByRole('region', { name: 'Needs you' })).toBeHidden();
   await openWelcome(page);
 });
 
