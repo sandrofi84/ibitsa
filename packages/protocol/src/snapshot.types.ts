@@ -210,5 +210,5 @@ export type NeedsYouItem =
       /** `campaign` when the whole campaign's cap stopped the hero (§14.3, #121). */
       scope?: 'hero' | 'campaign';
     }
-  /** resumeHero or stopHero */
-  | { kind: 'error'; id: string; heroId: string; message: string };
+  /** resumeHero or stopHero; `fresh` when resuming starts a fresh session (#292). */
+  | { kind: 'error'; id: string; heroId: string; message: string; fresh?: true };

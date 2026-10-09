@@ -15,7 +15,8 @@ import type {
 } from '@ibitsa/protocol';
 import { briefMarkdown, type SittingSession } from '@ibitsa/runtime';
 import { z } from 'zod';
-import { loadSdk, userMessage } from './claude-session';
+import type { SdkModule } from './claude-adapter.types';
+import { loadSdk, transcriptMissing, userMessage } from './claude-session';
 import { CouncillorSkills } from './councillor-skills';
 import type { ToolReply } from './elder-session.types';
 import { InputQueue } from './input-queue';
@@ -28,6 +29,10 @@ export const COUNCIL_TOOLS = ['report', 'ask_user', 'propose_plan', 'propose_ame
 export const READ_TOOLS = ['Read', 'Grep', 'Glob'];
 /** A sitting runs long: reports, questions, revisions. The cap usually ends it first. */
 const MAX_TURNS = 120;
+
+/** Why a sitting stopped when its session couldn't be resumed (#292). */
+export const COUNCIL_LOST =
+  "The council's Claude Code session can't be resumed: its transcript is gone. What it filed is kept in the campaign. Dismiss the council and convene again to plan with a fresh session.";
 
 /** Appended to Claude Code's system prompt; the same for every round table, so it caches (spec §10). */
 export const ROUND_TABLE_INSTRUCTIONS = `You are Ibitsa's council, sitting at a round table to plan a task with the user before anyone writes code. The elder chairs; the councillors you are given each speak for their own field. You only read: never edit files or run commands.
@@ -154,6 +159,9 @@ export class RoundTableSession implements SittingSession {
   private readonly tasks = new Set<string>();
   private query: Query | null = null;
   private closed = false;
+  private sdk: SdkModule | null = null;
+  /** The SDK said `init`: from here a failure isn't a lost transcript (#292). */
+  private started = false;
   private failed = false;
 
   constructor(init: RoundTableInit) {
@@ -327,6 +335,7 @@ export class RoundTableSession implements SittingSession {
   private async run(): Promise<void> {
     try {
       const sdk = await (this.init.adapter.loadSdk ?? loadSdk)();
+      this.sdk = sdk;
       const ibitsa = sdk.createSdkMcpServer({
         name: 'ibitsa',
         version: '1.0.0',
@@ -382,12 +391,21 @@ export class RoundTableSession implements SittingSession {
       if (first) this.input.push(userMessage({ text: first, priority: 'next' }));
       for await (const message of query) this.onSdkMessage(message);
     } catch (error) {
-      if (!this.closed)
-        this.emit({
-          type: 'error',
-          message: error instanceof Error ? error.message : String(error),
-        });
+      if (this.closed) return;
+      const message = (await this.transcriptGone())
+        ? COUNCIL_LOST
+        : error instanceof Error
+          ? error.message
+          : String(error);
+      this.emit({ type: 'error', message });
     }
+  }
+
+  /** A resume that failed before the session started because its transcript is gone (#292). */
+  private async transcriptGone(): Promise<boolean> {
+    const resume = this.init.start.resume;
+    if (this.started || !this.sdk || !resume) return false;
+    return transcriptMissing({ sdk: this.sdk, session: { resume: resume.sessionId } });
   }
 
   /** The first message. Separate chambers words it for the chairing elder. */
@@ -443,6 +461,7 @@ export class RoundTableSession implements SittingSession {
 
   private onSdkMessage(m: SDKMessage): void {
     if (m.type === 'system' && m.subtype === 'init') {
+      this.started = true;
       this.emit({ type: 'sessionStarted', sessionId: m.session_id });
       return;
     }

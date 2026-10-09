@@ -239,6 +239,57 @@ describe('ClaudeAdapter sessions', () => {
     expect(events).toEqual([{ type: 'error', message: 'Claude Code executable not found' }]);
   });
 
+  describe('a resume whose transcript is gone (#292)', () => {
+    const failing = (found: boolean | 'throws') => {
+      const fake = fakeSdk(async function* () {
+        yield* [];
+        throw new Error('Claude Code process exited with code 1');
+      });
+      fake.sdk.getSessionInfo = (async () => {
+        if (found === 'throws') throw new Error('unreadable');
+        return found ? { sessionId: 'sess-1' } : undefined;
+      }) as unknown as NonNullable<SdkModule['getSessionInfo']>;
+      return fake;
+    };
+    const run = async ({ fake, resume }: { fake: ReturnType<typeof fakeSdk>; resume: boolean }) => {
+      const events: AgentEvent[] = [];
+      const a = adapter(fake.sdk);
+      if (resume) a.resumeSession(start, (e) => events.push(e));
+      else a.startSession(start, (e) => events.push(e));
+      await flush();
+      await flush();
+      return events;
+    };
+
+    it('says the session is missing, not that it failed', async () => {
+      expect(await run({ fake: failing(false), resume: true })).toEqual([
+        { type: 'sessionMissing' },
+      ]);
+    });
+
+    it('reports the error as before when the transcript is there, or unknown', async () => {
+      const error = { type: 'error', message: 'Claude Code process exited with code 1' };
+      expect(await run({ fake: failing(true), resume: true })).toEqual([error]);
+      expect(await run({ fake: failing('throws'), resume: true })).toEqual([error]);
+      expect(await run({ fake: failing(false), resume: false })).toEqual([error]);
+    });
+
+    it('never asks once the resumed session has started', async () => {
+      let asked = 0;
+      const fake = fakeSdk(async function* () {
+        yield sdkMessage({ type: 'system', subtype: 'init', session_id: 'sess-1' });
+        yield sdkMessage({ ...(result as object), subtype: 'error_during_execution' });
+      });
+      fake.sdk.getSessionInfo = (async () => {
+        asked++;
+        return undefined;
+      }) as unknown as NonNullable<SdkModule['getSessionInfo']>;
+      const events = await run({ fake, resume: true });
+      expect(asked).toBe(0);
+      expect(events.at(-1)).toMatchObject({ type: 'error' });
+    });
+  });
+
   it('uses the real platform when none is given', async () => {
     const events: AgentEvent[] = [];
     new ClaudeAdapter({

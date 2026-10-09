@@ -65,4 +65,9 @@ export type AgentEvent =
   /** A retryable API error; the session keeps its state. */
   | { type: 'retrying'; reason: string }
   /** The session cannot continue. A failing tool is not an error. */
-  | { type: 'error'; message: string };
+  | { type: 'error'; message: string }
+  /**
+   * A resumed session's transcript is gone (#292), e.g. Claude Code's session file was cleared: it
+   * can't continue, but a fresh session primed from the campaign log can.
+   */
+  | { type: 'sessionMissing' };

@@ -47,8 +47,32 @@ Run tests so their exit status reaches you: don't pipe a test command through ta
 // the extension bundle and is loaded with import() (spec §13).
 export const loadSdk = async (): Promise<SdkModule> => {
   const sdk = await import('@anthropic-ai/claude-agent-sdk');
-  return { query: sdk.query, createSdkMcpServer: sdk.createSdkMcpServer, tool: sdk.tool };
+  return {
+    query: sdk.query,
+    createSdkMcpServer: sdk.createSdkMcpServer,
+    tool: sdk.tool,
+    getSessionInfo: sdk.getSessionInfo,
+  };
 };
+
+/**
+ * Whether a resume failed because the session's transcript is gone (#292), asked only after it failed
+ * so a resume that works is never second-guessed. Unknown (no lookup, or the lookup failed) is "no".
+ */
+export async function transcriptMissing({
+  sdk,
+  session,
+}: {
+  sdk: SdkModule;
+  session: { sessionId: string } | { resume: string };
+}): Promise<boolean> {
+  if (!('resume' in session) || !sdk.getSessionInfo) return false;
+  try {
+    return (await sdk.getSessionInfo(session.resume)) === undefined;
+  } catch {
+    return false;
+  }
+}
 
 /** Ibitsa's built-in actions and any other local plugins, as SDK plugin configs (#84). */
 export function plugins(dirs: string[]): { plugins?: { type: 'local'; path: string }[] } {
@@ -167,6 +191,11 @@ export class ClaudeSession implements AgentSession {
   // ---------- internals ----------
 
   private async run(init: ClaudeSessionInit): Promise<void> {
+    let sdk: SdkModule | null = null;
+    // A resume that fails before the session starts may have lost its transcript (#292).
+    let started = false;
+    const missing = async () =>
+      !started && sdk !== null && (await transcriptMissing({ sdk, session: init.session }));
     try {
       const platform = init.adapter.platform ?? process.platform;
       const problem = sandboxProblem({
@@ -177,7 +206,8 @@ export class ClaudeSession implements AgentSession {
         this.emit({ type: 'error', message: problem });
         return;
       }
-      const sdk = await (init.adapter.loadSdk ?? loadSdk)();
+      const loaded = await (init.adapter.loadSdk ?? loadSdk)();
+      sdk = loaded;
       const tests = new TestDetector(init.cwd);
       const mapper = new EventMapper({ worktree: this.worktree, tests });
       this.mapper = mapper;
@@ -187,18 +217,27 @@ export class ClaudeSession implements AgentSession {
         testScripts: tests.scriptNames,
         allowRules: init.allowRules,
       });
-      const query = sdk.query({
+      const query = loaded.query({
         prompt: this.input,
-        options: this.options({ init, sdk, mapper, hero }),
+        options: this.options({ init, sdk: loaded, mapper, hero }),
       });
       this.query = query;
       if (this.closed) query.close();
       if (init.prompt) this.input.push(userMessage({ text: init.prompt, priority: 'next' }));
       for await (const message of query) {
-        for (const event of mapper.message(message)) this.emit(event);
+        for (const event of mapper.message(message)) {
+          if (event.type === 'sessionStarted') started = true;
+          if (event.type === 'error' && (await missing())) {
+            this.emit({ type: 'sessionMissing' });
+            return;
+          }
+          this.emit(event);
+        }
       }
     } catch (error) {
-      if (!this.closed) {
+      if (this.closed) return;
+      if (await missing()) this.emit({ type: 'sessionMissing' });
+      else {
         this.emit({
           type: 'error',
           message: error instanceof Error ? error.message : String(error),
@@ -388,7 +427,12 @@ export class ClaudeSession implements AgentSession {
   private emit(event: AgentEvent): void {
     if (this.closed) return;
     if (event.type === 'sessionStarted' || event.type === 'turnStarted') this.busy = true;
-    if (event.type === 'turnEnded' || event.type === 'budgetExhausted' || event.type === 'error')
+    if (
+      event.type === 'turnEnded' ||
+      event.type === 'budgetExhausted' ||
+      event.type === 'error' ||
+      event.type === 'sessionMissing'
+    )
       this.busy = false;
     this.onEvent(event);
     // Safe points for held messages: after a tool finishes, and when the turn ends.

@@ -297,7 +297,8 @@ function renderItem({
       );
       actions.append(
         intentButton({
-          label: item.kind === 'stalled' ? 'Continue' : 'Resume',
+          // A session whose transcript is gone starts over, told what the log knows (#292).
+          label: item.kind === 'stalled' ? 'Continue' : item.fresh ? 'Start fresh' : 'Resume',
           intent: () => ({ type: 'resumeHero', heroId: item.heroId }),
           client,
         }),
