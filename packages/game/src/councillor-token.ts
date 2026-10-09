@@ -2,6 +2,7 @@ import type * as Phaser from 'phaser';
 import type { CouncillorTokenOptions, ReviewerProbe } from './councillor-token.types';
 import type { Point } from './layout.types';
 import { marker } from './map-markers';
+import { addPixelText, type PixelText } from './pixel-text';
 import { availablePose } from './poses';
 import type { MapPose } from './poses.types';
 import type { PlateBox, ReviewerView } from './reviewers.types';
@@ -23,9 +24,9 @@ const PLATE_Y = 2;
 export class CouncillorToken {
   private readonly container: Phaser.GameObjects.Container;
   private readonly sprite: Phaser.GameObjects.Sprite;
-  private readonly plate: Phaser.GameObjects.Text;
+  private readonly plate: PixelText;
   private readonly magnifier: Phaser.GameObjects.Sprite | Phaser.GameObjects.Graphics;
-  private readonly badge: Phaser.GameObjects.Text;
+  private readonly badge: PixelText;
   private readonly scene: Phaser.Scene;
   private readonly character: string;
   private readonly path: Point[];
@@ -50,20 +51,18 @@ export class CouncillorToken {
     base.lineStyle(1, PARCHMENT).strokeRect(-9, -17, 18, 18);
     this.sprite = scene.add.sprite(0, 0, character).setOrigin(0.5, 1);
     // Under the token, reaching away from the hero so it never covers it.
-    const plate = scene.add
-      .text(-9 * side, PLATE_Y, title.slice(0, 9), {
-        fontFamily: 'monospace',
-        fontSize: '8px',
-        color: '#1a1420',
-        backgroundColor: '#f3ead2',
-      })
-      .setOrigin(side === 1 ? 0 : 1, 0);
+    const plate = addPixelText(scene, {
+      x: -9 * side,
+      y: PLATE_Y,
+      text: title.slice(0, 9),
+      color: '#1a1420',
+      background: '#f3ead2',
+    }).setOrigin(side === 1 ? 0 : 1, 0);
     this.plate = plate;
     // The magnifier, badge or "?" on the token's outer top corner.
     const corner = { x: 8 * side, y: -16 };
     this.magnifier = marker({ scene, kind: 'magnifier', at: corner });
-    this.badge = scene.add
-      .text(corner.x, corner.y, '', { fontFamily: 'monospace', fontSize: '8px', color: '#ffffff' })
+    this.badge = addPixelText(scene, { x: corner.x, y: corner.y, text: '', color: '#ffffff' })
       .setOrigin(0.5)
       .setVisible(false);
     const start = (still ? path.at(-1) : path[0]) ?? { x: 0, y: 0 };
@@ -118,7 +117,7 @@ export class CouncillorToken {
   /** Its name plate's box on the map: in its own place, or where it's drawn now (#234). */
   plateBox({ stacked }: { stacked: boolean }): PlateBox {
     const width = this.plate.width;
-    const left = this.plate.x - (this.plate.originX === 1 ? width : 0);
+    const left = this.plate.x - (this.plate.origin.x === 1 ? width : 0);
     const y = stacked ? this.plate.y : PLATE_Y;
     return {
       x: this.container.x + left,

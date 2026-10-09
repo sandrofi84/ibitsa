@@ -11,8 +11,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
-import { engineTextures } from './art.ts';
-import { buildDefaultPack } from './generate.ts';
+import { buildDefaultPack, engineFiles } from './generate.ts';
 import type { Manifest } from './manifest.schema.ts';
 import { SOUND_LIMITS, SOUND_SLOTS } from './manifest.ts';
 import { Raster } from './raster.ts';
@@ -364,9 +363,9 @@ describe('regenerating', () => {
     );
   });
 
-  it('produces exactly the committed engine textures', () => {
-    for (const [name, raster] of Object.entries(engineTextures())) {
-      expect(readFileSync(join(TEXTURES, name)).equals(raster.png()), name).toBe(true);
+  it('produces exactly the committed engine textures and font', () => {
+    for (const [name, content] of Object.entries(engineFiles())) {
+      expect(readFileSync(join(TEXTURES, name)).equals(Buffer.from(content)), name).toBe(true);
     }
   });
 });
