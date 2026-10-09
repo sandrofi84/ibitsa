@@ -675,3 +675,15 @@ describe('ClaudeAdapter on the real platform', () => {
     },
   );
 });
+
+describe('a hero given a vague task (#266)', () => {
+  it('is told to ask which reading the user means before it changes code', () => {
+    expect(HERO_INSTRUCTIONS).toMatch(
+      /before you change any code.*ambiguous.*AskUserQuestion.*readings as options/is,
+    );
+  });
+
+  it('is told not to ask about what it can settle itself', () => {
+    expect(HERO_INSTRUCTIONS).toMatch(/don't ask about details/i);
+  });
+});

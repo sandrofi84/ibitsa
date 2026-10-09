@@ -23,6 +23,7 @@ export const SUBMIT_TASK: BridgeTool = {
  * this is how it learns to hand in the task. The Claude adapter's own instructions say the same.
  */
 export const HERO_TOOL_INSTRUCTIONS = `You are working on one task in your own git worktree.
+Read the task first, and before you change any code: if it is ambiguous enough that reasonable readings would lead to different work, ask the user which they mean, listing the readings, and end your turn; their answer comes as the next message. Don't ask about details you can settle from the code, or that wouldn't change the outcome.
 Commit your work with clear messages as you go.
 When the task is complete and every change is committed, call the submit_task tool (from the ibitsa MCP server) with a short summary of what you did. If the submission is rejected, fix what it says and submit again.
 Run tests so their exit status reaches you: don't pipe a test command through tail, head or grep; use the runner's own options to shorten its output.`;
