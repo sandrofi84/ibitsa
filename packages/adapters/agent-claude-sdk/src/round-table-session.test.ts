@@ -11,10 +11,11 @@ import type {
 import type { CouncilEvent, ResearchBrief } from '@ibitsa/protocol';
 import type { SittingStart } from '@ibitsa/runtime';
 import { afterEach, describe, expect, it } from 'vitest';
+import { CHAMBERS_INSTRUCTIONS } from './chambers-session';
 import { ClaudeAdapter } from './claude-adapter';
 import type { SdkModule } from './claude-adapter.types';
 import type { ToolReply } from './elder-session.types';
-import { COUNCIL_TOOLS, ROUND_TABLE_INSTRUCTIONS } from './round-table-session';
+import { COUNCIL_TOOLS, ROUND_TABLE_INSTRUCTIONS, toldText } from './round-table-session';
 
 type Handler = (input: unknown) => Promise<ToolReply>;
 type Call = (name: string, input: unknown) => Promise<ToolReply>;
@@ -583,5 +584,20 @@ describe('what a sitting cost (#106)', () => {
     expect(new ClaudeAdapter({ env: () => ({}) }).councilPromptVersion).toBe(
       adapter.councilPromptVersion,
     );
+  });
+});
+
+describe("the council can't end a sitting itself (#260)", () => {
+  const button = /only the user can end the sitting, with Dismiss the council/i;
+
+  it('says so in both kinds of sitting, so it points the user to the button', () => {
+    expect(ROUND_TABLE_INSTRUCTIONS).toMatch(button);
+    expect(CHAMBERS_INSTRUCTIONS).toMatch(button);
+  });
+
+  it('reminds it when the user writes, without claiming the sitting is over', () => {
+    const told = toldText({ text: 'dismiss the council' });
+    expect(told).toMatch(button);
+    expect(told).toMatch(/never say the council is dismissed/i);
   });
 });
