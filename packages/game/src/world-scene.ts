@@ -18,6 +18,7 @@ import {
   pathTo,
   reviewerPath,
   reviewerSide,
+  villageCenter,
 } from './layout';
 import type { BridgeLayout, IslandLayout, Point, WorldLayout } from './layout.types';
 import { marker } from './map-markers';
@@ -108,6 +109,7 @@ export class WorldScene extends Phaser.Scene {
   /** The hero the camera follows when chosen in the hero pane (#125); else the first one working. */
   private selected: string | null = null;
   private last: Snapshot | null = null;
+  private overviewKey = '';
   private boundsKey = '';
   private probe: MapProbe = {
     bounds: { x: 0, y: 0, width: WIDTH, height: HEIGHT },
@@ -304,7 +306,11 @@ export class WorldScene extends Phaser.Scene {
     else this.drawIsland(village, v);
     this.questLayer = this.add.container(0, 0);
     this.badgeLayer = this.add.container(0, 0);
-    this.empty = this.add.text(330, 120, 'No quest yet', textStyle('#d8ecff')).setOrigin(0.5);
+    // Over the village's labels, where the opening view looks (#243).
+    const home = villageCenter(this.layout);
+    this.empty = this.add
+      .text(home.x, v.hut.y - 24, 'No quest yet', textStyle('#d8ecff'))
+      .setOrigin(0.5);
     this.world.add([
       village,
       // Mid-campaign the hut opens the council's chamber (#169).
@@ -341,7 +347,9 @@ export class WorldScene extends Phaser.Scene {
     this.director = new CameraDirector({ auto: this.view.get(AUTO_KEY, true) });
     const cam = this.cameras.main;
     this.fitBounds();
-    cam.centerOn(WIDTH / 2, HEIGHT / 2);
+    const start = overviewCenter(this.layout);
+    cam.centerOn(start.x, start.y);
+    this.overviewKey = `${start.x},${start.y}`;
     this.ui = this.cameras.add(0, 0, this.scale.width, this.scale.height, false, 'ui');
     this.ui.ignore(this.world);
     cam.ignore(this.hud);
@@ -440,6 +448,20 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
+   * The whole map's middle moves when islands come or go (#243): from Home Village to the world and
+   * back. A camera showing the whole map follows it there.
+   */
+  private followOverview(): void {
+    const c = overviewCenter(this.layout);
+    const key = `${c.x},${c.y}`;
+    if (key === this.overviewKey) return;
+    this.overviewKey = key;
+    const aim = this.director.current;
+    if (aim.follow || aim.zoom !== OVERVIEW_ZOOM) return;
+    this.cameras.main.pan(c.x, c.y, CAMERA_MS, 'Sine.easeInOut', true);
+  }
+
+  /**
    * The sea and the camera's reach follow the map (#124): past its edges by a whole world each side, so
    * a panel wider or taller than the world shows more sea, never black (#59).
    */
@@ -494,6 +516,7 @@ export class WorldScene extends Phaser.Scene {
     this.last = snapshot;
     this.layout = layoutWorld(snapshot);
     this.fitBounds();
+    this.followOverview();
     this.empty.setVisible(snapshot.campaign === null);
     // A new campaign charts its islands afresh; an ended one sinks them (#180).
     const campaign = snapshot.campaign;
