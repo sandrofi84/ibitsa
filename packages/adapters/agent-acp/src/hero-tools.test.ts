@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { submitResult, submittedSummary } from './hero-tools';
+import { HERO_TOOL_INSTRUCTIONS, submitResult, submittedSummary } from './hero-tools';
 
 describe('hero tools (#197)', () => {
   it("reads submit_task's summary, trimmed, and nothing else", () => {
@@ -21,5 +21,14 @@ describe('hero tools (#197)', () => {
       text: 'Not submitted: the submit check failed.',
       isError: true,
     });
+  });
+});
+
+describe('an ACP hero given a vague task (#266)', () => {
+  it('is told to ask which reading the user means, and wait, before it changes code', () => {
+    expect(HERO_TOOL_INSTRUCTIONS).toMatch(
+      /before you change any code.*ambiguous.*ask the user which they mean.*end your turn/is,
+    );
+    expect(HERO_TOOL_INSTRUCTIONS).toMatch(/don't ask about details/i);
   });
 });

@@ -37,6 +37,7 @@ export const DISPUTE_TOOL = 'mcp__ibitsa__dispute_finding';
 
 /** Appended to Claude Code's own system prompt; identical for every hero so it caches (spec §10). */
 export const HERO_INSTRUCTIONS = `You are working on one task in your own git worktree.
+Read the task first, and before you change any code: if it is ambiguous enough that reasonable readings would lead to different work, ask the user which they mean with the AskUserQuestion tool, giving the readings as options. Don't ask about details you can settle from the code, or that wouldn't change the outcome.
 Commit your work with clear messages as you go.
 When the task is complete and every change is committed, call the submit_task tool with a short summary of what you did. If the submission is rejected, fix what it says and submit again.
 If you need a decision from the user, ask with the AskUserQuestion tool instead of guessing.
