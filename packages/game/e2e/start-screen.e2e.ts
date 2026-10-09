@@ -49,3 +49,66 @@ test('the start screen: the hut welcomes you, "I know the way" charts an island,
   await expect.poll(() => probe(page, (p) => p.map()?.startScreen)).toBe(true);
   await openWelcome(page);
 });
+
+interface HutProbe {
+  hut(): {
+    mode: string | null;
+    step: string;
+    councillors: { id: string; walking: boolean }[];
+  } | null;
+  hutOnPage(): { x: number; y: number } | null;
+}
+
+const hut = (page: Page) =>
+  page.evaluate(() => (window as unknown as { __ibitsa: HutProbe }).__ibitsa.hut());
+
+test('the hut opens on the elder alone, who walks in before the welcome; the work stays in the hut (#244)', async ({
+  page,
+}) => {
+  await page.goto('/?fixture=live');
+  await expect.poll(() => probe(page, (p) => p.map()?.startScreen)).toBe(true);
+
+  // The hut opens with the elder walking in; the welcome waits until it's seated.
+  await openWelcome(page);
+  const welcome = page.getByRole('dialog', { name: 'Welcome' });
+  const seen = await hut(page);
+  expect(seen?.mode).toBeNull();
+  expect(seen?.step).toBe('goal');
+  expect(seen?.councillors).toEqual([expect.objectContaining({ id: 'elder', walking: false })]);
+  await page.screenshot({ path: 'test-results/hut-welcome.png' });
+
+  // Cancel: back to the map.
+  await welcome.getByRole('button', { name: 'Cancel' }).click();
+  await expect.poll(() => hut(page)).toBeNull();
+  await expect.poll(() => probe(page, (p) => p.map()?.startScreen)).toBe(true);
+
+  // Asking the elder keeps the user in the hut, with its findings.
+  await openWelcome(page);
+  await welcome.getByLabel('Task').fill('Fix the login redirect');
+  await welcome.getByRole('button', { name: 'Help me find it' }).click();
+  const elder = page.getByRole('region', { name: 'Elder' });
+  await expect(elder).toContainText("The elder's findings");
+  await expect.poll(async () => (await hut(page))?.step).toBe('research');
+
+  // Out by the door, the elder's panel stays on the map; the hut leads back in (#245).
+  await page.getByRole('button', { name: 'Back to the map' }).click();
+  await expect.poll(() => hut(page)).toBeNull();
+  await expect(elder).toBeVisible();
+  await expect(async () => {
+    const at = await page.evaluate(() =>
+      (window as unknown as { __ibitsa: HutProbe }).__ibitsa.hutOnPage(),
+    );
+    if (at) await page.mouse.click(at.x, at.y);
+    expect(await hut(page)).not.toBeNull();
+  }).toPass({ timeout: 10_000 });
+
+  // Convening: the councillors walk in to join the elder, who stays in its seat.
+  await elder.getByRole('button', { name: 'Convene council' }).click();
+  const convene = page.getByRole('dialog', { name: 'Convene the council' });
+  await convene.getByRole('button', { name: 'Convene' }).click();
+  await expect
+    .poll(async () => (await hut(page))?.councillors.filter((c) => c.walking).length ?? 0)
+    .toBeGreaterThan(0);
+  const joining = await hut(page);
+  expect(joining?.councillors.find((c) => c.id === 'elder')?.walking).toBe(false);
+});

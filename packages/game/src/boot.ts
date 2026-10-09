@@ -1,5 +1,5 @@
 import type { Manifest } from '@ibitsa/assets';
-import type { SittingView } from '@ibitsa/protocol';
+import type { SittingView, Snapshot } from '@ibitsa/protocol';
 import * as Phaser from 'phaser';
 import { mountAmendmentReview } from './amendment-review';
 import type { Started } from './boot.types';
@@ -12,6 +12,7 @@ import { mountConveneForm } from './convene-form';
 import { consultedSitting, mountCouncilChamber } from './council-chamber';
 import { mountCouncilDialogue } from './council-dialogue-box';
 import { mountCouncilPane, mountCouncilWord } from './council-pane';
+import { elderHut } from './elder-hut';
 import { mountElderPanel } from './elder-panel';
 import { mountGuildHall } from './guild-hall';
 import { mountHeroPane } from './hero-pane';
@@ -20,10 +21,9 @@ import { setHeroClasses } from './heroes';
 import { reportDiagnostics } from './host';
 import type { Diagnostics, Host } from './host.types';
 import { HutDoor } from './hut-door';
-import type { HutDoorInput } from './hut-door.types';
 import { mountHutExit } from './hut-exit';
 import { HutScene } from './hut-scene';
-import { HUT_FEED } from './hut-view';
+import { HUT_FEED, HUT_SEATED } from './hut-view';
 import type { HutFeed } from './hut-view.types';
 import { mountNeedsYouPanel } from './needs-you-panel';
 import { mountNewActionForm } from './new-action-form';
@@ -156,8 +156,11 @@ export function startGame(root: HTMLElement, host: Host): Started {
       if (sitting) sittingFeed.update({ sitting, focus });
     },
   });
-  /** Back into the hut, if the user had left it (#245); set once the game is up. */
-  let enterHut = () => {};
+  // Whether the hut shows, and for what (#244, #245); followed once the game is up.
+  const door = new HutDoor();
+  let placeHut: (snapshot: Snapshot | null) => void = () => {};
+  /** Into the hut: the elder's welcome with no campaign planning, else back to the work (#244, #245). */
+  let enterHut: (prefill?: { description: string }) => void = () => {};
   const view = new ViewState(host.viewStorage);
   // Which hero the pane shows and the bar speaks to (#125); the map follows it too.
   const selection = new HeroSelection(view);
@@ -191,7 +194,15 @@ export function startGame(root: HTMLElement, host: Host): Started {
     assembleParty: (islandId) => newParty.open(islandId),
   });
   mountRestartNotice({ client });
-  const newQuest = mountNewQuestForm({ client, host, partyCheck });
+  const newQuest = mountNewQuestForm({
+    client,
+    host,
+    partyCheck,
+    onCancel: () => {
+      door.endWelcome();
+      placeHut(client.snapshot);
+    },
+  });
   const newActionForm = mountNewActionForm({ client });
   const newAction = () => newActionForm.open();
   const conveneForm = mountConveneForm({ client, view });
@@ -226,7 +237,8 @@ export function startGame(root: HTMLElement, host: Host): Started {
     client,
     history,
     onHistoryChange: saveHistory,
-    startQuest: (description) => newQuest.open({ description }),
+    // The task written in, the elder hears it in the hut (#244).
+    startQuest: (description) => enterHut({ description }),
     newAction,
     selection,
   });
@@ -235,6 +247,8 @@ export function startGame(root: HTMLElement, host: Host): Started {
   mountCouncilPane({ client, portrait: (a) => portraits.url(a) });
   // The Command Palette's Message Hero… and Run Action… (#87).
   host.onHostEvent((event) => {
+    // "Ibitsa: New Quest" walks into the hut, like clicking it (#244).
+    if (event.type === 'openNewQuest') enterHut();
     if (event.type === 'focusCommandBar') commandBar.focus();
     if (event.type === 'fillCommandBar') commandBar.fill(event.text);
   });
@@ -358,7 +372,8 @@ export function startGame(root: HTMLElement, host: Host): Started {
     // Before the pack has loaded, the pack scene starts the hut itself.
     const loaded = scenes.isActive('world') || scenes.isSleeping('world') || scenes.isActive('hut');
     if (scenes.isActive('world')) scenes.sleep('world');
-    if (loaded) scenes.start('hut');
+    // A hut already showing goes on with the new feed: the elder stays seated as the council joins it.
+    if (loaded && !scenes.isActive('hut')) scenes.start('hut');
   };
   /**
    * A pack chosen in the Guild Hall (#183): the old pack's art goes and the new one loads, then the map
@@ -419,13 +434,10 @@ export function startGame(root: HTMLElement, host: Host): Started {
   client.onSnapshot(() => {
     if (chamberHut) chamberFeed();
   });
-  // The council hut (§7.1 screen 9, #180): with no campaign running, the council's welcome; mid-campaign,
-  // its chamber (#169). While a campaign plans, the elder's panel and the sitting have the floor.
+  // The council hut (§7.1 screen 9, #180): with no campaign running, the elder's welcome (#244);
+  // mid-campaign, its chamber (#169); while a campaign plans, back in to the elder or the sitting (#245).
   game.events.on(HUT_SELECTED, () => {
-    const status = client.snapshot?.campaign?.status;
-    if (!status || status === 'finished' || status === 'abandoned') newQuest.open();
-    else if (status === 'active') chamber.open();
-    // While the council sits, back in to it (#245).
+    if (client.snapshot?.campaign?.status === 'active') chamber.open();
     else enterHut();
   });
   // The pack's sounds on what happens, at the user's volumes (#184).
@@ -433,31 +445,45 @@ export function startGame(root: HTMLElement, host: Host): Started {
   // The Guild Hall in Home Village opens Ibitsa's settings (#179).
   const guildHall = mountGuildHall({ client, host, partyCheck });
   game.events.on(GUILD_HALL_SELECTED, () => guildHall.open());
-  // The hut shows while the council sits (§7.1 screen 2), and the map comes back after, or when the
-  // user leaves by the hut's door (#245).
-  const door = new HutDoor();
-  let sittingHut = false;
-  const placeHut = (snapshot: HutDoorInput) => {
+  // The hut shows while a campaign plans: the elder alone, then the council while it sits (§7.1 screen
+  // 2, #244). The map comes back after, or when the user leaves by the hut's door (#245).
+  let doorHut = false;
+  /** The welcome's form opens once the elder has walked in (#244), with the task if one was written. */
+  let welcomeTask: { prefill?: { description: string } } | null = null;
+  placeHut = (snapshot) => {
     if (chamberHut) return;
-    if (door.see(snapshot) === 'sitting' && sitting) {
-      sittingFeed.update({ sitting, focus });
-      if (!sittingHut) {
-        sittingHut = true;
+    const place = door.see(snapshot);
+    if (place === 'sitting' && sitting) sittingFeed.update({ sitting, focus });
+    else if (place === 'elder') sittingFeed.show(elderHut(snapshot));
+    if (place) {
+      if (!doorHut) {
+        doorHut = true;
         showHut(sittingFeed);
       }
-    } else if (sittingHut) {
-      sittingHut = false;
+      return;
+    }
+    welcomeTask = null;
+    if (doorHut) {
+      doorHut = false;
       hideHut();
     }
   };
+  game.events.on(HUT_SEATED, () => {
+    const task = welcomeTask;
+    if (!task || door.see(client.snapshot) !== 'elder') return;
+    welcomeTask = null;
+    newQuest.open(task.prefill);
+  });
   client.onSnapshot((snapshot) => {
     sitting = isSitting(snapshot.sitting) ? snapshot.sitting : null;
     // The command bar talks to the council while it sits (#242).
     document.body.classList.toggle('council-sitting', sitting !== null);
     placeHut(snapshot);
   });
-  enterHut = () => {
+  enterHut = (prefill) => {
     door.enter();
+    const planning = client.snapshot?.campaign?.status === 'planning';
+    welcomeTask = planning ? null : prefill ? { prefill } : {};
     placeHut(client.snapshot);
   };
   mountHutExit(() => {

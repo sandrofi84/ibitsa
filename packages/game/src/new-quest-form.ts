@@ -10,8 +10,8 @@ import type { PartyCheck } from './party-check.types';
 /**
  * The council's welcome (§1.1, §7.1 screen 9, #180), once the New Quest form (spec §14.1, §4.1), and the
  * first-run API-key card (§11.6). Plain DOM in a native <dialog>, so it is keyboard-accessible.
- * Credentials go over the host channel, never the protocol. The council hut opens it when no campaign
- * runs; "Ibitsa: New Quest" too.
+ * Credentials go over the host channel, never the protocol. It opens in the council hut once the elder
+ * has walked in (#244), from the hut, "Ibitsa: New Quest" or the command bar.
  *
  * The elder asks what you want to do on Ibitsa (the task): **Help me find it** researches it first
  * (#101); **I know the way** shows the hero's fields for a quick quest straight away. After the elder's
@@ -21,11 +21,14 @@ export function mountNewQuestForm({
   client,
   host,
   partyCheck,
+  onCancel,
 }: {
   client: GameClient;
   host: Host;
   /** The quick quest's hero sets out once its class's ACP agent passes the party check (#199). */
   partyCheck: PartyCheck;
+  /** Cancel or Escape: with no campaign, the welcome is over and the hut closes (#244). */
+  onCancel?: () => void;
 }): NewQuestForm {
   const dialog = el('dialog', { className: 'new-quest council-welcome' });
   dialog.setAttribute('aria-label', 'Welcome');
@@ -46,11 +49,10 @@ export function mountNewQuestForm({
     if (dialog.open && !renderOnboarding) refreshBranches();
   });
 
+  dialog.addEventListener('cancel', () => onCancel?.());
+
   host.onHostEvent((event: HostEvent) => {
     switch (event.type) {
-      case 'openNewQuest':
-        open();
-        return;
       case 'credentials':
         if (!pendingStart) return;
         if (event.ready) {
@@ -152,7 +154,13 @@ export function mountNewQuestForm({
   form.lastElementChild?.append(
     start,
     skip,
-    button({ label: 'Cancel', onClick: () => dialog.close() }),
+    button({
+      label: 'Cancel',
+      onClick: () => {
+        dialog.close();
+        onCancel?.();
+      },
+    }),
   );
 
   function setMode(next: 'ask' | 'quest'): void {
