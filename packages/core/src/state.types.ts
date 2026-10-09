@@ -172,6 +172,11 @@ export interface HeroRecord {
   campaignCapped: boolean;
   /** False after a restart until the session is resumed. */
   sessionLive: boolean;
+  /**
+   * Its session's transcript is gone (#292): the next start is a fresh session, told what Ibitsa's
+   * log knows of the work so far.
+   */
+  lost?: boolean;
   /** Stop was pressed and the interrupted turn hasn't ended yet (#166). */
   stopping?: boolean;
   stalled: string | null;
@@ -292,7 +297,7 @@ export type PendingItem =
       capEnforcement: 'native' | 'turnEnd';
       scope?: 'hero' | 'campaign';
     }
-  | { kind: 'error'; id: string; heroId: string; message: string }
+  | { kind: 'error'; id: string; heroId: string; message: string; fresh?: true }
   | {
       kind: 'reviewEscalation';
       id: string;

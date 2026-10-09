@@ -15,7 +15,12 @@ import { CHAMBERS_INSTRUCTIONS } from './chambers-session';
 import { ClaudeAdapter } from './claude-adapter';
 import type { SdkModule } from './claude-adapter.types';
 import type { ToolReply } from './elder-session.types';
-import { COUNCIL_TOOLS, ROUND_TABLE_INSTRUCTIONS, toldText } from './round-table-session';
+import {
+  COUNCIL_LOST,
+  COUNCIL_TOOLS,
+  ROUND_TABLE_INSTRUCTIONS,
+  toldText,
+} from './round-table-session';
 
 type Handler = (input: unknown) => Promise<ToolReply>;
 type Call = (name: string, input: unknown) => Promise<ToolReply>;
@@ -461,6 +466,35 @@ describe('a council whose context was kept (#167)', () => {
     await flush();
     expect(kept.calls[0]?.options.resume).toBe('council-old');
     expect(fresh.calls[0]?.options).not.toHaveProperty('resume');
+  });
+});
+
+describe('a lead session whose transcript is gone (#292)', () => {
+  const failing = (found: boolean) => {
+    const sitting = run(
+      async function* () {
+        yield* [];
+        throw new Error('Claude Code process exited with code 1');
+      },
+      { resume: { sessionId: 'sit-gone', prompt: 'Carry on.' } },
+    );
+    sitting.sdk.getSessionInfo = (async () =>
+      found ? { sessionId: 'sit-gone' } : undefined) as unknown as NonNullable<
+      SdkModule['getSessionInfo']
+    >;
+    return sitting;
+  };
+
+  it('says the transcript is gone and how to go on', async () => {
+    const { events } = failing(false);
+    await until(() => events.length > 0);
+    expect(events).toEqual([{ type: 'error', message: COUNCIL_LOST }]);
+  });
+
+  it('reports any other failure as it was', async () => {
+    const { events } = failing(true);
+    await until(() => events.length > 0);
+    expect(events).toEqual([{ type: 'error', message: 'Claude Code process exited with code 1' }]);
   });
 });
 

@@ -351,6 +351,7 @@ export class Hero {
         r.sessionStarted = true;
         r.sessionLive = true;
         r.sessionId = event.sessionId;
+        delete r.lost;
         r.inTurn = true; // the session starts by working on its prompt
         break;
       case 'turnStarted':
@@ -448,8 +449,27 @@ export class Hero {
       case 'error':
         this.fail(event.message);
         break;
+      case 'sessionMissing':
+        this.lose();
+        break;
     }
     this.watchSilence();
+  }
+
+  /**
+   * Its session's transcript is gone (#292): resuming would fail again, so the next start is a fresh
+   * session told what the log knows. The user chooses when, from the error in "Needs you".
+   */
+  private lose(): void {
+    const r = this.record;
+    r.sessionId = null;
+    r.sessionLive = false;
+    r.lost = true;
+    this.fail(
+      "Its Claude Code session can't be resumed: the session's transcript is gone. Start fresh to " +
+        'give the task to a new session, told what Ibitsa knows: its changes so far and its last message.',
+      true,
+    );
   }
 
   /** The silence timer fired. */
@@ -673,12 +693,12 @@ export class Hero {
     }
   }
 
-  private fail(message: string): void {
+  private fail(message: string, fresh = false): void {
     const r = this.record;
     r.error = message;
     r.inTurn = false;
     r.runningTools = [];
-    this.ctx.needsYou.ask({ kind: 'error', heroId: r.id, message });
+    this.ctx.needsYou.ask({ kind: 'error', heroId: r.id, message, ...(fresh ? { fresh } : {}) });
   }
 
   private spent(): number {
@@ -772,6 +792,20 @@ export class Hero {
   private prompt(): string {
     const task = this.task();
     if (!task) return '';
-    return task.briefing ? `${task.description}\n\n${task.briefing}` : task.description;
+    const prompt = task.briefing ? `${task.description}\n\n${task.briefing}` : task.description;
+    return this.record.lost ? `${prompt}\n\n${this.takeOver()}` : prompt;
+  }
+
+  /** What a fresh session hears when the one before it was lost (#292): only what the log knows. */
+  private takeOver(): string {
+    const r = this.record;
+    const lines = [
+      'You are taking over this task from an earlier session whose conversation was lost. ' +
+        'The worktree keeps everything it changed: start with `git status`, `git diff` and ' +
+        '`git log` to see where it got to, then carry on.',
+    ];
+    if (r.submitted) lines.push(`It had handed the task in, saying:\n${r.submitted.summary}`);
+    if (r.lastMessage) lines.push(`Its last message was:\n${r.lastMessage}`);
+    return lines.join('\n\n');
   }
 }

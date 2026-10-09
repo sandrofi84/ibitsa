@@ -1,5 +1,6 @@
 import type {
   createSdkMcpServer,
+  getSessionInfo,
   query,
   SettingSource,
   tool,
@@ -11,6 +12,8 @@ export interface SdkModule {
   query: typeof query;
   createSdkMcpServer: typeof createSdkMcpServer;
   tool: typeof tool;
+  /** Whether a session's transcript still exists, after a resume fails (#292). */
+  getSessionInfo?: typeof getSessionInfo;
 }
 
 export interface ClaudeAdapterOptions {

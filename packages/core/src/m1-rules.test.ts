@@ -664,6 +664,63 @@ describe('errors', () => {
   });
 });
 
+describe('a session whose transcript is gone (#292)', () => {
+  const lost = () => {
+    const h = quest()
+      .agent({ type: 'message', text: 'The redirect now keeps the query string.' })
+      .agent({ type: 'turnEnded', queuedTurns: 0 })
+      .gm({ type: 'runtimeRestarted' })
+      .command({
+        type: 'sendMessage',
+        commandId: 'm1',
+        heroId: 'h4',
+        text: 'Add a test too.',
+        priority: 'next',
+      });
+    h.agent({ type: 'sessionMissing' });
+    h.drain();
+    return h;
+  };
+
+  it('asks to start fresh instead of offering a resume that would fail again', () => {
+    const h = lost();
+    const item = h.items().find((i) => i.kind === 'error');
+    expect(item).toMatchObject({ kind: 'error', heroId: 'h4', fresh: true });
+    expect(item && 'message' in item ? item.message : '').toMatch(/can't be resumed/);
+    expect(h.hero().state.kind).toBe('error');
+  });
+
+  it('starts a fresh session told the task, to look at the worktree, and its last message', () => {
+    const h = lost().command({ type: 'resumeHero', commandId: 'r1', heroId: 'h4' });
+    expect(h.effects.some((e) => e.type === 'resumeSession')).toBe(false);
+    const start = h.effects.find((e) => e.type === 'startSession');
+    expect(start).toMatchObject({ type: 'startSession', heroId: 'h4', cwd: '/wt' });
+    const prompt = start && 'prompt' in start ? start.prompt : '';
+    expect(prompt).toContain('Fix the login redirect');
+    expect(prompt).toContain('git diff');
+    expect(prompt).toContain('The redirect now keeps the query string.');
+  });
+
+  it('works as before once the fresh session is up', () => {
+    const h = lost()
+      .command({ type: 'resumeHero', commandId: 'r1', heroId: 'h4' })
+      .agent({ type: 'sessionStarted', sessionId: 's2' })
+      .agent({ type: 'turnEnded', queuedTurns: 0 })
+      .gm({ type: 'runtimeRestarted' })
+      .command({
+        type: 'sendMessage',
+        commandId: 'm2',
+        heroId: 'h4',
+        text: 'Thanks.',
+        priority: 'next',
+      });
+    expect(h.effects).toContainEqual(
+      expect.objectContaining({ type: 'resumeSession', heroId: 'h4', sessionId: 's2' }),
+    );
+    expect(h.items().some((i) => i.kind === 'error')).toBe(false);
+  });
+});
+
 describe('after a restart', () => {
   it('resumes a hero who was working, drops requests the old process held, and says so (#166)', () => {
     const h = quest().agent({
