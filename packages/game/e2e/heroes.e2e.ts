@@ -133,7 +133,7 @@ test('one hero looks as before: no hero list (#125)', async ({ page }) => {
   await page.goto('/?fixture=live');
   await openWelcome(page);
   await page.getByLabel('Task').fill('Tidy the README');
-  await page.getByRole('button', { name: 'I know the way' }).click();
+  await page.getByRole('button', { name: 'Start a quick quest now' }).click();
   await page.getByRole('button', { name: 'Start quest' }).click();
   const pane = page.getByRole('region', { name: 'Hero' });
   await expect(pane.getByRole('heading', { name: /Ranger/ })).toBeVisible();

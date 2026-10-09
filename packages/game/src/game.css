@@ -352,6 +352,20 @@ input:disabled,
   margin: 0 0 8px;
 }
 
+/* What each way to start does (#270): one line each, its name in bold. */
+.new-quest .note.choices {
+  list-style: none;
+  padding: 0;
+}
+
+.new-quest .note.choices li + li {
+  margin-top: 2px;
+}
+
+.new-quest .note.choices strong {
+  color: #3d2e14;
+}
+
 .new-quest .error {
   color: #9a1e12;
   margin: 0 0 8px;
