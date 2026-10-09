@@ -198,6 +198,7 @@ export function startGame(root: HTMLElement, host: Host): Started {
     client,
     host,
     partyCheck,
+    portrait: (appearance) => portraits.url(appearance),
     onCancel: () => {
       door.endWelcome();
       placeHut(client.snapshot);
