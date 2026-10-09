@@ -7,8 +7,6 @@ import { councillorAppearance, councillorTitle } from './sitting-hut';
 
 /** The chamber shows the latest lines; the whole dialogue is in the sitting. */
 const SHOWN_LINES = 12;
-/** How long the notice of a reply stays while the hut is closed. */
-const NOTICE_MS = 10_000;
 
 /** The approved sitting the council answers from mid-campaign (#169), or null when it can't be asked. */
 export function consultedSitting(snapshot: Snapshot | null): SittingView | null {
@@ -36,7 +34,8 @@ export function chamberStatus(sitting: SittingView): string | null {
 /**
  * The council's chamber mid-campaign (spec §4.8, #169): opened by clicking the hut on the map, it
  * shows the council's latest lines over the hut, and a box to ask the whole council or one councillor.
- * While it's closed, a short notice shows each reply as it comes. Heroes keep working either way.
+ * While it's closed, a notice shows each reply as it comes, until it's read. Heroes keep working
+ * either way.
  */
 export function mountCouncilChamber({
   client,
@@ -56,7 +55,6 @@ export function mountCouncilChamber({
   let open = false;
   let shownKey = '';
   let seenLines: number | null = null;
-  let noticeTimer: ReturnType<typeof setTimeout> | null = null;
   const draft = { text: '', to: '' };
 
   const close = () => {
@@ -149,21 +147,37 @@ export function mountCouncilChamber({
     if (typing) box.focus();
   };
 
-  /** A reply came while the chamber is closed: say who answered, and offer the hut. */
+  /**
+   * A reply came while the chamber is closed: say who answered, and offer the hut. It stays until the
+   * user has read it (#269): **OK** or Escape puts it away, and a newer reply takes its place.
+   */
   const tell = (sitting: SittingView) => {
     const line = sitting.dialogue.at(-1);
     if (!line || line.speaker === 'you') return;
-    notice.replaceChildren(
+    const words = el('p', { className: 'council-notice-words' });
+    words.append(
       el('strong', { text: `${councillorTitle(line.speaker)}: ` }),
       el('span', { text: line.text }),
-      button({ label: 'Open the hut', onClick: () => chamber.open() }),
     );
+    const actions = el('div', { className: 'council-notice-actions' });
+    actions.append(
+      button({ label: 'Open the hut', onClick: () => chamber.open() }),
+      button({ label: 'OK', onClick: putAway }),
+    );
+    notice.replaceChildren(words, actions);
     notice.hidden = false;
-    if (noticeTimer) clearTimeout(noticeTimer);
-    noticeTimer = setTimeout(() => {
-      notice.hidden = true;
-    }, NOTICE_MS);
   };
+  const putAway = () => {
+    const had = notice.contains(document.activeElement);
+    notice.hidden = true;
+    if (had) (document.activeElement as HTMLElement | null)?.blur();
+  };
+  notice.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      e.stopPropagation();
+      putAway();
+    }
+  });
 
   client.onSnapshot((snapshot) => {
     const sitting = consultedSitting(snapshot);

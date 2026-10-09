@@ -184,7 +184,8 @@ export function mountCouncilPane({ client, portrait }: CouncilPaneOptions): void
 /**
  * The conversation over the command bar (#242, #268): lines that aren't about an open question (say,
  * the elder ending its turn) would otherwise show nowhere in the hut. It reads down to the bar that
- * answers it: the council's latest word, what the user said since, then what happens next.
+ * answers it: the council's latest word, what the user said since, then what happens next. It stays
+ * until read (#269): **OK** or Escape puts it away until someone says something new.
  */
 export function mountCouncilWord({ client, portrait, into }: CouncilWordOptions): void {
   const word = el('div', { className: 'council-word' });
@@ -192,10 +193,23 @@ export function mountCouncilWord({ client, portrait, into }: CouncilWordOptions)
   word.hidden = true;
   into.prepend(word);
   let shown = '';
+  let putAway: string | null = null;
+  const hide = () => {
+    const had = word.contains(document.activeElement);
+    putAway = shown ? newest(JSON.parse(shown) as CouncilConversation) : null;
+    word.hidden = true;
+    if (had) into.querySelector<HTMLElement>('[role="combobox"]')?.focus();
+  };
+  word.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      e.stopPropagation();
+      hide();
+    }
+  });
   client.onSnapshot((snapshot) => {
     const sitting = snapshot.sitting;
     const said = isSitting(sitting) ? conversation(sitting) : null;
-    word.hidden = !said;
+    word.hidden = !said || newest(said) === putAway;
     const key = JSON.stringify(said);
     if (!said || key === shown) {
       if (!said) shown = '';
@@ -204,12 +218,19 @@ export function mountCouncilWord({ client, portrait, into }: CouncilWordOptions)
     shown = key;
     const lines = el('ol', { className: 'council-word-lines' });
     for (const line of said.lines) lines.append(lineItem({ line, portrait }));
-    word.replaceChildren(
-      lines,
-      ...(said.note ? [el('p', { className: 'note council-word-note', text: said.note })] : []),
+    const foot = el('div', { className: 'council-word-foot' });
+    foot.append(
+      el('p', { className: 'note council-word-note', text: said.note ?? '' }),
+      button({ label: 'OK', onClick: hide }),
     );
+    word.replaceChildren(lines, foot);
     word.scrollTop = word.scrollHeight;
   });
+}
+
+/** What makes a conversation new (#269): its latest line, or its note when it has no lines. */
+function newest(said: CouncilConversation): string {
+  return said.lines.at(-1)?.id ?? said.note ?? '';
 }
 
 /** One spoken line: the councillor's portrait, name and words, or the user's. */
