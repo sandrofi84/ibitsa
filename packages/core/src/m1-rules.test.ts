@@ -370,6 +370,15 @@ describe('stall detection', () => {
     expect(h.items().map((i) => i.kind)).toEqual(['stalled']); // no reply item while stalled
   });
 
+  it("asks for no reply when a hero's turn ends after its quest was abandoned (#255)", () => {
+    const h = quest();
+    h.command({ type: 'abandonQuest', commandId: 'a' });
+    expect(h.items()).toEqual([]);
+    // The session closes asynchronously: its last turn can still end afterwards.
+    h.agent({ type: 'turnEnded', queuedTurns: 0 });
+    expect(h.items()).toEqual([]);
+  });
+
   it('resets the failing-test count on a pass or a different command, but not on edits', () => {
     const h = quest();
     h.tool({ kind: 'test', detail: 'a', ok: false, id: '1' }).tool({

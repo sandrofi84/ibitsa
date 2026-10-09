@@ -572,7 +572,9 @@ export class Hero {
     const paused = r.stalled !== null || r.outOfGold || r.error !== null;
     // A task under review (M5) isn't waiting for orders: the review sends it back or passes it.
     const reviewing = this.task()?.state === 'underReview';
-    if (!r.submitted && !paused && !reviewing) {
+    // Nor is a hero whose quest has ended: its closing session can still end a turn (#255).
+    const ended = this.ctx.state.campaign?.status !== 'active';
+    if (!r.submitted && !paused && !reviewing && !ended) {
       this.ctx.needsYou.ask({ kind: 'reply', heroId: r.id, text: r.lastMessage ?? '' });
     }
   }
