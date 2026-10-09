@@ -134,6 +134,8 @@ test('the journal shows a recorded real quest in full (#58)', async ({ page }) =
   await page.goto('/?fixture=m1-real&autoplay=1&speed=instant');
   await expect.poll(() => probe(page, (p) => p.status().finished), { timeout: 20_000 }).toBe(true);
   const pane = page.getByRole('region', { name: 'Hero' });
+  // The finished quest folds the pane to its tab (#263).
+  await pane.getByRole('button', { name: /Expand the hero pane/ }).click();
   await pane.getByRole('button', { name: 'Journal' }).click();
   const journal = pane.getByRole('list', { name: 'Journal' });
   await expect(journal.getByRole('listitem').first()).toContainText(
