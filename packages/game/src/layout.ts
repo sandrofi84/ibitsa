@@ -272,7 +272,17 @@ export function bridgeState({ snapshot, to }: { snapshot: Snapshot; to: string }
   return { lowered, behind: island.behind };
 }
 
-/** Where the camera looks for the whole map: the 480×270 world from the village's side (#124). */
+/** The middle of Home Village's island. */
+export function villageCenter(layout: WorldLayout): Point {
+  const { village } = layout;
+  return { x: village.x + islandWidth(village.middles) / 2, y: village.y + ISLAND.height / 2 };
+}
+
+/**
+ * Where the camera looks for the whole map (#243): Home Village while it is all there is, else the
+ * 480×270 world from the village's side (#124).
+ */
 export function overviewCenter(layout: WorldLayout): Point {
+  if (layout.islands.length === 0) return villageCenter(layout);
   return { x: layout.bounds.x + WORLD.width / 2, y: WORLD.height / 2 };
 }

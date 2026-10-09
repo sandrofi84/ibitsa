@@ -14,6 +14,7 @@ import {
   reviewerSide,
   reviewerSpot,
   SHORE_ROW,
+  villageCenter,
   villageSpot,
   WORLD,
 } from './layout';
@@ -147,6 +148,14 @@ describe('layoutWorld', () => {
     const leftmost = Math.min(...l.islands.map((i) => i.x));
     expect(l.bounds.x).toBe(Math.min(0, leftmost - 16));
     expect(overviewCenter(l)).toEqual({ x: l.bounds.x + 240, y: 135 });
+  });
+
+  it('looks at Home Village while it is all there is on the map (#243)', () => {
+    const l = layoutWorld(null);
+    expect(villageCenter(l)).toEqual({ x: 80, y: 208 });
+    expect(overviewCenter(l)).toEqual(villageCenter(l));
+    const quest = layoutWorld(snapshot({ islands: [island('i', { tasks: 2 })] }));
+    expect(overviewCenter(quest)).toEqual({ x: 240, y: 135 });
   });
 });
 
