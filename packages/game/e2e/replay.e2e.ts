@@ -7,7 +7,7 @@ interface Probe {
   } | null;
   status(): { finished: boolean; diverged: boolean; waitingFor: string | null };
   zoom(): number;
-  hero: { speech(): string | null; icon(): string | null };
+  hero: { speech(): string | null; icon(): string | null; icons(): string[] };
 }
 
 const probe = <T>(page: Page, read: (p: Probe) => T) =>
@@ -107,27 +107,18 @@ test('fills the panel at the largest whole zoom where the map fits, as it grows 
 
 test('shows what the hero is doing as an icon beside it (#60)', async ({ page }) => {
   await page.goto('/?autoplay=1&speed=4');
-  // Sample the icon in the page every 30 ms: some activities last only a moment at this speed.
-  await page.evaluate(() => {
-    const w = window as unknown as {
-      __ibitsa: { hero: { icon(): string | null } };
-      __icons: string[];
-    };
-    w.__icons = [];
-    setInterval(() => {
-      const icon = w.__ibitsa.hero.icon();
-      if (icon && w.__icons.at(-1) !== icon) w.__icons.push(icon);
-    }, 30);
-  });
+  // The hero records every icon it shows (#289): at this speed some last only a moment, too short to
+  // be caught by sampling the page under load.
   await expect
-    .poll(() => probe(page, (p) => p.hero.icon()), { intervals: [30], timeout: 20_000 })
-    .toBe('edit');
-  await page.screenshot({ path: 'test-results/activity-icon-edit.png' });
+    .poll(() => probe(page, (p) => p.hero.icons()), { timeout: 20_000 })
+    .toContain('edit');
+  await page.screenshot({ path: 'test-results/activity-icons.png' });
   await expect.poll(() => probe(page, (p) => p.status().finished), { timeout: 30_000 }).toBe(true);
-  const seen = await page.evaluate(() => (window as unknown as { __icons: string[] }).__icons);
-  expect(seen).toEqual(expect.arrayContaining(['read', 'edit', 'test']));
-  // Submitted, not working: no icon.
-  expect(await probe(page, (p) => p.hero.icon())).toBeNull();
+  expect(await probe(page, (p) => p.hero.icons())).toEqual(
+    expect.arrayContaining(['read', 'edit', 'test']),
+  );
+  // Submitted, not working: no icon, once the last test's flask has lingered its moment (#289).
+  await expect.poll(() => probe(page, (p) => p.hero.icon())).toBeNull();
 });
 
 test('the journal shows a recorded real quest in full (#58)', async ({ page }) => {

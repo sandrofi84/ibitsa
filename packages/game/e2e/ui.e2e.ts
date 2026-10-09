@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { openWelcome } from './home';
+import { heroAwaitsOrders, openWelcome } from './home';
 
 // The New Quest form, the onboarding card and the hero pane (#37), against the real core and a
 // scripted fake runtime (`?fixture=live`).
@@ -639,6 +639,7 @@ test('the brief convenes a round table; its approved plan becomes a quest, task 
     'blocked',
   ]);
   // Asked to submit, hero 1 hands in task 1; island 2 starts and its hero gets to work.
+  await heroAwaitsOrders(page);
   const pane = page.getByRole('region', { name: 'Hero' });
   await pane.getByLabel('Message to the hero').fill('Submit it');
   await pane.getByRole('button', { name: 'Send now' }).click();

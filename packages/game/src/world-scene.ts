@@ -1093,6 +1093,7 @@ export class HeroToken {
   private readonly icon: Phaser.GameObjects.Sprite;
   private readonly iconKinds: readonly string[];
   private iconLinger: Phaser.Time.TimerEvent | null = null;
+  private readonly shownIcons: string[] = [];
   /** The camera zoom the bubbles and icon are sized for. */
   private zoom = 1;
   private speechFade: Phaser.Tweens.Tween | null = null;
@@ -1304,10 +1305,16 @@ export class HeroToken {
     return this.icon.visible ? (this.iconKinds[Number(this.icon.frame.name)] ?? null) : null;
   }
 
+  /** Every activity icon shown so far, in order, each change once (#289): a short one isn't missed. */
+  iconsShown(): string[] {
+    return [...this.shownIcons];
+  }
+
   private showIcon(kind: string): boolean {
     const frame = this.iconKinds.indexOf(kind);
     if (frame < 0) return false;
     this.icon.setFrame(frame).setVisible(true);
+    if (this.shownIcons.at(-1) !== kind) this.shownIcons.push(kind);
     return true;
   }
 
