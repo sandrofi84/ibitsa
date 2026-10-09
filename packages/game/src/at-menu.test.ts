@@ -137,6 +137,28 @@ describe('atMenu (#83)', () => {
     expect(pane.every((i) => i.group === 'Files')).toBe(true);
   });
 
+  it('offers only the council while it sits, and nothing once one is named (#242)', async () => {
+    const client = connected();
+    const snapshot = client.snapshot as Snapshot;
+    client.receive({
+      type: 'snapshot',
+      seq: 2,
+      snapshot: {
+        ...snapshot,
+        sitting: {
+          status: 'deliberating',
+          roster: [{ councillorId: 'security' }],
+        } as unknown as Snapshot['sitting'],
+      },
+    });
+    expect((await ask(client)).map((i) => [i.group, i.label, i.detail])).toEqual([
+      ['Council', '@council', 'Ask the whole council'],
+      ['Council', '@security', 'Ask Security'],
+    ]);
+    expect(await ask(client, { before: '@security is it ' })).toEqual([]);
+    expect(await ask(client, { recipients: false })).toEqual([]);
+  });
+
   it('offers nothing without a running quest, and no files before the worktree exists', async () => {
     expect(await ask(connected({ status: 'finished' }))).toEqual([]);
     const early = await ask(connected({ worktree: 'creating' }));

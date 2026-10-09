@@ -9,6 +9,7 @@ import type {
 } from '@ibitsa/protocol';
 import { describe, expect, it } from 'vitest';
 import type { Effect } from './effects.types';
+import { Sitting } from './sitting';
 import { initialState } from './state';
 import type { CoreState } from './state.types';
 import { step } from './step';
@@ -796,5 +797,88 @@ describe('the sitting and its campaign (#103)', () => {
       baseRef: 'main',
     });
     expect(c.rejections()).toEqual(['The council is sitting.']);
+  });
+});
+
+describe('a council waiting on the user (#242)', () => {
+  const ask = (c: Council) =>
+    c.event({ type: 'questionsAsked', toolUseId: 'u-ask', questions: [question()] });
+
+  it('waits when its turn ends with no question open and no plan', () => {
+    const c = deliberating()
+      .event({ type: 'said', councillorId: 'elder', text: 'There is nothing to plan here.' })
+      .event({ type: 'idle' });
+    expect(c.sitting().waiting).toBe(true);
+    // Its next turn has the floor again.
+    c.event({ type: 'sessionStarted', sessionId: 's-1' });
+    expect(c.sitting().waiting).toBe(false);
+  });
+
+  it('does not wait while questions are open, a plan is waiting, or once it has ended', () => {
+    expect(ask(deliberating()).event({ type: 'idle' }).sitting().waiting).toBe(false);
+    expect(deliberating().propose().event({ type: 'idle' }).sitting().waiting).toBe(false);
+    const dismissed = deliberating().event({ type: 'idle' }).do({ type: 'dismissCouncil' });
+    expect(dismissed.sitting().waiting).toBe(false);
+  });
+
+  it('passes the user’s words to the lead session and stops waiting', () => {
+    const c = deliberating().event({ type: 'idle' });
+    c.effects = [];
+    c.do({ type: 'consultCouncil', text: 'Plan it here anyway.' });
+    c.do({ type: 'consultCouncil', text: 'Is that safe?', councillorId: 'security' });
+    expect(c.rejections()).toEqual([]);
+    expect(c.sitting().waiting).toBe(false);
+    expect(c.sitting().dialogue).toEqual([
+      { id: 'd1', speaker: 'you', text: 'Plan it here anyway.' },
+      { id: 'd2', speaker: 'you', text: '@security Is that safe?' },
+    ]);
+    expect(c.effects).toEqual([
+      {
+        type: 'sittingMessage',
+        sittingId: 's1',
+        message: { kind: 'told', text: 'Plan it here anyway.' },
+      },
+      {
+        type: 'sittingMessage',
+        sittingId: 's1',
+        message: { kind: 'told', text: 'Is that safe?', councillorId: 'security' },
+      },
+    ]);
+  });
+
+  it('takes words while questions are open, not for a stranger or with a plan waiting', () => {
+    const open = ask(deliberating()).do({ type: 'consultCouncil', text: 'One moment.' });
+    expect(open.rejections()).toEqual([]);
+    expect(open.sitting().questions).not.toBeNull();
+    const stranger = deliberating().do({
+      type: 'consultCouncil',
+      text: 'Hi',
+      councillorId: 'designer',
+    });
+    expect(stranger.rejections()).toEqual(["designer isn't on the council's roster."]);
+    const waiting = deliberating().propose().do({ type: 'consultCouncil', text: 'Hi' });
+    expect(waiting.rejections()).toEqual(['A plan is waiting: approve it, or ask for changes.']);
+  });
+
+  it('counts only "Why?" as a why in the tally, not the user’s other words', () => {
+    const c = ask(deliberating());
+    const questions = c.sitting().questions;
+    c.do({
+      type: 'askCouncilWhy',
+      batchId: questions?.batchId,
+      questionId: questions?.items[0]?.id,
+    }).do({ type: 'consultCouncil', text: 'Also, keep it small.' });
+    expect(Sitting.tally(c.state.sitting as NonNullable<CoreState['sitting']>).whys).toBe(1);
+  });
+
+  it('stays waiting across a reload instead of waking the session', () => {
+    const reload = deliberating().event({ type: 'idle' });
+    reload.effects = [];
+    reload.feed({ kind: 'gm', t: 0, event: { type: 'runtimeRestarted' } });
+    expect(reload.effects).toEqual([]);
+    expect(reload.sitting().waiting).toBe(true);
+    // The user's words wake it.
+    reload.do({ type: 'consultCouncil', text: 'Carry on.' });
+    expect(reload.effects.map((e) => e.type)).toEqual(['startSitting', 'sittingMessage']);
   });
 });

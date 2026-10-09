@@ -35,6 +35,35 @@ export function councilMessage({
   };
 }
 
+/** The sitting statuses in which the council plans, and hears the user from the command bar (#242). */
+const PLANNING = ['convening', 'deliberating', 'awaitingApproval'];
+
+/** Who can be named while the council sits (#242): `council` and each councillor on the roster. */
+export function sittingHandles(snapshot: Snapshot | null): string[] {
+  const sitting = snapshot?.sitting;
+  if (!sitting || !PLANNING.includes(sitting.status)) return [];
+  return [COUNCIL, ...sitting.roster.map((c) => c.councillorId)];
+}
+
+/**
+ * A command bar message while the council sits (#242): everything goes to the council, to one
+ * councillor when an @ names it. Null when the council isn't sitting or there's nothing to say.
+ */
+export function sittingMessage({
+  text,
+  snapshot,
+}: {
+  text: string;
+  snapshot: Snapshot | null;
+}): { councillorId: string | null; text: string } | null {
+  const handles = sittingHandles(snapshot);
+  if (handles.length === 0) return null;
+  const parsed = parseMessage({ text, recipients: handles });
+  if (!parsed.text) return null;
+  const named = parsed.recipient !== null && parsed.recipient !== COUNCIL;
+  return { councillorId: named ? parsed.recipient : null, text: parsed.text };
+}
+
 /**
  * Reads a command bar message (spec §6.1, #83): the first @mention that names a recipient is the
  * recipient, and is taken out of the text; every other @mention stays as written, so a file reference

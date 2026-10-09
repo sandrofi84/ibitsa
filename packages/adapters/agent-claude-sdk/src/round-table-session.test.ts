@@ -328,6 +328,47 @@ describe('the round table (#103)', () => {
     expect(inputs[3]).toContain('security asked "How long should a session last?": One day');
   });
 
+  it('words what the user tells the council, to all or to one councillor (#242)', async () => {
+    const { session, inputs } = run(async function* ({ next }) {
+      await next();
+      await next();
+      await next();
+      yield result('success');
+    });
+    await until(() => inputs.length === 1);
+    session.message({ kind: 'told', text: 'Plan it here anyway.' });
+    session.message({ kind: 'told', text: 'Is that safe?', councillorId: 'security' });
+    await until(() => inputs.length === 3);
+    expect(inputs[1]).toMatch(
+      /^The user says:\nPlan it here anyway\.\n\nAnswer with say, as whoever/,
+    );
+    expect(inputs[2]).toMatch(
+      /^The user says to security:\nIs that safe\?\n\nAnswer with say, in security's voice/,
+    );
+  });
+
+  it('says it is idle when a turn ends with no task still running (#242)', async () => {
+    const { events } = run(async function* ({ next }) {
+      await next();
+      // A chamber outlives the turn: not idle yet.
+      yield message({ type: 'system', subtype: 'task_started', task_id: 'a1' });
+      yield result('success');
+      yield message({ type: 'system', subtype: 'task_notification', task_id: 'a1' });
+      yield result('success');
+      // The SDK's full background set replaces what was known; ambient tasks don't count.
+      yield message({
+        type: 'system',
+        subtype: 'background_tasks_changed',
+        tasks: [{ task_id: 'b1' }, { task_id: 'w1', ambient: true }],
+      });
+      yield result('success');
+      yield message({ type: 'system', subtype: 'background_tasks_changed', tasks: [] });
+      yield result('success');
+    });
+    await until(() => events.filter((e) => e.type === 'usage').length === 4);
+    expect(events.map((e) => e.type)).toEqual(['usage', 'usage', 'idle', 'usage', 'usage', 'idle']);
+  });
+
   it.each([
     ['error_max_budget_usd', 'The council ran out of gold. Its reports so far are kept.'],
     ['error_max_turns', 'The council took too many steps.'],

@@ -7,6 +7,8 @@ import {
   councilMessage,
   messageTargets,
   parseMessage,
+  sittingHandles,
+  sittingMessage,
 } from './mentions';
 
 const recipients = ['ranger-ilse', ALL];
@@ -102,5 +104,38 @@ describe('asking the council mid-campaign (#169)', () => {
     expect(councilMessage({ text: '@ranger-ilse carry on', snapshot: s })).toBeNull();
     expect(councilMessage({ text: '@council', snapshot: s })).toBeNull();
     expect(councilMessage({ text: '@council hi', snapshot: snapshot('deliberating') })).toBeNull();
+  });
+});
+
+describe('talking to the council while it sits (#242)', () => {
+  const snapshot = (status: string) =>
+    ({
+      campaign: { status: 'planning' },
+      sitting: { status, roster: [{ councillorId: 'security' }] },
+    }) as unknown as Snapshot;
+
+  it('offers @council and each councillor on the roster only while the council plans', () => {
+    expect(sittingHandles(snapshot('deliberating'))).toEqual(['council', 'security']);
+    expect(sittingHandles(snapshot('awaitingApproval'))).toEqual(['council', 'security']);
+    expect(sittingHandles(snapshot('approved'))).toEqual([]);
+    expect(sittingHandles(null)).toEqual([]);
+  });
+
+  it('sends every message to the council, to one councillor when an @ names it', () => {
+    const s = snapshot('deliberating');
+    expect(sittingMessage({ text: 'Plan it here anyway', snapshot: s })).toEqual({
+      councillorId: null,
+      text: 'Plan it here anyway',
+    });
+    expect(sittingMessage({ text: '@council carry on', snapshot: s })).toEqual({
+      councillorId: null,
+      text: 'carry on',
+    });
+    expect(sittingMessage({ text: '@security is it safe?', snapshot: s })).toEqual({
+      councillorId: 'security',
+      text: 'is it safe?',
+    });
+    expect(sittingMessage({ text: '@security', snapshot: s })).toBeNull();
+    expect(sittingMessage({ text: 'hi', snapshot: snapshot('dismissed') })).toBeNull();
   });
 });

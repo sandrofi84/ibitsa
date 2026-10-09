@@ -14,6 +14,7 @@ import { findingText } from './task-review';
 export function mountNeedsYouPanel({
   client,
   openCouncil,
+  replyToCouncil,
   selectHero,
   openTask,
   reviewAmendment,
@@ -30,12 +31,13 @@ export function mountNeedsYouPanel({
 
   let shown = '';
   client.onSnapshot((snapshot) => {
-    const council = councilItem({ snapshot, openCouncil });
+    const council =
+      councilItem({ snapshot, openCouncil }) ?? waitingItem({ snapshot, replyToCouncil });
     const amendment = amendmentItem({ snapshot, reviewAmendment });
     const parties = partyItems({ snapshot, assembleParty });
     const key = JSON.stringify([
       snapshot.needsYou,
-      council?.dataset.batch,
+      council?.dataset.batch ?? council?.dataset.waiting,
       amendment?.dataset.number,
       parties.map((p) => p.dataset.island),
     ]);
@@ -110,6 +112,28 @@ function partyItems({
       box.append(actions);
       return box;
     });
+}
+
+/**
+ * The council waiting on the user (#242): its turn ended with no question and no plan. One item that
+ * takes the user to the command bar to answer it; what the council said shows in the hut.
+ */
+function waitingItem({
+  snapshot,
+  replyToCouncil,
+}: {
+  snapshot: Snapshot;
+  replyToCouncil: (() => void) | undefined;
+}): HTMLElement | null {
+  const sitting = snapshot.sitting;
+  if (!isSitting(sitting) || !sitting.waiting) return null;
+  const box = el('article', { className: 'item council' });
+  box.dataset.waiting = String(sitting.dialogue.length);
+  box.append(el('p', { text: 'The council is waiting on you: tell it something, or dismiss it.' }));
+  const actions = el('div', { className: 'actions' });
+  actions.append(button({ label: 'Reply', onClick: () => replyToCouncil?.() }));
+  box.append(actions);
+  return box;
 }
 
 /** The council's waiting questions (§6.4, #102): one item that opens the dialogue box. */

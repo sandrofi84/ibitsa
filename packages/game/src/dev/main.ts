@@ -5,6 +5,7 @@ import m0Walk from '@ibitsa/agent-fake/fixtures/m0-walk.jsonl?raw';
 import m1Demo from '@ibitsa/agent-fake/fixtures/m1-demo.jsonl?raw';
 import m1Real from '@ibitsa/agent-fake/fixtures/m1-real.jsonl?raw';
 import m1Trouble from '@ibitsa/agent-fake/fixtures/m1-trouble.jsonl?raw';
+import m3CouncilWaits from '@ibitsa/agent-fake/fixtures/m3-council-waits.jsonl?raw';
 import m3RoundTable from '@ibitsa/agent-fake/fixtures/m3-round-table.jsonl?raw';
 import type { GitHostView } from '@ibitsa/protocol';
 import { startGame } from '../boot';
@@ -18,6 +19,7 @@ const fixtures: Record<string, string> = {
   'm1-trouble': m1Trouble,
   'm1-real': m1Real,
   'm1-demo': m1Demo,
+  'm3-council-waits': m3CouncilWaits,
   'm3-round-table': m3RoundTable,
 };
 

@@ -139,7 +139,7 @@ function blank(record: LogRecord): LogRecord {
     if (c.type === 'consultElder' || c.type === 'conveneCouncil') {
       return { ...record, command: { ...c, task: c.task.split('\n')[0] ?? '' } };
     }
-    if (c.type === 'sendMessage' || c.type === 'requestPlanChange') {
+    if (c.type === 'sendMessage' || c.type === 'requestPlanChange' || c.type === 'consultCouncil') {
       return { ...record, command: { ...c, text: BLANKED } };
     }
     if (c.type === 'askCouncilWhy' && c.text !== undefined) {

@@ -30,6 +30,7 @@ const sitting = (over: Partial<SittingView> = {}): SittingView => ({
   comparisonOf: null,
   consultations: [],
   amendments: [],
+  waiting: false,
   task: 'Add sign-in',
   mode: 'roundTable',
   status: 'deliberating',

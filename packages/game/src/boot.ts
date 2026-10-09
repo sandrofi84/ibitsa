@@ -11,6 +11,7 @@ import { CommandHistory } from './command-history';
 import { mountConveneForm } from './convene-form';
 import { consultedSitting, mountCouncilChamber } from './council-chamber';
 import { mountCouncilDialogue } from './council-dialogue-box';
+import { mountCouncilPane, mountCouncilWord } from './council-pane';
 import { mountElderPanel } from './elder-panel';
 import { mountGuildHall } from './guild-hall';
 import { mountHeroPane } from './hero-pane';
@@ -170,6 +171,8 @@ export function startGame(root: HTMLElement, host: Host): Started {
   mountNeedsYouPanel({
     client,
     openCouncil: () => councilDialogue.focus(),
+    // The council waiting on the user (#242): the command bar talks to it while it sits.
+    replyToCouncil: () => commandBar.focus(),
     selectHero: (heroId) => selection.select(heroId),
     openTask: (taskPointId) => taskPanel.open(taskPointId),
     reviewAmendment: () => amendmentReview.focus(),
@@ -215,6 +218,9 @@ export function startGame(root: HTMLElement, host: Host): Started {
     newAction,
     selection,
   });
+  // While the council sits (#242): its latest word over the bar, and its pane with the journal and Dismiss.
+  mountCouncilWord({ client, portrait: (a) => portraits.url(a), into: commandBar.element });
+  mountCouncilPane({ client, portrait: (a) => portraits.url(a) });
   // The Command Palette's Message Hero… and Run Action… (#87).
   host.onHostEvent((event) => {
     if (event.type === 'focusCommandBar') commandBar.focus();
@@ -417,6 +423,8 @@ export function startGame(root: HTMLElement, host: Host): Started {
   let sittingHut = false;
   client.onSnapshot((snapshot) => {
     sitting = isSitting(snapshot.sitting) ? snapshot.sitting : null;
+    // The command bar talks to the council while it sits (#242).
+    document.body.classList.toggle('council-sitting', sitting !== null);
     if (sitting) {
       sittingFeed.update({ sitting, focus });
       if (!sittingHut) {

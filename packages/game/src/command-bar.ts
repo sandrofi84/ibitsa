@@ -1,10 +1,11 @@
 import type { Snapshot } from '@ibitsa/protocol';
 import { attachActionPreview } from './action-preview';
 import { atMenu, handles } from './at-menu';
+import type { CommandIntent } from './client.types';
 import type { CommandBar, CommandBarOptions } from './command-bar.types';
 import { createCommandInput } from './command-input';
 import { el } from './dom';
-import { councilMessage, messageTargets } from './mentions';
+import { councilMessage, messageTargets, sittingHandles, sittingMessage } from './mentions';
 import { slashMenu } from './slash-menu';
 
 /**
@@ -40,6 +41,12 @@ export function mountCommandBar({
       slashMenu({ client, selected, ...(newAction ? { newAction } : {}) }),
     ],
     onSend: ({ text, priority }) => {
+      // While the council sits, the bar talks to it (#242): all of it, or the councillor an @ names.
+      if (sittingHandles(snapshot).length > 0) {
+        const told = sittingMessage({ text, snapshot });
+        if (told) client.send(consult(told));
+        return;
+      }
       const all = heroes();
       if (all.length === 0) {
         startQuest(text);
@@ -48,11 +55,7 @@ export function mountCommandBar({
       // `@council` or `@<councillor>` asks the council (#169); heroes keep working.
       const council = councilMessage({ text, snapshot });
       if (council) {
-        client.send({
-          type: 'consultCouncil',
-          text: council.text,
-          ...(council.councillorId ? { councillorId: council.councillorId } : {}),
-        });
+        client.send(consult(council));
         return;
       }
       const message = messageTargets({ text, heroes: all, selected: selected() });
@@ -76,6 +79,12 @@ export function mountCommandBar({
   document.body.appendChild(bar);
 
   const refresh = () => {
+    if (sittingHandles(snapshot).length > 0) {
+      input.input.placeholder = 'Tell the council, @ to name a councillor… (/ or ⌘K)';
+      input.setButtons({ next: 'Send', now: null });
+      input.setHint(null);
+      return;
+    }
     const target = hero();
     input.input.placeholder = target
       ? `Message ${target.name}, @ for files… (/ or ⌘K)`
@@ -103,6 +112,7 @@ export function mountCommandBar({
   });
 
   return {
+    element: bar,
     focus: () => input.input.focus(),
     fill: (text) => {
       input.input.value = text;
@@ -110,4 +120,15 @@ export function mountCommandBar({
       input.input.focus();
     },
   };
+}
+
+/** The command that tells the council, or one councillor, what the user wrote. */
+function consult({
+  councillorId,
+  text,
+}: {
+  councillorId: string | null;
+  text: string;
+}): CommandIntent {
+  return { type: 'consultCouncil', text, ...(councillorId ? { councillorId } : {}) };
 }

@@ -21,6 +21,7 @@ import {
   reply,
   seat,
   TOOL,
+  toldText,
 } from './round-table-session';
 
 const REPORT = TOOL('report');
@@ -39,7 +40,7 @@ Work in this order:
 1. Dispatch every councillor on the roster, in parallel where you can, with a short request naming the task. Each files its own report from its chamber with the report tool; you never file reports yourself. A councillor with nothing to add bows out in one line.
 2. Read their reports (the Agent tool returns each one). For a councillor at Deep effort whose report has a serious concern, you may dispatch <id>-deep for a deeper pass on that concern; it files a further report for the same councillor.
 3. Put the questions that matter to the user with ask_user, in one batch where you can: each names the councillor whose question it is (from their report), offers options with their trade-offs, recommends one with a reason, and allows free text when useful. When ask_user accepts the batch, end your turn: the answers arrive as a message.
-4. While you wait, the user may ask a councillor "Why?". Answer in that councillor's voice with say, from its report; if the report doesn't cover it, dispatch the councillor again with the question. Then end your turn.
+4. While you wait, the user may ask a councillor "Why?", or write to the council. Answer in that councillor's voice with say, from its report; if the report doesn't cover it, dispatch the councillor again with the question. Then end your turn.
 5. When every councillor has reported and the answers are in, call propose_plan with the plan, its islands and branching, and the decisions taken. If it is accepted, end your turn. On changes, dispatch again only the councillors the change affects (with the change in your request); they report again, then propose again.
 
 Speak to the user only through say and ask_user; anything else you write is not shown. If a tool rejects a call, fix what it says and call it again.`;
@@ -156,6 +157,8 @@ export class ChambersSession extends RoundTableSession {
           message.text && message.text !== 'Why?' ? `\nThey added: ${message.text}` : '';
         return `The user asked ${message.councillorId} "Why?" about: "${message.question}" (questionId ${message.questionId}).${followUp}\n\nAnswer in ${message.councillorId}'s voice with say, using that questionId, from its report; if the report doesn't cover it, dispatch ${message.councillorId} again with the question first. Then end your turn: the questions are still open.`;
       }
+      case 'told':
+        return toldText(message);
       case 'answered':
         return answeredText(message.answers);
     }

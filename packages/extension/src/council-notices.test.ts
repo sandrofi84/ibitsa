@@ -49,6 +49,24 @@ describe('councilNews (#103)', () => {
     expect(councilNews({ sitting: sitting({ plans }), noticed: none }).text).toBeNull();
   });
 
+  it('tells once that the council waits on the user, with what it last said (#242)', () => {
+    const said = [{ id: 'd1', speaker: 'elder', text: 'There is nothing to plan here.' }];
+    const first = councilNews({
+      sitting: sitting({ waiting: true, dialogue: said }),
+      noticed: none,
+    });
+    expect(first.text).toBe('The council is waiting on you: There is nothing to plan here.');
+    expect(
+      councilNews({ sitting: sitting({ waiting: true, dialogue: said }), noticed: first.noticed })
+        .text,
+    ).toBeNull();
+    const told = [...said, { id: 'd2', speaker: 'you', text: 'Plan it anyway.' }];
+    expect(
+      councilNews({ sitting: sitting({ waiting: true, dialogue: told }), noticed: first.noticed })
+        .text,
+    ).toBe('The council is waiting on you.');
+  });
+
   it('has nothing to tell without a sitting', () => {
     expect(councilNews({ sitting: null, noticed: none })).toEqual({ text: null, noticed: none });
   });

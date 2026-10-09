@@ -1,0 +1,16 @@
+{"kind":"header","logVersion":1,"protocolVersion":1,"campaignId":"c-waits","startedAt":"2026-10-08T21:00:00.000Z"}
+{"t":0,"kind":"command","command":{"type":"conveneCouncil","commandId":"k1","task":"Upgrade Gatsby to the latest","mode":"chambers","roster":["architect","tester"],"effort":"standard","councillorEfforts":{"architect":"standard","tester":"light"}},"mark":"convened"}
+{"t":1500,"kind":"council","sittingId":"s1","event":{"type":"sessionStarted","sessionId":"s-waits"}}
+{"t":3000,"kind":"council","sittingId":"s1","event":{"type":"usage","totalCost":60000}}
+{"t":5000,"kind":"council","sittingId":"s1","event":{"type":"reportFiled","toolUseId":"u1","councillorId":"architect","report":{"concerns":[{"summary":"No Gatsby in this repo","severity":"serious","reason":"package.json has no dependencies and there are no gatsby-* files"}],"questions":["Is this the wrong repo?"],"recommendations":["Do no work until the user says what they meant"],"notChecked":[]}}}
+{"t":6000,"kind":"council","sittingId":"s1","event":{"type":"reportFiled","toolUseId":"u2","councillorId":"tester","report":{"concerns":[],"questions":[],"recommendations":[],"notChecked":[],"bowOut":"Nothing to test: there is no Gatsby here."}}}
+{"t":6500,"kind":"council","sittingId":"s1","event":{"type":"sessionStarted","sessionId":"s-waits"}}
+{"t":8000,"kind":"council","sittingId":"s1","event":{"type":"said","councillorId":"elder","text":"This repo has no Gatsby, so there is nothing to upgrade here. Tell me what you meant, or dismiss the council and start again in the right repo."}}
+{"t":8200,"kind":"council","sittingId":"s1","event":{"type":"usage","totalCost":140000}}
+{"t":8300,"kind":"council","sittingId":"s1","event":{"type":"idle"},"mark":"waiting"}
+{"t":20000,"kind":"command","command":{"type":"consultCouncil","commandId":"k2","text":"Add Gatsby fresh, as a recipe site."},"mark":"told"}
+{"t":21000,"kind":"council","sittingId":"s1","event":{"type":"sessionStarted","sessionId":"s-waits"}}
+{"t":23000,"kind":"council","sittingId":"s1","event":{"type":"said","councillorId":"architect","text":"Then it is a new site, not an upgrade: that is a bigger plan. Shall we start over with that task?"}}
+{"t":23200,"kind":"council","sittingId":"s1","event":{"type":"usage","totalCost":190000}}
+{"t":23300,"kind":"council","sittingId":"s1","event":{"type":"idle"}}
+{"t":30000,"kind":"command","command":{"type":"dismissCouncil","commandId":"k3"},"mark":"dismissed"}

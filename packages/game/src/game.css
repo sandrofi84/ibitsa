@@ -940,6 +940,23 @@ body.in-hut .needs-you {
   bottom: 12px;
 }
 
+/*
+ * While the council sits, the bar talks to it (#242), and Needs you sits above it again. The dialogue
+ * box and the plan review take its place while they're open.
+ */
+body.in-hut.council-sitting .command-bar {
+  display: block;
+}
+
+body.in-hut.council-sitting .needs-you {
+  bottom: calc(var(--command-bar-height, 52px) + 24px);
+}
+
+body.in-hut:has(.council-dialogue:not([hidden])) .command-bar,
+body.in-hut:has(.plan-review:not([hidden])) .command-bar {
+  display: none;
+}
+
 .council-dialogue {
   position: fixed;
   left: 50%;
@@ -1676,6 +1693,119 @@ body.in-hut:has(.council-dialogue:not([hidden])) .needs-you {
 
 body.in-hut:has(.council-chamber:not([hidden])) .needs-you {
   display: none;
+}
+
+/* ---------- The council's pane and latest word while it sits (#242) ---------- */
+
+.council-word {
+  margin-bottom: 6px;
+  padding: 6px 8px;
+  max-height: 22vh;
+  overflow: auto;
+  background: rgba(239, 224, 184, 0.97);
+  border: 3px solid #5a3e1c;
+  border-radius: 4px;
+  box-shadow: 0 0 0 2px #1a1420;
+}
+
+.council-word > div {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.council-word .portrait,
+.council-pane .portrait {
+  width: 24px;
+  height: 24px;
+  image-rendering: pixelated;
+  border: 2px solid #5a3e1c;
+  background: #3a2a1a;
+  flex: none;
+}
+
+.council-pane {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  width: min(280px, calc(100vw - 32px));
+  /* Clear of the command bar along the bottom. */
+  max-height: calc(100vh - var(--command-bar-height, 52px) - 48px);
+  overflow: auto;
+  box-sizing: border-box;
+  background: rgba(239, 224, 184, 0.96);
+  border: 2px solid #8a6a3a;
+  border-radius: 4px;
+  padding: 6px;
+  color: #1a1420;
+  font:
+    13px / 1.4 system-ui,
+    sans-serif;
+}
+
+.council-pane-tab {
+  width: 100%;
+  font: inherit;
+  font-weight: 600;
+  padding: 3px 8px;
+  border: 1px solid #5e3b1c;
+  background: #fff6dc;
+  border-radius: 3px;
+  text-align: left;
+}
+
+.council-pane-tab:focus-visible,
+.council-journal:focus-visible {
+  outline: 2px solid #1a1420;
+}
+
+.council-pane h3 {
+  margin: 8px 0 2px;
+  font-size: 13px;
+}
+
+.council-pane .council-state {
+  margin: 6px 0 0;
+}
+
+.council-reports {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.council-reports .pending {
+  opacity: 0.75;
+}
+
+.council-journal {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  max-height: 16em;
+  overflow: auto;
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  background: #fff6dc;
+  border: 1px solid #c9b48a;
+  border-radius: 3px;
+}
+
+.council-journal li {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.council-journal li.you {
+  color: #4a3a6a;
+}
+
+.council-pane .actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
 }
 
 /* A reply from the council while the hut is closed (#169). */

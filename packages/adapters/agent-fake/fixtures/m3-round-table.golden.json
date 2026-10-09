@@ -63,7 +63,8 @@
           "rating": null,
           "comparisonOf": null,
           "consultations": [],
-          "amendments": []
+          "amendments": [],
+          "waiting": false
         },
         "islands": [],
         "heroes": [],
@@ -178,7 +179,8 @@
           "rating": null,
           "comparisonOf": null,
           "consultations": [],
-          "amendments": []
+          "amendments": [],
+          "waiting": false
         },
         "islands": [],
         "heroes": [],
@@ -368,7 +370,8 @@
           "rating": null,
           "comparisonOf": null,
           "consultations": [],
-          "amendments": []
+          "amendments": [],
+          "waiting": false
         },
         "islands": [],
         "heroes": [],
@@ -647,7 +650,8 @@
           "rating": null,
           "comparisonOf": null,
           "consultations": [],
-          "amendments": []
+          "amendments": [],
+          "waiting": false
         },
         "islands": [],
         "heroes": [],
@@ -927,7 +931,8 @@
           "rating": null,
           "comparisonOf": null,
           "consultations": [],
-          "amendments": []
+          "amendments": [],
+          "waiting": false
         },
         "islands": [],
         "heroes": [],
@@ -1371,7 +1376,8 @@
           "rating": null,
           "comparisonOf": null,
           "consultations": [],
-          "amendments": []
+          "amendments": [],
+          "waiting": false
         },
         "islands": [],
         "heroes": [],
@@ -1813,7 +1819,8 @@
       "rating": null,
       "comparisonOf": null,
       "consultations": [],
-      "amendments": []
+      "amendments": [],
+      "waiting": false
     },
     "islands": [],
     "heroes": [],
