@@ -49,6 +49,24 @@ export class RuntimeHost {
     this.runtime?.refreshCouncillors();
   }
 
+  /** Whether a campaign is planning or running (#265); false before the runtime has started. */
+  campaignLive(): boolean {
+    const status = this.runtime?.snapshotState.campaign?.status;
+    return status === 'active' || status === 'planning';
+  }
+
+  /**
+   * Stops every hero in the middle of a turn, as Stop Hero does (#265): each waits for orders, and a
+   * reload or restart doesn't resume the stopped turn. Returns how many were working.
+   */
+  async pauseHeroes(): Promise<number> {
+    const runtime = this.runtime;
+    if (!runtime) return 0;
+    const working = runtime.snapshotState.heroes.filter((h) => h.inTurn);
+    for (const hero of working) await this.command({ type: 'stopHero', heroId: hero.id });
+    return working.length;
+  }
+
   dispose(): void {
     this.runtime?.dispose();
     this.runtime = null;
