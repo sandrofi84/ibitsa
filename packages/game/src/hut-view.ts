@@ -6,6 +6,8 @@ import type {
   NamePlate,
   NamePlateInput,
   Seat,
+  StatusMark,
+  StatusQuery,
   TitleFit,
   WalkIn,
   WalkInPlan,
@@ -91,6 +93,46 @@ export function councilPose(view: HutView, id: string): CouncilPose {
   if (view.stage === 'study' && c.report === 'pending') return 'think';
   if (id === ELDER && view.step === 'plan') return 'write';
   return 'idle';
+}
+
+/** The thinking dots, growing one at a time. */
+const STUDY_DOTS = ['•', '••', '•••'];
+
+/** A councillor's thought bubble while the chambers study (#267): dots, then ✓; none otherwise. */
+export function statusMark({ view, id, dots }: StatusQuery): StatusMark | null {
+  const c = view.councillors.find((x) => x.id === id);
+  if (view.stage !== 'study' || !c) return null;
+  if (c.report === 'filed') return { text: '✓', done: true };
+  return { text: STUDY_DOTS[dots % STUDY_DOTS.length] as string, done: false };
+}
+
+/** How many steps the thinking dots take before starting again. */
+export const STUDY_DOT_STEPS = STUDY_DOTS.length;
+
+/**
+ * The status bubbles' colours (#267): dark marks on a light bubble with a dark rim, so a bubble reads
+ * against any room a pack paints: the fill stands out from a dark wall, the rim from a light one.
+ */
+export const STATUS_BUBBLE = {
+  fill: '#fdfaf0',
+  rim: '#1a1420',
+  ink: '#1a1420',
+  done: '#1f7a34',
+} as const;
+
+/** WCAG's contrast ratio between two `#rrggbb` colours: 1 (none) to 21 (black on white). */
+export function contrastRatio(a: string, b: string): number {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number];
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+/** WCAG's relative luminance of a `#rrggbb` colour. */
+function luminance(hex: string): number {
+  const channel = (i: number) => {
+    const c = Number.parseInt(hex.slice(1 + 2 * i, 3 + 2 * i), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * channel(0) + 0.7152 * channel(1) + 0.0722 * channel(2);
 }
 
 /** How wide a council figure is (§9.2): seats are this far apart once the table is full. */

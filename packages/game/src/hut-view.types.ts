@@ -89,3 +89,17 @@ export interface TitleFit {
   title: string;
   measure: (text: string) => number;
 }
+
+/** Which councillor's status, and how far the thinking dots have got (0, 1 or 2). */
+export interface StatusQuery {
+  view: HutView;
+  id: string;
+  dots: number;
+}
+
+/** What a councillor's thought bubble says (#267): thinking dots, or ✓ once its report is in. */
+export interface StatusMark {
+  text: string;
+  /** The report is in: the mark is the tick, in the bubble's "done" colour. */
+  done: boolean;
+}

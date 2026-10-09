@@ -15,10 +15,16 @@ export interface SeatObjects {
   label: PixelText;
   /** The name plate behind the label, on the table's front (#233). */
   plate: Phaser.GameObjects.Rectangle;
+  /** A speech bubble with "!" (#267): the councillor wants to speak. */
   hand: Phaser.GameObjects.Container;
-  mark: PixelText;
+  /** A thought bubble while the chambers study (#267), holding `markText`. */
+  mark: Phaser.GameObjects.Container;
+  markText: PixelText;
   book: Phaser.GameObjects.Rectangle;
 }
+
+/** A status bubble's shape (#267): a thought trails dots to the head, speech a pointed tail. */
+export type BubbleKind = 'thought' | 'speech';
 
 /** What the hut scene is actually showing, read from its game objects, for tests. */
 export interface HutRendered {
@@ -43,7 +49,7 @@ export interface HutRendered {
     walking: boolean;
     animation: string | null;
     scale: number;
-    /** The mark above the head while studying: dots, or ✓ once the report is in. */
+    /** The mark in the thought bubble while studying: dots, or ✓ once the report is in. */
     mark: string | null;
     hand: boolean;
     book: boolean;

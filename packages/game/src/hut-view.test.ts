@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  contrastRatio,
   councilPose,
   DECISIONS_Y,
   emptyHut,
@@ -11,7 +12,9 @@ import {
   PLATE_PAD,
   placeNames,
   reduceHut,
+  STATUS_BUBBLE,
   seatHut,
+  statusMark,
   TABLE_TOP,
   walkIns,
 } from './hut-view';
@@ -257,5 +260,34 @@ describe('name plates on the table (#233)', () => {
     expect(long.endsWith('…')).toBe(true);
     expect(measure(long)).toBeLessThanOrEqual(PLATE_MAX - 2 * PLATE_PAD);
     expect(long.startsWith('The Keeper of')).toBe(true);
+  });
+});
+
+describe('status bubbles over the councillors (#267)', () => {
+  it('thinks while studying, ticks once the report is in, and says nothing otherwise', () => {
+    const view = run([{ type: 'reportFiled', councillor: 'tester' }], convene('chambers'));
+    expect(statusMark({ view, id: 'architect', dots: 2 })).toEqual({ text: '•••', done: false });
+    expect(statusMark({ view, id: 'architect', dots: 0 })).toEqual({ text: '•', done: false });
+    expect(statusMark({ view, id: 'tester', dots: 0 })).toEqual({ text: '✓', done: true });
+    expect(statusMark({ view, id: 'nobody', dots: 0 })).toBeNull();
+    // A round table has no study stage, so no bubbles.
+    expect(statusMark({ view: convene('roundTable'), id: 'architect', dots: 0 })).toBeNull();
+  });
+
+  it('reads on any room: dark marks on a light bubble, its dark rim apart from a light wall', () => {
+    const { fill, rim, ink, done } = STATUS_BUBBLE;
+    expect(contrastRatio(ink, fill)).toBeGreaterThanOrEqual(7);
+    expect(contrastRatio(done, fill)).toBeGreaterThanOrEqual(4.5);
+    // Whatever the pack paints behind it, the fill or the rim stands out from it.
+    for (const room of ['#ffffff', '#f3ead2', '#8fc1ef', '#808080', '#3a2416', '#000000']) {
+      const best = Math.max(contrastRatio(fill, room), contrastRatio(rim, room));
+      expect(best).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it('measures contrast as WCAG does', () => {
+    expect(contrastRatio('#000000', '#ffffff')).toBeCloseTo(21, 5);
+    expect(contrastRatio('#ffffff', '#ffffff')).toBeCloseTo(1, 5);
+    expect(contrastRatio('#777777', '#ffffff')).toBeCloseTo(4.48, 2);
   });
 });
