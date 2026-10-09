@@ -37,8 +37,11 @@ test('replays m0-walk to the submitted state', async ({ page }) => {
     'doneUnreviewed',
   );
   expect(await probe(page, (p) => p.status().finished)).toBe(true);
-  // The quest is still active, so the submitted hero says so until you finish it (#57).
-  expect(await probe(page, (p) => p.hero.speech())).toBe('Ready for review!');
+  // The quest is still active, so the submitted hero says so until you finish it (#57), once its
+  // last message has had its bubble (#262).
+  await expect
+    .poll(() => probe(page, (p) => p.hero.speech()), { timeout: 8_000 })
+    .toBe('Ready for review!');
   await page.screenshot({ path: 'test-results/m0-walk-submitted.png' });
   expect(errors).toEqual([]);
 });

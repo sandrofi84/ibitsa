@@ -2251,3 +2251,30 @@ body.in-hut .needs-you .item.council[data-waiting] {
   gap: 6px;
   margin: 4px 0;
 }
+
+/* The hero's reply to your last message, in full (#262). */
+.hero-pane .reply {
+  margin: 0 0 8px;
+  padding: 6px 8px;
+  background: #fff6dc;
+  border: 1px solid #5e3b1c;
+  border-radius: 3px;
+  max-height: 12em;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.hero-pane .reply .from {
+  font-size: 12px;
+  font-weight: bold;
+  margin: 0 0 4px;
+}
+
+.hero-pane .reply p {
+  margin: 0 0 4px;
+}
+
+/* A reply arrived while the pane was collapsed. */
+.hero-pane-tab .reply-mark {
+  color: #f2c230;
+}
