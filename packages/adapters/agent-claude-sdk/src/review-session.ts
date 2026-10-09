@@ -163,7 +163,9 @@ export class ReviewSession implements Session {
       allowedTools: [...READ_TOOLS, VERDICT_TOOL],
       canUseTool: async () => ({ behavior: 'deny', message: 'A reviewer only reads the code.' }),
       maxTurns: MAX_TURNS,
-      maxBudgetUsd: start.maxBudgetMicroUsd / 1_000_000,
+      ...(start.maxBudgetMicroUsd === undefined
+        ? {}
+        : { maxBudgetUsd: start.maxBudgetMicroUsd / 1_000_000 }),
       ...(claudeCodePath ? { pathToClaudeCodeExecutable: claudeCodePath } : {}),
     };
   }
@@ -187,7 +189,11 @@ export class ReviewSession implements Session {
     this.emit({ type: 'usage', totalCost: Math.round(m.total_cost_usd * 1_000_000) });
     if (this.filed || this.closed) return;
     if (m.subtype === 'error_max_budget_usd') {
-      this.emit({ type: 'error', message: 'The reviewer ran out of gold before its verdict.' });
+      this.emit({
+        type: 'error',
+        message:
+          'The reviewer reached the spend cap you set (ibitsa.council.reviewBudgetUsd) before its verdict. Raise or clear it in the Guild Hall, then run it again.',
+      });
     } else if (m.subtype === 'error_max_turns') {
       this.emit({ type: 'error', message: 'The reviewer took too many steps without a verdict.' });
     } else if (m.subtype !== 'success') {

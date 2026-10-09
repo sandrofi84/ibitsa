@@ -194,7 +194,10 @@ describe('the review session (#138)', () => {
   });
 
   it.each([
-    ['error_max_budget_usd', 'The reviewer ran out of gold before its verdict.'],
+    [
+      'error_max_budget_usd',
+      'The reviewer reached the spend cap you set (ibitsa.council.reviewBudgetUsd) before its verdict. Raise or clear it in the Guild Hall, then run it again.',
+    ],
     ['error_max_turns', 'The reviewer took too many steps without a verdict.'],
     ['error_during_execution', 'The review stopped: error during execution.'],
   ])('reports one error when it ends on %s without a verdict', async (subtype, text) => {

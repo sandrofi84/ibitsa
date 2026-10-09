@@ -175,7 +175,9 @@ export class Consultation {
       roster: record.roster.map(({ councillorId, effort }) => ({ councillorId, effort })),
       brief: state.elder?.status === 'briefed' ? state.elder.brief : null,
       resume: { sessionId: record.sessionId, prompt },
-      maxBudgetMicroUsd: state.settings.consultBudgetMicroUsd,
+      ...(state.settings.consultBudgetMicroUsd === null
+        ? {}
+        : { maxBudgetMicroUsd: state.settings.consultBudgetMicroUsd }),
     });
   }
 

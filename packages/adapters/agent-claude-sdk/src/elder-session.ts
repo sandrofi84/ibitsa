@@ -160,7 +160,9 @@ export class ElderSession {
       allowedTools: [...READ_TOOLS, BRIEF_TOOL],
       canUseTool: async () => ({ behavior: 'deny', message: 'The elder only reads the code.' }),
       maxTurns: MAX_TURNS,
-      maxBudgetUsd: start.maxBudgetMicroUsd / 1_000_000,
+      ...(start.maxBudgetMicroUsd === undefined
+        ? {}
+        : { maxBudgetUsd: start.maxBudgetMicroUsd / 1_000_000 }),
       ...(claudeCodePath ? { pathToClaudeCodeExecutable: claudeCodePath } : {}),
     };
   }
@@ -184,7 +186,8 @@ export class ElderSession {
       if (m.subtype === 'error_max_budget_usd') {
         this.emit({
           type: 'error',
-          message: 'The elder ran out of gold before finishing the brief.',
+          message:
+            'The elder reached the spend cap you set (ibitsa.elder.budgetUsd) before finishing the brief. Raise or clear it in the Guild Hall, then ask again.',
         });
       } else if (m.subtype === 'error_max_turns') {
         this.emit({

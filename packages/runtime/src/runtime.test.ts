@@ -40,6 +40,7 @@ import type {
   UserSettings,
 } from './ports.types';
 import { Runtime, SNAPSHOT_INTERVAL_MS } from './runtime';
+import type { SessionCaps } from './runtime.types';
 
 class ManualClock implements Clock {
   private ms = Date.parse('2026-10-04T15:00:00.000Z');
@@ -1264,7 +1265,7 @@ describe('the elder (#101)', () => {
     expect(snapshot?.keptCouncil).toEqual({ from: 'Sign-in' });
   });
 
-  it('starts a planning campaign and an elder in the repository with the roster and the default cap', async () => {
+  it('starts a planning campaign and an elder in the repository with the roster, uncapped (#272)', async () => {
     const env = withElder();
     env.connection.receive(consult);
     await flush();
@@ -1275,7 +1276,6 @@ describe('the elder (#101)', () => {
         task: 'Fix the login redirect',
         councillors: [tester],
         model: 'haiku',
-        maxBudgetMicroUsd: 250_000,
         pastRecords: [],
         keptCouncil: null,
       },
@@ -1372,7 +1372,9 @@ describe('the round table (#103)', () => {
     log: unknown[];
     closed: boolean;
   };
-  function withSitting(options: { sittings?: boolean; repoDir?: string | null } = {}) {
+  function withSitting(
+    options: { sittings?: boolean; repoDir?: string | null; caps?: SessionCaps } = {},
+  ) {
     const storageDir = mkdtempSync(join(tmpdir(), 'ibitsa-runtime-'));
     const repoDir = options.repoDir === undefined ? '/repo' : options.repoDir;
     const home = mkdtempSync(join(tmpdir(), 'ibitsa-home-'));
@@ -1423,6 +1425,7 @@ describe('the round table (#103)', () => {
       watchFolder: () => ({ close: () => {} }),
       ...(repoDir ? { repoDir } : {}),
       disabledCouncillors: () => disabled,
+      ...(options.caps ? { caps: () => options.caps as SessionCaps } : {}),
     });
     runtime.start();
     const received: CoreMessage[] = [];
@@ -1466,7 +1469,7 @@ describe('the round table (#103)', () => {
     expect(env.snapshot()?.councilMode).toBe('roundTable');
   });
 
-  it("opens a campaign and a round table on the effort's model and cap, and logs what it says", async () => {
+  it("opens a campaign and a round table on the effort's model, uncapped, and logs what it says", async () => {
     const env = withSitting();
     env.connection.receive(convene);
     await flush();
@@ -1478,7 +1481,6 @@ describe('the round table (#103)', () => {
         brief: null,
         roster: [{ councillorId: 'security', effort: 'standard' }],
         model: 'sonnet',
-        maxBudgetMicroUsd: 2_000_000,
       },
     ]);
     const call = env.calls[0];
@@ -1523,7 +1525,7 @@ describe('the round table (#103)', () => {
     expect(logOf(env.storageDir).records.filter((r) => r.kind === 'council').length).toBe(4);
   });
 
-  it('runs separate chambers with a model per councillor and the summed cap (#105)', async () => {
+  it('runs separate chambers with a model per councillor (#105)', async () => {
     const env = withSitting();
     env.connection.receive({
       ...convene,
@@ -1535,16 +1537,25 @@ describe('the round table (#103)', () => {
     expect(env.calls[0]?.start).toMatchObject({
       mode: 'chambers',
       model: 'haiku',
-      maxBudgetMicroUsd: 1_500_000,
       roster: [{ councillorId: 'security', effort: 'deep', model: 'sonnet' }],
     });
   });
 
-  it('runs a deep sitting on Opus with $6', async () => {
+  it("caps a sitting at the user's cap, when they set one (#272)", async () => {
+    const env = withSitting({
+      caps: { sittingMicroUsd: 1_500_000, reviewMicroUsd: null, lessonsMicroUsd: null },
+    });
+    env.connection.receive(convene);
+    await flush();
+    expect(env.calls[0]?.start).toMatchObject({ maxBudgetMicroUsd: 1_500_000 });
+  });
+
+  it('runs a deep sitting on Opus, with no cap unless the user set one (#272)', async () => {
     const env = withSitting();
     env.connection.receive({ ...convene, effort: 'deep' });
     await flush();
-    expect(env.calls[0]?.start).toMatchObject({ model: 'opus', maxBudgetMicroUsd: 6_000_000 });
+    expect(env.calls[0]?.start).toMatchObject({ model: 'opus' });
+    expect(env.calls[0]?.start).not.toHaveProperty('maxBudgetMicroUsd');
   });
 
   it('fails the sitting without a repository or an agent that can plan', async () => {
@@ -1856,7 +1867,6 @@ describe('the review loop (M5, #136)', () => {
     expect(starts[0]).toMatchObject({
       cwd: '/wt/x',
       model: 'sonnet',
-      maxBudgetMicroUsd: 400_000,
       diff: 'diff --git a/x b/x',
       criteria: ['Hashed'],
     });
@@ -2304,7 +2314,6 @@ describe("a councillor's agent for reviews (§5.5, #201)", () => {
         councillorId: 'security',
         cwd: '/wt/x',
         model: '',
-        maxBudgetMicroUsd: 400_000,
         diff: 'diff',
         guidance: { title: 'Security', guidance: 'Look for injection.' },
       }),

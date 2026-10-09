@@ -8,40 +8,23 @@ const ROSTER_KEY = 'conveneRoster';
 const EFFORT_KEY = 'conveneEffort';
 const MODE_KEY = 'conveneMode';
 
-/** A round table's model and cap by effort (spec §4.2), as the runtime runs it. */
+/** A round table's model by effort (spec §4.2), as the runtime runs it. Effort sets no cap (#272). */
 const EFFORTS: { id: Effort; label: string }[] = [
-  { id: 'light', label: 'Light: Haiku, up to $0.50' },
-  { id: 'standard', label: 'Standard: Sonnet, up to $2' },
-  { id: 'deep', label: 'Deep: Opus, up to $6' },
+  { id: 'light', label: 'Light: Haiku' },
+  { id: 'standard', label: 'Standard: Sonnet' },
+  { id: 'deep', label: 'Deep: Opus' },
 ];
-const ROUND_TABLE_CAP: Record<Effort, number> = { light: 0.5, standard: 2, deep: 6 };
 
-/** A chamber's model and share of the cap by its councillor's effort (spec §4.2), as the runtime runs it. */
+/** A chamber's model by its councillor's effort (spec §4.2), as the runtime runs it. */
 const CHAMBER_EFFORTS: { id: Effort; label: string }[] = [
-  { id: 'light', label: 'Light: Haiku, $0.10' },
-  { id: 'standard', label: 'Standard: Sonnet, $0.40' },
-  { id: 'deep', label: 'Deep: Sonnet, $1.20, Opus on a serious concern' },
+  { id: 'light', label: 'Light: Haiku' },
+  { id: 'standard', label: 'Standard: Sonnet' },
+  { id: 'deep', label: 'Deep: Sonnet, Opus on a serious concern' },
 ];
-const CHAMBER_CAP: Record<Effort, number> = { light: 0.1, standard: 0.4, deep: 1.2 };
-/** What the chairing elder keeps for summing up in separate chambers. */
-const ELDER_RESERVE = 0.3;
 
-/**
- * The most a sitting may cost, in dollars (spec §4.2): a round table's cap by its effort, or every
- * chamber's share plus the elder's reserve.
- */
-export function estimatedCap({
-  mode,
-  effort,
-  chambers,
-}: {
-  mode: SittingMode;
-  effort: Effort;
-  chambers: readonly Effort[];
-}): number {
-  if (mode === 'roundTable') return ROUND_TABLE_CAP[effort];
-  return chambers.reduce((sum, e) => sum + CHAMBER_CAP[e], ELDER_RESERVE);
-}
+/** What the form says about spending (#272): Ibitsa caps nothing unless the user sets a cap. */
+export const SPEND_NOTE =
+  "No spend cap unless you set one: a sitting's cap is in the Guild Hall's Rule book.";
 
 /**
  * Convening the council (spec §4.2, #103, #105): how it sits, who sits, and the effort; in separate
@@ -182,8 +165,7 @@ export function mountConveneForm({
       className: 'note',
       text: brief ? `The elder: ${brief.effort.reason}` : '',
     });
-    const cap = el('p', { className: 'cap' });
-    cap.setAttribute('aria-live', 'polite');
+    const cap = el('p', { className: 'cap', text: SPEND_NOTE });
     // A council kept from an earlier campaign (#168): resume it, or start fresh as the elder suggests.
     const kept = keptCouncilChoice({ kept: client.snapshot?.keptCouncil ?? null, brief });
     const fresh = el('input');
@@ -204,12 +186,6 @@ export function mountConveneForm({
       for (const s of seats) s.row.hidden = !chambers || !s.box.checked;
       effortLabel.textContent = chambers ? 'The elder chairs at' : 'Effort';
       effort.setAttribute('aria-label', effortLabel.textContent);
-      const dollars = estimatedCap({
-        mode,
-        effort: effort.value as Effort,
-        chambers: chosen().map((s) => s.effort.value as Effort),
-      });
-      cap.textContent = `Costs up to $${dollars.toFixed(2)}.`;
       convene.disabled = chosen().length === 0;
     }
     for (const s of seats) {

@@ -113,7 +113,9 @@ export class LessonsSession {
       allowedTools: [LESSONS_TOOL],
       canUseTool: async () => ({ behavior: 'deny', message: 'Only submit_lessons is allowed.' }),
       maxTurns: MAX_TURNS,
-      maxBudgetUsd: start.maxBudgetMicroUsd / 1_000_000,
+      ...(start.maxBudgetMicroUsd === undefined
+        ? {}
+        : { maxBudgetUsd: start.maxBudgetMicroUsd / 1_000_000 }),
       ...(claudeCodePath ? { pathToClaudeCodeExecutable: claudeCodePath } : {}),
     };
   }
@@ -131,7 +133,7 @@ export class LessonsSession {
       type: 'error',
       message:
         m.subtype === 'error_max_budget_usd'
-          ? 'The elder ran out of gold before filing lessons.'
+          ? 'The elder reached the spend cap you set for lessons (ibitsa.council.lessonsBudgetUsd) before filing them.'
           : `The lessons stopped: ${m.subtype.replaceAll('_', ' ')}.`,
     });
   }

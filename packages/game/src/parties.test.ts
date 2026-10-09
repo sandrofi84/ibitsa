@@ -112,7 +112,7 @@ describe('gold caps and names (#123)', () => {
 describe('review efforts (#139)', () => {
   it('offers Light, Standard and Deep, Light first', () => {
     expect(REVIEW_EFFORTS.map((e) => e.id)).toEqual(['light', 'standard', 'deep']);
-    expect(REVIEW_EFFORTS[0]?.label).toBe('Light: Haiku, up to $0.10 a review');
+    expect(REVIEW_EFFORTS[0]?.label).toBe('Light: Haiku');
   });
 
   it('sends one effort per reviewing councillor, Light unless chosen, and none without reviewers', () => {

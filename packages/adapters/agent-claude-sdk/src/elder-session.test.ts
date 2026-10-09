@@ -196,7 +196,10 @@ describe('the elder session (#101)', () => {
 
   it.each([
     ['success', 'The elder finished without writing a brief.'],
-    ['error_max_budget_usd', 'The elder ran out of gold before finishing the brief.'],
+    [
+      'error_max_budget_usd',
+      'The elder reached the spend cap you set (ibitsa.elder.budgetUsd) before finishing the brief. Raise or clear it in the Guild Hall, then ask again.',
+    ],
     ['error_max_turns', 'The elder took too many steps without finishing the brief.'],
     ['error_during_execution', 'The research stopped: error during execution.'],
   ])('reports ending with %s and no brief as an error', async (subtype, text) => {

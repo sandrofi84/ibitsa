@@ -77,7 +77,14 @@ class Run {
 }
 
 describe('talking to the council mid-campaign (spec §4.8, #169)', () => {
-  it("resumes the lead session with the question and the campaign's status, capped", () => {
+  it('caps a question only when the user set a cap (#272)', () => {
+    const run = new Run().started();
+    run.state.settings.consultBudgetMicroUsd = 500_000;
+    run.do({ type: 'consultCouncil', text: 'Should we add rate limiting?' });
+    expect(run.last('startSitting')).toMatchObject({ maxBudgetMicroUsd: 500_000 });
+  });
+
+  it("resumes the lead session with the question and the campaign's status, uncapped (#272)", () => {
     const run = new Run().started();
     run.do({
       type: 'consultCouncil',
@@ -89,9 +96,9 @@ describe('talking to the council mid-campaign (spec §4.8, #169)', () => {
       sittingId: run.state.sitting?.id,
       mode: 'roundTable',
       roster: [{ councillorId: 'security', effort: 'standard' }],
-      maxBudgetMicroUsd: 500_000,
       resume: { sessionId: 'lead-1' },
     });
+    expect(effect).not.toHaveProperty('maxBudgetMicroUsd');
     const prompt = effect?.resume?.prompt ?? '';
     expect(prompt).toContain('The plan is approved and the heroes are at work.');
     expect(prompt).toContain('The user asks security, who answers in its own voice');

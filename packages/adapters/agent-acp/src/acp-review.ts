@@ -24,7 +24,8 @@ const READ_KINDS = ['read', 'search', 'think'];
 export const NO_BRIDGE = 'This agent can’t file a verdict: there is no tool bridge.';
 export const NO_VERDICT = 'The reviewer finished without a verdict.';
 export const TOO_MANY_STEPS = 'The reviewer took too many steps without a verdict.';
-export const OUT_OF_GOLD = 'The reviewer ran out of gold before its verdict.';
+export const OUT_OF_GOLD =
+  'The reviewer reached the spend cap you set (ibitsa.council.reviewBudgetUsd) before its verdict. Raise or clear it in the Guild Hall, then run it again.';
 
 /**
  * One councillor's review of one task on an ACP agent (spec §5.5, §11.5, #201): its own agent process
@@ -215,7 +216,9 @@ export class AcpReview implements ReviewSession {
       const cost = this.gold.reported(update.cost);
       if (!cost) return;
       this.emit({ type: 'usage', totalCost: cost.totalCost });
-      if (cost.totalCost > this.init.start.maxBudgetMicroUsd) this.stop(OUT_OF_GOLD);
+      const cap = this.init.start.maxBudgetMicroUsd;
+      // Only a cap the user set (#272).
+      if (cap !== undefined && cost.totalCost > cap) this.stop(OUT_OF_GOLD);
       return;
     }
     // A verdict waiting for core isn't a step: the reviewer is done looking.

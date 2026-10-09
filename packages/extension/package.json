@@ -144,10 +144,13 @@
           "markdownDescription": "The model the elder researches a new quest with, before the council or a quick quest."
         },
         "ibitsa.elder.budgetUsd": {
-          "type": "number",
-          "default": 0.25,
-          "minimum": 0.01,
-          "markdownDescription": "The most the elder's research may cost, in US dollars. It stops when the cap is reached."
+          "type": [
+            "number",
+            "null"
+          ],
+          "default": null,
+          "exclusiveMinimum": 0,
+          "markdownDescription": "The most the elder's research may cost, in US dollars. It stops when the cap is reached. Leave empty for no cap (the default)."
         },
         "ibitsa.council.mode": {
           "type": "string",
@@ -165,10 +168,40 @@
           "markdownDescription": "How the council sits when you convene it."
         },
         "ibitsa.council.consultBudgetUsd": {
-          "type": "number",
-          "default": 0.5,
+          "type": [
+            "number",
+            "null"
+          ],
+          "default": null,
           "exclusiveMinimum": 0,
-          "markdownDescription": "The most one question to the council mid-campaign (`@council`, `@<councillor>` or the hut) may spend, in dollars."
+          "markdownDescription": "The most one question to the council mid-campaign (`@council`, `@<councillor>` or the hut) may spend, in US dollars. Leave empty for no cap (the default)."
+        },
+        "ibitsa.council.sittingBudgetUsd": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "default": null,
+          "exclusiveMinimum": 0,
+          "markdownDescription": "The most one sitting of the council may spend, in US dollars, at a round table or in separate chambers. When it is reached the council wraps up with what it has. Leave empty for no cap (the default)."
+        },
+        "ibitsa.council.reviewBudgetUsd": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "default": null,
+          "exclusiveMinimum": 0,
+          "markdownDescription": "The most one councillor's review of a task may spend, in US dollars. A review that reaches it ends without a verdict and comes to you, with **Run again**. Leave empty for no cap (the default)."
+        },
+        "ibitsa.council.lessonsBudgetUsd": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "default": null,
+          "exclusiveMinimum": 0,
+          "markdownDescription": "The most the elder's lessons at a campaign's end may spend, in US dollars. Leave empty for no cap (the default)."
         },
         "ibitsa.classes": {
           "type": "object",

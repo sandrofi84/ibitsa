@@ -718,15 +718,15 @@ test('separate chambers: an effort per councillor, the study stage, then the que
   const convene = page.getByRole('dialog', { name: 'Convene the council' });
   const testerEffort = convene.getByLabel("Tester's effort");
   await expect(testerEffort).toBeHidden();
-  await expect(convene).toContainText('Costs up to $0.50.');
+  // No spend cap unless the user sets one (#272): the form says so instead of a price.
+  await expect(convene).toContainText('No spend cap unless you set one');
+  await expect(convene).not.toContainText('Costs up to');
   await convene.getByRole('radio', { name: /Separate chambers/ }).check();
-  // The elder's pick for the tester, with its reason; the cap is the shares plus the elder's reserve.
+  // The elder's pick for the tester, with its reason.
   await expect(testerEffort).toHaveValue('light');
   await expect(convene).toContainText('One case.');
-  await expect(convene).toContainText('Costs up to $0.40.');
   await convene.getByRole('checkbox', { name: /Security/ }).check();
   await convene.getByLabel("Security's effort").selectOption('deep');
-  await expect(convene).toContainText('Costs up to $1.60.');
   await expect(convene.getByText('The elder chairs at')).toBeVisible();
   await page.screenshot({ path: 'test-results/convene-chambers.png' });
   await convene.getByRole('button', { name: 'Convene' }).click();

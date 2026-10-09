@@ -34,7 +34,7 @@ import {
   type Snapshot,
 } from '@ibitsa/protocol';
 import { CampaignDocuments } from './campaign-documents';
-import { councilVersion, reviewPlan, seatable, sittingPlan } from './council';
+import { councilVersion, reviewModel, seatable, sittingPlan } from './council';
 import { CouncilTallies } from './council-tallies';
 import { KeptCouncil } from './kept-council';
 import type {
@@ -46,15 +46,21 @@ import type {
 } from './ports.types';
 import { ProjectRules } from './project-rules';
 import { PullRequests } from './pull-requests';
-import type { Connection, RuntimeOptions } from './runtime.types';
+import type { Connection, RuntimeOptions, SessionCaps } from './runtime.types';
 import { SkillCatalog, watchFolder } from './skill-catalog';
 import { type CampaignLog, CampaignStore } from './storage';
 
 /** Snapshots go out at most this often (spec §11.2.1: throttled, ~10/s). */
-/** The elder's defaults (spec §4.1): the smallest model, a quarter of a dollar. */
-const DEFAULT_ELDER = { model: 'haiku', budgetMicroUsd: 250_000 };
-/** The elder's lessons at a campaign's end (§4.9): Haiku, about $0.05. */
-const LESSONS = { model: 'haiku', maxBudgetMicroUsd: 50_000 };
+/** The elder's defaults (spec §4.1): the smallest model, and no cap unless the user sets one (#272). */
+const DEFAULT_ELDER = { model: 'haiku', budgetMicroUsd: null };
+/** The elder's lessons at a campaign's end (§4.9): on Haiku. */
+const LESSONS_MODEL = 'haiku';
+/** No caps unless the user sets them (#272). */
+const NO_CAPS: SessionCaps = { sittingMicroUsd: null, reviewMicroUsd: null, lessonsMicroUsd: null };
+
+/** A session's `maxBudgetMicroUsd` when the user set a cap, else nothing: it runs uncapped (#272). */
+const capOf = (microUsd: number | null | undefined): { maxBudgetMicroUsd?: number } =>
+  microUsd == null ? {} : { maxBudgetMicroUsd: microUsd };
 
 export const SNAPSHOT_INTERVAL_MS = 100;
 
@@ -671,7 +677,7 @@ export class Runtime {
           task,
           councillors,
           model,
-          maxBudgetMicroUsd: budgetMicroUsd,
+          ...capOf(budgetMicroUsd),
           // Past campaigns' records, and a kept council's campaign, for the elder to weigh (#168).
           pastRecords: new CampaignDocuments(cwd).pastRecords(),
           keptCouncil: from ? { from } : null,
@@ -700,7 +706,8 @@ export class Runtime {
           cwd,
           title: this.state.campaign?.title ?? 'Campaign',
           material,
-          ...LESSONS,
+          model: LESSONS_MODEL,
+          ...capOf(this.caps().lessonsMicroUsd),
         },
         report,
       );
@@ -764,9 +771,8 @@ export class Runtime {
           to: effect.to,
           since: effect.since,
         })) ?? '';
-      const effort = reviewPlan(effect.effort);
       // The effort's models are Claude's; another agent keeps its own default unless one is named.
-      const model = councillor?.model ?? (elsewhere ? '' : effort.model);
+      const model = councillor?.model ?? (elsewhere ? '' : reviewModel(effect.effort));
       const guidance = elsewhere
         ? (this.options.adapter.reviewGuidance?.({
             cwd: effect.worktreePath,
@@ -781,7 +787,7 @@ export class Runtime {
             councillorId: effect.councillorId,
             model,
             ...(guidance === undefined ? {} : { guidance }),
-            maxBudgetMicroUsd: effort.budgetMicroUsd,
+            ...capOf(this.caps().reviewMicroUsd),
             round: effect.round,
             diff,
             task: effect.task,
@@ -827,7 +833,8 @@ export class Runtime {
           brief: effect.brief,
           roster: plan.roster,
           model: plan.model,
-          maxBudgetMicroUsd: effect.maxBudgetMicroUsd ?? plan.maxBudgetMicroUsd,
+          // A question's own cap (#169), else the user's cap for a sitting, if any (#272).
+          ...capOf(effect.maxBudgetMicroUsd ?? this.caps().sittingMicroUsd),
           ...(effect.resume
             ? { resume: effect.resume }
             : kept
@@ -1106,6 +1113,11 @@ export class Runtime {
   private unsandboxed(heroClass: HeroClassView): boolean {
     if (heroClass.agent === CLAUDE_AGENT || !this.options.agentSandboxed) return false;
     return !this.options.agentSandboxed(heroClass.agent);
+  }
+
+  /** The user's caps as they are now (#272): read at each session's start, none by default. */
+  private caps(): SessionCaps {
+    return this.options.caps?.() ?? NO_CAPS;
   }
 
   /** The model a hero of this class runs on (#182); none for a class nobody knows. */

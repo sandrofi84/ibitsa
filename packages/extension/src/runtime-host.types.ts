@@ -1,5 +1,5 @@
 import type { Command, HeroClassView, RecolorMap } from '@ibitsa/protocol';
-import type { AgentAdapter, GameMaster, GitHost, UserSettings } from '@ibitsa/runtime';
+import type { AgentAdapter, GameMaster, GitHost, SessionCaps, UserSettings } from '@ibitsa/runtime';
 import type { Credentials } from './credentials.types';
 
 export interface Dependencies {
@@ -35,7 +35,9 @@ export interface RuntimeHostOptions {
   /** `ibitsa.council.mode` (#103). */
   councilMode?: () => 'ask' | 'roundTable' | 'chambers';
   /** The elder's model and cap from `ibitsa.elder.*` (#101). */
-  elder?: () => { model: string; budgetMicroUsd: number };
+  elder?: () => { model: string; budgetMicroUsd: number | null };
+  /** The user's caps from `ibitsa.council.{sitting,review,lessons}BudgetUsd` (#272); none by default. */
+  caps?: () => SessionCaps;
   /** Councillor ids turned off in `ibitsa.council.disabled` (#98). */
   disabledCouncillors?: () => string[];
   /** `ibitsa.pullRequests.pollSeconds` (§5.6). */

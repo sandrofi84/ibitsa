@@ -13,6 +13,5 @@ export interface CouncilVersionInput {
 export interface SittingPlan {
   /** The round table's, or the chairing elder's in separate chambers. */
   model: string;
-  maxBudgetMicroUsd: number;
   roster: { councillorId: string; effort: Effort; model?: string }[];
 }

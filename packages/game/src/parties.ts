@@ -69,11 +69,11 @@ export function namesProblem(names: readonly string[]): string | undefined {
   return twice ? `Two heroes are called ${twice.trim()}.` : undefined;
 }
 
-/** A reviewer's effort (§5.5, M5): its model and the most one review may cost; Light by default. */
+/** A reviewer's effort (§5.5, M5): its model, Light by default. Effort sets no cap (#272). */
 export const REVIEW_EFFORTS: readonly ReviewEffortOption[] = [
-  { id: 'light', label: 'Light: Haiku, up to $0.10 a review' },
-  { id: 'standard', label: 'Standard: Sonnet, up to $0.40 a review' },
-  { id: 'deep', label: 'Deep: Opus, up to $1.20 a review' },
+  { id: 'light', label: 'Light: Haiku' },
+  { id: 'standard', label: 'Standard: Sonnet' },
+  { id: 'deep', label: 'Deep: Opus' },
 ];
 
 /**

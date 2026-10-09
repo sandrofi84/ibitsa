@@ -426,7 +426,9 @@ export class RoundTableSession implements SittingSession {
         ],
       },
       maxTurns: MAX_TURNS,
-      maxBudgetUsd: start.maxBudgetMicroUsd / 1_000_000,
+      ...(start.maxBudgetMicroUsd === undefined
+        ? {}
+        : { maxBudgetUsd: start.maxBudgetMicroUsd / 1_000_000 }),
       // Resumed for a question (#169), or a council kept from the last campaign (#167).
       ...(start.resume ? { resume: start.resume.sessionId } : {}),
       ...(claudeCodePath ? { pathToClaudeCodeExecutable: claudeCodePath } : {}),
@@ -480,7 +482,7 @@ export class RoundTableSession implements SittingSession {
       type: 'error',
       message:
         m.subtype === 'error_max_budget_usd'
-          ? 'The council ran out of gold. Its reports so far are kept.'
+          ? 'The council reached the spend cap you set (ibitsa.council.sittingBudgetUsd, or ibitsa.council.consultBudgetUsd for a question). Its reports so far are kept.'
           : m.subtype === 'error_max_turns'
             ? 'The council took too many steps.'
             : `The sitting stopped: ${m.subtype.replaceAll('_', ' ')}.`,
@@ -580,7 +582,12 @@ export function openingText({
     `The roster (every one must report before you propose a plan):\n\n${seats
       .map((s) => `### ${s.id} (${s.title})\n\n${s.guidance}`)
       .join('\n\n')}`,
-    `Your budget is $${(start.maxBudgetMicroUsd / 1_000_000).toFixed(2)}: keep reading and reports short.`,
+    // Only a cap the user set (#272).
+    ...(start.maxBudgetMicroUsd === undefined
+      ? []
+      : [
+          `Your budget is $${(start.maxBudgetMicroUsd / 1_000_000).toFixed(2)}: keep reading and reports short.`,
+        ]),
   ];
   return parts.join('\n\n---\n\n');
 }
